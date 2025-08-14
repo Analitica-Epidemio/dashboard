@@ -3,9 +3,12 @@
 from fastapi import APIRouter
 from typing import Dict, Any
 
+from app.api.v1.hello import router as hello_router
+
 api_router = APIRouter(prefix="/api/v1")
 
-# api_router.include_router(some_router)
+# Incluir routers
+api_router.include_router(hello_router)
 
 # Endpoint raíz de la API
 @api_router.get("/")
