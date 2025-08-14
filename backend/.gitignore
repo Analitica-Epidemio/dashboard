@@ -69,7 +69,6 @@ coverage.xml
 Thumbs.db
 
 # Alembic
-alembic/versions/*
 !alembic/versions/.gitkeep
 
 # Logs

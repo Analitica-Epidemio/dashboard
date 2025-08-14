@@ -20,6 +20,7 @@ dependencies = [
     "python-magic>=0.4.27",
     "asyncpg>=0.30.0",
     "werkzeug>=3.0.0",
+    "click>=8.1.0",
 ]
 
 [project.optional-dependencies]

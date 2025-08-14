@@ -74,7 +74,7 @@ dev-docker-db-reset:  ## 💣 Reinicia la BD Docker desde cero (BORRA TODOS LOS 
 	@echo "⚠️  ADVERTENCIA: Esto eliminará TODOS los datos de la base de datos"
 	@read -p "¿Estás seguro? (y/N): " confirm && [ "$$confirm" = "y" ] || exit 1
 	docker-compose -f docker-compose.dev.yml down
-	docker volume rm api_postgres_data_dev 2>/dev/null || true
+	docker volume rm epi_dashboard_postgres_data_dev 2>/dev/null || true
 	@echo "✅ Base de datos eliminada. Se creará una nueva al ejecutar 'make dev-docker'"
 
 # =============================================================================
