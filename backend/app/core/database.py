@@ -8,7 +8,9 @@ from sqlmodel import Session, SQLModel, create_engine
 from app.core.config import settings
 
 # Para desarrollo, usar engines síncrono y asíncrono
-database_url_sync = settings.DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://")
+database_url_sync = settings.DATABASE_URL.replace(
+    "postgresql+asyncpg://", "postgresql://"
+)
 database_url_async = settings.DATABASE_URL
 
 # Crear engines

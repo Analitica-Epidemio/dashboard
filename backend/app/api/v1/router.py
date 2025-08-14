@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 """Router principal de la API v1"""
+
 from fastapi import APIRouter
 from typing import Dict, Any
 
@@ -9,6 +9,7 @@ api_router = APIRouter(prefix="/api/v1")
 
 # Incluir routers
 api_router.include_router(hello_router)
+
 
 # Endpoint raíz de la API
 @api_router.get("/")

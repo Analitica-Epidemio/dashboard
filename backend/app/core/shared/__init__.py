@@ -15,7 +15,7 @@ from .enums import (
 
 __all__ = [
     "TipoDocumento",
-    "SexoBiologico", 
+    "SexoBiologico",
     "RespuestaSiNoIndeterminado",
     "FrecuenciaOcurrencia",
     "OrigenFinanciamiento",
@@ -23,5 +23,5 @@ __all__ = [
     "EstadoEventoEpidemiologico",
     "ResultadoTratamiento",
     "EstadoInternacion",
-    "TipoContactoEpidemiologico"
+    "TipoContactoEpidemiologico",
 ]

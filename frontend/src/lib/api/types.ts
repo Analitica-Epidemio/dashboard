@@ -12,8 +12,14 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Obtener saludo simple
-         * @description Retorna un mensaje de saludo simple con timestamp del servidor
+         * Get Hello
+         * @description Obtiene un saludo del servidor.
+         *
+         *     Implementación CORRECTA con mejores prácticas:
+         *     - JSONResponse directo para control total del status code
+         *     - 50% probabilidad de éxito para testing
+         *     - Errores estructurados con códigos significativos
+         *     - Sin excepciones, retorno directo
          */
         get: operations["get_hello_api_v1_hello_get"];
         put?: never;
@@ -49,46 +55,81 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
-         * ErrorResponse
-         * @description Modelo estándar para respuestas de error
-         * @example {
-         *       "error": true,
-         *       "message": "Recurso no encontrado",
-         *       "path": "/api/v1/resource/123",
-         *       "status_code": 404
-         *     }
+         * ErrorDetail
+         * @description Detalle de un error específico.
          */
-        ErrorResponse: {
+        ErrorDetail: {
             /**
-             * Error
-             * @default true
+             * Code
+             * @description Código de error machine-readable
              */
-            error: boolean;
-            /** Message */
-            message: string;
-            /** Status Code */
-            status_code: number;
-            /** Path */
-            path: string;
-        };
-        /**
-         * HelloResponse
-         * @description Modelo de respuesta para el endpoint Hello World.
-         */
-        HelloResponse: {
+            code: string;
             /**
              * Message
-             * @description Mensaje de saludo
+             * @description Mensaje human-readable
+             */
+            message: string;
+            /**
+             * Field
+             * @description Campo que causó el error
+             */
+            field?: string | null;
+        };
+        /**
+         * ErrorResponse
+         * @description Respuesta de error estándar.
+         *
+         *     Se usa SOLO con códigos HTTP 4xx/5xx.
+         *     Basado en Google JSON Style Guide.
+         */
+        ErrorResponse: {
+            /** @description Detalle del error */
+            error: components["schemas"]["ErrorDetail"];
+            /**
+             * Errors
+             * @description Lista de errores adicionales (para validación múltiple)
+             */
+            errors?: components["schemas"]["ErrorDetail"][] | null;
+            /**
+             * Request Id
+             * @description ID único para tracking
+             */
+            request_id?: string | null;
+        };
+        /**
+         * HelloData
+         * @description Datos del saludo.
+         */
+        HelloData: {
+            /**
+             * Message
              * @example Hello, World!
              */
             message: string;
             /**
              * Timestamp
              * Format: date-time
-             * @description Timestamp del servidor
              * @example 2024-01-15T10:30:00Z
              */
             timestamp: string;
+            /**
+             * Server
+             * @default epidemiologia-api
+             * @example epidemiologia-api
+             */
+            server: string;
+        };
+        /** SuccessResponse[HelloData] */
+        SuccessResponse_HelloData_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["HelloData"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
         };
     };
     responses: never;
@@ -108,30 +149,28 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Successful Response */
+            /** @description Saludo exitoso */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HelloResponse"];
+                    "application/json": components["schemas"]["SuccessResponse_HelloData_"];
                 };
             };
-            /** @description Recurso no encontrado */
-            404: {
+            /** @description Servicio temporalmente no disponible */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Error interno del servidor */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "SERVICE_UNAVAILABLE",
+                     *         "message": "El servicio de saludo está temporalmente no disponible"
+                     *       },
+                     *       "request_id": "550e8400-e29b-41d4-a716"
+                     *     } */
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };

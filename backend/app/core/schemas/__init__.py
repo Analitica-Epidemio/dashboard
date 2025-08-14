@@ -1,5 +1,17 @@
-"""Schemas compartidos para la aplicación."""
+"""Schemas del sistema siguiendo mejores prácticas."""
 
-from .common import ErrorDetail, StandardResponse
+from .response import (
+    ErrorDetail,
+    ErrorResponse,
+    SuccessResponse,
+    PaginatedResponse,
+    DataResponse,
+)
 
-__all__ = ["ErrorDetail", "StandardResponse"]
+__all__ = [
+    "ErrorDetail",
+    "ErrorResponse",
+    "SuccessResponse",
+    "PaginatedResponse",
+    "DataResponse",
+]

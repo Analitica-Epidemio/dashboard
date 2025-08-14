@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Aplicación principal FastAPI para el Sistema de Epidemiología Moderna.
 
 Sistema de vigilancia epidemiológica con procesamiento ETL, autenticación
 JWT y gestión de eventos de salud pública.
 """
+
 import logging
 import time
 from contextlib import asynccontextmanager
@@ -25,8 +25,7 @@ from app.core.middleware import setup_middleware
 
 # Configurar logging
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -35,12 +34,12 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     Maneja el ciclo de vida de la aplicación.
-    
+
     Se ejecuta al iniciar y cerrar la aplicación.
     """
     # Startup
     logger.info("🚀 Iniciando Sistema de Epidemiología Moderna...")
-    
+
     # Intentar crear tablas de base de datos (opcional en desarrollo)
     try:
         create_db_and_tables()
@@ -48,11 +47,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception as e:
         logger.warning(f"⚠️ No se pudo inicializar la base de datos: {e}")
         logger.info("ℹ️ La aplicación continuará sin base de datos")
-    
+
     logger.info("🏥 Sistema de Epidemiología listo para recibir requests")
-    
+
     yield
-    
+
     # Shutdown
     logger.info("🔄 Cerrando Sistema de Epidemiología...")
 
@@ -60,7 +59,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 def create_application() -> FastAPI:
     """
     Factory para crear la aplicación FastAPI.
-    
+
     Returns:
         Aplicación FastAPI configurada
     """
@@ -78,26 +77,26 @@ def create_application() -> FastAPI:
         redoc_url="/redoc" if settings.ENVIRONMENT != "production" else None,
         openapi_url="/openapi.json" if settings.ENVIRONMENT != "production" else None,
     )
-    
+
     # Configurar middleware personalizado
     setup_middleware(app)
-    
+
     # Configurar middleware estándar
     setup_standard_middleware(app)
-    
+
     # Configurar exception handlers
     setup_exception_handlers(app)
-    
+
     # Incluir routers
     app.include_router(api_router)
-    
+
     return app
 
 
 def setup_standard_middleware(app: FastAPI) -> None:
     """
     Configura middleware de la aplicación.
-    
+
     Args:
         app: Instancia de FastAPI
     """
@@ -111,7 +110,9 @@ def setup_standard_middleware(app: FastAPI) -> None:
             allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
             allow_headers=["*"],
         )
-        logger.info("🌐 CORS configurado para desarrollo - permitiendo cualquier puerto en localhost")
+        logger.info(
+            "🌐 CORS configurado para desarrollo - permitiendo cualquier puerto en localhost"
+        )
     elif settings.BACKEND_CORS_ORIGINS:
         app.add_middleware(
             CORSMiddleware,
@@ -120,47 +121,49 @@ def setup_standard_middleware(app: FastAPI) -> None:
             allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
             allow_headers=["*"],
         )
-    
+
     # Trusted hosts para seguridad en producción
     if settings.ALLOWED_HOSTS:
         allowed_hosts = [host.strip() for host in settings.ALLOWED_HOSTS.split(",")]
-        app.add_middleware(
-            TrustedHostMiddleware,
-            allowed_hosts=allowed_hosts
-        )
-    
+        app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
+
     # Middleware personalizado para logging de requests
     @app.middleware("http")
-    async def log_requests(request: Request, call_next: Callable[[Request], Any]) -> Response:
+    async def log_requests(
+        request: Request, call_next: Callable[[Request], Any]
+    ) -> Response:
         """Log de requests entrantes"""
         start_time = time.time()
-        
+
         logger.info(
             f"🔍 {request.method} {request.url.path} - "
             f"IP: {request.client.host if request.client else 'unknown'}"
         )
-        
+
         response = await call_next(request)
-        
+
         process_time = time.time() - start_time
         logger.info(
             f"✅ {request.method} {request.url.path} - "
             f"Status: {response.status_code} - "
             f"Time: {process_time:.3f}s"
         )
-        
+
         return response  # type: ignore[no-any-return]
 
 
 def setup_exception_handlers(app: FastAPI) -> None:
     """
     Configura manejadores de excepciones personalizados.
-    
+
     Args:
         app: Instancia de FastAPI
     """
+
     @app.exception_handler(StarletteHTTPException)
-    async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+    async def http_exception_handler(
+        request: Request, exc: StarletteHTTPException
+    ) -> JSONResponse:
         """Maneja excepciones HTTP con formato consistente"""
         return JSONResponse(
             status_code=exc.status_code,
@@ -168,12 +171,14 @@ def setup_exception_handlers(app: FastAPI) -> None:
                 "error": True,
                 "message": exc.detail,
                 "status_code": exc.status_code,
-                "path": str(request.url.path)
-            }
+                "path": str(request.url.path),
+            },
         )
-    
+
     @app.exception_handler(RequestValidationError)
-    async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    async def validation_exception_handler(
+        request: Request, exc: RequestValidationError
+    ) -> JSONResponse:
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content={
@@ -181,23 +186,27 @@ def setup_exception_handlers(app: FastAPI) -> None:
                 "message": "Error de validación en los datos enviados",
                 "status_code": 422,
                 "path": str(request.url.path),
-                "details": exc.errors()
-            }
+                "details": exc.errors(),
+            },
         )
-    
+
     @app.exception_handler(Exception)
-    async def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    async def general_exception_handler(
+        request: Request, exc: Exception
+    ) -> JSONResponse:
         """Maneja excepciones generales no capturadas"""
         logger.error(f"💥 Error no manejado: {str(exc)}", exc_info=True)
-        
+
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={
                 "error": True,
-                "message": "Error interno del servidor" if settings.ENVIRONMENT == "production" else str(exc),
+                "message": "Error interno del servidor"
+                if settings.ENVIRONMENT == "production"
+                else str(exc),
                 "status_code": 500,
-                "path": str(request.url.path)
-            }
+                "path": str(request.url.path),
+            },
         )
 
 
@@ -223,22 +232,22 @@ async def health_check() -> Dict[str, Any]:
     from sqlalchemy import text
 
     from app.core.database import engine
-    
+
     try:
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
         db_status = "healthy"
     except Exception as e:
         logger.error(f"Error en health check de BD: {e}")
-        db_status = "unhealthy" 
-    
+        db_status = "unhealthy"
+
     return {
         "status": "healthy" if db_status == "healthy" else "unhealthy",
         "timestamp": time.time(),
         "services": {
             "database": db_status,
         },
-        "version": "1.0.0"
+        "version": "1.0.0",
     }
 
 

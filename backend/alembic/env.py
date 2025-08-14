@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
 # type: ignore
 """
 Alembic environment configuration for Sistema de Epidemiología.
 
 Configuración de migrations con SQLModel y AsyncIO support.
 """
+
 import os
 
 # Importar configuración de la aplicación
@@ -21,8 +21,21 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from app.core.config import settings
 
+# Importar SQLModel
+from sqlmodel import SQLModel
+
 # Importar todos los modelos para que Alembic los detecte
-from app.core.base.models import BaseModel
+# IMPORTANTE: Importar todos los modelos de los dominios aquí
+from app.domains import (
+    ciudadanos,
+    localidades,
+    eventos,
+    salud,
+    establecimientos,
+    diagnosticos,
+    investigaciones,
+    analytics,
+)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -35,7 +48,7 @@ if config.config_file_name is not None:
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-target_metadata = BaseModel.metadata
+target_metadata = SQLModel.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -46,7 +59,7 @@ target_metadata = BaseModel.metadata
 def get_database_url() -> str:
     """
     Obtiene la URL de la base de datos desde las configuraciones.
-    
+
     Returns:
         URL de conexión a la base de datos
     """
@@ -84,12 +97,12 @@ def run_migrations_offline() -> None:
 def do_run_migrations(connection: Connection) -> None:
     """
     Ejecuta las migrations con una conexión existente.
-    
+
     Args:
         connection: Conexión a la base de datos
     """
     context.configure(
-        connection=connection, 
+        connection=connection,
         target_metadata=target_metadata,
         # Configuraciones específicas para epidemiología
         render_as_batch=False,
@@ -98,7 +111,7 @@ def do_run_migrations(connection: Connection) -> None:
         # Incluir esquemas si es necesario
         include_schemas=True,
         # Configuración para timestamps y UUIDs
-        user_module_prefix='sqlalchemy_utils.',
+        user_module_prefix="sqlalchemy_utils.",
     )
 
     with context.begin_transaction():
@@ -115,7 +128,7 @@ async def run_async_migrations() -> None:
     # Configuración del engine asíncrono
     configuration = config.get_section(config.config_ini_section, {})
     configuration["sqlalchemy.url"] = get_database_url()
-    
+
     connectable = async_engine_from_config(
         configuration,
         prefix="sqlalchemy.",
@@ -137,15 +150,15 @@ def run_migrations_online() -> None:
     """
     # Para compatibilidad, también soportamos modo síncrono
     from sqlalchemy import create_engine
-    
+
     url = get_database_url()
-    
-    # Convertir URL async aSync si es necesario para migrations
+
+    # Convertir URL async a sync si es necesario para migrations
     if url.startswith("postgresql+asyncpg://"):
         sync_url = url.replace("postgresql+asyncpg://", "postgresql://")
     else:
         sync_url = url
-    
+
     connectable = create_engine(
         sync_url,
         poolclass=pool.NullPool,
@@ -153,7 +166,7 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, 
+            connection=connection,
             target_metadata=target_metadata,
             render_as_batch=False,
             compare_type=True,
