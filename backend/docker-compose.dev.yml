@@ -1,0 +1,97 @@
+# Docker Compose para DESARROLLO del Sistema de Epidemiología
+# Configuración optimizada para desarrollo con hot-reload
+
+version: '3.8'
+
+services:
+  # =============================================================================
+  # Base de datos PostgreSQL
+  # =============================================================================
+  db:
+    image: postgres:15-alpine
+    container_name: epidemiologia_db_dev
+    environment:
+      POSTGRES_DB: epidemiologia_db
+      POSTGRES_USER: epidemiologia_user
+      POSTGRES_PASSWORD: epidemiologia_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U epidemiologia_user -d epidemiologia_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - epidemiologia_network_dev
+
+  # =============================================================================
+  # Redis para Celery
+  # =============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: epidemiologia_redis_dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data_dev:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - epidemiologia_network_dev
+
+  # =============================================================================
+  # API Backend (FastAPI) - DESARROLLO con hot-reload
+  # =============================================================================
+  api:
+    image: python:3.11-slim
+    container_name: epidemiologia_api_dev
+    working_dir: /app
+    environment:
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql+asyncpg://epidemiologia_user:epidemiologia_password@db:5432/epidemiologia_db
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: development_secret_key_change_in_production
+      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+      ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0
+      PYTHONPATH: /app
+      PYTHONDONTWRITEBYTECODE: 1
+      PYTHONUNBUFFERED: 1
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - ./uploads:/app/uploads
+    command: >
+      bash -c "
+        apt-get update && apt-get install -y libpq5 &&
+        pip install --no-cache-dir -e . &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - epidemiologia_network_dev
+
+# =============================================================================
+# Volúmenes persistentes para desarrollo
+# =============================================================================
+volumes:
+  postgres_data_dev:
+    driver: local
+  redis_data_dev:
+    driver: local
+
+# =============================================================================
+# Red privada para comunicación entre servicios
+# =============================================================================
+networks:
+  epidemiologia_network_dev:
+    driver: bridge
