@@ -154,6 +154,7 @@ class TratamientoEvento(BaseModel, table=True):
     # Campos propios
     # TODO: Chequear con Luciano si estab_tto debería ser el FK directamente
     # o mantener ambos campos (texto libre + FK opcional)
+    # NO TENER, ya que son campos libres, bah, doble-chequear
     establecimiento_tratamiento: Optional[str] = Field(
         None, max_length=150, description="Establecimiento de tratamiento (texto libre)"
     )
