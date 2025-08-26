@@ -68,9 +68,6 @@ class Ciudadano(BaseModel, table=True):
         back_populates="ciudadano"
     )
     viajes: List["ViajesCiudadano"] = Relationship(back_populates="ciudadano")
-    ambitos_concurrencia: List["AmbitosConcurrenciaCiudadano"] = Relationship(
-        back_populates="ciudadano"
-    )
 
 
 class Animal(BaseModel, table=True):
@@ -245,16 +242,15 @@ class ViajesCiudadano(BaseModel, table=True):
     localidad: Optional["Localidad"] = Relationship()
 
 
-class AmbitosConcurrenciaCiudadano(BaseModel, table=True):
-    """Ámbitos de concurrencia de ciudadanos"""
+class AmbitosConcurrenciaEvento(BaseModel, table=True):
+    """Ámbitos de concurrencia durante eventos epidemiológicos"""
 
-    __tablename__ = "ambitos_concurrencia_ciudadano"
+    __tablename__ = "ambitos_concurrencia_evento"
 
     # Foreign Keys
-    codigo_ciudadano: int = Field(
-        sa_type=BigInteger,
-        foreign_key="ciudadano.codigo_ciudadano",
-        description="Código del ciudadano",
+    id_evento: int = Field(
+        foreign_key="evento.id", 
+        description="ID del evento"
     )
     id_localidad_ambito_ocurrencia: Optional[int] = Field(
         None,
@@ -287,5 +283,5 @@ class AmbitosConcurrenciaCiudadano(BaseModel, table=True):
     )
 
     # Relaciones
-    ciudadano: "Ciudadano" = Relationship(back_populates="ambitos_concurrencia")
+    evento: "Evento" = Relationship(back_populates="ambitos_concurrencia")
     localidad: Optional["Localidad"] = Relationship()

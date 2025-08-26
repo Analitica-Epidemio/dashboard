@@ -7,7 +7,7 @@ from sqlmodel import Field, Relationship
 from app.core.models import BaseModel
 
 if TYPE_CHECKING:
-    from app.domains.ciudadanos.models import Animal, Ciudadano
+    from app.domains.ciudadanos.models import AmbitosConcurrenciaEvento, Animal, Ciudadano
     from app.domains.diagnosticos.models import (
         DiagnosticoEvento,
         EstudioEvento,
@@ -191,6 +191,9 @@ class Evento(BaseModel, table=True):
         back_populates="evento"
     )
     contactos: List["ContactosNotificacion"] = Relationship(
+        back_populates="evento"
+    )
+    ambitos_concurrencia: List["AmbitosConcurrenciaEvento"] = Relationship(
         back_populates="evento"
     )
 
