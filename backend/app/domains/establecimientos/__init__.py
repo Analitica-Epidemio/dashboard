@@ -7,6 +7,6 @@ Contiene:
 - Relaciones con localidades y usuarios
 """
 
-from .models import Establecimiento, EstablecimientoEvento
+from .models import Establecimiento
 
-__all__ = ["Establecimiento", "EstablecimientoEvento"]
+__all__ = ["Establecimiento"]

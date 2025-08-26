@@ -11,7 +11,8 @@ Contiene:
 """
 
 from .models import (
-    AmbitosConcurrenciaCiudadano,
+    AmbitosConcurrenciaEvento,
+    Animal,
     Ciudadano,
     CiudadanoComorbilidades,
     CiudadanoDatos,
@@ -25,5 +26,6 @@ __all__ = [
     "CiudadanoDatos",
     "CiudadanoComorbilidades",
     "ViajesCiudadano",
-    "AmbitosConcurrenciaCiudadano",
+    "AmbitosConcurrenciaEvento",
+    "Animal",
 ]

@@ -35,7 +35,10 @@ from app.domains import (
     diagnosticos,
     investigaciones,
     analytics,
+    uploads,
 )
+
+# Los modelos de uploads ya se importan a través de app.domains
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

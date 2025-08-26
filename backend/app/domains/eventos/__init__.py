@@ -11,15 +11,17 @@ Contiene:
 from .models import (
     AntecedenteEpidemiologico,
     AntecedentesEpidemiologicosEvento,
-    CiudadanoEvento,
     DetalleEventoSintomas,
     Evento,
+    GrupoEno,
+    TipoEno,
 )
 
 __all__ = [
     "Evento",
     "AntecedenteEpidemiologico",
-    "CiudadanoEvento",
     "DetalleEventoSintomas",
     "AntecedentesEpidemiologicosEvento",
+    "GrupoEno",
+    "TipoEno",
 ]

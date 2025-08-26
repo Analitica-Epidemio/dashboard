@@ -241,7 +241,6 @@ class MuestraEvento(BaseModel, table=True):
     evento: "Evento" = Relationship(back_populates="muestras")
     establecimiento: "Establecimiento" = Relationship(back_populates="muestras")
     muestra: "Muestra" = Relationship(back_populates="muestras_eventos")
-    estudios: List["EstudioEvento"] = Relationship(back_populates="muestra_evento")
 
 
 class VacunasCiudadano(BaseModel, table=True):
@@ -274,39 +273,3 @@ class VacunasCiudadano(BaseModel, table=True):
     vacuna: "Vacuna" = Relationship(back_populates="vacunas_ciudadanos")
 
 
-class EstudioEvento(BaseModel, table=True):
-    """
-    Estudios de laboratorio normalizados realizados en muestras.
-    
-    Registra estudios específicos realizados en muestras biológicas con
-    relaciones normalizadas a determinación, técnica y resultado técnica.
-    """
-
-    __tablename__ = "estudio_evento"
-
-    # Campos propios
-    fecha_estudio: Optional[date] = Field(None, description="Fecha del estudio")
-    fecha_resultado: Optional[date] = Field(None, description="Fecha del resultado")
-    observaciones: Optional[str] = Field(
-        None, max_length=500, description="Observaciones del estudio"
-    )
-
-    # Foreign Keys
-    id_muestra_evento: int = Field(
-        foreign_key="muestra_evento.id", description="ID de la muestra evento"
-    )
-    id_determinacion: int = Field(
-        foreign_key="determinacion.id", description="ID de la determinación"
-    )
-    id_tecnica: int = Field(
-        foreign_key="tecnica.id", description="ID de la técnica"
-    )
-    id_resultado_tecnica: int = Field(
-        foreign_key="resultado_tecnica.id", description="ID del resultado técnica"
-    )
-
-    # Relaciones
-    muestra_evento: "MuestraEvento" = Relationship(back_populates="estudios")
-    determinacion: "Determinacion" = Relationship()
-    tecnica: "Tecnica" = Relationship()
-    resultado_tecnica: "ResultadoTecnica" = Relationship()
