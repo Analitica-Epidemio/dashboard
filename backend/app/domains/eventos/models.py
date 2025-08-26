@@ -7,14 +7,13 @@ from sqlmodel import Field, Relationship
 from app.core.models import BaseModel
 
 if TYPE_CHECKING:
-    from app.domains.ciudadanos.models import Ciudadano
+    from app.domains.ciudadanos.models import Animal, Ciudadano
     from app.domains.diagnosticos.models import (
         DiagnosticoEvento,
         EstudioEvento,
         InternacionEvento,
         TratamientoEvento,
     )
-    from app.domains.establecimientos.models import EstablecimientoEvento
     from app.domains.investigaciones.models import (
         ContactosNotificacion,
         InvestigacionEvento,
@@ -22,20 +21,46 @@ if TYPE_CHECKING:
     from app.domains.salud.models import MuestraEvento, Sintoma, VacunasCiudadano
 
 
-class Evento(BaseModel, table=True):
-    """Eventos epidemiológicos"""
+class GrupoEno(BaseModel, table=True):
+    """Grupos de eventos epidemiológicos (ENO)"""
 
-    __tablename__ = "evento"
+    __tablename__ = "grupo_eno"
 
     # Campos propios
-    nombre: str = Field(..., description="Nombre del evento epidemiológico")
-    # TODO: Deberíamos de tener un grupo evento tabla???
-    grupo_evento: Optional[str] = Field(
-        None, max_length=150, description="Grupo al que pertenece el evento"
+    nombre: str = Field(..., max_length=150, description="Nombre del grupo ENO")
+    descripcion: Optional[str] = Field(
+        None, max_length=500, description="Descripción del grupo"
+    )
+    codigo: Optional[str] = Field(
+        None, max_length=50, unique=True, index=True, description="Código del grupo"
     )
 
     # Relaciones
-    ciudadanos_eventos: List["CiudadanoEvento"] = Relationship(back_populates="evento")
+    tipos_eno: List["TipoEno"] = Relationship(back_populates="grupo_eno")
+
+
+class TipoEno(BaseModel, table=True):
+    """Tipos de eventos epidemiológicos (ENO)"""
+
+    __tablename__ = "tipo_eno"
+
+    # Campos propios
+    nombre: str = Field(..., max_length=200, description="Nombre del tipo ENO")
+    descripcion: Optional[str] = Field(
+        None, max_length=500, description="Descripción del tipo"
+    )
+    codigo: Optional[str] = Field(
+        None, max_length=50, unique=True, index=True, description="Código del tipo"
+    )
+
+    # Foreign Keys
+    id_grupo_eno: int = Field(
+        foreign_key="grupo_eno.id", description="ID del grupo ENO"
+    )
+
+    # Relaciones
+    grupo_eno: "GrupoEno" = Relationship(back_populates="tipos_eno")
+    eventos: List["Evento"] = Relationship(back_populates="tipo_eno")
 
 
 class AntecedenteEpidemiologico(BaseModel, table=True):
@@ -57,10 +82,10 @@ class AntecedenteEpidemiologico(BaseModel, table=True):
     )
 
 
-class CiudadanoEvento(BaseModel, table=True):
-    """Eventos de ciudadanos"""
+class Evento(BaseModel, table=True):
+    """Eventos epidemiológicos (instancias específicas de un tipo ENO)"""
 
-    __tablename__ = "ciudadano_evento"
+    __tablename__ = "evento"
 
     # Campos propios
     id_evento_caso: int = Field(
@@ -127,42 +152,46 @@ class CiudadanoEvento(BaseModel, table=True):
     )
 
     # Foreign Keys
-    id_evento: int = Field(foreign_key="evento.id", description="ID del evento")
-    codigo_ciudadano: int = Field(
+    id_tipo_eno: int = Field(foreign_key="tipo_eno.id", description="ID del tipo ENO")
+    codigo_ciudadano: Optional[int] = Field(
+        None,
         sa_type=BigInteger,
         foreign_key="ciudadano.codigo_ciudadano",
-        description="Código del ciudadano",
+        description="Código del ciudadano (opcional si es evento de animal)",
+    )
+    id_animal: Optional[int] = Field(
+        None,
+        foreign_key="animal.id",
+        description="ID del animal (opcional si es evento de ciudadano)",
     )
 
     # Relaciones
-    evento: "Evento" = Relationship(back_populates="ciudadanos_eventos")
-    ciudadano: "Ciudadano" = Relationship(back_populates="eventos")
+    tipo_eno: "TipoEno" = Relationship(back_populates="eventos")
+    ciudadano: Optional["Ciudadano"] = Relationship(back_populates="eventos")
+    animal: Optional["Animal"] = Relationship(back_populates="eventos")
     sintomas: List["DetalleEventoSintomas"] = Relationship(
-        back_populates="ciudadano_evento"
+        back_populates="evento"
     )
-    muestras: List["MuestraEvento"] = Relationship(back_populates="ciudadano_evento")
+    muestras: List["MuestraEvento"] = Relationship(back_populates="evento")
     antecedentes: List["AntecedentesEpidemiologicosEvento"] = Relationship(
-        back_populates="ciudadano_evento"
+        back_populates="evento"
     )
-    vacunas: List["VacunasCiudadano"] = Relationship(back_populates="ciudadano_evento")
-    establecimientos: List["EstablecimientoEvento"] = Relationship(
-        back_populates="ciudadano_evento"
-    )
+    vacunas: List["VacunasCiudadano"] = Relationship(back_populates="evento")
     diagnosticos: List["DiagnosticoEvento"] = Relationship(
-        back_populates="ciudadano_evento"
+        back_populates="evento"
     )
     internaciones: List["InternacionEvento"] = Relationship(
-        back_populates="ciudadano_evento"
+        back_populates="evento"
     )
-    estudios: List["EstudioEvento"] = Relationship(back_populates="ciudadano_evento")
+    estudios: List["EstudioEvento"] = Relationship(back_populates="evento")
     tratamientos: List["TratamientoEvento"] = Relationship(
-        back_populates="ciudadano_evento"
+        back_populates="evento"
     )
     investigaciones: List["InvestigacionEvento"] = Relationship(
-        back_populates="ciudadano_evento"
+        back_populates="evento"
     )
     contactos: List["ContactosNotificacion"] = Relationship(
-        back_populates="ciudadano_evento"
+        back_populates="evento"
     )
 
 
@@ -187,15 +216,15 @@ class DetalleEventoSintomas(BaseModel, table=True):
     )
 
     # Foreign Keys
-    id_ciudadano_evento: int = Field(
-        foreign_key="ciudadano_evento.id", description="ID del evento del ciudadano"
+    id_evento: int = Field(
+        foreign_key="evento.id", description="ID del evento"
     )
     id_sintoma: int = Field(
         foreign_key="sintoma.id_snvs_signo_sintoma", description="ID del síntoma"
     )
 
     # Relaciones
-    ciudadano_evento: "CiudadanoEvento" = Relationship(back_populates="sintomas")
+    evento: "Evento" = Relationship(back_populates="sintomas")
     sintoma: "Sintoma" = Relationship(back_populates="detalle_eventos")
 
 
@@ -215,15 +244,15 @@ class AntecedentesEpidemiologicosEvento(BaseModel, table=True):
     )
 
     # Foreign Keys
-    id_ciudadano_evento: int = Field(
-        foreign_key="ciudadano_evento.id", description="ID del evento del ciudadano"
+    id_evento: int = Field(
+        foreign_key="evento.id", description="ID del evento"
     )
     id_antecedente_epidemiologico: int = Field(
         foreign_key="antecedente_epidemiologico.id", description="ID del antecedente"
     )
 
     # Relaciones
-    ciudadano_evento: "CiudadanoEvento" = Relationship(back_populates="antecedentes")
+    evento: "Evento" = Relationship(back_populates="antecedentes")
     antecedente_epidemiologico_rel: "AntecedenteEpidemiologico" = Relationship(
         back_populates="antecedentes_eventos"
     )

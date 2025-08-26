@@ -10,7 +10,7 @@ from app.core.models import BaseModel
 from app.core.shared.enums import FrecuenciaOcurrencia, SexoBiologico, TipoDocumento
 
 if TYPE_CHECKING:
-    from app.domains.eventos.models import CiudadanoEvento
+    from app.domains.eventos.models import Evento
     from app.domains.localidades.models import Localidad
     from app.domains.salud.models import Comorbilidad
 
@@ -63,7 +63,7 @@ class Ciudadano(BaseModel, table=True):
     # Relaciones
     domicilios: List["CiudadanoDomicilio"] = Relationship(back_populates="ciudadano")
     datos: List["CiudadanoDatos"] = Relationship(back_populates="ciudadano")
-    eventos: List["CiudadanoEvento"] = Relationship(back_populates="ciudadano")
+    eventos: List["Evento"] = Relationship(back_populates="ciudadano")
     comorbilidades: List["CiudadanoComorbilidades"] = Relationship(
         back_populates="ciudadano"
     )
@@ -71,6 +71,45 @@ class Ciudadano(BaseModel, table=True):
     ambitos_concurrencia: List["AmbitosConcurrenciaCiudadano"] = Relationship(
         back_populates="ciudadano"
     )
+
+
+class Animal(BaseModel, table=True):
+    """Datos principales de animales para eventos epidemiológicos"""
+
+    __tablename__ = "animal"
+    __table_args__ = {"extend_existing": True}
+
+    # Campos propios
+    especie: str = Field(..., max_length=100, description="Especie del animal")
+    raza: Optional[str] = Field(None, max_length=100, description="Raza del animal")
+    sexo: Optional[str] = Field(None, max_length=20, description="Sexo del animal")
+    edad_aproximada: Optional[int] = Field(None, description="Edad aproximada en meses")
+    identificacion: Optional[str] = Field(
+        None, max_length=100, description="Identificación del animal (collar, chip, etc)"
+    )
+    
+    # Datos del propietario/responsable
+    propietario_nombre: Optional[str] = Field(
+        None, max_length=150, description="Nombre del propietario"
+    )
+    propietario_contacto: Optional[str] = Field(
+        None, max_length=150, description="Contacto del propietario"
+    )
+
+    # Ubicación
+    id_localidad_indec: Optional[int] = Field(
+        None,
+        sa_type=BigInteger,
+        foreign_key="localidad.id_localidad_indec",
+        description="ID de la localidad INDEC",
+    )
+    direccion: Optional[str] = Field(
+        None, max_length=200, description="Dirección donde se encuentra el animal"
+    )
+
+    # Relaciones
+    localidad: Optional["Localidad"] = Relationship()
+    eventos: List["Evento"] = Relationship(back_populates="animal")
 
 
 class CiudadanoDomicilio(BaseModel, table=True):

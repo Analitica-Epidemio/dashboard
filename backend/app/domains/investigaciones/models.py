@@ -10,7 +10,7 @@ from app.core.models import BaseModel
 from app.core.shared.enums import OrigenFinanciamiento
 
 if TYPE_CHECKING:
-    from app.domains.eventos.models import CiudadanoEvento
+    from app.domains.eventos.models import Evento
 
 
 class InvestigacionEvento(BaseModel, table=True):
@@ -50,12 +50,12 @@ class InvestigacionEvento(BaseModel, table=True):
     )
 
     # Foreign Keys
-    id_ciudadano_evento: int = Field(
-        foreign_key="ciudadano_evento.id", description="ID del evento del ciudadano"
+    id_evento: int = Field(
+        foreign_key="evento.id", description="ID del evento"
     )
 
     # Relaciones
-    ciudadano_evento: "CiudadanoEvento" = Relationship(back_populates="investigaciones")
+    evento: "Evento" = Relationship(back_populates="investigaciones")
 
 
 class ContactosNotificacion(BaseModel, table=True):
@@ -95,9 +95,9 @@ class ContactosNotificacion(BaseModel, table=True):
     )
 
     # Foreign Keys
-    id_ciudadano_evento: int = Field(
-        foreign_key="ciudadano_evento.id", description="ID del evento del ciudadano"
+    id_evento: int = Field(
+        foreign_key="evento.id", description="ID del evento"
     )
 
     # Relaciones
-    ciudadano_evento: "CiudadanoEvento" = Relationship(back_populates="contactos")
+    evento: "Evento" = Relationship(back_populates="contactos")

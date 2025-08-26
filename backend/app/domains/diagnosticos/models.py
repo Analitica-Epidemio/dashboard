@@ -10,7 +10,7 @@ from app.core.shared.enums import ResultadoTratamiento
 
 if TYPE_CHECKING:
     from app.domains.establecimientos.models import Establecimiento
-    from app.domains.eventos.models import CiudadanoEvento
+    from app.domains.eventos.models import Evento
 
 
 class DiagnosticoEvento(BaseModel, table=True):
@@ -54,8 +54,8 @@ class DiagnosticoEvento(BaseModel, table=True):
     )
 
     # Foreign Keys
-    id_ciudadano_evento: int = Field(
-        foreign_key="ciudadano_evento.id", description="ID del evento del ciudadano"
+    id_evento: int = Field(
+        foreign_key="evento.id", description="ID del evento"
     )
     # Corregido por Ignacio - FK estaba mal mapeado a establecimiento
     id_establecimiento_diagnostico: Optional[int] = Field(
@@ -65,7 +65,7 @@ class DiagnosticoEvento(BaseModel, table=True):
     )
 
     # Relaciones
-    ciudadano_evento: "CiudadanoEvento" = Relationship(back_populates="diagnosticos")
+    evento: "Evento" = Relationship(back_populates="diagnosticos")
     establecimiento: Optional["Establecimiento"] = Relationship(
         back_populates="diagnosticos"
     )
@@ -103,12 +103,12 @@ class InternacionEvento(BaseModel, table=True):
     )
 
     # Foreign Keys
-    id_ciudadano_evento: int = Field(
-        foreign_key="ciudadano_evento.id", description="ID del evento del ciudadano"
+    id_evento: int = Field(
+        foreign_key="evento.id", description="ID del evento"
     )
 
     # Relaciones
-    ciudadano_evento: "CiudadanoEvento" = Relationship(back_populates="internaciones")
+    evento: "Evento" = Relationship(back_populates="internaciones")
 
 
 class EstudioEvento(BaseModel, table=True):
@@ -136,12 +136,12 @@ class EstudioEvento(BaseModel, table=True):
     fecha_recepcion: Optional[date] = Field(None, description="Fecha de recepción")
 
     # Foreign Keys
-    id_ciudadano_evento: int = Field(
-        foreign_key="ciudadano_evento.id", description="ID del evento del ciudadano"
+    id_evento: int = Field(
+        foreign_key="evento.id", description="ID del evento"
     )
 
     # Relaciones
-    ciudadano_evento: "CiudadanoEvento" = Relationship(back_populates="estudios")
+    evento: "Evento" = Relationship(back_populates="estudios")
 
 
 class TratamientoEvento(BaseModel, table=True):
@@ -176,8 +176,8 @@ class TratamientoEvento(BaseModel, table=True):
     )
 
     # Foreign Keys
-    id_ciudadano_evento: int = Field(
-        foreign_key="ciudadano_evento.id", description="ID del evento del ciudadano"
+    id_evento: int = Field(
+        foreign_key="evento.id", description="ID del evento"
     )
     id_establecimiento_tratamiento: Optional[int] = Field(
         None,
@@ -186,5 +186,5 @@ class TratamientoEvento(BaseModel, table=True):
     )
 
     # Relaciones
-    ciudadano_evento: "CiudadanoEvento" = Relationship(back_populates="tratamientos")
+    evento: "Evento" = Relationship(back_populates="tratamientos")
     establecimiento: Optional["Establecimiento"] = Relationship()
