@@ -80,6 +80,40 @@ services:
     networks:
       - epi_dashboard_network_dev
 
+  # =============================================================================
+  # Celery Worker para procesamiento asíncrono
+  # =============================================================================
+  celery_worker:
+    image: python:3.11-slim
+    container_name: epi_dashboard_celery_worker_dev
+    working_dir: /app
+    environment:
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql+asyncpg://epidemiologia_user:epidemiologia_password@db:5432/epidemiologia_db
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      SECRET_KEY: development_secret_key_change_in_production
+      PYTHONPATH: /app
+      PYTHONDONTWRITEBYTECODE: 1
+      PYTHONUNBUFFERED: 1
+    volumes:
+      - .:/app
+      - ./uploads:/app/uploads
+    command: >
+      bash -c "
+        apt-get update && apt-get install -y libpq5 libmagic1 &&
+        pip install --no-cache-dir -e . &&
+        celery -A app.core.celery_app:celery_app worker --loglevel=info --concurrency=2 -Q default,file_processing,maintenance
+      "
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - epi_dashboard_network_dev
+
 # =============================================================================
 # Volúmenes persistentes para desarrollo
 # =============================================================================
