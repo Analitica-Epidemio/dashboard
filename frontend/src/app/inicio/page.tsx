@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 
@@ -10,13 +10,23 @@ import { SheetSelector } from "./_components/sheet-selector";
 import { DataTableSheet } from "./_components/data-table-sheet";
 import { UploadActions } from "./_components/upload-actions";
 import { ValidationError } from "./_components/validation-error";
+import { UploadSteps } from "./_components/upload-steps";
+import { UploadSuccess } from "./_components/upload-success";
+import { UploadProgress } from "./_components/upload-progress";
 
 // Hooks
-import { useSheetUpload } from "./_hooks/use-file-upload";
+import { useAsyncSheetUpload } from "./_hooks/use-file-upload";
 import { useClientPreview } from "./_hooks/use-client-preview";
+import { useJobProgress } from "./_hooks/use-job-progress";
+
+interface UploadSuccessData {
+  sheetName: string;
+  totalRows: number;
+  message: string;
+}
 
 export default function Page() {
-  const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState<UploadSuccessData | null>(null);
   
   // Hook for client-side preview
   const {
@@ -25,6 +35,7 @@ export default function Page() {
     selectedSheet,
     hasValidSheets,
     isProcessing,
+    progress,
     error,
     validationError,
     processFile,
@@ -33,12 +44,32 @@ export default function Page() {
   } = useClientPreview();
 
   // Hook for uploading selected sheet
-  const sheetUploadMutation = useSheetUpload();
+  const sheetUploadMutation = useAsyncSheetUpload();
+  
+  // Hook for job progress tracking
+  const { 
+    startPolling
+  } = useJobProgress();
+  
+  // State for current job ID
+  const [currentJobId, setCurrentJobId] = useState<string | null>(null);
+  
+  // Handler para cuando el job se completa exitosamente
+  const handleJobComplete = useCallback((resultData: { total_rows?: number; columns?: string[]; file_path?: string }) => {
+    if (resultData.total_rows && selectedSheet) {
+      setUploadSuccess({
+        sheetName: selectedSheet,
+        totalRows: resultData.total_rows,
+        message: `¡Éxito! Hoja "${selectedSheet}" procesada con ${resultData.total_rows.toLocaleString()} filas.`
+      });
+    }
+    setCurrentJobId(null);
+  }, [selectedSheet]);
 
-  const handleFileAccepted = async (file: File) => {
+  const handleFileAccepted = useCallback(async (file: File) => {
     setUploadSuccess(null);
     await processFile(file);
-  };
+  }, [processFile]);
 
   const handleContinue = async () => {
     if (!originalFile || !selectedSheet) {
@@ -46,31 +77,49 @@ export default function Page() {
     }
 
     try {
+      console.log(`Iniciando upload de la hoja "${selectedSheet}"...`);
+      
       const result = await sheetUploadMutation.mutateAsync({
         originalFile,
         selectedSheetName: selectedSheet,
         originalFilename: originalFile.name,
       });
 
-      setUploadSuccess(
-        `¡Éxito! Hoja "${result.sheet_name}" subida con ${result.total_rows} filas procesadas.`
-      );
+      // Iniciar tracking del job
+      setCurrentJobId(result.job_id);
+      startPolling(result.job_id);
       
-      console.log("Upload exitoso:", result);
-      
-      // Opcional: limpiar después del éxito
-      // clearData();
+      console.log("Job iniciado:", result);
       
     } catch (err) {
       console.error("Error al subir hoja:", err);
+      // El error se maneja automáticamente por el mutation
     }
   };
 
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     clearData();
     setUploadSuccess(null);
     sheetUploadMutation.reset();
-  };
+  }, [clearData, sheetUploadMutation]);
+
+  // Funciones para el componente de éxito
+  const handleUploadAnother = useCallback(() => {
+    handleReset();
+  }, [handleReset]);
+
+  const handleViewDashboard = useCallback(() => {
+    // Para el componente de success
+    console.log("🚀 Navegando al dashboard...");
+    alert("🚧 Dashboard en desarrollo. Los datos se actualizarán automáticamente cuando esté listo.");
+  }, []);
+
+  // Determinar paso actual para el breadcrumb
+  const getCurrentStep = useCallback((): 'upload' | 'preview' | 'processing' => {
+    if (currentJobId || uploadSuccess) return 'processing';
+    if (hasValidSheets) return 'preview';
+    return 'upload';
+  }, [currentJobId, uploadSuccess, hasValidSheets]);
 
   return (
     <SidebarProvider
@@ -83,16 +132,31 @@ export default function Page() {
     >
       <AppSidebar variant="inset" />
       <SidebarInset>
-        <div className="flex flex-col items-center min-h-screen bg-gray-100 p-6">
-          {/* Mensaje de éxito */}
-          {uploadSuccess && (
-            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg text-green-800 max-w-2xl">
-              <p className="font-medium">{uploadSuccess}</p>
-            </div>
-          )}
+        <div className="flex flex-col min-h-screen bg-background">
+          <div className="flex-1 w-full max-w-6xl mx-auto px-6 py-8">
+          {/* Breadcrumb de pasos */}
+          <UploadSteps currentStep={getCurrentStep()} />
 
-          {/* Mostrar error de validación si no hay hojas válidas */}
-          {validationError ? (
+          {/* Flujo principal condicional */}
+          {uploadSuccess ? (
+            <UploadSuccess
+              sheetName={uploadSuccess.sheetName}
+              totalRows={uploadSuccess.totalRows}
+              onUploadAnother={handleUploadAnother}
+              onViewDashboard={handleViewDashboard}
+            />
+          ) : currentJobId ? (
+            /* Mostrar progreso cuando hay un job activo */
+            <UploadProgress
+              jobId={currentJobId}
+              onComplete={handleJobComplete}
+              onError={(error) => {
+                console.error("Job error:", error);
+                setCurrentJobId(null);
+              }}
+              dashboardHref="/dashboard"
+            />
+          ) : validationError ? (
             <ValidationError
               message={validationError}
               onRetry={handleReset}
@@ -101,26 +165,28 @@ export default function Page() {
             <FileUploadArea
               onFileAccepted={handleFileAccepted}
               isProcessing={isProcessing}
+              progress={progress}
               error={error}
             />
           ) : (
-            <SheetSelector
-              sheets={sheets}
-              selectedSheet={selectedSheet}
-              onSheetChange={setSelectedSheet}
-            >
-              {(sheet) => <DataTableSheet sheet={sheet} />}
-            </SheetSelector>
+            <>
+              <SheetSelector
+                sheets={sheets}
+                selectedSheet={selectedSheet}
+                onSheetChange={setSelectedSheet}
+              >
+                {(sheet) => <DataTableSheet sheet={sheet} />}
+              </SheetSelector>
+              
+              <UploadActions
+                selectedSheet={selectedSheet}
+                onContinue={handleContinue}
+                onReset={handleReset}
+                isUploading={sheetUploadMutation.isPending}
+              />
+            </>
           )}
-
-          {hasValidSheets && (
-            <UploadActions
-              selectedSheet={selectedSheet}
-              onContinue={handleContinue}
-              onReset={handleReset}
-              isUploading={sheetUploadMutation.isPending}
-            />
-          )}
+          </div>
         </div>
       </SidebarInset>
     </SidebarProvider>

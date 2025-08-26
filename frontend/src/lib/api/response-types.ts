@@ -57,12 +57,12 @@ export interface PaginatedResponse<T> {
  * Type guard para verificar si es un error
  */
 export function isErrorResponse(response: unknown): response is ErrorResponse {
-  return response && typeof response === 'object' && 'error' in response;
+  return !!(response && typeof response === 'object' && 'error' in response);
 }
 
 /**
  * Type guard para verificar si es éxito
  */
 export function isSuccessResponse<T>(response: unknown): response is SuccessResponse<T> {
-  return response && typeof response === 'object' && 'data' in response;
+  return !!(response && typeof response === 'object' && 'data' in response);
 }

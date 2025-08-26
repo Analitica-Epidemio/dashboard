@@ -36,8 +36,16 @@ export function UploadActions({
         <Button
           onClick={onContinue}
           disabled={!selectedSheet || isUploading}
+          className="min-w-[200px]"
         >
-          {isUploading ? "Subiendo..." : "Subir hoja seleccionada"}
+          {isUploading ? (
+            <div className="flex items-center space-x-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              <span>Enviando al servidor...</span>
+            </div>
+          ) : (
+            "Subir hoja seleccionada"
+          )}
         </Button>
       </div>
     </div>

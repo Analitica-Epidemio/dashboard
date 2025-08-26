@@ -30,6 +30,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/uploads/csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload Csv Async
+         * @description Procesamiento asíncrono de CSV con Celery.
+         *
+         *     **Arquitectura moderna:**
+         *     1. Cliente sube CSV convertido desde Excel
+         *     2. Servidor crea job asíncrono
+         *     3. Celery worker procesa en background
+         *     4. Cliente hace polling del estado
+         *
+         *     **Ventajas:**
+         *     - No bloquea la UI
+         *     - Procesa archivos grandes sin timeout
+         *     - Progress tracking en tiempo real
+         *     - Error handling robusto
+         *
+         *     **Returns:** Job ID para seguimiento del progreso
+         */
+        post: operations["upload_csv_async_api_v1_uploads_csv_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/uploads/jobs/{job_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Job Status
+         * @description Obtener estado de un job de procesamiento.
+         *
+         *     **Polling endpoint** para seguimiento en tiempo real:
+         *     - Progreso percentage (0-100)
+         *     - Paso actual de procesamiento
+         *     - Errores si los hay
+         *     - Resultado final cuando completa
+         *
+         *     **Estados posibles:**
+         *     - `pending`: En cola esperando
+         *     - `in_progress`: Procesando activamente
+         *     - `completed`: Completado exitosamente
+         *     - `failed`: Error en procesamiento
+         *     - `cancelled`: Cancelado por usuario
+         */
+        get: operations["get_job_status_api_v1_uploads_jobs__job_id__status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/uploads/jobs/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Cancel Job
+         * @description Cancelar un job en progreso.
+         *
+         *     **Funcionalidad:**
+         *     - Revoca la task de Celery
+         *     - Marca el job como cancelado
+         *     - Limpia archivos temporales
+         *
+         *     **Limitaciones:**
+         *     - Solo jobs en estado `pending` o `in_progress`
+         *     - Jobs completados no se pueden cancelar
+         */
+        delete: operations["cancel_job_api_v1_uploads_jobs__job_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/": {
         parameters: {
             query?: never;
@@ -54,6 +150,48 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AsyncJobResponse
+         * @description Respuesta cuando se inicia un job asíncrono.
+         */
+        AsyncJobResponse: {
+            /**
+             * Job Id
+             * @description UUID del job para seguimiento
+             */
+            job_id: string;
+            /** @description Estado inicial del job */
+            status: components["schemas"]["JobStatus"];
+            /**
+             * Message
+             * @description Mensaje informativo
+             */
+            message: string;
+            /**
+             * Polling Url
+             * @description URL para consultar estado
+             */
+            polling_url: string;
+        };
+        /** Body_upload_csv_async_api_v1_uploads_csv_post */
+        Body_upload_csv_async_api_v1_uploads_csv_post: {
+            /**
+             * File
+             * Format: binary
+             * @description Archivo CSV epidemiológico
+             */
+            file: string;
+            /**
+             * Original Filename
+             * @description Nombre del archivo Excel original
+             */
+            original_filename: string;
+            /**
+             * Sheet Name
+             * @description Nombre de la hoja convertida
+             */
+            sheet_name: string;
+        };
         /**
          * ErrorDetail
          * @description Detalle de un error específico.
@@ -96,6 +234,11 @@ export interface components {
              */
             request_id?: string | null;
         };
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
+        };
         /**
          * HelloData
          * @description Datos del saludo.
@@ -119,6 +262,90 @@ export interface components {
              */
             server: string;
         };
+        /**
+         * JobStatus
+         * @description Estados posibles de un trabajo de procesamiento.
+         * @enum {string}
+         */
+        JobStatus: "pending" | "in_progress" | "completed" | "failed" | "cancelled";
+        /**
+         * JobStatusResponse
+         * @description Respuesta del estado de un job asíncrono.
+         */
+        JobStatusResponse: {
+            /**
+             * Job Id
+             * @description UUID del job
+             */
+            job_id: string;
+            /** @description Estado actual del job */
+            status: components["schemas"]["JobStatus"];
+            /**
+             * Progress Percentage
+             * @description Progreso (0-100)
+             */
+            progress_percentage: number;
+            /**
+             * Current Step
+             * @description Paso actual
+             */
+            current_step?: string | null;
+            /**
+             * Total Steps
+             * @description Total de pasos
+             */
+            total_steps: number;
+            /**
+             * Completed Steps
+             * @description Pasos completados
+             */
+            completed_steps: number;
+            /**
+             * Created At
+             * Format: date-time
+             * @description Momento de creación
+             */
+            created_at: string;
+            /**
+             * Started At
+             * @description Momento de inicio
+             */
+            started_at?: string | null;
+            /**
+             * Completed At
+             * @description Momento de finalización
+             */
+            completed_at?: string | null;
+            /**
+             * Duration Seconds
+             * @description Duración en segundos
+             */
+            duration_seconds?: number | null;
+            /**
+             * Error Message
+             * @description Mensaje de error si falló
+             */
+            error_message?: string | null;
+            /**
+             * Result Data
+             * @description Datos del resultado
+             */
+            result_data?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[AsyncJobResponse] */
+        SuccessResponse_AsyncJobResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["AsyncJobResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
         /** SuccessResponse[HelloData] */
         SuccessResponse_HelloData_: {
             /** @description Datos de la respuesta */
@@ -130,6 +357,27 @@ export interface components {
             meta?: {
                 [key: string]: unknown;
             } | null;
+        };
+        /** SuccessResponse[JobStatusResponse] */
+        SuccessResponse_JobStatusResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["JobStatusResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** ValidationError */
+        ValidationError: {
+            /** Location */
+            loc: (string | number)[];
+            /** Message */
+            msg: string;
+            /** Error Type */
+            type: string;
         };
     };
     responses: never;
@@ -172,6 +420,146 @@ export interface operations {
                      *       "request_id": "550e8400-e29b-41d4-a716"
                      *     } */
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    upload_csv_async_api_v1_uploads_csv_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_csv_async_api_v1_uploads_csv_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Procesamiento asíncrono iniciado */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_AsyncJobResponse_"];
+                };
+            };
+            /** @description Archivo CSV no válido */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Archivo muy grande (máx 50MB) */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_job_status_api_v1_uploads_jobs__job_id__status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Estado actual del job */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_JobStatusResponse_"];
+                };
+            };
+            /** @description Job no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_job_api_v1_uploads_jobs__job_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Job cancelado exitosamente */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Job no encontrado o ya terminado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

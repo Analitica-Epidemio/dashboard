@@ -3,9 +3,18 @@
 import React from "react";
 import { useDropzone, FileRejection } from "react-dropzone";
 
+interface ProgressState {
+  step: string;
+  current: number;
+  total: number;
+  percentage: number;
+  message: string;
+}
+
 interface FileUploadAreaProps {
   onFileAccepted: (file: File) => void;
   isProcessing: boolean;
+  progress: ProgressState | null;
   error: string | null;
 }
 
@@ -15,6 +24,7 @@ const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
 export function FileUploadArea({ 
   onFileAccepted, 
   isProcessing, 
+  progress,
   error 
 }: FileUploadAreaProps) {
   const onDrop = React.useCallback(
@@ -46,26 +56,49 @@ export function FileUploadArea({
       <div
         {...getRootProps()}
         className={`
-          border-2 border-dashed rounded-xl p-10 w-96 text-center cursor-pointer transition
-          ${isDragActive ? "border-blue-500 bg-blue-50" : "border-gray-400"}
-          ${isProcessing ? "opacity-50 cursor-not-allowed" : ""}
+          border-2 border-dashed rounded-xl p-10 w-96 text-center cursor-pointer transition-colors
+          ${isDragActive ? "border-primary bg-muted/50" : "border-border"}
+          ${isProcessing ? "opacity-50 cursor-not-allowed" : "hover:border-primary/50 hover:bg-muted/30"}
         `}
       >
         <input {...getInputProps()} />
         
         {isProcessing ? (
-          <div className="flex flex-col items-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-            <p className="text-blue-600 font-medium">
-              Procesando archivo...
-            </p>
+          <div className="flex flex-col items-center space-y-4 w-full max-w-md">
+            {/* Barra de progreso visual */}
+            <div className="w-full bg-muted rounded-full h-2.5">
+              <div 
+                className="bg-primary h-2.5 rounded-full transition-all duration-300" 
+                style={{ width: `${progress?.percentage || 0}%` }}
+              ></div>
+            </div>
+            
+            {/* Información del progreso */}
+            <div className="text-center space-y-2">
+              {progress && (
+                <>
+                  <p className="text-foreground font-medium">
+                    {progress.message}
+                  </p>
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>{progress.percentage}% completado</span>
+                    {progress.total > 0 && progress.step === 'processing' && (
+                      <span>{progress.current + 1} de {progress.total} hojas</span>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+            
+            {/* Spinner */}
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
           </div>
         ) : isDragActive ? (
-          <p className="text-blue-600 font-medium">
+          <p className="text-primary font-medium">
             Suelta el archivo aquí...
           </p>
         ) : (
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             Arrastra y suelta un archivo <b>.xlsx</b> aquí (máx {MAX_SIZE_MB} MB), 
             o haz click para seleccionarlo
           </p>
@@ -73,8 +106,8 @@ export function FileUploadArea({
       </div>
 
       {error && (
-        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-600 text-sm">{error}</p>
+        <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+          <p className="text-destructive text-sm">{error}</p>
         </div>
       )}
     </div>

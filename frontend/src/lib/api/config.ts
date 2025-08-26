@@ -10,8 +10,9 @@ export const API_CONFIG = {
   
   // API Endpoints
   ENDPOINTS: {
-    // Upload endpoints
-    UPLOAD_SHEET: "/api/v1/uploads/sheet",
+    // Modern async upload endpoints
+    UPLOAD_CSV_ASYNC: "/api/v1/uploads/csv",
+    JOB_STATUS: "/api/v1/uploads/jobs",
     
     // Add more endpoints here as needed
     // USERS: "/api/v1/users",
@@ -38,10 +39,24 @@ export function buildApiUrl(endpoint: string): string {
 }
 
 /**
- * Helper function to get upload endpoint URL
+ * Helper function to get async CSV upload endpoint URL
  */
-export function getUploadSheetUrl(): string {
-  return buildApiUrl(API_CONFIG.ENDPOINTS.UPLOAD_SHEET);
+export function getUploadCsvAsyncUrl(): string {
+  return buildApiUrl(API_CONFIG.ENDPOINTS.UPLOAD_CSV_ASYNC);
+}
+
+/**
+ * Helper function to get job status endpoint URL
+ */
+export function getJobStatusUrl(jobId: string): string {
+  return buildApiUrl(`${API_CONFIG.ENDPOINTS.JOB_STATUS}/${jobId}/status`);
+}
+
+/**
+ * Helper function to cancel job endpoint URL
+ */
+export function getCancelJobUrl(jobId: string): string {
+  return buildApiUrl(`${API_CONFIG.ENDPOINTS.JOB_STATUS}/${jobId}`);
 }
 
 /**
