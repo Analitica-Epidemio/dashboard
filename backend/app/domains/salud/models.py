@@ -11,7 +11,89 @@ from app.core.models import BaseModel
 if TYPE_CHECKING:
     from app.domains.ciudadanos.models import CiudadanoComorbilidades
     from app.domains.establecimientos.models import Establecimiento
-    from app.domains.eventos.models import CiudadanoEvento, DetalleEventoSintomas
+    from app.domains.eventos.models import Evento, DetalleEventoSintomas
+
+
+class Determinacion(BaseModel, table=True):
+    """
+    Catálogo de determinaciones para estudios de laboratorio.
+    
+    Define las determinaciones/análisis que pueden realizarse
+    en muestras biológicas durante eventos epidemiológicos.
+    """
+
+    __tablename__ = "determinacion"
+
+    # Campos propios
+    nombre: str = Field(..., max_length=200, description="Nombre de la determinación")
+    codigo: Optional[str] = Field(
+        None, max_length=50, unique=True, index=True, description="Código de la determinación"
+    )
+    descripcion: Optional[str] = Field(
+        None, max_length=500, description="Descripción de la determinación"
+    )
+
+    # Relaciones
+    tecnicas: List["Tecnica"] = Relationship(back_populates="determinacion")
+
+
+class Tecnica(BaseModel, table=True):
+    """
+    Catálogo de técnicas de laboratorio.
+    
+    Define las técnicas específicas que pueden utilizarse
+    para realizar una determinación específica.
+    """
+
+    __tablename__ = "tecnica"
+
+    # Campos propios
+    nombre: str = Field(..., max_length=200, description="Nombre de la técnica")
+    codigo: Optional[str] = Field(
+        None, max_length=50, unique=True, index=True, description="Código de la técnica"
+    )
+    descripcion: Optional[str] = Field(
+        None, max_length=500, description="Descripción de la técnica"
+    )
+
+    # Foreign Keys
+    id_determinacion: int = Field(
+        foreign_key="determinacion.id", description="ID de la determinación"
+    )
+
+    # Relaciones
+    determinacion: "Determinacion" = Relationship(back_populates="tecnicas")
+    resultados_tecnica: List["ResultadoTecnica"] = Relationship(back_populates="tecnica")
+
+
+class ResultadoTecnica(BaseModel, table=True):
+    """
+    Catálogo de resultados técnicos posibles.
+    
+    Define los posibles resultados que puede arrojar una técnica específica.
+    """
+
+    __tablename__ = "resultado_tecnica"
+
+    # Campos propios
+    nombre: str = Field(..., max_length=200, description="Nombre del resultado")
+    codigo: Optional[str] = Field(
+        None, max_length=50, unique=True, index=True, description="Código del resultado"
+    )
+    descripcion: Optional[str] = Field(
+        None, max_length=500, description="Descripción del resultado"
+    )
+    es_positivo: Optional[bool] = Field(
+        None, description="Indica si es un resultado positivo"
+    )
+
+    # Foreign Keys
+    id_tecnica: int = Field(
+        foreign_key="tecnica.id", description="ID de la técnica"
+    )
+
+    # Relaciones
+    tecnica: "Tecnica" = Relationship(back_populates="resultados_tecnica")
 
 
 class Sintoma(BaseModel, table=True):
@@ -145,8 +227,8 @@ class MuestraEvento(BaseModel, table=True):
     fecha_papel: Optional[date] = Field(None, description="Fecha en papel")
 
     # Foreign Keys
-    id_ciudadano_evento: int = Field(
-        foreign_key="ciudadano_evento.id", description="ID del evento del ciudadano"
+    id_evento: int = Field(
+        foreign_key="evento.id", description="ID del evento"
     )
     id_establecimiento: int = Field(
         foreign_key="establecimiento.id", description="ID del establecimiento"
@@ -156,9 +238,10 @@ class MuestraEvento(BaseModel, table=True):
     )
 
     # Relaciones
-    ciudadano_evento: "CiudadanoEvento" = Relationship(back_populates="muestras")
+    evento: "Evento" = Relationship(back_populates="muestras")
     establecimiento: "Establecimiento" = Relationship(back_populates="muestras")
     muestra: "Muestra" = Relationship(back_populates="muestras_eventos")
+    estudios: List["EstudioEvento"] = Relationship(back_populates="muestra_evento")
 
 
 class VacunasCiudadano(BaseModel, table=True):
@@ -181,11 +264,49 @@ class VacunasCiudadano(BaseModel, table=True):
     )
 
     # Foreign Keys
-    id_ciudadano_evento: int = Field(
-        foreign_key="ciudadano_evento.id", description="ID del evento del ciudadano"
+    id_evento: int = Field(
+        foreign_key="evento.id", description="ID del evento"
     )
     id_vacuna: int = Field(foreign_key="vacuna.id", description="ID de la vacuna")
 
     # Relaciones
-    ciudadano_evento: "CiudadanoEvento" = Relationship(back_populates="vacunas")
+    evento: "Evento" = Relationship(back_populates="vacunas")
     vacuna: "Vacuna" = Relationship(back_populates="vacunas_ciudadanos")
+
+
+class EstudioEvento(BaseModel, table=True):
+    """
+    Estudios de laboratorio normalizados realizados en muestras.
+    
+    Registra estudios específicos realizados en muestras biológicas con
+    relaciones normalizadas a determinación, técnica y resultado técnica.
+    """
+
+    __tablename__ = "estudio_evento"
+
+    # Campos propios
+    fecha_estudio: Optional[date] = Field(None, description="Fecha del estudio")
+    fecha_resultado: Optional[date] = Field(None, description="Fecha del resultado")
+    observaciones: Optional[str] = Field(
+        None, max_length=500, description="Observaciones del estudio"
+    )
+
+    # Foreign Keys
+    id_muestra_evento: int = Field(
+        foreign_key="muestra_evento.id", description="ID de la muestra evento"
+    )
+    id_determinacion: int = Field(
+        foreign_key="determinacion.id", description="ID de la determinación"
+    )
+    id_tecnica: int = Field(
+        foreign_key="tecnica.id", description="ID de la técnica"
+    )
+    id_resultado_tecnica: int = Field(
+        foreign_key="resultado_tecnica.id", description="ID del resultado técnica"
+    )
+
+    # Relaciones
+    muestra_evento: "MuestraEvento" = Relationship(back_populates="estudios")
+    determinacion: "Determinacion" = Relationship()
+    tecnica: "Tecnica" = Relationship()
+    resultado_tecnica: "ResultadoTecnica" = Relationship()

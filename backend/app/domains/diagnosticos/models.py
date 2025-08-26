@@ -10,7 +10,7 @@ from app.core.shared.enums import ResultadoTratamiento
 
 if TYPE_CHECKING:
     from app.domains.establecimientos.models import Establecimiento
-    from app.domains.eventos.models import CiudadanoEvento
+    from app.domains.eventos.models import Evento
 
 
 class DiagnosticoEvento(BaseModel, table=True):
@@ -35,8 +35,9 @@ class DiagnosticoEvento(BaseModel, table=True):
     clasificacion_algoritmo: Optional[str] = Field(
         None, max_length=150, description="Algoritmo de clasificación"
     )
+    # Agregado por Ignacio - Campo faltante del CSV epidemiológico  
     validacion: Optional[str] = Field(
-        None, max_length=150, description="Estado de validación"
+        None, max_length=500, description="Estado de validación del diagnóstico (usar 'Sin validar' si no se especifica)"
     )
     edad_diagnostico: Optional[int] = Field(
         None, description="Edad al momento del diagnóstico"
@@ -44,25 +45,27 @@ class DiagnosticoEvento(BaseModel, table=True):
     grupo_etario: Optional[str] = Field(
         None, max_length=150, description="Grupo etario"
     )
+    # Agregado por Ignacio - Campos faltantes del CSV epidemiológico
     diagnostico_referido: Optional[str] = Field(
-        None, max_length=150, description="Diagnóstico referido"
+        None, max_length=150, description="Diagnóstico referido (usar 'No especificado' si no se conoce)"
     )
     fecha_diagnostico_referido: Optional[date] = Field(
         None, description="Fecha del diagnóstico referido"
     )
 
     # Foreign Keys
-    id_ciudadano_evento: int = Field(
-        foreign_key="ciudadano_evento.id", description="ID del evento del ciudadano"
+    id_evento: int = Field(
+        foreign_key="evento.id", description="ID del evento"
     )
-    id_diagnostico: Optional[int] = Field(
+    # Corregido por Ignacio - FK estaba mal mapeado a establecimiento
+    id_establecimiento_diagnostico: Optional[int] = Field(
         None,
         foreign_key="establecimiento.id",
-        description="ID del establecimiento de diagnóstico",
+        description="ID del establecimiento donde se realizó el diagnóstico",
     )
 
     # Relaciones
-    ciudadano_evento: "CiudadanoEvento" = Relationship(back_populates="diagnosticos")
+    evento: "Evento" = Relationship(back_populates="diagnosticos")
     establecimiento: Optional["Establecimiento"] = Relationship(
         back_populates="diagnosticos"
     )
@@ -89,8 +92,9 @@ class InternacionEvento(BaseModel, table=True):
     fecha_cuidados_intensivos: Optional[date] = Field(
         None, description="Fecha de ingreso a cuidados intensivos"
     )
+    # Nota Ignacio - Este campo ya mapea ESTABLECIMIENTO_INTERNACION del CSV 
     establecimiento_internacion: Optional[str] = Field(
-        None, max_length=150, description="Establecimiento de internación"
+        None, max_length=150, description="Establecimiento de internación (usar 'Desconocido' si no se especifica)"
     )
     fecha_alta_medica: Optional[date] = Field(None, description="Fecha de alta médica")
     es_fallecido: Optional[bool] = Field(None, description="Falleció")
@@ -99,12 +103,12 @@ class InternacionEvento(BaseModel, table=True):
     )
 
     # Foreign Keys
-    id_ciudadano_evento: int = Field(
-        foreign_key="ciudadano_evento.id", description="ID del evento del ciudadano"
+    id_evento: int = Field(
+        foreign_key="evento.id", description="ID del evento"
     )
 
     # Relaciones
-    ciudadano_evento: "CiudadanoEvento" = Relationship(back_populates="internaciones")
+    evento: "Evento" = Relationship(back_populates="internaciones")
 
 
 class EstudioEvento(BaseModel, table=True):
@@ -132,12 +136,12 @@ class EstudioEvento(BaseModel, table=True):
     fecha_recepcion: Optional[date] = Field(None, description="Fecha de recepción")
 
     # Foreign Keys
-    id_ciudadano_evento: int = Field(
-        foreign_key="ciudadano_evento.id", description="ID del evento del ciudadano"
+    id_evento: int = Field(
+        foreign_key="evento.id", description="ID del evento"
     )
 
     # Relaciones
-    ciudadano_evento: "CiudadanoEvento" = Relationship(back_populates="estudios")
+    evento: "Evento" = Relationship(back_populates="estudios")
 
 
 class TratamientoEvento(BaseModel, table=True):
@@ -154,6 +158,7 @@ class TratamientoEvento(BaseModel, table=True):
     # Campos propios
     # TODO: Chequear con Luciano si estab_tto debería ser el FK directamente
     # o mantener ambos campos (texto libre + FK opcional)
+    # NO TENER, ya que son campos libres, bah, doble-chequear
     establecimiento_tratamiento: Optional[str] = Field(
         None, max_length=150, description="Establecimiento de tratamiento (texto libre)"
     )
@@ -171,8 +176,8 @@ class TratamientoEvento(BaseModel, table=True):
     )
 
     # Foreign Keys
-    id_ciudadano_evento: int = Field(
-        foreign_key="ciudadano_evento.id", description="ID del evento del ciudadano"
+    id_evento: int = Field(
+        foreign_key="evento.id", description="ID del evento"
     )
     id_establecimiento_tratamiento: Optional[int] = Field(
         None,
@@ -181,5 +186,5 @@ class TratamientoEvento(BaseModel, table=True):
     )
 
     # Relaciones
-    ciudadano_evento: "CiudadanoEvento" = Relationship(back_populates="tratamientos")
+    evento: "Evento" = Relationship(back_populates="tratamientos")
     establecimiento: Optional["Establecimiento"] = Relationship()

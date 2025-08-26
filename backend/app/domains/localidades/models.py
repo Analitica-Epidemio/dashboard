@@ -14,7 +14,7 @@ from app.core.models import BaseModel
 
 if TYPE_CHECKING:
     from app.domains.ciudadanos.models import (
-        AmbitosConcurrenciaCiudadano,
+        AmbitosConcurrenciaEvento,
         CiudadanoDomicilio,
         ViajesCiudadano,
     )
@@ -117,6 +117,6 @@ class Localidad(BaseModel, table=True):
     )
     domicilios: List["CiudadanoDomicilio"] = Relationship(back_populates="localidad")
     viajes: List["ViajesCiudadano"] = Relationship(back_populates="localidad")
-    ambitos_concurrencia: List["AmbitosConcurrenciaCiudadano"] = Relationship(
+    ambitos_concurrencia: List["AmbitosConcurrenciaEvento"] = Relationship(
         back_populates="localidad"
     )
