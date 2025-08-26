@@ -16,6 +16,7 @@ from . import (
     investigaciones,
     localidades,
     salud,
+    uploads,
 )
 
 __all__ = [
@@ -26,4 +27,5 @@ __all__ = [
     "establecimientos",
     "diagnosticos",
     "investigaciones",
+    "uploads",
 ]

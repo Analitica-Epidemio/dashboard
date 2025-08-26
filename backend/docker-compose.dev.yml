@@ -53,6 +53,8 @@ services:
       ENVIRONMENT: development
       DATABASE_URL: postgresql+asyncpg://epidemiologia_user:epidemiologia_password@db:5432/epidemiologia_db
       REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
       SECRET_KEY: development_secret_key_change_in_production
       CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
       ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0
@@ -66,7 +68,7 @@ services:
       - ./uploads:/app/uploads
     command: >
       bash -c "
-        apt-get update && apt-get install -y libpq5 &&
+        apt-get update && apt-get install -y libpq5 libmagic1 &&
         pip install --no-cache-dir -e . &&
         uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
       "

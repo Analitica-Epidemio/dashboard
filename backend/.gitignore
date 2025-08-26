@@ -82,3 +82,9 @@ temp/
 
 # UV
 .uv/
+
+# Uploads directory (archivos temporales subidos - solo en raíz)
+/uploads/
+
+# Incluir explícitamente el dominio uploads (código fuente)
+!/app/domains/uploads/

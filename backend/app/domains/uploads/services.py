@@ -1,127 +1,257 @@
-"""Servicios para el manejo de uploads de hojas Excel individuales."""
+"""
+Servicios para procesamiento asíncrono de archivos CSV.
 
-import pandas as pd
+Arquitectura moderna sin legacy:
+- Async processing con Celery
+- Repository pattern para datos
+- Status tracking avanzado
+- Error handling robusto
+"""
+
 from datetime import datetime
 from pathlib import Path
-from typing import List, Any
+from typing import Optional
 from fastapi import HTTPException, UploadFile
-import magic
+from celery.result import AsyncResult
+import logging
+import traceback
 
-from app.domains.uploads.schemas import SheetUploadResponse
-from app.domains.uploads.models import FileUpload
+from app.domains.uploads.schemas import JobStatusResponse
+from app.domains.uploads.models import ProcessingJob, JobStatus, JobPriority
+from app.domains.uploads.repositories import job_repository
+from app.core.celery_app import celery_app
+
+logger = logging.getLogger(__name__)
 
 
-class SheetUploadService:
-    """Servicio simplificado para manejo de hojas Excel individuales."""
+class AsyncFileProcessingService:
+    """
+    Servicio moderno para procesamiento asíncrono de archivos.
+    
+    Sin código legacy - arquitectura clean:
+    - Jobs asíncronos con Celery
+    - Status tracking en tiempo real  
+    - Repository pattern
+    - Error handling senior-level
+    """
     
     def __init__(self, upload_dir: str = "uploads"):
         self.upload_dir = Path(upload_dir)
         self.upload_dir.mkdir(exist_ok=True)
-        
-        # Límites de archivo
         self.max_file_size = 50 * 1024 * 1024  # 50MB
-        
-        # Tipos MIME permitidos
-        self.allowed_mime_types = {
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "application/vnd.ms-excel"
-        }
     
-    def validate_file(self, file: UploadFile) -> None:
-        """Valida el archivo subido."""
+    def validate_csv_file(self, file: UploadFile) -> None:
+        """Validar archivo CSV con límites estrictos."""
         
-        # Validar tamaño
         if hasattr(file, 'size') and file.size and file.size > self.max_file_size:
             raise HTTPException(
                 status_code=413,
-                detail=f"Archivo muy grande. Máximo permitido: {self.max_file_size / (1024*1024):.0f}MB"
+                detail=f"Archivo demasiado grande. Máximo: {self.max_file_size / (1024*1024):.0f}MB"
             )
         
-        # Validar extensión
-        if not file.filename or not file.filename.lower().endswith(('.xlsx', '.xls')):
+        if not file.filename or not file.filename.lower().endswith('.csv'):
             raise HTTPException(
                 status_code=400,
-                detail="Solo se permiten archivos Excel (.xlsx, .xls)"
+                detail="Solo archivos CSV permitidos"
             )
     
-    def save_file(self, file: UploadFile, original_filename: str, sheet_name: str) -> Path:
-        """Guarda el archivo en el sistema de archivos."""
+    async def start_csv_processing(
+        self,
+        file: UploadFile,
+        original_filename: str,
+        sheet_name: str,
+        priority: JobPriority = JobPriority.NORMAL
+    ) -> ProcessingJob:
+        """
+        Iniciar procesamiento asíncrono de CSV.
         
-        # Generar nombre único con contexto
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        clean_sheet_name = "".join(c for c in sheet_name if c.isalnum() or c in (' ', '-', '_')).rstrip()
-        filename = f"{timestamp}_{clean_sheet_name}_{original_filename}"
+        Returns:
+            ProcessingJob: Job creado para tracking
+        """
+        
+        logger.info(f"🚀 Starting CSV processing - original_filename: {original_filename}, sheet_name: {sheet_name}")
+        
+        try:
+            # Validaciones previas
+            logger.info("🔍 Validating CSV file...")
+            self.validate_csv_file(file)
+            logger.info("✅ File validation passed")
+            
+            # Crear job en base de datos
+            logger.info("📝 Creating ProcessingJob object...")
+            job = ProcessingJob(
+                job_type="csv_processing",
+                original_filename=original_filename,
+                sheet_name=sheet_name,
+                priority=priority,
+                total_steps=3,  # save -> validate -> process
+                job_metadata={
+                    "file_size_bytes": getattr(file, 'size', 0),
+                    "original_content_type": file.content_type
+                }
+            )
+            logger.info(f"✅ ProcessingJob object created - job_type: {job.job_type}")
+            
+            # Persistir job
+            logger.info("💾 Persisting job to database via job_repository.create...")
+            created_job = await job_repository.create(job)
+            logger.info(f"✅ Job persisted successfully - job_id: {created_job.id}")
+            
+            # Guardar archivo temporalmente
+            logger.info("📁 Saving temporary file...")
+            file_path = await self._save_temp_file(file, created_job.id, sheet_name)
+            logger.info(f"✅ File saved to: {file_path}")
+            
+            created_job.file_path = str(file_path)
+            logger.info("💾 Updating job with file_path...")
+            await job_repository.update(created_job)
+            logger.info("✅ Job updated with file_path")
+            
+            # Lanzar task asíncrona de Celery
+            logger.info("🔥 Importing and launching Celery task...")
+            from app.domains.uploads.tasks import process_csv_file
+            logger.info("📦 process_csv_file imported successfully")
+            
+            celery_task = process_csv_file.delay(created_job.id, str(file_path))
+            logger.info(f"✅ Celery task launched - task_id: {celery_task.id}")
+            
+            # Asociar task ID con job
+            logger.info("🔗 Associating Celery task ID with job...")
+            created_job.celery_task_id = celery_task.id
+            created_job.mark_started(celery_task.id)
+            await job_repository.update(created_job)
+            logger.info(f"✅ Job updated with celery_task_id: {celery_task.id}")
+            
+            logger.info(f"🎉 CSV processing setup complete - job_id: {created_job.id}")
+            return created_job
+            
+        except Exception as e:
+            logger.error(f"💥 Error in start_csv_processing: {str(e)}")
+            logger.error(f"💥 Full traceback:\n{traceback.format_exc()}")
+            raise
+    
+    async def get_job_status(self, job_id: str) -> Optional[JobStatusResponse]:
+        """
+        Obtener estado actual de un job.
+        
+        Args:
+            job_id: UUID del job
+            
+        Returns:
+            JobStatusResponse con estado actual
+        """
+        
+        job = await job_repository.get_by_id(job_id)
+        if not job:
+            return None
+        
+        # Si está en progreso, sincronizar con Celery
+        if job.status == JobStatus.IN_PROGRESS and job.celery_task_id:
+            await self._sync_with_celery(job)
+        
+        return JobStatusResponse(
+            job_id=job.id,
+            status=job.status,
+            progress_percentage=job.progress_percentage,
+            current_step=job.current_step,
+            total_steps=job.total_steps,
+            completed_steps=job.completed_steps,
+            created_at=job.created_at,
+            started_at=job.started_at,
+            completed_at=job.completed_at,
+            duration_seconds=job.duration_seconds,
+            error_message=job.error_message,
+            result_data={
+                "total_rows": job.total_rows,
+                "columns": job.columns,
+                "file_path": job.file_path
+            } if job.status == JobStatus.COMPLETED else None
+        )
+    
+    async def cancel_job(self, job_id: str) -> bool:
+        """Cancelar un job en progreso."""
+        
+        job = await job_repository.get_by_id(job_id)
+        if not job or job.is_finished:
+            return False
+        
+        # Revocar task de Celery si existe
+        if job.celery_task_id:
+            celery_app.control.revoke(job.celery_task_id, terminate=True)
+        
+        # Marcar como cancelado
+        job.status = JobStatus.CANCELLED
+        job.completed_at = datetime.now()
+        await job_repository.update(job)
+        
+        logger.info(f"Job cancelado: {job_id}")
+        return True
+    
+    async def _save_temp_file(
+        self, 
+        file: UploadFile, 
+        job_id: str, 
+        sheet_name: str
+    ) -> Path:
+        """Guardar archivo temporal para procesamiento."""
+        
+        # Nombre único para el archivo
+        clean_sheet = "".join(c for c in sheet_name if c.isalnum() or c in (' ', '-', '_')).strip()
+        filename = f"{job_id}_{clean_sheet}.csv"
         file_path = self.upload_dir / filename
         
-        # Guardar archivo
         try:
             with open(file_path, "wb") as buffer:
-                content = file.file.read()
+                content = await file.read()
                 buffer.write(content)
-                
+            
+            logger.debug(f"Archivo temporal guardado: {file_path}")
             return file_path
             
         except Exception as e:
-            # Limpiar archivo parcial si hay error
+            # Cleanup en caso de error
             if file_path.exists():
                 file_path.unlink()
             raise HTTPException(
                 status_code=500,
-                detail=f"Error al guardar archivo: {str(e)}"
+                detail=f"Error guardando archivo: {str(e)}"
             )
     
-    def process_sheet_upload(
-        self, 
-        file: UploadFile, 
-        original_filename: str, 
-        sheet_name: str
-    ) -> SheetUploadResponse:
-        """Procesa el upload de una hoja específica de Excel."""
+    async def _sync_with_celery(self, job: ProcessingJob) -> None:
+        """Sincronizar estado del job con Celery."""
         
-        # Validar archivo
-        self.validate_file(file)
-        
-        # Guardar archivo
-        file_path = self.save_file(file, original_filename, sheet_name)
+        if not job.celery_task_id:
+            return
         
         try:
-            # Leer y procesar la hoja
-            df = pd.read_excel(file_path)
+            # Obtener resultado de Celery
+            celery_result = AsyncResult(job.celery_task_id, app=celery_app)
             
-            # Obtener información de la hoja
-            total_rows = len(df)
-            columns = df.columns.tolist()
-            file_size = file_path.stat().st_size
+            if celery_result.ready():
+                if celery_result.successful():
+                    # Task completada exitosamente
+                    result_data = celery_result.result
+                    job.mark_completed(**result_data)
+                    await job_repository.update(job)
+                else:
+                    # Task falló
+                    error_info = str(celery_result.info)
+                    job.mark_failed(error_info)
+                    await job_repository.update(job)
             
-            # Aquí puedes agregar lógica específica de procesamiento de datos
-            # Por ejemplo: validaciones, transformaciones, guardado en BD principal
-            
-            # Simular guardado en BD
-            upload_id = int(datetime.now().timestamp())
-            
-            return SheetUploadResponse(
-                upload_id=upload_id,
-                filename=original_filename,
-                sheet_name=sheet_name,
-                file_path=str(file_path),
-                file_size=file_size,
-                total_rows=total_rows,
-                columns=columns,
-                upload_timestamp=datetime.now().isoformat(),
-                success=True,
-                message=f"Hoja '{sheet_name}' procesada exitosamente con {total_rows} filas"
-            )
-            
+            elif celery_result.state == 'PROGRESS':
+                # Actualizar progreso desde Celery
+                progress_info = celery_result.info
+                if isinstance(progress_info, dict):
+                    if 'percentage' in progress_info:
+                        job.progress_percentage = progress_info['percentage']
+                    if 'step' in progress_info:
+                        job.current_step = progress_info['step']
+                    await job_repository.update(job)
+                    
         except Exception as e:
-            # Limpiar archivo si hay error en el procesamiento
-            if file_path.exists():
-                file_path.unlink()
-                
-            raise HTTPException(
-                status_code=422,
-                detail=f"Error al procesar hoja Excel: {str(e)}"
-            )
+            logger.error(f"Error sincronizando con Celery para job {job.id}: {str(e)}")
 
 
 # Instancia singleton del servicio
-sheet_service = SheetUploadService()
+async_service = AsyncFileProcessingService()
