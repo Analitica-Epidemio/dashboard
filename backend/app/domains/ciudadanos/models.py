@@ -134,6 +134,11 @@ class CiudadanoDatos(BaseModel, table=True):
     es_declarado_pueblo_indigena: Optional[bool] = Field(
         None, description="Se declara perteneciente a pueblo indígena"
     )
+    
+    # Agregado por Ignacio - Campos faltantes del CSV epidemiológico
+    es_embarazada: Optional[bool] = Field(
+        None, description="Indica si la ciudadana está embarazada (relevante para análisis de riesgo epidemiológico)"
+    )
 
     # Relaciones
     ciudadano: "Ciudadano" = Relationship(back_populates="datos")

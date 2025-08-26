@@ -111,6 +111,20 @@ class CiudadanoEvento(BaseModel, table=True):
     observaciones_texto: Optional[str] = Field(
         None, sa_column=Text, description="Observaciones en texto libre sobre el evento"
     )
+    
+    # Agregado por Ignacio - Campos faltantes del CSV epidemiológico
+    fecha_consulta: Optional[date] = Field(
+        None, description="Fecha de primera consulta médica del caso (usar NULL cuando sea desconocida)"
+    )
+    id_origen: Optional[str] = Field(
+        None, max_length=200, description="ID del sistema origen (SNVS, otro sistema, usar 'Desconocido' si no se especifica)"
+    )
+    semana_epidemiologica_sintomas: Optional[int] = Field(
+        None, description="Semana epidemiológica específica de inicio de síntomas"
+    )
+    semana_epidemiologica_muestra: Optional[int] = Field(
+        None, description="Semana epidemiológica específica de toma de muestra"
+    )
 
     # Foreign Keys
     id_evento: int = Field(foreign_key="evento.id", description="ID del evento")

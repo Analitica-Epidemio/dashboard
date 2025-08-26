@@ -35,8 +35,9 @@ class DiagnosticoEvento(BaseModel, table=True):
     clasificacion_algoritmo: Optional[str] = Field(
         None, max_length=150, description="Algoritmo de clasificación"
     )
+    # Agregado por Ignacio - Campo faltante del CSV epidemiológico  
     validacion: Optional[str] = Field(
-        None, max_length=150, description="Estado de validación"
+        None, max_length=500, description="Estado de validación del diagnóstico (usar 'Sin validar' si no se especifica)"
     )
     edad_diagnostico: Optional[int] = Field(
         None, description="Edad al momento del diagnóstico"
@@ -44,8 +45,9 @@ class DiagnosticoEvento(BaseModel, table=True):
     grupo_etario: Optional[str] = Field(
         None, max_length=150, description="Grupo etario"
     )
+    # Agregado por Ignacio - Campos faltantes del CSV epidemiológico
     diagnostico_referido: Optional[str] = Field(
-        None, max_length=150, description="Diagnóstico referido"
+        None, max_length=150, description="Diagnóstico referido (usar 'No especificado' si no se conoce)"
     )
     fecha_diagnostico_referido: Optional[date] = Field(
         None, description="Fecha del diagnóstico referido"
@@ -55,10 +57,11 @@ class DiagnosticoEvento(BaseModel, table=True):
     id_ciudadano_evento: int = Field(
         foreign_key="ciudadano_evento.id", description="ID del evento del ciudadano"
     )
-    id_diagnostico: Optional[int] = Field(
+    # Corregido por Ignacio - FK estaba mal mapeado a establecimiento
+    id_establecimiento_diagnostico: Optional[int] = Field(
         None,
         foreign_key="establecimiento.id",
-        description="ID del establecimiento de diagnóstico",
+        description="ID del establecimiento donde se realizó el diagnóstico",
     )
 
     # Relaciones
@@ -89,8 +92,9 @@ class InternacionEvento(BaseModel, table=True):
     fecha_cuidados_intensivos: Optional[date] = Field(
         None, description="Fecha de ingreso a cuidados intensivos"
     )
+    # Nota Ignacio - Este campo ya mapea ESTABLECIMIENTO_INTERNACION del CSV 
     establecimiento_internacion: Optional[str] = Field(
-        None, max_length=150, description="Establecimiento de internación"
+        None, max_length=150, description="Establecimiento de internación (usar 'Desconocido' si no se especifica)"
     )
     fecha_alta_medica: Optional[date] = Field(None, description="Fecha de alta médica")
     es_fallecido: Optional[bool] = Field(None, description="Falleció")
