@@ -283,6 +283,7 @@ class EstudioEvento(BaseModel, table=True):
     """
 
     __tablename__ = "estudio_evento"
+    __table_args__ = {"extend_existing": True}
 
     # Campos propios
     fecha_estudio: Optional[date] = Field(None, description="Fecha del estudio")
@@ -307,6 +308,6 @@ class EstudioEvento(BaseModel, table=True):
 
     # Relaciones
     muestra_evento: "MuestraEvento" = Relationship(back_populates="estudios")
-    determinacion: "Determinacion" = Relationship()
-    tecnica: "Tecnica" = Relationship()
-    resultado_tecnica: "ResultadoTecnica" = Relationship()
+    determinacion_rel: "Determinacion" = Relationship()
+    tecnica_rel: "Tecnica" = Relationship()
+    resultado_tecnica_rel: "ResultadoTecnica" = Relationship()
