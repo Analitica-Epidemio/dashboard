@@ -1,72 +1,128 @@
 "use client";
-import React, {useCallback, useState} from 'react'
-import {useDropzone} from 'react-dropzone'
+
+import React, { useState } from "react";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
+
+// Components
+import { FileUploadArea } from "./_components/file-upload-area";
+import { SheetSelector } from "./_components/sheet-selector";
+import { DataTableSheet } from "./_components/data-table-sheet";
+import { UploadActions } from "./_components/upload-actions";
+import { ValidationError } from "./_components/validation-error";
+
+// Hooks
+import { useSheetUpload } from "./_hooks/use-file-upload";
+import { useClientPreview } from "./_hooks/use-client-preview";
 
 export default function Page() {
-  const [files, setFiles] = useState<File[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const tamañoMaximoMegaBytes = 50;
-  const tamañoMaximoBytes = tamañoMaximoMegaBytes * 1024 * 1024;
+  const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
+  
+  // Hook for client-side preview
+  const {
+    originalFile,
+    sheets,
+    selectedSheet,
+    hasValidSheets,
+    isProcessing,
+    error,
+    validationError,
+    processFile,
+    setSelectedSheet,
+    clearData,
+  } = useClientPreview();
 
-  const onDrop = useCallback((acceptedFiles: File[], fileRejections: string | any[]) => {
-    if (fileRejections.length > 0) {
-      const rejection = fileRejections[0];
-      if (rejection.errors.some((e: { code: string; }) => e.code === "file-too-large")) {
-        setError("El archivo es demasiado grande (máx {tamañoMaximoMegaBytes} MB)");
-      } else if (rejection.errors.some((e: { code: string; }) => e.code === "file-invalid-type")) {
-        setError("Solo se permiten archivos .xlsx");
-      } else {
-        setError("Archivo no válido");
-      }
-      setFiles([]);
+  // Hook for uploading selected sheet
+  const sheetUploadMutation = useSheetUpload();
+
+  const handleFileAccepted = async (file: File) => {
+    setUploadSuccess(null);
+    await processFile(file);
+  };
+
+  const handleContinue = async () => {
+    if (!originalFile || !selectedSheet) {
       return;
     }
 
-    setError(null);
-    setFiles(acceptedFiles);
-  }, []);
+    try {
+      const result = await sheetUploadMutation.mutateAsync({
+        originalFile,
+        selectedSheetName: selectedSheet,
+        originalFilename: originalFile.name,
+      });
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
-    },
-    multiple: false,
-    maxSize: tamañoMaximoBytes, 
-  });
+      setUploadSuccess(
+        `¡Éxito! Hoja "${result.sheet_name}" subida con ${result.total_rows} filas procesadas.`
+      );
+      
+      console.log("Upload exitoso:", result);
+      
+      // Opcional: limpiar después del éxito
+      // clearData();
+      
+    } catch (err) {
+      console.error("Error al subir hoja:", err);
+    }
+  };
+
+  const handleReset = () => {
+    clearData();
+    setUploadSuccess(null);
+    sheetUploadMutation.reset();
+  };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-6">
-      <div
-        {...getRootProps()}
-        className={`border-2 border-dashed rounded-xl p-10 w-96 text-center cursor-pointer transition ${
-          isDragActive ? "border-blue-500 bg-blue-50" : "border-gray-400"
-        }`}
-      >
-        <input {...getInputProps()} />
-        {isDragActive ? (
-          <p className="text-blue-600 font-medium">Suelta el archivo aquí...</p>
-        ) : (
-          <p className="text-gray-600">
-            Arrastra y suelta un archivo <b>.xlsx</b> aquí (máx {tamañoMaximoMegaBytes} MB), o haz click para seleccionarlo
-          </p>
-        )}
-      </div>
+    <SidebarProvider
+      style={
+        {
+          "--sidebar-width": "calc(var(--spacing) * 72)",
+          "--header-height": "calc(var(--spacing) * 12)",
+        } as React.CSSProperties
+      }
+    >
+      <AppSidebar variant="inset" />
+      <SidebarInset>
+        <div className="flex flex-col items-center min-h-screen bg-gray-100 p-6">
+          {/* Mensaje de éxito */}
+          {uploadSuccess && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg text-green-800 max-w-2xl">
+              <p className="font-medium">{uploadSuccess}</p>
+            </div>
+          )}
 
-      {error && <p className="text-red-600 mt-4">{error}</p>}
+          {/* Mostrar error de validación si no hay hojas válidas */}
+          {validationError ? (
+            <ValidationError
+              message={validationError}
+              onRetry={handleReset}
+            />
+          ) : !hasValidSheets ? (
+            <FileUploadArea
+              onFileAccepted={handleFileAccepted}
+              isProcessing={isProcessing}
+              error={error}
+            />
+          ) : (
+            <SheetSelector
+              sheets={sheets}
+              selectedSheet={selectedSheet}
+              onSheetChange={setSelectedSheet}
+            >
+              {(sheet) => <DataTableSheet sheet={sheet} />}
+            </SheetSelector>
+          )}
 
-      {files.length > 0 && (
-        <div className="mt-6 w-96">
-          <h2 className="text-lg font-semibold mb-2">Archivo seleccionado:</h2>
-          <ul className="list-disc list-inside">
-            {files.map((file) => (
-              <li key={file.name} className="text-gray-700">
-                {file.name} ({(file.size / 1024).toFixed(2)} KB)
-              </li>
-            ))}
-          </ul>
+          {hasValidSheets && (
+            <UploadActions
+              selectedSheet={selectedSheet}
+              onContinue={handleContinue}
+              onReset={handleReset}
+              isUploading={sheetUploadMutation.isPending}
+            />
+          )}
         </div>
-      )}
-    </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

@@ -31,7 +31,7 @@ export interface ErrorResponse {
  */
 export interface SuccessResponse<T> {
   data: T;
-  meta?: Record<string, any>;  // Metadata opcional
+  meta?: Record<string, unknown>;  // Metadata opcional
 }
 
 /**
@@ -56,13 +56,13 @@ export interface PaginatedResponse<T> {
 /**
  * Type guard para verificar si es un error
  */
-export function isErrorResponse(response: any): response is ErrorResponse {
+export function isErrorResponse(response: unknown): response is ErrorResponse {
   return response && typeof response === 'object' && 'error' in response;
 }
 
 /**
  * Type guard para verificar si es éxito
  */
-export function isSuccessResponse<T>(response: any): response is SuccessResponse<T> {
+export function isSuccessResponse<T>(response: unknown): response is SuccessResponse<T> {
   return response && typeof response === 'object' && 'data' in response;
 }
