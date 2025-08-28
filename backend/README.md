@@ -1,86 +1,137 @@
-# Epidemiología API
+# Sistema de Epidemiología - Backend
 
-API del Sistema de Epidemiología
+API REST moderna para el sistema de vigilancia epidemiológica.
 
-## Descripción
+## 🚀 Quick Start
 
-Backend API para el sistema de epidemiología.
+### Prerequisites
+- Docker & Docker Compose
+- Make (macOS/Linux tienen preinstalado, Windows ver abajo)
 
-## Requisitos Previos
+### Windows
+- **Opción 1 (recomendado):** Usar Git Bash (viene con Git)
+- **Opción 2:** WSL2
+- **Opción 3:** Sin Make, usar `run.cmd` en vez de `make`
 
-### Instalar UV (Gestor de paquetes Python)
-
-UV es un gestor de paquetes ultra-rápido para Python. Elige una opción según tu sistema:
-
-#### macOS/Linux
+### Setup inicial (solo primera vez)
 ```bash
-# Opción 1: Instalación rápida con curl (RECOMENDADO)
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Opción 2: Con Homebrew (macOS)
-brew install uv
-
-# Opción 3: Con pip
-pip install uv
-
-# Opción 4: Con pipx
-pipx install uv
-```
-
-#### Windows
-```powershell
-# PowerShell
-powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
-
-# O con pip
-pip install uv
-```
-
-#### Verificar instalación
-```bash
-uv --version
-```
-
-## Instalación
-
-```bash
-# Configuración inicial (primera vez)
+# macOS/Linux/Git Bash
 make setup
 
-# Instalar/actualizar dependencias
-make install
+# Windows CMD/PowerShell
+run.cmd setup
 ```
 
-## Desarrollo
-
-### Opción 1: Con Docker (Recomendado)
+### Desarrollo diario
 ```bash
-# Iniciar todos los servicios (API + PostgreSQL + Redis)
-make dev-docker
+# macOS/Linux/Git Bash
+make up      # Iniciar servicios
+make down    # Detener servicios
+make logs    # Ver logs
 
-# Detener servicios
-make dev-docker-down
+# Windows CMD/PowerShell
+run.cmd up   # Iniciar servicios
+run.cmd down # Detener servicios
+run.cmd logs # Ver logs
 ```
 
-### Opción 2: Sin Docker
+## 📋 Comandos principales
+
+| Comando | Descripción |
+|---------|-------------|
+| `make up` | Iniciar stack de desarrollo |
+| `make down` | Detener servicios |
+| `make logs` | Ver logs |
+| `make test` | Ejecutar tests |
+| `make lint` | Formatear código |
+| `make shell` | Shell Python interactivo |
+| `make migrate` | Ejecutar migraciones |
+
+Ver todos los comandos: `make help`
+
+## 🏗️ Stack tecnológico
+
+- **FastAPI** - Framework web
+- **PostgreSQL** - Base de datos
+- **Redis** - Cache y cola de tareas
+- **Celery** - Procesamiento asíncrono
+- **Docker** - Containerización
+- **uv** - Gestión de dependencias (10x más rápido que pip)
+
+## 📁 Estructura del proyecto
+
+```
+backend/
+├── app/
+│   ├── api/        # Endpoints REST
+│   ├── core/       # Configuración
+│   ├── models/     # Modelos de DB
+│   ├── schemas/    # Esquemas Pydantic
+│   └── services/   # Lógica de negocio
+├── compose.yaml    # Docker Compose
+├── Dockerfile      # Producción
+├── Dockerfile.dev  # Desarrollo
+└── Makefile        # Comandos
+```
+
+## 🔧 Desarrollo
+
+El proyecto usa Docker para desarrollo, garantizando consistencia entre todos los sistemas operativos.
+
+### Testing
 ```bash
-# Requiere PostgreSQL y Redis instalados localmente
-make dev
+make test        # Ejecutar tests
+make qa          # Lint + Type check + Tests
 ```
 
-## Comandos Útiles
+### Base de datos
+```bash
+make migrate                    # Aplicar migraciones
+make migration MSG="descripción" # Crear nueva migración
+make rollback                   # Revertir última migración
+```
+
+### Debugging
+```bash
+make shell       # Shell Python
+make bash        # Shell Bash
+make logs        # Ver todos los logs
+make logs SERVICE=api  # Logs específicos
+```
+
+## 🚢 Producción
 
 ```bash
-# Ver todos los comandos disponibles
-make help
-
-# Migraciones de base de datos
-make migrate                     # Aplicar migraciones
-make makemigrations m="mensaje"  # Crear nueva migración
-
-# Calidad de código
-make qa                          # Ejecutar todos los checks
-make test                        # Ejecutar tests
-make lint                        # Linter
-make format                      # Formatear código
+make prod  # Build y ejecutar imagen de producción
 ```
+
+## 🛠️ Troubleshooting
+
+### Resetear todo
+```bash
+make clean  # Limpiar containers y cache
+make reset  # Resetear DB (⚠️ borra datos)
+```
+
+### Ver estado
+```bash
+make ps     # Containers activos
+make stats  # Uso de recursos
+```
+
+## 📚 Documentación API
+
+Con los servicios corriendo:
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
+
+## 🤝 Contribuir
+
+1. Crear feature branch
+2. Hacer cambios
+3. Ejecutar `make qa` antes de commit
+4. Crear PR
+
+## 📝 Licencia
+
+Propiedad del Ministerio de Salud.

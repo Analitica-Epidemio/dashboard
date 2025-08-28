@@ -1,8 +1,8 @@
 """
-Script de migración/seed para cargar estrategias desde el código legacy a la base de datos.
+Seed de estrategias epidemiológicas.
 
-Uso:
-    python app/scripts/seed_strategies.py
+Este módulo carga las estrategias de vigilancia en la base de datos.
+Puede ser ejecutado directamente o importado desde seed.py
 """
 
 import sys

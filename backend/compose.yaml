@@ -1,0 +1,113 @@
+# Docker Compose moderno 2025 para desarrollo
+# Nombre: compose.yaml (estándar actual, docker-compose.yml es legacy)
+name: epidemiologia-dev
+
+services:
+  # =============================================================================
+  # Base de datos PostgreSQL
+  # =============================================================================
+  db:
+    image: postgres:17-alpine  # Actualizado a PostgreSQL 17
+    container_name: ${COMPOSE_PROJECT_NAME:-epi}_postgres_dev
+    environment:
+      POSTGRES_DB: ${DB_NAME:-epidemiologia_db}
+      POSTGRES_USER: ${DB_USER:-epidemiologia_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-epidemiologia_password}
+    ports:
+      - "${DB_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-epidemiologia_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # =============================================================================
+  # Redis para Celery
+  # =============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-epi}_redis_dev
+    ports:
+      - "${REDIS_PORT:-6380}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+  # =============================================================================
+  # API Backend (FastAPI) - DESARROLLO con hot-reload
+  # =============================================================================
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      cache_from:
+        - type=registry,ref=${COMPOSE_PROJECT_NAME:-epi}/api:buildcache
+      cache_to:
+        - type=registry,ref=${COMPOSE_PROJECT_NAME:-epi}/api:buildcache,mode=max
+    container_name: ${COMPOSE_PROJECT_NAME:-epi}_api_dev
+    environment:
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql+asyncpg://${DB_USER:-epidemiologia_user}:${DB_PASSWORD:-epidemiologia_password}@db:5432/${DB_NAME:-epidemiologia_db}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-development_secret_key_change_in_production}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0}
+      PYTHONPATH: /app
+      PYTHONDONTWRITEBYTECODE: 1
+      PYTHONUNBUFFERED: 1
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - .:/app:cached  # cached mejora rendimiento en macOS
+      - /app/.venv      # Preservar dependencias
+      - ./uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    develop:  # Nuevo en 2024: watch mode nativo
+      watch:
+        - action: sync
+          path: ./app
+          target: /app/app
+        - action: rebuild
+          path: pyproject.toml
+
+  # =============================================================================
+  # Celery Worker
+  # =============================================================================
+  celery_worker:
+    extends: api  # Hereda configuración de api (DRY)
+    container_name: ${COMPOSE_PROJECT_NAME:-epi}_celery_worker_dev
+    ports: []  # Sin puerto expuesto
+    command: ["uv", "run", "celery", "-A", "app.core.celery_app:celery_app", "worker", "--loglevel=info", "--concurrency=2"]
+
+# =============================================================================
+# Volúmenes con nombres descriptivos
+# =============================================================================
+volumes:
+  postgres_data:
+    name: ${COMPOSE_PROJECT_NAME:-epi}_postgres_data_dev
+  redis_data:
+    name: ${COMPOSE_PROJECT_NAME:-epi}_redis_data_dev
+
+# =============================================================================
+# Red personalizada
+# =============================================================================
+networks:
+  default:
+    name: ${COMPOSE_PROJECT_NAME:-epi}_network_dev

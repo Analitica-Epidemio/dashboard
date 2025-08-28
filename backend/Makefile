@@ -1,117 +1,66 @@
-.PHONY: help setup install dev dev-docker dev-docker-down test lint format typecheck qa clean
+# Makefile simplificado - Docker-only development (2025)
+# Compatible con Windows (Git Bash), macOS y Linux
+# Comandos estándar de la industria
+
+.PHONY: help up down logs shell test lint clean build reset-db reset-all
+
+# Comando por defecto
+help: ## Show this help message
+	@echo "Available commands:"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
 # =============================================================================
-# COMANDOS PRINCIPALES
+# DESARROLLO (Docker only)
 # =============================================================================
 
-help:  ## 📚 Muestra esta ayuda
-	@echo "Sistema de Epidemiología - Comandos disponibles"
-	@echo "================================================"
-	@echo ""
-	@echo "INICIO RÁPIDO:"
-	@echo "  make setup        → Configuración inicial del proyecto (primera vez)"
-	@echo "  make dev-docker   → Desarrollo CON Docker (incluye DB + Redis)"
-	@echo "  make dev          → Desarrollo SIN Docker (requiere DB local)"
-	@echo ""
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+up: ## Start development stack
+	docker compose up
 
-# =============================================================================
-# CONFIGURACIÓN INICIAL
-# =============================================================================
+down: ## Stop development stack
+	docker compose down
 
-setup:  ## 🎯 Configuración inicial completa (ejecutar la primera vez)
-	@echo "🚀 Configurando proyecto por primera vez..."
-	@echo "1. Verificando archivo .env..."
-	@if [ ! -f .env ]; then \
-		if [ -f .env.example ]; then \
-			cp .env.example .env; \
-			echo "✅ Archivo .env creado desde .env.example"; \
-			echo "⚠️  IMPORTANTE: Edita el archivo .env con tus configuraciones"; \
-		else \
-			echo "❌ No se encontró .env.example"; \
-			exit 1; \
-		fi \
+restart: ## Restart all services
+	docker compose restart
+
+logs: ## View logs (use: make logs SERVICE=api)
+	@if [ -z "$(SERVICE)" ]; then \
+		docker compose logs -f; \
 	else \
-		echo "✅ Archivo .env ya existe"; \
+		docker compose logs -f $(SERVICE); \
 	fi
-	@echo "2. Creando directorios necesarios..."
-	@mkdir -p uploads logs
-	@echo "3. Instalando dependencias con uv..."
-	@uv sync --all-extras
-	@echo ""
-	@echo "✅ Configuración completada!"
-	@echo ""
-	@echo "🔥 PRÓXIMOS PASOS:"
-	@echo "   1. Edita el archivo .env con tus configuraciones"
-	@echo "   2. Elige cómo ejecutar el proyecto:"
-	@echo "      • CON Docker:    make dev-docker"
-	@echo "      • SIN Docker:    make dev"
 
-install:  ## 📦 Instala/actualiza las dependencias
-	uv sync --all-extras
+build: ## Rebuild containers
+	docker compose build
+
+rebuild: ## Rebuild and start
+	docker compose up --build
 
 # =============================================================================
-# DESARROLLO CON DOCKER (Recomendado)
+# DESARROLLO INTERACTIVO
 # =============================================================================
 
-dev-docker:  ## 🐳 Inicia desarrollo CON Docker (API + DB + Redis con hot-reload)
-	@echo "🐳 Iniciando stack de desarrollo con Docker..."
-	@echo "   • PostgreSQL en puerto 5432"
-	@echo "   • Redis en puerto 6379"
-	@echo "   • API en puerto 8000 con hot-reload"
-	docker-compose -f docker-compose.dev.yml up
+shell: ## Open Python shell in API container
+	docker compose exec api uv run python
 
-dev-docker-down:  ## 🛑 Detiene los servicios Docker
-	docker-compose -f docker-compose.dev.yml down
-
-dev-docker-rebuild:  ## 🔄 Reconstruye y reinicia servicios Docker
-	docker-compose -f docker-compose.dev.yml up --build
-
-dev-docker-logs:  ## 📋 Ver logs de los servicios Docker
-	docker-compose -f docker-compose.dev.yml logs -f
-
-dev-docker-db-reset:  ## 💣 Reinicia la BD Docker desde cero (BORRA TODOS LOS DATOS)
-	@echo "⚠️  ADVERTENCIA: Esto eliminará TODOS los datos de la base de datos"
-	@read -p "¿Estás seguro? (y/N): " confirm && [ "$$confirm" = "y" ] || exit 1
-	docker-compose -f docker-compose.dev.yml down -v
-	@echo "✅ Base de datos y volúmenes eliminados. Se crearán nuevos al ejecutar 'make dev-docker'"
-
+bash: ## Open bash shell in API container
+	docker compose exec api bash
 
 # =============================================================================
-# DESARROLLO SIN DOCKER (Requiere PostgreSQL y Redis locales)
+# TESTING Y CALIDAD
 # =============================================================================
 
-dev:  ## 💻 Inicia desarrollo SIN Docker (requiere DB y Redis locales)
-	@echo "💻 Iniciando servidor de desarrollo local..."
-	@echo "   ⚠️  Requiere PostgreSQL y Redis instalados localmente"
-	uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+test: ## Run tests
+	docker compose exec api uv run pytest
 
-# =============================================================================
-# TESTING Y CALIDAD DE CÓDIGO
-# =============================================================================
+lint: ## Run linter and formatter
+	docker compose exec api uv run ruff check . --fix
+	docker compose exec api uv run ruff format .
 
-test:  ## 🧪 Ejecuta los tests
-	uv run pytest
+typecheck: ## Run type checking
+	docker compose exec api uv run mypy app
 
-test-watch:  ## 👀 Ejecuta los tests en modo watch
-	uv run pytest-watch
-
-test-coverage:  ## 📊 Ejecuta tests con reporte de cobertura
-	uv run pytest --cov=app --cov-report=html --cov-report=term
-
-lint:  ## 🔍 Ejecuta el linter y arregla problemas
-	uv run ruff check . --fix
-
-format:  ## 💅 Formatea el código
-	uv run ruff format .
-
-typecheck:  ## 🔎 Verifica tipos con mypy
-	uv run mypy app
-
-qa:  ## ✅ Ejecuta todos los checks de calidad
-	@echo "🔍 Ejecutando checks de calidad..."
+qa: ## Run all quality checks (lint + typecheck + test)
 	@make lint
-	@make format
 	@make typecheck
 	@make test
 
@@ -119,56 +68,92 @@ qa:  ## ✅ Ejecuta todos los checks de calidad
 # BASE DE DATOS
 # =============================================================================
 
-migrate:  ## 🗄️ Ejecuta las migraciones pendientes
-	uv run python -m alembic upgrade head
+migrate: ## Run database migrations
+	docker compose exec api uv run alembic upgrade head
 
-makemigrations:  ## 📝 Genera nueva migración (uso: make makemigrations m="descripción")
-	uv run python -m alembic revision --autogenerate -m "$(m)"
+migration: ## Create new migration (use: make migration MSG="description")
+	@if [ -z "$(MSG)" ]; then \
+		echo "Error: Please provide a message. Usage: make migration MSG=\"description\""; \
+		exit 1; \
+	fi
+	docker compose exec api uv run alembic revision --autogenerate -m "$(MSG)"
 
-rollback:  ## ↩️ Rollback de la última migración
-	uv run python -m alembic downgrade -1
+rollback: ## Rollback last migration
+	docker compose exec api uv run alembic downgrade -1
 
-db-history:  ## 📜 Ver historial de migraciones
-	uv run python -m alembic history
+seed: ## Seed database with initial data
+	docker compose exec api uv run python -m app.scripts.seed
 
-seed-strategies:  ## 🌱 Carga las estrategias iniciales en la BD
-	uv run python -m app.scripts.seed_strategies
+# =============================================================================
+# LIMPIEZA
+# =============================================================================
 
-seed-strategies-docker:  ## 🌱 Carga las estrategias iniciales en la BD (Docker)
-	docker compose -f docker-compose.dev.yml exec api python -m app.scripts.seed_strategies
+clean: ## Remove all containers, volumes and clean cache
+	docker compose down -v
+	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+	find . -type f -name "*.pyc" -delete 2>/dev/null || true
+	find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
+	find . -type d -name ".mypy_cache" -exec rm -rf {} + 2>/dev/null || true
+	find . -type d -name ".ruff_cache" -exec rm -rf {} + 2>/dev/null || true
+
+reset-db: ## Reset ONLY database (keeps Redis cache)
+	@echo "⚠️  WARNING: This will delete ALL database data (keeps Redis)"
+	@read -p "Are you sure? (y/N): " confirm && [ "$$confirm" = "y" ] || exit 1
+	docker compose stop db
+	docker compose rm -f db
+	docker volume rm $$(docker volume ls -q | grep postgres) 2>/dev/null || true
+	docker compose up -d db
+	@echo "Waiting for database to be ready..."
+	@sleep 5
+	@make migrate
+	@make seed
+	@echo "✅ Database reset complete (Redis intact)"
+
+reset-all: ## Reset EVERYTHING (database + Redis)
+	@echo "⚠️  WARNING: This will delete ALL data (database + Redis)"
+	@read -p "Are you sure? (y/N): " confirm && [ "$$confirm" = "y" ] || exit 1
+	docker compose down -v
+	docker compose up -d db redis
+	@sleep 5
+	@make migrate
+	@make seed
+	@echo "✅ Full reset complete"
 
 # =============================================================================
 # PRODUCCIÓN
 # =============================================================================
 
-docker-prod:  ## 🚢 Construye y ejecuta para producción
-	docker-compose up --build
+prod: ## Build and run production image
+	docker build -f Dockerfile -t epidemiologia-api:latest .
+	docker run -p 8000:8000 --env-file .env epidemiologia-api:latest
 
-docker-build:  ## 🏗️ Construye la imagen Docker de producción
-	docker build -t epidemiologia-api .
+# =============================================================================
+# SETUP INICIAL
+# =============================================================================
+
+setup: ## Initial setup (run once)
+	@echo "Setting up project..."
+	@if [ ! -f .env ]; then \
+		cp .env.example .env; \
+		echo "✅ Created .env file - please edit it with your settings"; \
+	fi
+	@mkdir -p uploads logs
+	@docker compose build
+	@echo "✅ Setup complete! Run 'make up' to start"
 
 # =============================================================================
 # UTILIDADES
 # =============================================================================
 
-clean:  ## 🧹 Limpia archivos temporales
-	find . -type d -name "__pycache__" -exec rm -rf {} +
-	find . -type f -name "*.pyc" -delete
-	find . -type f -name "*.pyo" -delete
-	find . -type f -name "*.coverage" -delete
-	find . -type d -name "*.egg-info" -exec rm -rf {} +
-	find . -type d -name ".pytest_cache" -exec rm -rf {} +
-	find . -type d -name ".mypy_cache" -exec rm -rf {} +
-	find . -type d -name "htmlcov" -exec rm -rf {} +
+ps: ## Show running containers
+	docker compose ps
 
-pre-commit:  ## 🪝 Instala los hooks de pre-commit
-	uv run pre-commit install
+stats: ## Show container stats
+	docker stats --no-stream
 
-pre-commit-run:  ## 🔄 Ejecuta pre-commit en todos los archivos
-	uv run pre-commit run --all-files
-
-shell:  ## 🐚 Abre shell de Python con el contexto del proyecto
-	uv run python
-
-logs:  ## 📜 Ver logs de la aplicación
-	tail -f logs/*.log 2>/dev/null || echo "No hay logs disponibles"
+exec: ## Execute command in container (use: make exec CMD="command")
+	@if [ -z "$(CMD)" ]; then \
+		echo "Error: Please provide a command. Usage: make exec CMD=\"command\""; \
+		exit 1; \
+	fi
+	docker compose exec api $(CMD)
