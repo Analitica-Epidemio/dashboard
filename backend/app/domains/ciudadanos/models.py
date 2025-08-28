@@ -1,9 +1,9 @@
 """Modelos del dominio de Ciudadanos."""
 
 from datetime import date
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 
-from sqlalchemy import BigInteger
+from sqlalchemy import JSON, BigInteger, Column
 from sqlmodel import Field, Relationship, UniqueConstraint
 
 from app.core.models import BaseModel
@@ -12,7 +12,7 @@ from app.core.shared.enums import FrecuenciaOcurrencia, SexoBiologico, TipoDocum
 if TYPE_CHECKING:
     from app.domains.eventos.models import Evento
     from app.domains.localidades.models import Localidad
-    from app.domains.salud.models import Comorbilidad
+    from app.domains.salud.models import Comorbilidad, VacunasCiudadano
 
 
 class Ciudadano(BaseModel, table=True):
@@ -68,6 +68,7 @@ class Ciudadano(BaseModel, table=True):
         back_populates="ciudadano"
     )
     viajes: List["ViajesCiudadano"] = Relationship(back_populates="ciudadano")
+    vacunas: List["VacunasCiudadano"] = Relationship(back_populates="ciudadano")
 
 
 class Animal(BaseModel, table=True):
@@ -82,9 +83,34 @@ class Animal(BaseModel, table=True):
     sexo: Optional[str] = Field(None, max_length=20, description="Sexo del animal")
     edad_aproximada: Optional[int] = Field(None, description="Edad aproximada en meses")
     identificacion: Optional[str] = Field(
-        None, max_length=100, description="Identificación del animal (collar, chip, etc)"
+        None,
+        max_length=100,
+        description="Identificación del animal (collar, chip, etc)",
     )
-    
+
+    # Campos adicionales para mejor clasificación
+    subespecie: Optional[str] = Field(
+        None,
+        max_length=100,
+        description="Subespecie o nombre científico completo (ej: TADARIDA BRASILIENSIS)",
+    )
+    clasificacion_taxonomica: Optional[Dict] = Field(
+        None,
+        sa_column=Column(JSON),
+        description="Información taxonómica estructurada extraída automáticamente",
+    )
+    origen_deteccion: Optional[str] = Field(
+        None,
+        max_length=255,
+        description="Cómo se detectó: 'automatico', 'manual', 'revision'",
+    )
+    confidence_deteccion: Optional[float] = Field(
+        None,
+        ge=0.0,
+        le=1.0,
+        description="Confianza en la detección automática (0.0 a 1.0)",
+    )
+
     # Datos del propietario/responsable
     propietario_nombre: Optional[str] = Field(
         None, max_length=150, description="Nombre del propietario"
@@ -153,6 +179,10 @@ class CiudadanoDatos(BaseModel, table=True):
         foreign_key="ciudadano.codigo_ciudadano",
         description="Código del ciudadano",
     )
+    id_evento: int = Field(
+        foreign_key="evento.id",
+        description="ID del evento asociado (para mantener historial temporal)",
+    )
 
     # Campos propios
     cobertura_social_obra_social: Optional[str] = Field(
@@ -170,10 +200,11 @@ class CiudadanoDatos(BaseModel, table=True):
     es_declarado_pueblo_indigena: Optional[bool] = Field(
         None, description="Se declara perteneciente a pueblo indígena"
     )
-    
+
     # Agregado por Ignacio - Campos faltantes del CSV epidemiológico
     es_embarazada: Optional[bool] = Field(
-        None, description="Indica si la ciudadana está embarazada (relevante para análisis de riesgo epidemiológico)"
+        None,
+        description="Indica si la ciudadana está embarazada (relevante para análisis de riesgo epidemiológico)",
     )
 
     # Relaciones
@@ -248,10 +279,7 @@ class AmbitosConcurrenciaEvento(BaseModel, table=True):
     __tablename__ = "ambitos_concurrencia_evento"
 
     # Foreign Keys
-    id_evento: int = Field(
-        foreign_key="evento.id", 
-        description="ID del evento"
-    )
+    id_evento: int = Field(foreign_key="evento.id", description="ID del evento")
     id_localidad_ambito_ocurrencia: Optional[int] = Field(
         None,
         sa_type=BigInteger,

@@ -23,6 +23,8 @@ if "%1"=="migrate" goto migrate
 if "%1"=="makemigrations" goto makemigrations
 if "%1"=="rollback" goto rollback
 if "%1"=="db-history" goto db-history
+if "%1"=="seed-strategies" goto seed-strategies
+if "%1"=="seed-strategies-docker" goto seed-strategies-docker
 if "%1"=="docker-prod" goto docker-prod
 if "%1"=="docker-build" goto docker-build
 if "%1"=="clean" goto clean
@@ -71,6 +73,8 @@ echo   run migrate               → Ejecuta las migraciones pendientes
 echo   run makemigrations        → Genera nueva migración
 echo   run rollback              → Rollback de la última migración
 echo   run db-history            → Ver historial de migraciones
+echo   run seed-strategies       → Carga las estrategias iniciales en la BD
+echo   run seed-strategies-docker→ Carga las estrategias en BD (Docker)
 echo.
 echo PRODUCCIÓN:
 echo   run docker-prod           → Construye y ejecuta para producción
@@ -232,6 +236,16 @@ goto end
 :db-history
 echo 📜 Ver historial de migraciones...
 uv run alembic history
+goto end
+
+:seed-strategies
+echo 🌱 Cargando estrategias iniciales en la BD...
+uv run python -m app.scripts.seed_strategies
+goto end
+
+:seed-strategies-docker
+echo 🌱 Cargando estrategias iniciales en la BD (Docker)...
+docker compose -f docker-compose.dev.yml exec api python -m app.scripts.seed_strategies
 goto end
 
 REM =============================================================================

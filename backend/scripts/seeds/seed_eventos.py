@@ -4,8 +4,8 @@ Seed para cargar eventos epidemiológicos estándar.
 Estos son los eventos principales del sistema SNVS que se monitorean.
 """
 
-from sqlmodel import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select
 
 from app.domains.eventos.models import Evento
 

@@ -8,9 +8,11 @@ Arquitectura senior-level con:
 - Error handling robusto
 """
 
-from celery import Celery
-from app.core.config import settings
 import logging
+
+from celery import Celery
+
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +22,7 @@ def create_celery_app() -> Celery:
     Factory function para crear la aplicación Celery.
     Permite configuración flexible y testing.
     """
-    
+
     celery_app = Celery(
         "epidemiologia_dashboard",
         broker=settings.CELERY_BROKER_URL,
@@ -28,9 +30,9 @@ def create_celery_app() -> Celery:
         include=[
             "app.domains.uploads.tasks",
             # Agregar más módulos de tasks aquí
-        ]
+        ],
     )
-    
+
     # Configuración optimizada para procesamiento de archivos
     celery_app.conf.update(
         # Serialización
@@ -39,17 +41,14 @@ def create_celery_app() -> Celery:
         result_serializer="json",
         timezone="America/Argentina/Buenos_Aires",
         enable_utc=True,
-        
         # Workers configuration
         worker_prefetch_multiplier=1,  # Para tasks de archivos grandes
-        task_acks_late=True,           # ACK después de completar
+        task_acks_late=True,  # ACK después de completar
         worker_disable_rate_limits=False,
-        
         # Results configuration
-        result_expires=3600,           # 1 hora
+        result_expires=3600,  # 1 hora
         result_persistent=True,
         task_track_started=True,
-        
         # Task routing y priority
         task_default_queue="default",
         task_routes={
@@ -58,42 +57,37 @@ def create_celery_app() -> Celery:
                 "priority": 5,
             },
             "app.domains.uploads.tasks.cleanup_old_files": {
-                "queue": "maintenance", 
+                "queue": "maintenance",
                 "priority": 1,
-            }
+            },
         },
-        
         # Error handling
         task_reject_on_worker_lost=True,
         task_ignore_result=False,
-        
         # Monitoring
         worker_send_task_events=True,
         task_send_sent_event=True,
-        
         # Security
         worker_hijack_root_logger=False,
         worker_log_color=False,
-        
         # File processing specific
-        task_soft_time_limit=300,      # 5 minutos soft limit
-        task_time_limit=600,           # 10 minutos hard limit
-        
+        task_soft_time_limit=300,  # 5 minutos soft limit
+        task_time_limit=600,  # 10 minutos hard limit
         # Beat scheduler (para tareas periódicas)
         beat_schedule={
             "cleanup-old-files": {
                 "task": "app.domains.uploads.tasks.cleanup_old_files",
                 "schedule": 3600.0,  # Cada hora
-                "options": {"queue": "maintenance"}
+                "options": {"queue": "maintenance"},
             },
             "cleanup-old-jobs": {
-                "task": "app.domains.uploads.tasks.cleanup_old_jobs", 
+                "task": "app.domains.uploads.tasks.cleanup_old_jobs",
                 "schedule": 7200.0,  # Cada 2 horas
-                "options": {"queue": "maintenance"}
-            }
-        }
+                "options": {"queue": "maintenance"},
+            },
+        },
     )
-    
+
     return celery_app
 
 
@@ -106,11 +100,11 @@ def file_processing_task(*args, **kwargs):
     """Decorator para tasks de procesamiento de archivos."""
     return celery_app.task(
         bind=True,
-        queue="file_processing", 
+        queue="file_processing",
         soft_time_limit=300,
         time_limit=600,
-        *args, 
-        **kwargs
+        *args,
+        **kwargs,
     )
 
 
@@ -122,7 +116,7 @@ def maintenance_task(*args, **kwargs):
         soft_time_limit=60,
         time_limit=120,
         *args,
-        **kwargs
+        **kwargs,
     )
 
 

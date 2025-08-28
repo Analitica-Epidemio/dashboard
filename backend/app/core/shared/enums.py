@@ -82,13 +82,24 @@ class EstadoEventoEpidemiologico(str, Enum):
 class ResultadoTratamiento(str, Enum):
     """Resultado del tratamiento médico aplicado"""
 
-    PACIENTE_CURADO = "CURADO"
-    PACIENTE_MEJORADO = "MEJORADO"
-    SIN_CAMBIOS = "SIN_CAMBIOS"
-    PACIENTE_EMPEORADO = "EMPEORADO"
-    PACIENTE_FALLECIDO = "FALLECIDO"
-    ABANDONO_TRATAMIENTO = "ABANDONO"
-    EN_TRATAMIENTO = "EN_TRATAMIENTO"
+    ADECUADO = "Adecuado (al menos 1 dosis al menos 30 días antes de FPP)"
+    APLICADO = "Aplicado"
+    CURADO = "Curado"
+    DESCONOCIDO = "Desconocido"
+    EN_TRATAMIENTO = "En tratamiento"
+    EXITO_TRATAMIENTO = "Éxito del tratamiento"
+    FALLECIDO = "Fallecido"
+    FRACASO_TRATAMIENTO = "Fracaso del tratamiento"
+    INADECUADO = "Inadecuado"
+    NO_CORRESPONDE = "No corresponde"
+    PENICILINA_BENZATINICA = "Penicilina Benzatínica única dosis"
+    PERDIDA_SEGUIMIENTO = "Pérdida de seguimiento"
+    SIN_TRATAMIENTO = "Sin tratamiento"
+    TRASLADO = "Traslado"
+    TRATAMIENTO_COMPLETO = "Tratamiento completo"
+    TRATAMIENTO_EN_CURSO = "Tratamiento en curso"
+    TRATAMIENTO_INCOMPLETO = "Tratamiento incompleto"
+    TRATAMIENTO_INCOMPLETO_ABANDONO = "Tratamiento incompleto por abandono"
 
 
 class EstadoInternacion(str, Enum):

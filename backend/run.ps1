@@ -61,6 +61,8 @@ function Show-Help {
     Write-Host "  makemigrations 'msg'  → Genera nueva migración"
     Write-Host "  rollback              → Rollback de la última migración"
     Write-Host "  db-history            → Ver historial de migraciones"
+    Write-Host "  seed-strategies       → Carga las estrategias iniciales en la BD"
+    Write-Host "  seed-strategies-docker→ Carga las estrategias en BD (Docker)"
     Write-Host ""
     Write-ColorOutput "PRODUCCIÓN:" "Yellow"
     Write-Host "  docker-prod           → Construye y ejecuta para producción"
@@ -230,6 +232,16 @@ function Show-DBHistory {
     & uv run alembic history
 }
 
+function Seed-Strategies {
+    Write-Info "🌱 Cargando estrategias iniciales en la BD..."
+    & uv run python -m app.scripts.seed_strategies
+}
+
+function Seed-StrategiesDocker {
+    Write-Info "🌱 Cargando estrategias iniciales en la BD (Docker)..."
+    & docker compose -f docker-compose.dev.yml exec api python -m app.scripts.seed_strategies
+}
+
 # =============================================================================
 # PRODUCCIÓN
 # =============================================================================
@@ -308,6 +320,8 @@ switch ($Command.ToLower()) {
     "makemigrations" { Make-Migration }
     "rollback" { Run-Rollback }
     "db-history" { Show-DBHistory }
+    "seed-strategies" { Seed-Strategies }
+    "seed-strategies-docker" { Seed-StrategiesDocker }
     "docker-prod" { Start-DockerProd }
     "docker-build" { Build-Docker }
     "clean" { Clean-Project }

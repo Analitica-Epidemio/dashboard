@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, FileText, RotateCcw } from "lucide-react";
 
@@ -8,14 +9,12 @@ interface UploadSuccessProps {
   sheetName: string;
   totalRows: number;
   onUploadAnother: () => void;
-  onViewDashboard?: () => void;
 }
 
 export function UploadSuccess({ 
   sheetName, 
   totalRows, 
-  onUploadAnother,
-  onViewDashboard 
+  onUploadAnother
 }: UploadSuccessProps) {
   return (
     <div className="flex flex-col items-center justify-center flex-1 max-w-2xl mx-auto">
@@ -62,16 +61,12 @@ export function UploadSuccess({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {/* Botón para ver dashboard */}
-          {onViewDashboard && (
-            <Button
-              onClick={onViewDashboard}
-              className="flex items-center justify-center space-x-2 py-3"
-              size="lg"
-            >
+          <Button asChild size="lg" className="flex items-center justify-center space-x-2 py-3">
+            <Link href="/dashboard">
               <FileText className="w-5 h-5" />
               <span>Ver Dashboard</span>
-            </Button>
-          )}
+            </Link>
+          </Button>
           
           {/* Botón para subir otro archivo */}
           <Button

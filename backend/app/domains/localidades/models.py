@@ -92,9 +92,10 @@ class Localidad(BaseModel, table=True):
     nombre: str = Field(
         max_length=150, index=True, description="Nombre de la localidad"
     )
-    id_departamento_indec: int = Field(
+    id_departamento_indec: Optional[int] = Field(
+        None,
         foreign_key="departamento.id_departamento_indec",
-        description="ID del departamento",
+        description="ID del departamento (opcional para localidades de viaje)",
     )
     # TODO: El original tenia provincia indec, pero con esto lo podemos sacar a traves de un join con el  departamento
 
@@ -111,7 +112,7 @@ class Localidad(BaseModel, table=True):
     longitud: Optional[float] = Field(None, description="Longitud geográfica")
 
     # Relaciones
-    departamento: "Departamento" = Relationship(back_populates="localidades")
+    departamento: Optional["Departamento"] = Relationship(back_populates="localidades")
     establecimientos: List["Establecimiento"] = Relationship(
         back_populates="localidad_establecimiento"
     )

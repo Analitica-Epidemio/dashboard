@@ -14,15 +14,9 @@ database_url_sync = settings.DATABASE_URL.replace(
 database_url_async = settings.DATABASE_URL
 
 # Crear engines
-engine = create_engine(
-    database_url_sync,
-    echo=settings.ENVIRONMENT == "development",
-)
+engine = create_engine(database_url_sync, echo=False)
 
-async_engine = create_async_engine(
-    database_url_async,
-    echo=settings.ENVIRONMENT == "development",
-)
+async_engine = create_async_engine(database_url_async, echo=False)
 
 
 def get_session() -> Generator[Session, None, None]:

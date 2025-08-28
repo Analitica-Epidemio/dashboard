@@ -77,7 +77,7 @@ class DatamartEpidemiologia(BaseModel, table=True):
         None, max_length=150, description="Nombre del departamento"
     )
     region_sanitaria: Optional[str] = Field(
-        None, max_length=50, index=True, description="Región sanitaria"
+        None, max_length=255, index=True, description="Región sanitaria"
     )
 
     # Datos del evento
@@ -137,7 +137,7 @@ class DatamartEpidemiologia(BaseModel, table=True):
 
     # Datos de evolución
     evolucion_final: Optional[str] = Field(
-        None, max_length=50, index=True, description="Evolución final del caso"
+        None, max_length=255, index=True, description="Evolución final del caso"
     )
     fecha_alta: Optional[date] = Field(None, description="Fecha de alta")
 

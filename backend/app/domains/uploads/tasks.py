@@ -1,300 +1,238 @@
 """
-Celery tasks para procesamiento asíncrono de archivos.
+Celery tasks para procesamiento de archivos epidemiológicos.
 
-Arquitectura senior-level:
-- Progress tracking avanzado
-- Error handling robusto
-- Logging detallado
-- Recovery mechanisms
+ENFOQUE SIMPLE: Normalizar, clasificar y guardar en BD.
+Sin alertas ni métricas complejas.
 """
 
-import pandas as pd
-from pathlib import Path
-from datetime import datetime, timedelta
+import json
 import logging
-import traceback
-from typing import Dict, Any
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Any, Dict
+
+from sqlmodel import and_, select
 
 from app.core.celery_app import file_processing_task, maintenance_task
-from app.domains.uploads.repositories import job_repository
-from app.domains.uploads.models import JobStatus
+from app.core.database import Session, engine
+from app.domains.uploads.models import JobStatus, ProcessingJob
+from app.domains.uploads.processors.simple_processor import create_processor
 
 logger = logging.getLogger(__name__)
+
+
+def convert_numpy_types(obj):
+    """Convierte tipos numpy/pandas a tipos nativos de Python."""
+    import numpy as np
+    import pandas as pd
+
+    if isinstance(obj, (np.integer, np.floating)):
+        return obj.item()
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, pd.Series):
+        return obj.tolist()
+    elif isinstance(obj, dict):
+        return {k: convert_numpy_types(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_numpy_types(v) for v in obj]
+    elif hasattr(obj, "item"):
+        try:
+            return obj.item()
+        except (ValueError, TypeError):
+            return str(obj)
+    return obj
 
 
 @file_processing_task(name="app.domains.uploads.tasks.process_csv_file")
 def process_csv_file(self, job_id: str, file_path: str) -> Dict[str, Any]:
     """
-    Procesar archivo CSV de forma asíncrona.
-    
+    Procesa archivo CSV de forma simple y eficiente.
+
+    OBJETIVO:
+    1. Validar y limpiar datos
+    2. Clasificar eventos usando estrategias
+    3. Normalizar y guardar en BD con bulk operations
+    4. Reportar resultados básicos
+
     Args:
-        job_id: UUID del job en la base de datos
-        file_path: Ruta del archivo CSV a procesar
-        
+        job_id: ID del job
+        file_path: Ruta del archivo
+
     Returns:
-        Dict con resultados del procesamiento
-        
-    Raises:
-        Exception: Si hay errores en el procesamiento
+        Resultados básicos del procesamiento
     """
-    
-    # Configurar contexto de logging
-    logger = logging.getLogger(f"{__name__}.{job_id}")
-    logger.info(f"Iniciando procesamiento de CSV: {file_path}")
-    
-    # Variables para tracking
+    logger.info(f"Procesando archivo - Job: {job_id}, File: {file_path}")
+
     job = None
     file_path_obj = Path(file_path)
-    
+
     try:
-        # PASO 1: Cargar job desde base de datos
-        logger.info("Paso 1: Cargando job desde base de datos")
-        import asyncio
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        
-        job = loop.run_until_complete(job_repository.get_by_id(job_id))
-        if not job:
-            raise Exception(f"Job {job_id} no encontrado en base de datos")
-        
-        # Actualizar progreso: 10%
-        job.update_progress(10, "Iniciando validaciones", increment_completed_steps=True)
-        loop.run_until_complete(job_repository.update(job))
-        
-        # Reportar progreso a Celery
-        self.update_state(
-            state='PROGRESS',
-            meta={'percentage': 10, 'step': 'Iniciando validaciones'}
-        )
-        
-        # PASO 2: Validar archivo
-        logger.info("Paso 2: Validando archivo CSV")
-        if not file_path_obj.exists():
-            raise Exception(f"Archivo no encontrado: {file_path}")
-        
-        file_size = file_path_obj.stat().st_size
-        if file_size > 50 * 1024 * 1024:  # 50MB
-            raise Exception(f"Archivo muy grande: {file_size / (1024*1024):.2f}MB")
-        
-        # Actualizar progreso: 25%
-        job.update_progress(25, "Leyendo archivo CSV", increment_completed_steps=True)
-        loop.run_until_complete(job_repository.update(job))
-        
-        self.update_state(
-            state='PROGRESS',
-            meta={'percentage': 25, 'step': 'Leyendo archivo CSV'}
-        )
-        
-        # PASO 3: Procesar CSV con pandas
-        logger.info("Paso 3: Procesando CSV con pandas")
-        
-        # Leer CSV con configuración robusta
-        try:
-            df = pd.read_csv(
-                file_path_obj,
-                encoding='utf-8',
-                na_filter=True,
-                keep_default_na=True,
-                dtype=str,  # Leer todo como string inicialmente
-                low_memory=False
+        with Session(engine) as session:
+            # Cargar job
+            statement = select(ProcessingJob).where(ProcessingJob.id == job_id)
+            job = session.exec(statement).first()
+
+            if not job:
+                raise Exception(f"Job {job_id} no encontrado")
+
+            sheet_name = (
+                job.job_metadata.get("sheet_name") if job.job_metadata else None
             )
-        except UnicodeDecodeError:
-            # Fallback a latin-1 encoding
-            logger.warning("Error UTF-8, intentando latin-1")
-            df = pd.read_csv(
-                file_path_obj,
-                encoding='latin-1',
-                na_filter=True,
-                keep_default_na=True,
-                dtype=str,
-                low_memory=False
-            )
-        
-        # Actualizar progreso: 50%
-        job.update_progress(50, "Validando datos", increment_completed_steps=True)
-        loop.run_until_complete(job_repository.update(job))
-        
-        self.update_state(
-            state='PROGRESS',
-            meta={'percentage': 50, 'step': 'Validando datos'}
-        )
-        
-        # Obtener información del dataset
-        total_rows = len(df)
-        columns = df.columns.tolist()
-        
-        logger.info(f"CSV cargado exitosamente:")
-        logger.info(f"  - Filas: {total_rows:,}")
-        logger.info(f"  - Columnas: {len(columns)}")
-        logger.info(f"  - Tamaño: {file_size / (1024*1024):.2f}MB")
-        
-        # Validaciones epidemiológicas específicas
-        validation_errors = []
-        
-        # Verificar que no esté vacío
-        if total_rows == 0:
-            validation_errors.append("Archivo CSV está vacío")
-        
-        # Verificar columnas mínimas (ejemplo)
-        if len(columns) < 3:
-            validation_errors.append("Archivo debe tener al menos 3 columnas")
-        
-        # Verificar filas duplicadas
-        duplicates = df.duplicated().sum()
-        if duplicates > 0:
-            logger.warning(f"Encontradas {duplicates} filas duplicadas")
-        
-        # Actualizar progreso: 75%
-        job.update_progress(75, "Finalizando procesamiento")
-        loop.run_until_complete(job_repository.update(job))
-        
-        self.update_state(
-            state='PROGRESS',
-            meta={'percentage': 75, 'step': 'Finalizando procesamiento'}
-        )
-        
-        # Construir resultado
-        result_data = {
-            "total_rows": total_rows,
-            "columns": columns,
-            "file_path": str(file_path_obj),
-            "file_size": file_size,
-            "validation_errors": validation_errors,
-            "duplicates_found": duplicates,
-            "processing_metadata": {
-                "pandas_version": pd.__version__,
-                "processing_time": datetime.utcnow().isoformat(),
-                "encoding_used": "utf-8"  # O latin-1 si fue fallback
+
+            # Callback de progreso simple
+            def update_progress(percentage: int, message: str):
+                try:
+                    job.update_progress(percentage, message)
+                    session.add(job)
+                    session.commit()
+                    session.refresh(job)
+
+                    self.update_state(
+                        state="PROGRESS",
+                        meta={"percentage": percentage, "step": message},
+                    )
+                except Exception as e:
+                    logger.warning(f"Error actualizando progreso: {e}")
+
+            # Crear procesador simple
+            processor = create_processor(session, update_progress)
+
+            # Procesar archivo
+            result = processor.process_file(file_path_obj, sheet_name)
+
+            # Preparar datos para el job
+            result_data = {
+                "file_path": str(file_path),
+                "file_size": file_path_obj.stat().st_size
+                if file_path_obj.exists()
+                else 0,
+                "total_rows": result["total_rows"],
+                "processed_rows": result["processed_rows"],
+                "entities_created": result.get("ciudadanos_created", 0)
+                + result.get("eventos_created", 0),
+                "ciudadanos_created": result.get("ciudadanos_created", 0),
+                "eventos_created": result.get("eventos_created", 0),
+                "diagnosticos_created": result.get("diagnosticos_created", 0),
+                "processing_time_seconds": 0,  # Se puede agregar timing si necesitas
+                "errors": result.get("errors", []),
             }
-        }
-        
-        # Actualizar progreso: 100%
-        job.update_progress(100, "Completado exitosamente")
-        loop.run_until_complete(job_repository.update(job))
-        
-        logger.info(f"Procesamiento completado exitosamente para job {job_id}")
-        return result_data
-        
+
+            # Actualizar job
+            if result["status"] == "SUCCESS":
+                job.mark_completed(**result_data)
+                logger.info(f"Procesamiento exitoso - Job: {job_id}")
+            else:
+                job.mark_failed(result.get("error", "Error desconocido"), json.dumps(result_data, default=str))
+                logger.error(f"Procesamiento falló - Job: {job_id}")
+
+            session.add(job)
+            session.commit()
+
+        return convert_numpy_types(result_data)
+
     except Exception as e:
-        error_msg = str(e)
-        error_trace = traceback.format_exc()
-        
-        logger.error(f"Error procesando CSV para job {job_id}: {error_msg}")
-        logger.error(f"Traceback: {error_trace}")
-        
-        # Si tenemos el job, marcarlo como fallido
+        # Rollback de la sesión en caso de error
+        try:
+            session.rollback()
+        except:
+            pass
+        error_msg = f"Error procesando job {job_id}: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+
+        # Actualizar job con error
         if job:
             try:
-                import asyncio
-                loop = asyncio.get_event_loop()
-                job.mark_failed(error_msg, error_trace)
-                loop.run_until_complete(job_repository.update(job))
-            except Exception as update_error:
-                logger.error(f"Error actualizando job fallido: {update_error}")
-        
-        # Re-raise la excepción para que Celery la maneje
+                with Session(engine) as session:
+                    statement = select(ProcessingJob).where(ProcessingJob.id == job_id)
+                    job = session.exec(statement).first()
+                    if job:
+                        job.mark_failed(error_msg, json.dumps({"error_type": type(e).__name__}, default=str))
+                        session.add(job)
+                        session.commit()
+            except Exception as session_error:
+                logger.error(f"Error updating job status: {session_error}")
+                pass
+
         raise e
-    
+
     finally:
-        # Cleanup: remover archivo temporal si existe
-        try:
-            if file_path_obj and file_path_obj.exists():
+        # Limpiar archivo temporal
+        if file_path_obj.exists():
+            try:
                 file_path_obj.unlink()
-                logger.debug(f"Archivo temporal removido: {file_path_obj}")
-        except Exception as cleanup_error:
-            logger.warning(f"Error removiendo archivo temporal: {cleanup_error}")
+            except Exception as e:
+                logger.warning(f"No se pudo eliminar archivo temporal: {e}")
 
 
 @maintenance_task(name="app.domains.uploads.tasks.cleanup_old_files")
 def cleanup_old_files() -> Dict[str, Any]:
-    """
-    Limpiar archivos temporales antiguos.
-    
-    Returns:
-        Dict con estadísticas de limpieza
-    """
-    
-    logger.info("Iniciando limpieza de archivos antiguos")
-    
-    # Directorio de uploads
+    """Limpia archivos temporales antiguos."""
+    logger.info("Limpiando archivos antiguos")
+
     upload_dir = Path("uploads")
     if not upload_dir.exists():
         return {"status": "skipped", "reason": "Upload directory not found"}
-    
-    # Archivos más antiguos que 24 horas
+
     cutoff_time = datetime.now() - timedelta(hours=24)
-    
-    cleaned_files = []
+    cleaned_count = 0
     total_size = 0
-    
+
     try:
         for file_path in upload_dir.iterdir():
             if file_path.is_file():
-                # Verificar si es antiguo
                 file_time = datetime.fromtimestamp(file_path.stat().st_mtime)
-                
                 if file_time < cutoff_time:
                     file_size = file_path.stat().st_size
-                    total_size += file_size
-                    
-                    # Remover archivo
                     file_path.unlink()
-                    cleaned_files.append({
-                        "name": file_path.name,
-                        "size": file_size,
-                        "age_hours": (datetime.now() - file_time).total_seconds() / 3600
-                    })
-        
-        result = {
-            "status": "completed",
-            "files_cleaned": len(cleaned_files),
-            "total_size_freed": total_size,
-            "files": cleaned_files
-        }
-        
-        logger.info(f"Limpieza completada: {len(cleaned_files)} archivos, {total_size / (1024*1024):.2f}MB liberados")
-        return result
-        
-    except Exception as e:
-        error_msg = f"Error en limpieza de archivos: {str(e)}"
-        logger.error(error_msg)
+                    cleaned_count += 1
+                    total_size += file_size
+
         return {
-            "status": "failed",
-            "error": error_msg
+            "status": "completed",
+            "files_cleaned": cleaned_count,
+            "size_freed_mb": total_size / (1024 * 1024),
         }
+
+    except Exception as e:
+        logger.error(f"Error limpiando archivos: {e}")
+        return {"status": "failed", "error": str(e)}
 
 
 @maintenance_task(name="app.domains.uploads.tasks.cleanup_old_jobs")
 def cleanup_old_jobs() -> Dict[str, Any]:
-    """
-    Limpiar jobs antiguos completados o fallidos.
-    
-    Returns:
-        Dict con estadísticas de limpieza
-    """
-    
-    logger.info("Iniciando limpieza de jobs antiguos")
-    
+    """Limpia jobs antiguos según políticas de retención."""
+    logger.info("Limpiando jobs antiguos")
+
     try:
-        import asyncio
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        
-        # Limpiar jobs más antiguos que 7 días
-        cleaned_count = loop.run_until_complete(job_repository.cleanup_old_jobs(days_old=7))
-        
-        result = {
-            "status": "completed",
-            "jobs_cleaned": cleaned_count
-        }
-        
-        logger.info(f"Limpieza de jobs completada: {cleaned_count} jobs eliminados")
-        return result
-        
+        with Session(engine) as session:
+            retention_policies = {
+                JobStatus.COMPLETED: timedelta(days=30),
+                JobStatus.FAILED: timedelta(days=7),
+                JobStatus.CANCELLED: timedelta(days=3),
+            }
+
+            total_cleaned = 0
+
+            for status, retention_time in retention_policies.items():
+                cutoff_time = datetime.utcnow() - retention_time
+
+                query = select(ProcessingJob).where(
+                    and_(
+                        ProcessingJob.created_at < cutoff_time,
+                        ProcessingJob.status == status,
+                    )
+                )
+
+                jobs_to_clean = session.exec(query).all()
+                for job in jobs_to_clean:
+                    session.delete(job)
+                    total_cleaned += 1
+
+            session.commit()
+
+            return {"status": "completed", "jobs_cleaned": total_cleaned}
+
     except Exception as e:
-        error_msg = f"Error en limpieza de jobs: {str(e)}"
-        logger.error(error_msg)
-        return {
-            "status": "failed",
-            "error": error_msg
-        }
+        logger.error(f"Error limpiando jobs: {e}")
+        return {"status": "failed", "error": str(e)}

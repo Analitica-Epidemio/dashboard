@@ -11,7 +11,6 @@ interface UploadProgressProps {
   jobId: string | null;
   onComplete?: (result: { total_rows?: number; columns?: string[]; file_path?: string }) => void;
   onError?: (error: string) => void;
-  dashboardHref?: string;
   className?: string;
 }
 
@@ -28,25 +27,30 @@ export function UploadProgress({
   jobId, 
   onComplete, 
   onError,
-  dashboardHref = "/dashboard",
   className = "" 
 }: UploadProgressProps) {
   const { 
     jobStatus, 
     isLoading, 
     error, 
-    isPolling, 
     startPolling, 
     cancelJob,
     reset 
   } = useJobProgress();
 
   // Auto-start polling cuando recibimos un jobId
+  // Solo iniciar polling una vez cuando se monta el componente
   React.useEffect(() => {
-    if (jobId && !isPolling) {
+    if (jobId) {
       startPolling(jobId);
     }
-  }, [jobId, isPolling, startPolling]);
+    // Cleanup al desmontar
+    return () => {
+      if (jobId) {
+        // stopPolling se llama automáticamente en useJobProgress cleanup
+      }
+    };
+  }, [jobId]); // Removemos isPolling para evitar re-iniciar después de fallar
 
   // Callbacks cuando cambia el estado
   React.useEffect(() => {
@@ -149,6 +153,7 @@ export function UploadProgress({
 
   const canCancel = jobStatus.status === "pending" || jobStatus.status === "in_progress";
   const isFinished = jobStatus.status === "completed" || jobStatus.status === "failed" || jobStatus.status === "cancelled";
+  const isFailed = jobStatus.status === "failed";
 
   return (
     <div className={`space-y-4 p-4 border rounded-lg bg-card ${className}`}>
@@ -168,7 +173,7 @@ export function UploadProgress({
           </div>
         </div>
         
-        {/* Botón de cancelar */}
+        {/* Botón de cancelar o reintentar */}
         {canCancel && (
           <Button 
             variant="outline" 
@@ -209,13 +214,42 @@ export function UploadProgress({
       )}
 
       {jobStatus.error_message && (
-        <div className="space-y-2 p-3 bg-red-50 rounded-md border border-red-200">
-          <p className="text-sm font-medium text-red-800">
-            Error en procesamiento
-          </p>
-          <p className="text-xs text-red-700">
-            {jobStatus.error_message}
-          </p>
+        <div className="space-y-3 p-3 bg-red-50 rounded-md border border-red-200">
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-red-800">
+              El procesamiento falló
+            </p>
+            <p className="text-xs text-red-700">
+              {jobStatus.error_message}
+            </p>
+          </div>
+          
+          {/* Opciones cuando falla */}
+          {isFailed && (
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => window.location.reload()}
+                className="flex-1 bg-white hover:bg-red-50 border-red-200 text-red-700"
+              >
+                Intentar con otro archivo
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  // Reintentar el mismo archivo
+                  if (onError) {
+                    onError("retry");
+                  }
+                }}
+                className="flex-1 bg-white hover:bg-red-50 border-red-200 text-red-700"
+              >
+                Reintentar
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
@@ -227,36 +261,36 @@ export function UploadProgress({
           </div>
         )}
         
-        {/* Mensaje informativo y botón dashboard */}
-        <div className="p-3 bg-blue-50 rounded-md border border-blue-200">
-          <div className="space-y-3">
-            <div className="text-sm">
-              <p className="font-medium text-blue-800 mb-1">
-                {jobStatus.status === "completed" ? "✅ Procesamiento completado" : "📊 Procesamiento en curso"}
-              </p>
-              <p className="text-blue-700 text-xs">
-                {jobStatus.status === "completed" 
-                  ? "Los datos han sido procesados y están disponibles en el dashboard."
-                  : "Los datos se están analizando en segundo plano. Una vez terminado, la información se actualizará automáticamente en el dashboard."
-                }
-              </p>
-            </div>
-            
-            {dashboardHref && (
+        {/* Mensaje informativo y botón dashboard - Solo si NO falló */}
+        {!isFailed && (
+          <div className="p-3 bg-blue-50 rounded-md border border-blue-200">
+            <div className="space-y-3">
+              <div className="text-sm">
+                <p className="font-medium text-blue-800 mb-1">
+                  {jobStatus.status === "completed" ? "✅ Procesamiento completado" : "📊 Procesamiento en curso"}
+                </p>
+                <p className="text-blue-700 text-xs">
+                  {jobStatus.status === "completed" 
+                    ? "Los datos han sido procesados y están disponibles en el dashboard."
+                    : "Los datos se están analizando en segundo plano. Una vez terminado, la información se actualizará automáticamente en el dashboard."
+                  }
+                </p>
+              </div>
+              
               <Button 
                 variant="outline" 
                 size="sm"
                 asChild
                 className="w-full bg-white hover:bg-blue-50 border-blue-200 text-blue-700"
               >
-                <Link href={dashboardHref}>
+                <Link href="/dashboard">
                   <ExternalLink className="w-4 h-4 mr-2" />
                   Ir al Dashboard
                 </Link>
               </Button>
-            )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

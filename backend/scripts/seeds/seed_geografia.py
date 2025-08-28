@@ -8,9 +8,9 @@ from pathlib import Path
 from typing import Optional
 
 import pandas as pd
-from sqlmodel import select as sqlmodel_select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import Select
+from sqlmodel import select as sqlmodel_select
 
 from app.core.constants.chubut_epidemiologia import (
     MAPEO_LOCALIDAD_A_DEPARTAMENTO_CHUBUT,

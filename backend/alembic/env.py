@@ -19,26 +19,14 @@ from alembic import context
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from app.core.config import settings
-
 # Importar SQLModel
 from sqlmodel import SQLModel
 
+from app.core.config import settings
+
 # Importar todos los modelos para que Alembic los detecte
 # IMPORTANTE: Importar todos los modelos de los dominios aquí
-from app.domains import (
-    ciudadanos,
-    localidades,
-    eventos,
-    salud,
-    establecimientos,
-    diagnosticos,
-    investigaciones,
-    analytics,
-    uploads,
-)
-
-# Los modelos de uploads ya se importan a través de app.domains
+from app.domains import *  # noqa: F403, F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

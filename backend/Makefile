@@ -73,9 +73,9 @@ dev-docker-logs:  ## 📋 Ver logs de los servicios Docker
 dev-docker-db-reset:  ## 💣 Reinicia la BD Docker desde cero (BORRA TODOS LOS DATOS)
 	@echo "⚠️  ADVERTENCIA: Esto eliminará TODOS los datos de la base de datos"
 	@read -p "¿Estás seguro? (y/N): " confirm && [ "$$confirm" = "y" ] || exit 1
-	docker-compose -f docker-compose.dev.yml down
-	docker volume rm epi_dashboard_postgres_data_dev 2>/dev/null || true
-	@echo "✅ Base de datos eliminada. Se creará una nueva al ejecutar 'make dev-docker'"
+	docker-compose -f docker-compose.dev.yml down -v
+	@echo "✅ Base de datos y volúmenes eliminados. Se crearán nuevos al ejecutar 'make dev-docker'"
+
 
 # =============================================================================
 # DESARROLLO SIN DOCKER (Requiere PostgreSQL y Redis locales)
@@ -120,16 +120,22 @@ qa:  ## ✅ Ejecuta todos los checks de calidad
 # =============================================================================
 
 migrate:  ## 🗄️ Ejecuta las migraciones pendientes
-	uv run alembic upgrade head
+	uv run python -m alembic upgrade head
 
 makemigrations:  ## 📝 Genera nueva migración (uso: make makemigrations m="descripción")
-	uv run alembic revision --autogenerate -m "$(m)"
+	uv run python -m alembic revision --autogenerate -m "$(m)"
 
 rollback:  ## ↩️ Rollback de la última migración
-	uv run alembic downgrade -1
+	uv run python -m alembic downgrade -1
 
 db-history:  ## 📜 Ver historial de migraciones
-	uv run alembic history
+	uv run python -m alembic history
+
+seed-strategies:  ## 🌱 Carga las estrategias iniciales en la BD
+	uv run python -m app.scripts.seed_strategies
+
+seed-strategies-docker:  ## 🌱 Carga las estrategias iniciales en la BD (Docker)
+	docker compose -f docker-compose.dev.yml exec api python -m app.scripts.seed_strategies
 
 # =============================================================================
 # PRODUCCIÓN

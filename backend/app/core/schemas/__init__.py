@@ -1,11 +1,11 @@
 """Schemas del sistema siguiendo mejores prácticas."""
 
 from .response import (
+    DataResponse,
     ErrorDetail,
     ErrorResponse,
-    SuccessResponse,
     PaginatedResponse,
-    DataResponse,
+    SuccessResponse,
 )
 
 __all__ = [

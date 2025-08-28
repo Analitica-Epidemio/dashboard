@@ -2,8 +2,8 @@
 Seed para cargar establecimientos de salud principales de Chubut.
 """
 
-from sqlmodel import select, col
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import col, select
 
 from app.domains.establecimientos.models import Establecimiento
 
