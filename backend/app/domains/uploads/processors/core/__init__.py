@@ -7,7 +7,6 @@ Provides the foundation classes and utilities for the new architecture.
 from .base_processor import (
     BaseProcessor,
     BatchProcessor,
-    PipelineProcessor,
     ProcessingContext,
     ProcessingStats,
 )
@@ -26,7 +25,6 @@ __all__ = [
     "BatchProcessor",
     "ProcessingContext",
     "ProcessingStats",
-    "PipelineProcessor",
     # Constants
     "ProcessingStage",
     "ProcessingStatus",
