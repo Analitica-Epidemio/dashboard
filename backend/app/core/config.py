@@ -1,5 +1,6 @@
 """Configuración de la aplicación."""
 
+import os
 from typing import List
 
 from pydantic_settings import BaseSettings
@@ -24,7 +25,9 @@ class Settings(BaseSettings):
     # =============================================================================
     # CONFIGURACIÓN DE BASE DE DATOS
     # =============================================================================
-    DATABASE_URL: str = "postgresql+asyncpg://epidemiologia_user:epidemiologia_password@localhost:5432/epidemiologia_db"
+    DATABASE_URL: str = (
+        "postgresql+asyncpg://epidemiologia_user:epidemiologia_password@localhost:5432/epidemiologia_db"
+    )
 
     # =============================================================================
     # CONFIGURACIÓN DE SEGURIDAD

@@ -2,7 +2,7 @@
 
 import time
 import traceback
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Request, Response, status

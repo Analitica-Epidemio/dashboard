@@ -12,6 +12,7 @@ from . import (
     ciudadanos,
     diagnosticos,
     establecimientos,
+    estrategias,
     eventos,
     investigaciones,
     localidades,
@@ -26,6 +27,7 @@ __all__ = [
     "salud",
     "establecimientos",
     "diagnosticos",
+    "estrategias",
     "investigaciones",
     "uploads",
 ]

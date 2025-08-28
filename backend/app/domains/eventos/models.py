@@ -1,19 +1,23 @@
 from datetime import date
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 
-from sqlalchemy import BigInteger, Text
+from sqlalchemy import JSON, BigInteger, Column, Text
 from sqlmodel import Field, Relationship
 
 from app.core.models import BaseModel
 
 if TYPE_CHECKING:
-    from app.domains.ciudadanos.models import AmbitosConcurrenciaEvento, Animal, Ciudadano
+    from app.domains.ciudadanos.models import (
+        AmbitosConcurrenciaEvento,
+        Animal,
+        Ciudadano,
+    )
     from app.domains.diagnosticos.models import (
         DiagnosticoEvento,
-        EstudioEvento,
         InternacionEvento,
         TratamientoEvento,
     )
+    from app.domains.establecimientos.models import Establecimiento
     from app.domains.investigaciones.models import (
         ContactosNotificacion,
         InvestigacionEvento,
@@ -32,7 +36,7 @@ class GrupoEno(BaseModel, table=True):
         None, max_length=500, description="Descripción del grupo"
     )
     codigo: Optional[str] = Field(
-        None, max_length=50, unique=True, index=True, description="Código del grupo"
+        None, max_length=200, unique=True, index=True, description="Código del grupo"
     )
 
     # Relaciones
@@ -50,7 +54,7 @@ class TipoEno(BaseModel, table=True):
         None, max_length=500, description="Descripción del tipo"
     )
     codigo: Optional[str] = Field(
-        None, max_length=50, unique=True, index=True, description="Código del tipo"
+        None, max_length=200, unique=True, index=True, description="Código del tipo"
     )
 
     # Foreign Keys
@@ -136,13 +140,16 @@ class Evento(BaseModel, table=True):
     observaciones_texto: Optional[str] = Field(
         None, sa_column=Text, description="Observaciones en texto libre sobre el evento"
     )
-    
+
     # Agregado por Ignacio - Campos faltantes del CSV epidemiológico
     fecha_consulta: Optional[date] = Field(
-        None, description="Fecha de primera consulta médica del caso (usar NULL cuando sea desconocida)"
+        None,
+        description="Fecha de primera consulta médica del caso (usar NULL cuando sea desconocida)",
     )
     id_origen: Optional[str] = Field(
-        None, max_length=200, description="ID del sistema origen (SNVS, otro sistema, usar 'Desconocido' si no se especifica)"
+        None,
+        max_length=200,
+        description="ID del sistema origen (SNVS, otro sistema, usar 'Desconocido' si no se especifica)",
     )
     semana_epidemiologica_sintomas: Optional[int] = Field(
         None, description="Semana epidemiológica específica de inicio de síntomas"
@@ -164,35 +171,84 @@ class Evento(BaseModel, table=True):
         foreign_key="animal.id",
         description="ID del animal (opcional si es evento de ciudadano)",
     )
+    # Agregado por Ignacio - FKs a establecimientos del evento
+    id_establecimiento_consulta: Optional[int] = Field(
+        None,
+        foreign_key="establecimiento.id",
+        description="ID del establecimiento donde ocurrió la primera consulta clínica",
+    )
+    id_establecimiento_notificacion: Optional[int] = Field(
+        None,
+        foreign_key="establecimiento.id",
+        description="ID del establecimiento que notificó/reportó el caso epidemiológico",
+    )
+    id_establecimiento_carga: Optional[int] = Field(
+        None,
+        foreign_key="establecimiento.id",
+        description="ID del establecimiento donde se cargó el caso en el sistema",
+    )
+
+    # Campos para casos ambiguos y metadata
+    requiere_revision_especie: Optional[bool] = Field(
+        False, description="Indica si requiere revisión manual del tipo de sujeto"
+    )
+    datos_originales_csv: Optional[Dict] = Field(
+        None,
+        sa_column=Column(JSON),
+        description="Datos originales del CSV para casos ambiguos",
+    )
+    metadata_clasificacion: Optional[Dict] = Field(
+        None,
+        sa_column=Column(JSON),
+        description="Metadata extraída (fuente_contagio, tipo_sujeto, etc.)",
+    )
+
+    # Campos agregados para clasificación con estrategias
+    clasificacion_estrategia: Optional[str] = Field(
+        None,
+        max_length=255,
+        description="Clasificación aplicada por la estrategia (CONFIRMADOS, SOSPECHOSOS, etc.)",
+    )
+    metadata_extraida: Optional[Dict] = Field(
+        None,
+        sa_column=Column(JSON),
+        description="Metadata extraída por la estrategia de clasificación",
+    )
+    es_positivo: Optional[bool] = Field(
+        None, description="Indica si el caso es positivo según la clasificación"
+    )
+    confidence_score: Optional[float] = Field(
+        None, description="Score de confianza de la clasificación (0-1)"
+    )
 
     # Relaciones
     tipo_eno: "TipoEno" = Relationship(back_populates="eventos")
     ciudadano: Optional["Ciudadano"] = Relationship(back_populates="eventos")
     animal: Optional["Animal"] = Relationship(back_populates="eventos")
-    sintomas: List["DetalleEventoSintomas"] = Relationship(
-        back_populates="evento"
+    # Agregado por Ignacio - Relaciones con establecimientos
+    establecimiento_consulta: Optional["Establecimiento"] = Relationship(
+        sa_relationship_kwargs={"foreign_keys": "[Evento.id_establecimiento_consulta]"}
     )
+    establecimiento_notificacion: Optional["Establecimiento"] = Relationship(
+        sa_relationship_kwargs={
+            "foreign_keys": "[Evento.id_establecimiento_notificacion]"
+        }
+    )
+    establecimiento_carga: Optional["Establecimiento"] = Relationship(
+        sa_relationship_kwargs={"foreign_keys": "[Evento.id_establecimiento_carga]"}
+    )
+    sintomas: List["DetalleEventoSintomas"] = Relationship(back_populates="evento")
     muestras: List["MuestraEvento"] = Relationship(back_populates="evento")
     antecedentes: List["AntecedentesEpidemiologicosEvento"] = Relationship(
         back_populates="evento"
     )
     vacunas: List["VacunasCiudadano"] = Relationship(back_populates="evento")
-    diagnosticos: List["DiagnosticoEvento"] = Relationship(
-        back_populates="evento"
-    )
-    internaciones: List["InternacionEvento"] = Relationship(
-        back_populates="evento"
-    )
-    estudios: List["EstudioEvento"] = Relationship(back_populates="evento")
-    tratamientos: List["TratamientoEvento"] = Relationship(
-        back_populates="evento"
-    )
-    investigaciones: List["InvestigacionEvento"] = Relationship(
-        back_populates="evento"
-    )
-    contactos: List["ContactosNotificacion"] = Relationship(
-        back_populates="evento"
-    )
+    diagnosticos: List["DiagnosticoEvento"] = Relationship(back_populates="evento")
+    internaciones: List["InternacionEvento"] = Relationship(back_populates="evento")
+    # Nota: estudios ahora están relacionados con MuestraEvento, no directamente con Evento
+    tratamientos: List["TratamientoEvento"] = Relationship(back_populates="evento")
+    investigaciones: List["InvestigacionEvento"] = Relationship(back_populates="evento")
+    contactos: List["ContactosNotificacion"] = Relationship(back_populates="evento")
     ambitos_concurrencia: List["AmbitosConcurrenciaEvento"] = Relationship(
         back_populates="evento"
     )
@@ -219,12 +275,8 @@ class DetalleEventoSintomas(BaseModel, table=True):
     )
 
     # Foreign Keys
-    id_evento: int = Field(
-        foreign_key="evento.id", description="ID del evento"
-    )
-    id_sintoma: int = Field(
-        foreign_key="sintoma.id_snvs_signo_sintoma", description="ID del síntoma"
-    )
+    id_evento: int = Field(foreign_key="evento.id", description="ID del evento")
+    id_sintoma: int = Field(foreign_key="sintoma.id", description="ID del síntoma")
 
     # Relaciones
     evento: "Evento" = Relationship(back_populates="sintomas")
@@ -247,9 +299,7 @@ class AntecedentesEpidemiologicosEvento(BaseModel, table=True):
     )
 
     # Foreign Keys
-    id_evento: int = Field(
-        foreign_key="evento.id", description="ID del evento"
-    )
+    id_evento: int = Field(foreign_key="evento.id", description="ID del evento")
     id_antecedente_epidemiologico: int = Field(
         foreign_key="antecedente_epidemiologico.id", description="ID del antecedente"
     )

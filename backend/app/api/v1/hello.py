@@ -10,10 +10,12 @@ Principios:
 
 import random
 from datetime import datetime
+
 from fastapi import APIRouter, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
-from app.core.schemas.response import SuccessResponse, ErrorResponse, ErrorDetail
+
+from app.core.schemas.response import ErrorDetail, ErrorResponse, SuccessResponse
 
 router = APIRouter(prefix="/hello", tags=["Examples"])
 

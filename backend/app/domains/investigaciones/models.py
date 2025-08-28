@@ -36,6 +36,10 @@ class InvestigacionEvento(BaseModel, table=True):
     id_usuario_centinela_participante: Optional[int] = Field(
         None, description="ID del usuario centinela que participó"
     )
+    # Agregado por Ignacio - Campo SISTEMA faltante del CSV
+    id_snvs_evento: Optional[int] = Field(
+        None, description="ID SNVS del evento (diferente del ID_SNVS_EVENTO_MUESTRA)"
+    )
     es_investigacion_terreno: Optional[bool] = Field(
         None, description="Investigación en terreno"
     )
@@ -50,9 +54,7 @@ class InvestigacionEvento(BaseModel, table=True):
     )
 
     # Foreign Keys
-    id_evento: int = Field(
-        foreign_key="evento.id", description="ID del evento"
-    )
+    id_evento: int = Field(foreign_key="evento.id", description="ID del evento")
 
     # Relaciones
     evento: "Evento" = Relationship(back_populates="investigaciones")
@@ -95,9 +97,7 @@ class ContactosNotificacion(BaseModel, table=True):
     )
 
     # Foreign Keys
-    id_evento: int = Field(
-        foreign_key="evento.id", description="ID del evento"
-    )
+    id_evento: int = Field(foreign_key="evento.id", description="ID del evento")
 
     # Relaciones
     evento: "Evento" = Relationship(back_populates="contactos")

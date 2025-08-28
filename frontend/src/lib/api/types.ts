@@ -126,6 +126,377 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/estrategias/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Strategies
+         * @description Listar todas las estrategias de clasificación.
+         *
+         *     **Filtros opcionales:**
+         *     - `active_only`: Solo estrategias activas
+         *     - `tipo_eno_id`: Filtrar por tipo de evento específico
+         *
+         *     **Returns:** Lista de estrategias con metadatos
+         */
+        get: operations["list_strategies_api_v1_estrategias__get"];
+        put?: never;
+        /**
+         * Create Strategy
+         * @description Crear nueva estrategia de clasificación.
+         *
+         *     **Validaciones:**
+         *     - Nombre único
+         *     - Tipo de evento válido
+         *     - Al menos una regla de clasificación
+         *     - Prioridades de reglas consistentes
+         *
+         *     **Returns:** Estrategia creada con ID asignado
+         */
+        post: operations["create_strategy_api_v1_estrategias__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/estrategias/{strategy_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Strategy
+         * @description Obtener una estrategia específica por ID.
+         *
+         *     **Returns:** Estrategia completa con reglas y metadatos
+         */
+        get: operations["get_strategy_api_v1_estrategias__strategy_id__get"];
+        /**
+         * Update Strategy
+         * @description Actualizar estrategia existente.
+         *
+         *     **Funcionalidades:**
+         *     - Actualización parcial (solo campos proporcionados)
+         *     - Validación de reglas modificadas
+         *     - Auditoría automática de cambios
+         *
+         *     **Returns:** Estrategia actualizada
+         */
+        put: operations["update_strategy_api_v1_estrategias__strategy_id__put"];
+        post?: never;
+        /**
+         * Delete Strategy
+         * @description Eliminar estrategia.
+         *
+         *     **Restricciones:**
+         *     - No se pueden eliminar estrategias activas (usar force=true para anular)
+         *     - Se eliminan también las reglas asociadas
+         *     - Acción no reversible
+         *
+         *     **Parámetros:**
+         *     - `force`: Permitir eliminar estrategias activas
+         */
+        delete: operations["delete_strategy_api_v1_estrategias__strategy_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/estrategias/{strategy_id}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Activate Strategy
+         * @description Activar estrategia.
+         *
+         *     **Funcionalidades:**
+         *     - Desactiva automáticamente otras estrategias del mismo evento
+         *     - Valida que la estrategia esté completa
+         *     - Registra cambio en auditoría
+         */
+        post: operations["activate_strategy_api_v1_estrategias__strategy_id__activate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/estrategias/{strategy_id}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Test Strategy
+         * @description Probar estrategia con datos de ejemplo.
+         *
+         *     **Funcionalidades:**
+         *     - Aplica la estrategia a datos CSV de prueba
+         *     - Muestra resultados sin persistir
+         *     - Útil para validar reglas antes de activar
+         *
+         *     **Returns:** Resultados de clasificación simulados
+         */
+        post: operations["test_strategy_api_v1_estrategias__strategy_id__test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/estrategias/{strategy_id}/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Strategy Audit Log
+         * @description Obtener historial de auditoría de una estrategia.
+         *
+         *     **Returns:** Lista de cambios realizados ordenados por fecha
+         */
+        get: operations["get_strategy_audit_log_api_v1_estrategias__strategy_id__audit_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/eventos/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Eventos
+         * @description Lista eventos epidemiológicos con filtros y paginación.
+         *
+         *     **Características:**
+         *     - Búsqueda por ID evento, nombre ciudadano o documento
+         *     - Filtros múltiples combinables
+         *     - Paginación eficiente
+         *     - Incluye conteos de relaciones
+         *
+         *     **Performance:**
+         *     - Usa índices optimizados
+         *     - Carga solo datos necesarios para listado
+         *     - Límite máximo 200 registros por página
+         */
+        get: operations["list_eventos_api_v1_eventos__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/eventos/{evento_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Evento Detail
+         * @description Obtiene el detalle completo de un evento.
+         *
+         *     **Incluye:**
+         *     - Datos completos del evento
+         *     - Información del ciudadano o animal
+         *     - Síntomas, muestras, diagnósticos
+         *     - Metadata de clasificación
+         *     - Timeline de eventos
+         */
+        get: operations["get_evento_detail_api_v1_eventos__evento_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/eventos/{evento_id}/timeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Evento Timeline
+         * @description Obtiene el timeline cronológico de un evento.
+         *
+         *     **Incluye eventos de:**
+         *     - Inicio de síntomas
+         *     - Consultas médicas
+         *     - Toma de muestras
+         *     - Resultados de laboratorio
+         *     - Diagnósticos
+         *     - Internaciones
+         *     - Vacunaciones
+         *
+         *     Ordenado cronológicamente.
+         */
+        get: operations["get_evento_timeline_api_v1_eventos__evento_id__timeline_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/eventos/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Eventos
+         * @description Exporta eventos filtrados a CSV o Excel.
+         *
+         *     **Limitaciones:**
+         *     - Máximo 10,000 registros por exportación
+         *     - Incluye solo datos básicos (no relaciones completas)
+         */
+        get: operations["export_eventos_api_v1_eventos_export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analytics/grupos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Obtener grupos de eventos disponibles
+         * @description Obtiene la lista de grupos de eventos disponibles para analytics.
+         *
+         *     Incluye tanto eventos simples como grupos de eventos epidemiológicos
+         *     con sus configuraciones de clasificaciones y gráficos especiales.
+         */
+        get: operations["get_grupos_api_v1_analytics_grupos_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analytics/grupos/{grupo_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Obtener detalle de un grupo específico
+         * @description Obtiene el detalle de un grupo específico incluyendo:
+         *     - Información del grupo
+         *     - Lista de eventos dentro del grupo
+         *     - Gráficos disponibles para este grupo
+         *     - Estadísticas básicas de cada evento
+         */
+        get: operations["get_grupo_detalle_api_v1_analytics_grupos__grupo_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analytics/datos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Obtener datos para visualización
+         * @description Obtiene datos procesados para una visualización específica.
+         *
+         *     Parámetros:
+         *     - grupo_id: ID del grupo de eventos
+         *     - evento_ids: Lista de eventos específicos (opcional, por defecto todos del grupo)
+         *     - clasificacion: Filtro de clasificación (confirmados, sospechosos, todos)
+         *     - fecha_desde/fecha_hasta: Rango de fechas (opcional)
+         *     - tipo_grafico: Tipo de gráfico solicitado
+         *     - parametros_extra: Parámetros adicionales específicos del gráfico
+         *
+         *     Respuesta incluye:
+         *     - Datos formateados según el tipo de gráfico
+         *     - Metadatos del query y filtros aplicados
+         *     - Información contextual (total casos, fecha generación, etc.)
+         */
+        post: operations["get_datos_visualizacion_api_v1_analytics_datos_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analytics/grupos/{grupo_id}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Vista previa rápida de un grupo
+         * @description Obtiene una vista previa rápida de un grupo con estadísticas básicas.
+         *     Útil para mostrar información sin cargar datos completos de visualización.
+         */
+        get: operations["get_preview_grupo_api_v1_analytics_grupos__grupo_id__preview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/": {
         parameters: {
             query?: never;
@@ -151,6 +522,99 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
+         * AmbitoConcurrenciaInfo
+         * @description Información de ámbito de concurrencia
+         */
+        AmbitoConcurrenciaInfo: {
+            /**
+             * Id
+             * @description ID del ámbito
+             */
+            id: number;
+            /**
+             * Nombre Lugar
+             * @description Nombre del lugar
+             */
+            nombre_lugar?: string | null;
+            /**
+             * Tipo Lugar
+             * @description Tipo de lugar
+             */
+            tipo_lugar?: string | null;
+            /**
+             * Localidad
+             * @description Localidad del ámbito
+             */
+            localidad?: string | null;
+            /**
+             * Fecha Ocurrencia
+             * @description Fecha de ocurrencia
+             */
+            fecha_ocurrencia?: string | null;
+            /**
+             * Frecuencia Concurrencia
+             * @description Frecuencia de concurrencia
+             */
+            frecuencia_concurrencia?: string | null;
+        };
+        /**
+         * AnimalInfo
+         * @description Información del animal
+         */
+        AnimalInfo: {
+            /**
+             * Id
+             * @description ID del animal
+             */
+            id: number;
+            /**
+             * Identificacion
+             * @description Identificación del animal
+             */
+            identificacion?: string | null;
+            /**
+             * Especie
+             * @description Especie
+             */
+            especie?: string | null;
+            /**
+             * Raza
+             * @description Raza
+             */
+            raza?: string | null;
+            /**
+             * Provincia
+             * @description Provincia
+             */
+            provincia?: string | null;
+            /**
+             * Localidad
+             * @description Localidad
+             */
+            localidad?: string | null;
+        };
+        /**
+         * AntecedenteInfo
+         * @description Información de antecedente epidemiológico
+         */
+        AntecedenteInfo: {
+            /**
+             * Id
+             * @description ID del antecedente
+             */
+            id: number;
+            /**
+             * Descripcion
+             * @description Descripción del antecedente
+             */
+            descripcion?: string | null;
+            /**
+             * Fecha Antecedente
+             * @description Fecha del antecedente
+             */
+            fecha_antecedente?: string | null;
+        };
+        /**
          * AsyncJobResponse
          * @description Respuesta cuando se inicia un job asíncrono.
          */
@@ -173,6 +637,71 @@ export interface components {
              */
             polling_url: string;
         };
+        /**
+         * AuditAction
+         * @description Acciones de auditoría.
+         * @enum {string}
+         */
+        AuditAction: "CREATE" | "UPDATE" | "DELETE" | "ACTIVATE" | "DEACTIVATE";
+        /**
+         * AuditLogResponse
+         * @description Response DTO para entradas de auditoría.
+         */
+        AuditLogResponse: {
+            /**
+             * Id
+             * @description ID de la entrada de auditoría
+             */
+            id: number;
+            /**
+             * Strategy Id
+             * @description ID de la estrategia
+             */
+            strategy_id: number;
+            /**
+             * Strategy Name
+             * @description Nombre de la estrategia
+             */
+            strategy_name: string;
+            /** @description Acción realizada */
+            action: components["schemas"]["AuditAction"];
+            /**
+             * Field Changed
+             * @description Campo modificado
+             */
+            field_changed?: string | null;
+            /**
+             * Old Value
+             * @description Valor anterior
+             */
+            old_value?: string | null;
+            /**
+             * New Value
+             * @description Nuevo valor
+             */
+            new_value?: string | null;
+            /**
+             * Changed By
+             * @description Usuario que realizó el cambio
+             */
+            changed_by: string;
+            /**
+             * Changed At
+             * Format: date-time
+             * @description Fecha y hora del cambio
+             */
+            changed_at: string;
+            /**
+             * Ip Address
+             * @description Dirección IP del usuario
+             */
+            ip_address?: string | null;
+            /**
+             * User Agent
+             * @description User agent del navegador
+             */
+            user_agent?: string | null;
+        };
         /** Body_upload_csv_async_api_v1_uploads_csv_post */
         Body_upload_csv_async_api_v1_uploads_csv_post: {
             /**
@@ -191,6 +720,356 @@ export interface components {
              * @description Nombre de la hoja convertida
              */
             sheet_name: string;
+        };
+        /**
+         * CiudadanoInfo
+         * @description Información del ciudadano
+         */
+        CiudadanoInfo: {
+            /**
+             * Codigo
+             * @description Código del ciudadano
+             */
+            codigo: number;
+            /**
+             * Nombre
+             * @description Nombre
+             */
+            nombre: string;
+            /**
+             * Apellido
+             * @description Apellido
+             */
+            apellido: string;
+            /**
+             * Documento
+             * @description Número de documento
+             */
+            documento?: string | null;
+            /**
+             * Fecha Nacimiento
+             * @description Fecha de nacimiento
+             */
+            fecha_nacimiento?: string | null;
+            /**
+             * Sexo
+             * @description Sexo
+             */
+            sexo?: string | null;
+            /**
+             * Provincia
+             * @description Provincia de residencia
+             */
+            provincia?: string | null;
+            /**
+             * Localidad
+             * @description Localidad de residencia
+             */
+            localidad?: string | null;
+            /**
+             * Telefono
+             * @description Teléfono de contacto
+             */
+            telefono?: string | null;
+        };
+        /**
+         * ClassificationRuleRequest
+         * @description Request DTO para reglas de clasificación.
+         */
+        ClassificationRuleRequest: {
+            /** @description Tipo de clasificación resultante */
+            classification: components["schemas"]["TipoClasificacion"];
+            /**
+             * Priority
+             * @description Prioridad de la regla (1 = mayor prioridad)
+             */
+            priority: number;
+            /**
+             * Is Active
+             * @description Si la regla está activa
+             * @default true
+             */
+            is_active: boolean;
+            /**
+             * Auto Approve
+             * @description Si los casos se aprueban automáticamente
+             * @default true
+             */
+            auto_approve: boolean;
+            /**
+             * Required Confidence
+             * @description Confianza mínima requerida (0.0-1.0)
+             */
+            required_confidence?: number | null;
+            /**
+             * Filters
+             * @description Lista de condiciones de filtro
+             * @default []
+             */
+            filters: components["schemas"]["FilterConditionRequest"][];
+        };
+        /**
+         * ClassificationRuleResponse
+         * @description Response DTO para reglas de clasificación.
+         */
+        ClassificationRuleResponse: {
+            /** @description Tipo de clasificación resultante */
+            classification: components["schemas"]["TipoClasificacion"];
+            /**
+             * Priority
+             * @description Prioridad de la regla (1 = mayor prioridad)
+             */
+            priority: number;
+            /**
+             * Is Active
+             * @description Si la regla está activa
+             * @default true
+             */
+            is_active: boolean;
+            /**
+             * Auto Approve
+             * @description Si los casos se aprueban automáticamente
+             * @default true
+             */
+            auto_approve: boolean;
+            /**
+             * Required Confidence
+             * @description Confianza mínima requerida (0.0-1.0)
+             */
+            required_confidence?: number | null;
+            /**
+             * Filters
+             * @description Lista de filtros
+             * @default []
+             */
+            filters: components["schemas"]["FilterConditionResponse"][];
+            /**
+             * Id
+             * @description ID de la regla
+             */
+            id?: number | null;
+            /**
+             * Created At
+             * @description Fecha de creación
+             */
+            created_at?: string | null;
+            /**
+             * Updated At
+             * @description Fecha de última actualización
+             */
+            updated_at?: string | null;
+        };
+        /**
+         * ConfiguracionVisualizacion
+         * @description Configuración para tipos de visualización disponibles.
+         */
+        ConfiguracionVisualizacion: {
+            /**
+             * Id
+             * @description ID del tipo de gráfico
+             */
+            id: string;
+            /**
+             * Nombre
+             * @description Nombre descriptivo
+             */
+            nombre: string;
+            /**
+             * Descripcion
+             * @description Descripción del gráfico
+             */
+            descripcion?: string | null;
+            /**
+             * Tipo
+             * @description Tipo: bar, line, pie, area, table, etc
+             */
+            tipo: string;
+            /**
+             * Parametros
+             * @description Parámetros específicos del gráfico
+             */
+            parametros?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Requiere Parametros
+             * @description Parámetros requeridos
+             */
+            requiere_parametros?: string[];
+            /**
+             * Disponible Para Grupos
+             * @description Grupos que pueden usar este gráfico
+             */
+            disponible_para_grupos?: string[];
+            /**
+             * Disponible Para Todos
+             * @description Si está disponible para todos los grupos
+             * @default true
+             */
+            disponible_para_todos: boolean;
+        };
+        /**
+         * ContactoInfo
+         * @description Información de contactos
+         */
+        ContactoInfo: {
+            /**
+             * Id
+             * @description ID del registro de contactos
+             */
+            id: number;
+            /**
+             * Contacto Caso Confirmado
+             * @description Contacto con caso confirmado
+             */
+            contacto_caso_confirmado?: boolean | null;
+            /**
+             * Contacto Caso Sospechoso
+             * @description Contacto con caso sospechoso
+             */
+            contacto_caso_sospechoso?: boolean | null;
+            /**
+             * Contactos Menores Un Ano
+             * @description Contactos menores de 1 año
+             */
+            contactos_menores_un_ano?: number | null;
+            /**
+             * Contactos Vacunados
+             * @description Contactos vacunados
+             */
+            contactos_vacunados?: number | null;
+            /**
+             * Contactos Embarazadas
+             * @description Contactos embarazadas
+             */
+            contactos_embarazadas?: number | null;
+        };
+        /**
+         * DatosVisualizacionRequest
+         * @description Request para obtener datos de visualización.
+         */
+        DatosVisualizacionRequest: {
+            /**
+             * Grupo Id
+             * @description ID del grupo
+             */
+            grupo_id: number;
+            /**
+             * Evento Ids
+             * @description IDs específicos de eventos (vacío = todos del grupo)
+             */
+            evento_ids?: number[];
+            /**
+             * Clasificacion
+             * @description Clasificación a filtrar
+             * @default todos
+             */
+            clasificacion: string;
+            /**
+             * Fecha Desde
+             * @description Fecha desde (YYYY-MM-DD)
+             */
+            fecha_desde?: string | null;
+            /**
+             * Fecha Hasta
+             * @description Fecha hasta (YYYY-MM-DD)
+             */
+            fecha_hasta?: string | null;
+            /**
+             * Tipo Grafico
+             * @description Tipo de gráfico solicitado
+             */
+            tipo_grafico: string;
+            /**
+             * Parametros Extra
+             * @description Parámetros adicionales
+             */
+            parametros_extra?: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * DatosVisualizacionResponse
+         * @description Respuesta con datos para visualización.
+         */
+        DatosVisualizacionResponse: {
+            /**
+             * Grupo
+             * @description Nombre del grupo
+             */
+            grupo: string;
+            /**
+             * Eventos
+             * @description Nombres de eventos incluidos
+             */
+            eventos: string[];
+            /**
+             * Clasificacion
+             * @description Clasificación filtrada
+             */
+            clasificacion: string;
+            /**
+             * Tipo Grafico
+             * @description Tipo de gráfico
+             */
+            tipo_grafico: string;
+            /**
+             * Datos
+             * @description Datos del gráfico
+             */
+            datos: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Metadatos
+             * @description Metadatos adicionales
+             */
+            metadatos?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Total Casos
+             * @description Total de casos en el resultado
+             */
+            total_casos: number;
+            /**
+             * Fecha Generacion
+             * @description Timestamp de generación
+             */
+            fecha_generacion: string;
+            /**
+             * Filtros Aplicados
+             * @description Resumen de filtros aplicados
+             */
+            filtros_aplicados: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * DiagnosticoInfo
+         * @description Información de diagnóstico
+         */
+        DiagnosticoInfo: {
+            /**
+             * Id
+             * @description ID del diagnóstico
+             */
+            id: number;
+            /**
+             * Diagnostico
+             * @description Diagnóstico
+             */
+            diagnostico?: string | null;
+            /**
+             * Fecha
+             * @description Fecha del diagnóstico
+             */
+            fecha?: string | null;
+            /**
+             * Es Principal
+             * @description Si es diagnóstico principal
+             */
+            es_principal?: boolean | null;
         };
         /**
          * ErrorDetail
@@ -234,6 +1113,904 @@ export interface components {
              */
             request_id?: string | null;
         };
+        /**
+         * EstablecimientoInfo
+         * @description Información de establecimiento
+         */
+        EstablecimientoInfo: {
+            /**
+             * Id
+             * @description ID del establecimiento
+             */
+            id: number;
+            /**
+             * Nombre
+             * @description Nombre del establecimiento
+             */
+            nombre?: string | null;
+            /**
+             * Tipo
+             * @description Tipo de establecimiento
+             */
+            tipo?: string | null;
+            /**
+             * Provincia
+             * @description Provincia
+             */
+            provincia?: string | null;
+            /**
+             * Localidad
+             * @description Localidad
+             */
+            localidad?: string | null;
+        };
+        /**
+         * EventStrategyCreate
+         * @description Request DTO para crear estrategia.
+         */
+        EventStrategyCreate: {
+            /**
+             * Name
+             * @description Nombre de la estrategia
+             */
+            name: string;
+            /**
+             * Tipo Eno Id
+             * @description ID del tipo de evento epidemiológico
+             */
+            tipo_eno_id: number;
+            /**
+             * Active
+             * @description Si la estrategia está activa
+             * @default true
+             */
+            active: boolean;
+            /**
+             * Usa Provincia Carga
+             * @description Si filtra por provincia de carga
+             * @default false
+             */
+            usa_provincia_carga: boolean;
+            /**
+             * Provincia Field
+             * @description Campo de provincia a usar
+             * @default PROVINCIA_RESIDENCIA
+             */
+            provincia_field: string;
+            /**
+             * Confidence Threshold
+             * @description Umbral de confianza general
+             * @default 0.5
+             */
+            confidence_threshold: number;
+            /**
+             * Description
+             * @description Descripción de la estrategia
+             */
+            description?: string | null;
+            /**
+             * Classification Rules
+             * @description Reglas de clasificación
+             * @default []
+             */
+            classification_rules: components["schemas"]["ClassificationRuleRequest"][];
+            /**
+             * Metadata Extractors
+             * @description Extractores de metadata
+             * @default []
+             */
+            metadata_extractors: components["schemas"]["FilterConditionRequest"][];
+        };
+        /**
+         * EventStrategyResponse
+         * @description Response DTO para estrategias.
+         */
+        EventStrategyResponse: {
+            /**
+             * Name
+             * @description Nombre de la estrategia
+             */
+            name: string;
+            /**
+             * Tipo Eno Id
+             * @description ID del tipo de evento epidemiológico
+             */
+            tipo_eno_id: number;
+            /**
+             * Active
+             * @description Si la estrategia está activa
+             * @default true
+             */
+            active: boolean;
+            /**
+             * Usa Provincia Carga
+             * @description Si filtra por provincia de carga
+             * @default false
+             */
+            usa_provincia_carga: boolean;
+            /**
+             * Provincia Field
+             * @description Campo de provincia a usar
+             * @default PROVINCIA_RESIDENCIA
+             */
+            provincia_field: string;
+            /**
+             * Confidence Threshold
+             * @description Umbral de confianza general
+             * @default 0.5
+             */
+            confidence_threshold: number;
+            /**
+             * Description
+             * @description Descripción de la estrategia
+             */
+            description?: string | null;
+            /**
+             * Id
+             * @description ID de la estrategia
+             */
+            id: number;
+            /**
+             * Tipo Eno Name
+             * @description Nombre del tipo de evento
+             */
+            tipo_eno_name?: string | null;
+            /**
+             * Status
+             * @description Estado de la estrategia
+             * @default active
+             */
+            status: string;
+            /**
+             * Classification Rules
+             * @description Reglas de clasificación
+             * @default []
+             */
+            classification_rules: components["schemas"]["ClassificationRuleResponse"][];
+            /**
+             * Metadata Extractors
+             * @description Extractores de metadata
+             * @default []
+             */
+            metadata_extractors: components["schemas"]["FilterConditionResponse"][];
+            /**
+             * Created At
+             * Format: date-time
+             * @description Fecha de creación
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             * @description Fecha de última actualización
+             */
+            updated_at: string;
+            /**
+             * Created By
+             * @description Usuario que creó la estrategia
+             */
+            created_by?: string | null;
+            /**
+             * Classification Rules Count
+             * @description Número de reglas activas
+             */
+            classification_rules_count?: number | null;
+        };
+        /**
+         * EventStrategyUpdate
+         * @description Request DTO para actualizar estrategia.
+         */
+        EventStrategyUpdate: {
+            /**
+             * Name
+             * @description Nombre de la estrategia
+             */
+            name?: string | null;
+            /**
+             * Active
+             * @description Si la estrategia está activa
+             */
+            active?: boolean | null;
+            /**
+             * Usa Provincia Carga
+             * @description Si filtra por provincia de carga
+             */
+            usa_provincia_carga?: boolean | null;
+            /**
+             * Provincia Field
+             * @description Campo de provincia a usar
+             */
+            provincia_field?: string | null;
+            /**
+             * Confidence Threshold
+             * @description Umbral de confianza general
+             */
+            confidence_threshold?: number | null;
+            /**
+             * Description
+             * @description Descripción de la estrategia
+             */
+            description?: string | null;
+            /**
+             * Classification Rules
+             * @description Reglas de clasificación
+             */
+            classification_rules?: components["schemas"]["ClassificationRuleRequest"][] | null;
+            /**
+             * Metadata Extractors
+             * @description Extractores de metadata
+             */
+            metadata_extractors?: components["schemas"]["FilterConditionRequest"][] | null;
+        };
+        /**
+         * EventoDentroGrupo
+         * @description Evento específico dentro de un grupo.
+         */
+        EventoDentroGrupo: {
+            /**
+             * Id
+             * @description ID único del evento
+             */
+            id: number;
+            /**
+             * Tipo Eno Id
+             * @description ID del tipo ENO
+             */
+            tipo_eno_id: number;
+            /**
+             * Nombre
+             * @description Nombre del evento específico
+             */
+            nombre: string;
+            /**
+             * Grupo Id
+             * @description ID del grupo al que pertenece
+             */
+            grupo_id: number;
+            /**
+             * Grupo Nombre
+             * @description Nombre del grupo
+             */
+            grupo_nombre: string;
+            /**
+             * Clasificaciones
+             * @description Clasificaciones específicas (null = usar del grupo)
+             */
+            clasificaciones?: string[] | null;
+            /**
+             * Estrategia
+             * @description Estrategia específica del evento
+             */
+            estrategia?: string | null;
+            /**
+             * Total Casos
+             * @description Total de casos de este evento
+             * @default 0
+             */
+            total_casos: number;
+            /**
+             * Casos Confirmados
+             * @description Casos confirmados
+             * @default 0
+             */
+            casos_confirmados: number;
+            /**
+             * Casos Sospechosos
+             * @description Casos sospechosos
+             * @default 0
+             */
+            casos_sospechosos: number;
+            /**
+             * Ultimo Caso
+             * @description Fecha del último caso
+             */
+            ultimo_caso?: string | null;
+        };
+        /**
+         * EventoDetailResponse
+         * @description Respuesta detallada de un evento (EVENT-CENTERED)
+         */
+        EventoDetailResponse: {
+            /**
+             * Id
+             * @description ID del evento
+             */
+            id: number;
+            /**
+             * Id Evento Caso
+             * @description ID del caso
+             */
+            id_evento_caso: number;
+            /**
+             * Tipo Eno Id
+             * @description ID del tipo ENO
+             */
+            tipo_eno_id: number;
+            /**
+             * Tipo Eno Nombre
+             * @description Nombre del tipo ENO
+             */
+            tipo_eno_nombre?: string | null;
+            /**
+             * Tipo Eno Descripcion
+             * @description Descripción del tipo ENO
+             */
+            tipo_eno_descripcion?: string | null;
+            /**
+             * Enfermedad
+             * @description Enfermedad relacionada
+             */
+            enfermedad?: string | null;
+            /**
+             * Fecha Minima Evento
+             * Format: date
+             * @description Fecha mínima del evento
+             */
+            fecha_minima_evento: string;
+            /**
+             * Fecha Inicio Sintomas
+             * @description Fecha de inicio de síntomas
+             */
+            fecha_inicio_sintomas?: string | null;
+            /**
+             * Fecha Apertura Caso
+             * @description Fecha de apertura del caso
+             */
+            fecha_apertura_caso?: string | null;
+            /**
+             * Fecha Primera Consulta
+             * @description Fecha de primera consulta
+             */
+            fecha_primera_consulta?: string | null;
+            /**
+             * Fecha Notificacion
+             * @description Fecha de notificación
+             */
+            fecha_notificacion?: string | null;
+            /**
+             * Fecha Diagnostico
+             * @description Fecha de diagnóstico
+             */
+            fecha_diagnostico?: string | null;
+            /**
+             * Fecha Investigacion
+             * @description Fecha de investigación
+             */
+            fecha_investigacion?: string | null;
+            /**
+             * Semana Epidemiologica Apertura
+             * @description Semana epidemiológica de apertura
+             */
+            semana_epidemiologica_apertura?: number | null;
+            /**
+             * Anio Epidemiologico Apertura
+             * @description Año epidemiológico de apertura
+             */
+            anio_epidemiologico_apertura?: number | null;
+            /**
+             * Semana Epidemiologica Sintomas
+             * @description Semana epidemiológica de síntomas
+             */
+            semana_epidemiologica_sintomas?: number | null;
+            /** @description Clasificación estratégica del evento */
+            clasificacion_estrategia?: components["schemas"]["TipoClasificacion"] | null;
+            /**
+             * Es Positivo
+             * @description Si es positivo
+             */
+            es_positivo?: boolean | null;
+            /**
+             * Confidence Score
+             * @description Score de confianza
+             */
+            confidence_score?: number | null;
+            /**
+             * Metadata Clasificacion
+             * @description Metadata de clasificación
+             */
+            metadata_clasificacion?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Metadata Extraida
+             * @description Metadata extraída
+             */
+            metadata_extraida?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Tipo Sujeto
+             * @description Tipo de sujeto
+             */
+            tipo_sujeto: string;
+            /** @description Información del ciudadano */
+            ciudadano?: components["schemas"]["CiudadanoInfo"] | null;
+            /** @description Información del animal */
+            animal?: components["schemas"]["AnimalInfo"] | null;
+            /** @description Establecimiento de consulta */
+            establecimiento_consulta?: components["schemas"]["EstablecimientoInfo"] | null;
+            /** @description Establecimiento que notificó */
+            establecimiento_notificacion?: components["schemas"]["EstablecimientoInfo"] | null;
+            /** @description Establecimiento de carga */
+            establecimiento_carga?: components["schemas"]["EstablecimientoInfo"] | null;
+            /**
+             * Es Caso Sintomatico
+             * @description Si es sintomático
+             */
+            es_caso_sintomatico?: boolean | null;
+            /**
+             * Requiere Revision Especie
+             * @description Si requiere revisión
+             */
+            requiere_revision_especie?: boolean | null;
+            /**
+             * Observaciones Texto
+             * @description Observaciones
+             */
+            observaciones_texto?: string | null;
+            /**
+             * Id Origen
+             * @description ID del sistema origen
+             */
+            id_origen?: string | null;
+            /**
+             * Datos Originales Csv
+             * @description Datos originales del CSV
+             */
+            datos_originales_csv?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Sintomas
+             * @description Síntomas del evento
+             */
+            sintomas?: components["schemas"]["SintomaInfo"][];
+            /**
+             * Muestras
+             * @description Muestras del evento
+             */
+            muestras?: components["schemas"]["MuestraInfo"][];
+            /**
+             * Diagnosticos
+             * @description Diagnósticos del evento
+             */
+            diagnosticos?: components["schemas"]["DiagnosticoInfo"][];
+            /**
+             * Tratamientos
+             * @description Tratamientos del evento
+             */
+            tratamientos?: components["schemas"]["TratamientoInfo"][];
+            /**
+             * Internaciones
+             * @description Internaciones del evento
+             */
+            internaciones?: components["schemas"]["InternacionInfo"][];
+            /**
+             * Investigaciones
+             * @description Investigaciones del evento
+             */
+            investigaciones?: components["schemas"]["InvestigacionInfo"][];
+            /**
+             * Contactos
+             * @description Contactos del evento
+             */
+            contactos?: components["schemas"]["ContactoInfo"][];
+            /**
+             * Ambitos Concurrencia
+             * @description Ámbitos de concurrencia
+             */
+            ambitos_concurrencia?: components["schemas"]["AmbitoConcurrenciaInfo"][];
+            /**
+             * Antecedentes
+             * @description Antecedentes epidemiológicos
+             */
+            antecedentes?: components["schemas"]["AntecedenteInfo"][];
+            /**
+             * Vacunas
+             * @description Vacunas relacionadas
+             */
+            vacunas?: components["schemas"]["VacunaInfo"][];
+            /**
+             * Total Sintomas
+             * @description Total de síntomas
+             * @default 0
+             */
+            total_sintomas: number;
+            /**
+             * Total Muestras
+             * @description Total de muestras
+             * @default 0
+             */
+            total_muestras: number;
+            /**
+             * Total Diagnosticos
+             * @description Total de diagnósticos
+             * @default 0
+             */
+            total_diagnosticos: number;
+            /**
+             * Total Tratamientos
+             * @description Total de tratamientos
+             * @default 0
+             */
+            total_tratamientos: number;
+            /**
+             * Total Internaciones
+             * @description Total de internaciones
+             * @default 0
+             */
+            total_internaciones: number;
+            /**
+             * Total Investigaciones
+             * @description Total de investigaciones
+             * @default 0
+             */
+            total_investigaciones: number;
+            /**
+             * Created At
+             * @description Fecha de creación
+             */
+            created_at?: string | null;
+            /**
+             * Updated At
+             * @description Fecha de actualización
+             */
+            updated_at?: string | null;
+        };
+        /**
+         * EventoListItem
+         * @description Item individual en la lista de eventos
+         */
+        EventoListItem: {
+            /**
+             * Id
+             * @description ID del evento
+             */
+            id: number;
+            /**
+             * Id Evento Caso
+             * @description ID único del caso
+             */
+            id_evento_caso: number;
+            /**
+             * Tipo Eno Id
+             * @description ID del tipo ENO
+             */
+            tipo_eno_id: number;
+            /**
+             * Tipo Eno Nombre
+             * @description Nombre del tipo ENO
+             */
+            tipo_eno_nombre?: string | null;
+            /**
+             * Fecha Minima Evento
+             * Format: date
+             * @description Fecha del evento
+             */
+            fecha_minima_evento: string;
+            /**
+             * Fecha Inicio Sintomas
+             * @description Fecha de inicio de síntomas
+             */
+            fecha_inicio_sintomas?: string | null;
+            /** @description Clasificación estratégica del evento */
+            clasificacion_estrategia?: components["schemas"]["TipoClasificacion"] | null;
+            /**
+             * Es Positivo
+             * @description Si es positivo
+             */
+            es_positivo?: boolean | null;
+            /**
+             * Confidence Score
+             * @description Score de confianza
+             */
+            confidence_score?: number | null;
+            /**
+             * Tipo Sujeto
+             * @description Tipo de sujeto: humano/animal/desconocido
+             */
+            tipo_sujeto: string;
+            /**
+             * Nombre Sujeto
+             * @description Nombre del sujeto
+             */
+            nombre_sujeto?: string | null;
+            /**
+             * Documento Sujeto
+             * @description Documento del sujeto
+             */
+            documento_sujeto?: string | null;
+            /**
+             * Edad
+             * @description Edad en años
+             */
+            edad?: number | null;
+            /**
+             * Sexo
+             * @description Sexo del sujeto
+             */
+            sexo?: string | null;
+            /**
+             * Provincia
+             * @description Provincia de residencia
+             */
+            provincia?: string | null;
+            /**
+             * Localidad
+             * @description Localidad de residencia
+             */
+            localidad?: string | null;
+            /**
+             * Es Caso Sintomatico
+             * @description Si presenta síntomas
+             */
+            es_caso_sintomatico?: boolean | null;
+            /**
+             * Requiere Revision Especie
+             * @description Si requiere revisión
+             */
+            requiere_revision_especie?: boolean | null;
+            /**
+             * Con Resultado Mortal
+             * @description Si tuvo resultado mortal
+             */
+            con_resultado_mortal?: boolean | null;
+            /**
+             * Cantidad Sintomas
+             * @description Cantidad de síntomas registrados
+             * @default 0
+             */
+            cantidad_sintomas: number;
+            /**
+             * Cantidad Muestras
+             * @description Cantidad de muestras tomadas
+             * @default 0
+             */
+            cantidad_muestras: number;
+            /**
+             * Cantidad Diagnosticos
+             * @description Cantidad de diagnósticos
+             * @default 0
+             */
+            cantidad_diagnosticos: number;
+        };
+        /**
+         * EventoListResponse
+         * @description Respuesta completa del listado de eventos
+         */
+        EventoListResponse: {
+            /**
+             * Data
+             * @description Lista de eventos
+             */
+            data: components["schemas"]["EventoListItem"][];
+            pagination: components["schemas"]["PaginationInfo"];
+            /**
+             * Filters Applied
+             * @description Filtros aplicados
+             */
+            filters_applied: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * EventoSortBy
+         * @enum {string}
+         */
+        EventoSortBy: "fecha_desc" | "fecha_asc" | "id_desc" | "id_asc" | "tipo_eno";
+        /**
+         * EventoTimelineItem
+         * @description Item del timeline de eventos
+         */
+        EventoTimelineItem: {
+            /**
+             * Fecha
+             * Format: date
+             * @description Fecha del evento
+             */
+            fecha: string;
+            /**
+             * Tipo
+             * @description Tipo de evento: sintoma/muestra/diagnostico/internacion/etc
+             */
+            tipo: string;
+            /**
+             * Descripcion
+             * @description Descripción del evento
+             */
+            descripcion: string;
+            /**
+             * Detalles
+             * @description Detalles adicionales
+             */
+            detalles?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /**
+         * EventoTimelineResponse
+         * @description Respuesta del timeline
+         */
+        EventoTimelineResponse: {
+            /**
+             * Items
+             * @description Items del timeline
+             */
+            items: components["schemas"]["EventoTimelineItem"][];
+            /**
+             * Total
+             * @description Total de items
+             */
+            total: number;
+        };
+        /**
+         * FilterConditionRequest
+         * @description Request DTO para condiciones de filtro.
+         */
+        FilterConditionRequest: {
+            /** @description Tipo de filtro */
+            filter_type: components["schemas"]["TipoFiltro"];
+            /**
+             * Field Name
+             * @description Nombre del campo a filtrar
+             */
+            field_name: string;
+            /**
+             * Value
+             * @description Valor para filtros de valor único
+             */
+            value?: string | null;
+            /**
+             * Values
+             * @description Lista de valores para filtros múltiples
+             */
+            values?: string[] | null;
+            /**
+             * Logical Operator
+             * @description Operador lógico (AND/OR)
+             * @default AND
+             */
+            logical_operator: string;
+            /**
+             * Order
+             * @description Orden de aplicación del filtro
+             * @default 0
+             */
+            order: number;
+            /**
+             * Config
+             * @description Configuración adicional específica del filtro
+             */
+            config?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Extracted Metadata Field
+             * @description Campo donde guardar metadata extraída
+             */
+            extracted_metadata_field?: string | null;
+        };
+        /**
+         * FilterConditionResponse
+         * @description Response DTO para condiciones de filtro.
+         */
+        FilterConditionResponse: {
+            /** @description Tipo de filtro */
+            filter_type: components["schemas"]["TipoFiltro"];
+            /**
+             * Field Name
+             * @description Nombre del campo a filtrar
+             */
+            field_name: string;
+            /**
+             * Value
+             * @description Valor para filtros de valor único
+             */
+            value?: string | null;
+            /**
+             * Values
+             * @description Lista de valores para filtros múltiples
+             */
+            values?: string[] | null;
+            /**
+             * Logical Operator
+             * @description Operador lógico (AND/OR)
+             * @default AND
+             */
+            logical_operator: string;
+            /**
+             * Order
+             * @description Orden de aplicación del filtro
+             * @default 0
+             */
+            order: number;
+            /**
+             * Config
+             * @description Configuración adicional específica del filtro
+             */
+            config?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Extracted Metadata Field
+             * @description Campo donde guardar metadata extraída
+             */
+            extracted_metadata_field?: string | null;
+            /**
+             * Id
+             * @description ID del filtro
+             */
+            id?: number | null;
+            /**
+             * Created At
+             * @description Fecha de creación
+             */
+            created_at?: string | null;
+            /**
+             * Updated At
+             * @description Fecha de última actualización
+             */
+            updated_at?: string | null;
+        };
+        /**
+         * GrupoEvento
+         * @description Modelo para grupos de eventos epidemiológicos.
+         */
+        GrupoEvento: {
+            /**
+             * Id
+             * @description ID único del grupo
+             */
+            id: number;
+            /**
+             * Nombre
+             * @description Nombre del grupo de eventos
+             */
+            nombre: string;
+            /**
+             * Tipo
+             * @description Tipo: 'simple' o 'grupo'
+             */
+            tipo: string;
+            /**
+             * Descripcion
+             * @description Descripción del grupo
+             */
+            descripcion?: string | null;
+            /**
+             * Activo
+             * @description Si está activo para visualización
+             * @default true
+             */
+            activo: boolean;
+            /**
+             * Clasificaciones Disponibles
+             * @description Clasificaciones disponibles para el grupo
+             */
+            clasificaciones_disponibles: string[];
+            /**
+             * Graficos Especiales
+             * @description Gráficos especiales del grupo
+             */
+            graficos_especiales?: string[];
+            /**
+             * Orden
+             * @description Orden para mostrar en UI
+             * @default 100
+             */
+            orden: number;
+        };
+        /**
+         * GrupoEventoResponse
+         * @description Respuesta para un grupo de eventos.
+         */
+        GrupoEventoResponse: {
+            grupo: components["schemas"]["GrupoEvento"];
+            /** Eventos */
+            eventos: components["schemas"]["EventoDentroGrupo"][];
+            /** Graficos Disponibles */
+            graficos_disponibles: components["schemas"]["ConfiguracionVisualizacion"][];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -261,6 +2038,63 @@ export interface components {
              * @example epidemiologia-api
              */
             server: string;
+        };
+        /**
+         * InternacionInfo
+         * @description Información de internación
+         */
+        InternacionInfo: {
+            /**
+             * Id
+             * @description ID de la internación
+             */
+            id: number;
+            /**
+             * Fecha Internacion
+             * @description Fecha de internación
+             */
+            fecha_internacion?: string | null;
+            /**
+             * Fecha Alta
+             * @description Fecha de alta
+             */
+            fecha_alta?: string | null;
+            /**
+             * Requirio Uci
+             * @description Si requirió UCI
+             */
+            requirio_uci?: boolean | null;
+        };
+        /**
+         * InvestigacionInfo
+         * @description Información de investigación epidemiológica
+         */
+        InvestigacionInfo: {
+            /**
+             * Id
+             * @description ID de la investigación
+             */
+            id: number;
+            /**
+             * Es Investigacion Terreno
+             * @description Si fue investigación de terreno
+             */
+            es_investigacion_terreno?: boolean | null;
+            /**
+             * Fecha Investigacion
+             * @description Fecha de investigación
+             */
+            fecha_investigacion?: string | null;
+            /**
+             * Tipo Lugar Investigacion
+             * @description Tipo y lugar de investigación
+             */
+            tipo_lugar_investigacion?: string | null;
+            /**
+             * Origen Financiamiento
+             * @description Origen del financiamiento
+             */
+            origen_financiamiento?: string | null;
         };
         /**
          * JobStatus
@@ -334,10 +2168,233 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /**
+         * ListaGruposResponse
+         * @description Respuesta para la lista de grupos.
+         */
+        ListaGruposResponse: {
+            /** Grupos */
+            grupos: components["schemas"]["GrupoEvento"][];
+            /** Total */
+            total: number;
+        };
+        /**
+         * MuestraInfo
+         * @description Información de muestra
+         */
+        MuestraInfo: {
+            /**
+             * Id
+             * @description ID de la muestra
+             */
+            id: number;
+            /**
+             * Tipo
+             * @description Tipo de muestra
+             */
+            tipo?: string | null;
+            /**
+             * Fecha
+             * @description Fecha de toma
+             */
+            fecha?: string | null;
+            /**
+             * Resultado
+             * @description Resultado
+             */
+            resultado?: string | null;
+        };
+        /**
+         * PaginationInfo
+         * @description Información de paginación
+         */
+        PaginationInfo: {
+            /**
+             * Page
+             * @description Página actual
+             */
+            page: number;
+            /**
+             * Page Size
+             * @description Tamaño de página
+             */
+            page_size: number;
+            /**
+             * Total
+             * @description Total de registros
+             */
+            total: number;
+            /**
+             * Total Pages
+             * @description Total de páginas
+             */
+            total_pages: number;
+            /**
+             * Has Next
+             * @description Si hay página siguiente
+             */
+            has_next: boolean;
+            /**
+             * Has Prev
+             * @description Si hay página anterior
+             */
+            has_prev: boolean;
+        };
+        /**
+         * SintomaInfo
+         * @description Información de síntoma
+         */
+        SintomaInfo: {
+            /**
+             * Id
+             * @description ID del síntoma
+             */
+            id: number;
+            /**
+             * Nombre
+             * @description Nombre del síntoma
+             */
+            nombre?: string | null;
+            /**
+             * Fecha
+             * @description Fecha del síntoma
+             */
+            fecha?: string | null;
+        };
+        /**
+         * StrategyTestRequest
+         * @description Request DTO para probar estrategia.
+         */
+        StrategyTestRequest: {
+            /**
+             * Csv Data
+             * @description Datos CSV para probar
+             */
+            csv_data: string;
+            /**
+             * Sample Size
+             * @description Tamaño de muestra a procesar
+             */
+            sample_size?: number | null;
+        };
+        /**
+         * StrategyTestResponse
+         * @description Response DTO para resultados de prueba.
+         */
+        StrategyTestResponse: {
+            /**
+             * Total Rows
+             * @description Total de filas procesadas
+             */
+            total_rows: number;
+            /**
+             * Classified Rows
+             * @description Filas que fueron clasificadas
+             */
+            classified_rows: number;
+            /**
+             * Classification Summary
+             * @description Resumen de clasificaciones
+             */
+            classification_summary: {
+                [key: string]: number;
+            };
+            /**
+             * Results Preview
+             * @description Muestra de resultados
+             */
+            results_preview: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Confidence Stats
+             * @description Estadísticas de confianza
+             */
+            confidence_stats?: {
+                [key: string]: number;
+            } | null;
+            /**
+             * Processing Time Seconds
+             * @description Tiempo de procesamiento
+             */
+            processing_time_seconds?: number | null;
+        };
         /** SuccessResponse[AsyncJobResponse] */
         SuccessResponse_AsyncJobResponse_: {
             /** @description Datos de la respuesta */
             data: components["schemas"]["AsyncJobResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[DatosVisualizacionResponse] */
+        SuccessResponse_DatosVisualizacionResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["DatosVisualizacionResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[EventStrategyResponse] */
+        SuccessResponse_EventStrategyResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["EventStrategyResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[EventoDetailResponse] */
+        SuccessResponse_EventoDetailResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["EventoDetailResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[EventoListResponse] */
+        SuccessResponse_EventoListResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["EventoListResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[EventoTimelineResponse] */
+        SuccessResponse_EventoTimelineResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["EventoTimelineResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[GrupoEventoResponse] */
+        SuccessResponse_GrupoEventoResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["GrupoEventoResponse"];
             /**
              * Meta
              * @description Metadata opcional (paginación, etc)
@@ -369,6 +2426,146 @@ export interface components {
             meta?: {
                 [key: string]: unknown;
             } | null;
+        };
+        /** SuccessResponse[List[AuditLogResponse]] */
+        SuccessResponse_List_AuditLogResponse__: {
+            /**
+             * Data
+             * @description Datos de la respuesta
+             */
+            data: components["schemas"]["AuditLogResponse"][];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[List[EventStrategyResponse]] */
+        SuccessResponse_List_EventStrategyResponse__: {
+            /**
+             * Data
+             * @description Datos de la respuesta
+             */
+            data: components["schemas"]["EventStrategyResponse"][];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[ListaGruposResponse] */
+        SuccessResponse_ListaGruposResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["ListaGruposResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[StrategyTestResponse] */
+        SuccessResponse_StrategyTestResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["StrategyTestResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[dict] */
+        SuccessResponse_dict_: {
+            /**
+             * Data
+             * @description Datos de la respuesta
+             */
+            data: {
+                [key: string]: unknown;
+            };
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /**
+         * TipoClasificacion
+         * @description Clasificaciones estándar de eventos epidemiológicos
+         * @enum {string}
+         */
+        TipoClasificacion: "CONFIRMADOS" | "SOSPECHOSOS" | "PROBABLES" | "EN_ESTUDIO" | "NEGATIVOS" | "DESCARTADOS" | "NOTIFICADOS" | "CON_RESULTADO_MORTAL" | "SIN_RESULTADO_MORTAL" | "REQUIERE_REVISION";
+        /**
+         * TipoFiltro
+         * @description Tipos de filtros soportados para clasificación
+         * @enum {string}
+         */
+        TipoFiltro: "CAMPO_IGUAL" | "CAMPO_EN_LISTA" | "CAMPO_CONTIENE" | "REGEX_EXTRACCION" | "CAMPO_EXISTE" | "CAMPO_NO_NULO" | "CUSTOM_FUNCTION" | "DETECTOR_TIPO_SUJETO" | "EXTRACTOR_METADATA";
+        /**
+         * TratamientoInfo
+         * @description Información de tratamiento
+         */
+        TratamientoInfo: {
+            /**
+             * Id
+             * @description ID del tratamiento
+             */
+            id: number;
+            /**
+             * Descripcion
+             * @description Descripción del tratamiento
+             */
+            descripcion?: string | null;
+            /**
+             * Fecha Inicio
+             * @description Fecha de inicio
+             */
+            fecha_inicio?: string | null;
+            /**
+             * Fecha Fin
+             * @description Fecha de fin
+             */
+            fecha_fin?: string | null;
+            /**
+             * Recibio Tratamiento
+             * @description Si recibió tratamiento
+             */
+            recibio_tratamiento?: boolean | null;
+        };
+        /**
+         * VacunaInfo
+         * @description Información de vacuna
+         */
+        VacunaInfo: {
+            /**
+             * Id
+             * @description ID de la vacuna
+             */
+            id: number;
+            /**
+             * Nombre Vacuna
+             * @description Nombre de la vacuna
+             */
+            nombre_vacuna?: string | null;
+            /**
+             * Fecha Ultima Dosis
+             * @description Fecha de última dosis
+             */
+            fecha_ultima_dosis?: string | null;
+            /**
+             * Dosis Total
+             * @description Total de dosis
+             */
+            dosis_total?: number | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -495,7 +2692,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Estado actual del job */
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -551,6 +2748,773 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_strategies_api_v1_estrategias__get: {
+        parameters: {
+            query?: {
+                active_only?: boolean | null;
+                tipo_eno_id?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_List_EventStrategyResponse__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno del servidor */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_strategy_api_v1_estrategias__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EventStrategyCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_EventStrategyResponse_"];
+                };
+            };
+            /** @description Datos inválidos */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Estrategia ya existe para este tipo de evento */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno del servidor */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_strategy_api_v1_estrategias__strategy_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                strategy_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_EventStrategyResponse_"];
+                };
+            };
+            /** @description Estrategia no encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno del servidor */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_strategy_api_v1_estrategias__strategy_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                strategy_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EventStrategyUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_EventStrategyResponse_"];
+                };
+            };
+            /** @description Datos inválidos */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Estrategia no encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno del servidor */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_strategy_api_v1_estrategias__strategy_id__delete: {
+        parameters: {
+            query?: {
+                force?: boolean;
+            };
+            header?: never;
+            path: {
+                strategy_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Estrategia eliminada exitosamente */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Estrategia no encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No se puede eliminar estrategia activa */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno del servidor */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    activate_strategy_api_v1_estrategias__strategy_id__activate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                strategy_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_EventStrategyResponse_"];
+                };
+            };
+            /** @description Estrategia no encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Ya existe estrategia activa para este evento */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno del servidor */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    test_strategy_api_v1_estrategias__strategy_id__test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                strategy_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StrategyTestRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_StrategyTestResponse_"];
+                };
+            };
+            /** @description Datos de prueba inválidos */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Estrategia no encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno del servidor */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_strategy_audit_log_api_v1_estrategias__strategy_id__audit_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                strategy_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_List_AuditLogResponse__"];
+                };
+            };
+            /** @description Estrategia no encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno del servidor */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_eventos_api_v1_eventos__get: {
+        parameters: {
+            query?: {
+                /** @description Número de página */
+                page?: number;
+                /** @description Tamaño de página */
+                page_size?: number;
+                /** @description Búsqueda por ID, nombre o documento */
+                search?: string | null;
+                tipo_eno_id?: number | null;
+                fecha_desde?: string | null;
+                fecha_hasta?: string | null;
+                clasificacion?: string | null;
+                es_positivo?: boolean | null;
+                provincia?: string | null;
+                tipo_sujeto?: string | null;
+                requiere_revision?: boolean | null;
+                sort_by?: components["schemas"]["EventoSortBy"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_EventoListResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno del servidor */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_evento_detail_api_v1_eventos__evento_id__get: {
+        parameters: {
+            query?: {
+                /** @description Incluir datos relacionados */
+                include_relations?: boolean;
+            };
+            header?: never;
+            path: {
+                evento_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_EventoDetailResponse_"];
+                };
+            };
+            /** @description Evento no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno del servidor */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_evento_timeline_api_v1_eventos__evento_id__timeline_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                evento_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_EventoTimelineResponse_"];
+                };
+            };
+            /** @description Evento no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno del servidor */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    export_eventos_api_v1_eventos_export_get: {
+        parameters: {
+            query?: {
+                tipo_eno_id?: number | null;
+                fecha_desde?: string | null;
+                fecha_hasta?: string | null;
+                clasificacion?: string | null;
+                /** @description Formato de exportación (csv/excel) */
+                formato?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Archivo CSV con los eventos */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno del servidor */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_grupos_api_v1_analytics_grupos_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_ListaGruposResponse_"];
+                };
+            };
+        };
+    };
+    get_grupo_detalle_api_v1_analytics_grupos__grupo_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                grupo_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_GrupoEventoResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_datos_visualizacion_api_v1_analytics_datos_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DatosVisualizacionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_DatosVisualizacionResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_preview_grupo_api_v1_analytics_grupos__grupo_id__preview_get: {
+        parameters: {
+            query?: {
+                clasificacion?: string;
+            };
+            header?: never;
+            path: {
+                grupo_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_dict_"];
                 };
             };
             /** @description Validation Error */

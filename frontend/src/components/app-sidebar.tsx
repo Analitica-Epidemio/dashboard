@@ -42,17 +42,17 @@ const data = {
   navMain: [
     {
       title: "Dashboard",
-      url: "#",
+      url: "/dashboard",
       icon: IconDashboard,
     },
     {
-      title: "Lifecycle",
-      url: "#",
+      title: "Eventos",
+      url: "/eventos",
       icon: IconListDetails,
     },
     {
       title: "Analytics",
-      url: "#",
+      url: "/analytics",
       icon: IconChartBar,
     },
     {
@@ -116,8 +116,8 @@ const data = {
   ],
   navSecondary: [
     {
-      title: "Settings",
-      url: "#",
+      title: "Configuración de Estrategias",
+      url: "/configuracion",
       icon: IconSettings,
     },
     {

@@ -20,7 +20,6 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.v1.router import api_router
 from app.core.config import settings
-from app.core.database import create_db_and_tables
 from app.core.middleware import setup_middleware
 
 # Configurar logging
@@ -40,13 +39,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Startup
     logger.info("🚀 Iniciando Sistema de Epidemiología Moderna...")
 
-    # Intentar crear tablas de base de datos (opcional en desarrollo)
-    try:
-        create_db_and_tables()
-        logger.info("✅ Base de datos inicializada")
-    except Exception as e:
-        logger.warning(f"⚠️ No se pudo inicializar la base de datos: {e}")
-        logger.info("ℹ️ La aplicación continuará sin base de datos")
+    # Conexión a base de datos (sin crear tablas automáticamente)
+    logger.info("🗄️ Base de datos lista - usa migraciones manuales con 'make migrate'")
 
     logger.info("🏥 Sistema de Epidemiología listo para recibir requests")
 

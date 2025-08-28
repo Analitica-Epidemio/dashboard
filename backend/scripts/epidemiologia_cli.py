@@ -10,7 +10,6 @@ estos servicios via API web.
 import asyncio
 import sys
 from pathlib import Path
-from typing import Optional
 
 import click
 
@@ -81,7 +80,7 @@ def seeds_geografia(confirm: bool):
 
                     await seed_geografia(session)
                     click.echo("✅ Seed de geografía ejecutado correctamente!")
-                except Exception as e:
+                except Exception:
                     await session.rollback()
                     raise
                 finally:
@@ -112,7 +111,7 @@ def seeds_eventos(confirm: bool):
 
                     await seed_eventos(session)
                     click.echo("✅ Seed de eventos ejecutado correctamente!")
-                except Exception as e:
+                except Exception:
                     await session.rollback()
                     raise
                 finally:
@@ -147,7 +146,7 @@ def seeds_establecimientos(confirm: bool):
 
                     await seed_establecimientos(session)
                     click.echo("✅ Seed de establecimientos ejecutado correctamente!")
-                except Exception as e:
+                except Exception:
                     await session.rollback()
                     raise
                 finally:

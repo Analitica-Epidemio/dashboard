@@ -3,7 +3,6 @@ Configuración de email para autenticación.
 """
 
 import logging
-from typing import Optional
 
 from app.core.config import settings
 
@@ -26,7 +25,7 @@ async def send_reset_password_email(email: str, token: str) -> None:
 
     if settings.ENVIRONMENT == "development":
         print(f"\n{'=' * 50}")
-        print(f"RESET PASSWORD EMAIL")
+        print("RESET PASSWORD EMAIL")
         print(f"To: {email}")
         print(f"Reset URL: {reset_url}")
         print(f"Token: {token}")
@@ -49,7 +48,7 @@ async def send_verification_email(email: str, token: str) -> None:
 
     if settings.ENVIRONMENT == "development":
         print(f"\n{'=' * 50}")
-        print(f"VERIFICATION EMAIL")
+        print("VERIFICATION EMAIL")
         print(f"To: {email}")
         print(f"Verify URL: {verify_url}")
         print(f"Token: {token}")

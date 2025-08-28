@@ -9,15 +9,16 @@ from sqlmodel import Field, Relationship
 from app.core.models import BaseModel
 
 if TYPE_CHECKING:
-    from app.domains.ciudadanos.models import CiudadanoComorbilidades
+    from app.domains.ciudadanos.models import Ciudadano, CiudadanoComorbilidades
+    from app.domains.diagnosticos.models import EstudioEvento
     from app.domains.establecimientos.models import Establecimiento
-    from app.domains.eventos.models import Evento, DetalleEventoSintomas
+    from app.domains.eventos.models import DetalleEventoSintomas, Evento
 
 
 class Determinacion(BaseModel, table=True):
     """
     Catálogo de determinaciones para estudios de laboratorio.
-    
+
     Define las determinaciones/análisis que pueden realizarse
     en muestras biológicas durante eventos epidemiológicos.
     """
@@ -27,7 +28,11 @@ class Determinacion(BaseModel, table=True):
     # Campos propios
     nombre: str = Field(..., max_length=200, description="Nombre de la determinación")
     codigo: Optional[str] = Field(
-        None, max_length=50, unique=True, index=True, description="Código de la determinación"
+        None,
+        max_length=255,
+        unique=True,
+        index=True,
+        description="Código de la determinación",
     )
     descripcion: Optional[str] = Field(
         None, max_length=500, description="Descripción de la determinación"
@@ -40,7 +45,7 @@ class Determinacion(BaseModel, table=True):
 class Tecnica(BaseModel, table=True):
     """
     Catálogo de técnicas de laboratorio.
-    
+
     Define las técnicas específicas que pueden utilizarse
     para realizar una determinación específica.
     """
@@ -50,7 +55,11 @@ class Tecnica(BaseModel, table=True):
     # Campos propios
     nombre: str = Field(..., max_length=200, description="Nombre de la técnica")
     codigo: Optional[str] = Field(
-        None, max_length=50, unique=True, index=True, description="Código de la técnica"
+        None,
+        max_length=255,
+        unique=True,
+        index=True,
+        description="Código de la técnica",
     )
     descripcion: Optional[str] = Field(
         None, max_length=500, description="Descripción de la técnica"
@@ -63,13 +72,15 @@ class Tecnica(BaseModel, table=True):
 
     # Relaciones
     determinacion: "Determinacion" = Relationship(back_populates="tecnicas")
-    resultados_tecnica: List["ResultadoTecnica"] = Relationship(back_populates="tecnica")
+    resultados_tecnica: List["ResultadoTecnica"] = Relationship(
+        back_populates="tecnica"
+    )
 
 
 class ResultadoTecnica(BaseModel, table=True):
     """
     Catálogo de resultados técnicos posibles.
-    
+
     Define los posibles resultados que puede arrojar una técnica específica.
     """
 
@@ -78,7 +89,11 @@ class ResultadoTecnica(BaseModel, table=True):
     # Campos propios
     nombre: str = Field(..., max_length=200, description="Nombre del resultado")
     codigo: Optional[str] = Field(
-        None, max_length=50, unique=True, index=True, description="Código del resultado"
+        None,
+        max_length=255,
+        unique=True,
+        index=True,
+        description="Código del resultado",
     )
     descripcion: Optional[str] = Field(
         None, max_length=500, description="Descripción del resultado"
@@ -88,9 +103,7 @@ class ResultadoTecnica(BaseModel, table=True):
     )
 
     # Foreign Keys
-    id_tecnica: int = Field(
-        foreign_key="tecnica.id", description="ID de la técnica"
-    )
+    id_tecnica: int = Field(foreign_key="tecnica.id", description="ID de la técnica")
 
     # Relaciones
     tecnica: "Tecnica" = Relationship(back_populates="resultados_tecnica")
@@ -156,7 +169,9 @@ class Muestra(BaseModel, table=True):
     __tablename__ = "muestra"
 
     # Campos propios
-    descripcion: Optional[str] = Field(None, max_length=150, description="Descripción de muestra")
+    descripcion: Optional[str] = Field(
+        None, max_length=150, description="Descripción de muestra"
+    )
 
     # Relaciones
     muestras_eventos: List["MuestraEvento"] = Relationship(back_populates="muestra")
@@ -203,14 +218,10 @@ class MuestraEvento(BaseModel, table=True):
         None, description="Año epidemiológico de la muestra"
     )
     id_snvs_evento_muestra: Optional[int] = Field(
-        None, 
-        sa_type=BigInteger,
-        description="ID SNVS del evento muestra"
+        None, sa_type=BigInteger, description="ID SNVS del evento muestra"
     )
     id_snvs_prueba_muestra: Optional[int] = Field(
-        None, 
-        sa_type=BigInteger,
-        description="ID SNVS de la prueba muestra"
+        None, sa_type=BigInteger, description="ID SNVS de la prueba muestra"
     )
     # TODO: Campo "valor" - verificar dónde/cómo se usa según comentario original "DONDE?"
     valor: Optional[str] = Field(
@@ -225,11 +236,15 @@ class MuestraEvento(BaseModel, table=True):
     id_snvs_prueba: Optional[int] = Field(None, description="ID de la prueba")
     id_snvs_resultado: Optional[int] = Field(None, description="ID del resultado")
     fecha_papel: Optional[date] = Field(None, description="Fecha en papel")
+    
+    # Campo para identificación única SNVS
+    id_snvs_muestra: Optional[int] = Field(
+        None, sa_type=BigInteger, unique=True, index=True, 
+        description="ID SNVS único de la muestra"
+    )
 
     # Foreign Keys
-    id_evento: int = Field(
-        foreign_key="evento.id", description="ID del evento"
-    )
+    id_evento: int = Field(foreign_key="evento.id", description="ID del evento")
     id_establecimiento: int = Field(
         foreign_key="establecimiento.id", description="ID del establecimiento"
     )
@@ -241,6 +256,7 @@ class MuestraEvento(BaseModel, table=True):
     evento: "Evento" = Relationship(back_populates="muestras")
     establecimiento: "Establecimiento" = Relationship(back_populates="muestras")
     muestra: "Muestra" = Relationship(back_populates="muestras_eventos")
+    estudios: List["EstudioEvento"] = Relationship(back_populates="muestra_evento")
 
 
 class VacunasCiudadano(BaseModel, table=True):
@@ -263,13 +279,17 @@ class VacunasCiudadano(BaseModel, table=True):
     )
 
     # Foreign Keys
-    id_evento: int = Field(
-        foreign_key="evento.id", description="ID del evento"
+    codigo_ciudadano: int = Field(
+        sa_type=BigInteger, 
+        foreign_key="ciudadano.codigo_ciudadano", 
+        description="Código del ciudadano"
     )
     id_vacuna: int = Field(foreign_key="vacuna.id", description="ID de la vacuna")
+    id_evento: Optional[int] = Field(
+        None, foreign_key="evento.id", description="ID del evento (opcional)"
+    )
 
     # Relaciones
-    evento: "Evento" = Relationship(back_populates="vacunas")
+    ciudadano: "Ciudadano" = Relationship(back_populates="vacunas")
     vacuna: "Vacuna" = Relationship(back_populates="vacunas_ciudadanos")
-
-
+    evento: Optional["Evento"] = Relationship(back_populates="vacunas")

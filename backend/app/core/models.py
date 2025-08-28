@@ -16,11 +16,8 @@ class TimestampMixin(SQLModel):
 
     created_at: datetime = Field(
         sa_type=DateTime(timezone=True),
-        sa_column_kwargs={
-            "server_default": func.now(),
-            "nullable": False
-        },
-        description="Fecha y hora de creación del registro"
+        sa_column_kwargs={"server_default": func.now(), "nullable": False},
+        description="Fecha y hora de creación del registro",
     )
 
     updated_at: datetime = Field(
@@ -28,9 +25,9 @@ class TimestampMixin(SQLModel):
         sa_column_kwargs={
             "server_default": func.now(),
             "onupdate": func.now(),
-            "nullable": False
+            "nullable": False,
         },
-        description="Fecha y hora de última actualización"
+        description="Fecha y hora de última actualización",
     )
 
 
@@ -40,10 +37,8 @@ class SoftDeleteMixin(SQLModel):
     deleted_at: Optional[datetime] = Field(
         default=None,
         sa_type=DateTime(timezone=True),
-        sa_column_kwargs={
-            "nullable": True
-        },
-        description="Fecha de borrado lógico"
+        sa_column_kwargs={"nullable": True},
+        description="Fecha de borrado lógico",
     )
 
     is_active: bool = Field(
