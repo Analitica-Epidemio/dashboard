@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.core.database import get_async_session
 from app.core.schemas.response import ErrorResponse, SuccessResponse
-from app.domains.eventos.models import TipoEno
+from app.domains.eventos.models import TipoEno, GrupoEno
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -42,6 +42,25 @@ async def list_tiposEno(
         query = (
             select(TipoEno)
         )
+        result = await db.execute(query)
+        tiposEno = result.scalars().all()
+        return tiposEno
+    except Exception as e:
+        logger.error(f"💥 Error listando eventos: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error obteniendo eventos: {str(e)}",
+        )
+    
+@router.get(
+    "/{filtro}"
+)
+async def list_tiposEno_filtro(
+    grupos: list[int],
+    db: AsyncSession = Depends(get_async_session),
+)-> list[TipoEnoResponse]:
+    try:
+        query = select(TipoEno).where(TipoEno.id_grupo_eno.in_(grupos))
         result = await db.execute(query)
         tiposEno = result.scalars().all()
         return tiposEno
