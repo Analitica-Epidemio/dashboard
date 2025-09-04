@@ -29,7 +29,7 @@ from app.domains.ciudadanos.models import (
     CiudadanoDomicilio,
 )
 from app.domains.estrategias.models import TipoClasificacion
-from app.domains.eventos.models import Evento, TipoEno, DetalleEventoSintomas
+from app.domains.eventos.models import Evento, GrupoEno, TipoEno, DetalleEventoSintomas
 from app.domains.localidades.models import Departamento, Localidad
 
 logger = logging.getLogger(__name__)
@@ -418,7 +418,6 @@ class EventoTimelineResponse(BaseModel):
 
 
 # ============= Endpoints =============
-
 
 @router.get(
     "/",
