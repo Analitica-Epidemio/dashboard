@@ -160,21 +160,94 @@ class EventosBulkProcessor(BulkProcessorBase):
             f"Creados/verificados {len(grupo_mapping)} grupos ENO y {len(tipo_mapping)} tipos ENO"
         )
 
-        # Deduplicar eventos por id_evento_caso (tomar la primera ocurrencia)
+        # Agrupar eventos por id_evento_caso para calcular agregaciones correctamente
         eventos_data = []
-        eventos_vistos = set()
+        eventos_agrupados = df.groupby(Columns.IDEVENTOCASO)
+        
+        self.logger.info(f"Procesando {len(eventos_agrupados)} eventos únicos de {len(df)} filas totales")
 
-        for _, row in df.iterrows():
-            id_evento_caso = self._safe_int(row.get(Columns.IDEVENTOCASO))
-
-            # Solo procesar si no hemos visto este evento antes
-            if id_evento_caso and id_evento_caso not in eventos_vistos:
-                evento_dict = self._row_to_evento_dict(
-                    row, establecimiento_mapping, tipo_mapping
-                )
-                if evento_dict:
-                    eventos_data.append(evento_dict)
-                    eventos_vistos.add(id_evento_caso)
+        for id_evento_caso, grupo_df in eventos_agrupados:
+            if not id_evento_caso:
+                continue
+                
+            # Calcular fecha mínima de TODAS las filas del evento
+            fechas_posibles = []
+            todos_establecimientos_consulta = set()
+            todos_establecimientos_notif = set()
+            todos_establecimientos_carga = set()
+            fecha_inicio_sintomas_mas_temprana = None
+            
+            for _, row in grupo_df.iterrows():
+                # Recolectar todas las fechas posibles
+                fecha_sintoma = self._safe_date(row.get(Columns.FECHA_INICIO_SINTOMA))
+                fecha_diag = self._safe_date(row.get(Columns.FECHA_DIAG_REFERIDO))
+                fecha_ambito = self._safe_date(row.get(Columns.FECHA_AMBITO_OCURRENCIA))
+                
+                if fecha_sintoma:
+                    fechas_posibles.append(fecha_sintoma)
+                    # Guardar la fecha de inicio de síntomas más temprana
+                    if not fecha_inicio_sintomas_mas_temprana or fecha_sintoma < fecha_inicio_sintomas_mas_temprana:
+                        fecha_inicio_sintomas_mas_temprana = fecha_sintoma
+                        
+                if fecha_diag:
+                    fechas_posibles.append(fecha_diag)
+                if fecha_ambito:
+                    fechas_posibles.append(fecha_ambito)
+                    
+                # Recolectar todos los establecimientos mencionados
+                estab_consulta = self._clean_string(row.get(Columns.ESTAB_CLINICA))
+                estab_notif = self._clean_string(row.get(Columns.ESTABLECIMIENTO_EPI))
+                estab_carga = self._clean_string(row.get(Columns.ESTABLECIMIENTO_CARGA))
+                
+                if estab_consulta:
+                    todos_establecimientos_consulta.add(estab_consulta)
+                if estab_notif:
+                    todos_establecimientos_notif.add(estab_notif)
+                if estab_carga:
+                    todos_establecimientos_carga.add(estab_carga)
+            
+            # Usar la fecha más temprana encontrada, o la fecha actual si no hay ninguna
+            fecha_minima_evento = min(fechas_posibles) if fechas_posibles else date.today()
+            
+            # Usar la primera fila para datos básicos pero con priorización inteligente
+            primera_fila = grupo_df.iloc[0]
+            
+            # Para establecimientos, preferir el más frecuente o el primero no vacío
+            estab_consulta_final = (list(todos_establecimientos_consulta)[0] 
+                                   if todos_establecimientos_consulta else None)
+            estab_notif_final = (list(todos_establecimientos_notif)[0] 
+                                if todos_establecimientos_notif else None)
+            estab_carga_final = (list(todos_establecimientos_carga)[0] 
+                               if todos_establecimientos_carga else None)
+            
+            evento_dict = self._row_to_evento_dict(
+                primera_fila, establecimiento_mapping, tipo_mapping
+            )
+            
+            if evento_dict:
+                # Sobrescribir con los valores agregados correctos
+                evento_dict["fecha_minima_evento"] = fecha_minima_evento
+                evento_dict["fecha_inicio_sintomas"] = fecha_inicio_sintomas_mas_temprana
+                
+                # Actualizar establecimientos con los valores priorizados
+                if estab_consulta_final:
+                    evento_dict["id_establecimiento_consulta"] = establecimiento_mapping.get(estab_consulta_final)
+                if estab_notif_final:
+                    evento_dict["id_establecimiento_notificacion"] = establecimiento_mapping.get(estab_notif_final)
+                if estab_carga_final:
+                    evento_dict["id_establecimiento_carga"] = establecimiento_mapping.get(estab_carga_final)
+                
+                # Log para debugging cuando hay múltiples filas
+                if len(grupo_df) > 1:
+                    self.logger.info(
+                        f"Evento {id_evento_caso}: {len(grupo_df)} filas agregadas\n"
+                        f"  - Fecha mínima: {fecha_minima_evento}\n"
+                        f"  - Fecha inicio síntomas: {fecha_inicio_sintomas_mas_temprana}\n"
+                        f"  - Establecimientos encontrados: consulta={len(todos_establecimientos_consulta)}, "
+                        f"notif={len(todos_establecimientos_notif)}, carga={len(todos_establecimientos_carga)}"
+                    )
+                
+                eventos_data.append(evento_dict)
 
         if not eventos_data:
             return {}
@@ -453,11 +526,8 @@ class EventosBulkProcessor(BulkProcessorBase):
                     row.get(Columns.FECHA_INICIO_SINTOMA)
                 ),
                 "clasificacion_estrategia": clasificacion_estrategia,
-                "fecha_minima_evento": self._safe_date(
-                    row.get(Columns.FECHA_INICIO_SINTOMA)
-                )
-                or self._safe_date(row.get(Columns.FECHA_DIAG_REFERIDO))
-                or date.today(),  # Campo requerido
+                # fecha_minima_evento se calculará en bulk_upsert_eventos considerando todas las filas
+                "fecha_minima_evento": date.today(),  # Valor temporal, será sobrescrito
                 "id_tipo_eno": id_tipo_eno,
                 # Foreign keys a establecimientos
                 "id_establecimiento_consulta": establecimiento_mapping.get(
