@@ -47,7 +47,7 @@ export default function EpidemiologyDashboard() {
     setShowComparison(true);
   };
 
-  // Volver al constructor de filtros
+  // Volver al constructor de filtros (mantiene las combinaciones)
   const handleBackToFilters = () => {
     setShowComparison(false);
   };
@@ -69,6 +69,8 @@ export default function EpidemiologyDashboard() {
             eventsLoading={allEventsLoading}
             groupsError={groupsError}
             eventsError={allEventsError}
+            initialDateRange={appliedDateRange}
+            initialCombinations={appliedCombinations}
           />
         ) : (
           /* Comparative Dashboard with compact filter bar */

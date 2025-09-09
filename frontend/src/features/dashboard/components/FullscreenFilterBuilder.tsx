@@ -47,6 +47,8 @@ interface FullscreenFilterBuilderProps {
   eventsLoading: boolean;
   groupsError: Error | null;
   eventsError: Error | null;
+  initialDateRange?: DateRange;
+  initialCombinations?: FilterCombination[];
 }
 
 // Predefined colors for combinations
@@ -67,15 +69,23 @@ export const FullscreenFilterBuilder: React.FC<FullscreenFilterBuilderProps> = (
   eventsLoading,
   groupsError,
   eventsError,
+  initialDateRange,
+  initialCombinations,
 }) => {
-  // Estado para el rango de fechas global
-  const [dateRange, setDateRange] = useState<DateRange>({
-    from: new Date(new Date().setMonth(new Date().getMonth() - 3)), // Últimos 3 meses
-    to: new Date(),
-  });
+  // Estado para el rango de fechas global (usa valores iniciales si existen)
+  const [dateRange, setDateRange] = useState<DateRange>(
+    initialDateRange && initialDateRange.from && initialDateRange.to
+      ? initialDateRange
+      : {
+          from: new Date(new Date().setMonth(new Date().getMonth() - 3)), // Últimos 3 meses por defecto
+          to: new Date(),
+        }
+  );
 
-  // Estado para las combinaciones de filtros
-  const [filterCombinations, setFilterCombinations] = useState<FilterCombination[]>([]);
+  // Estado para las combinaciones de filtros (usa valores iniciales si existen)
+  const [filterCombinations, setFilterCombinations] = useState<FilterCombination[]>(
+    initialCombinations || []
+  );
   
   // Estado para el filtro que se está construyendo
   const [currentFilter, setCurrentFilter] = useState<FilterCombination>({
@@ -337,8 +347,8 @@ export const FullscreenFilterBuilder: React.FC<FullscreenFilterBuilderProps> = (
           </div>
 
           {/* Right Column - Added Combinations */}
-          <div className="space-y-6">
-            <Card className="h-full">
+          <div className="lg:col-span-1">
+            <Card className="sticky top-8">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
@@ -358,7 +368,7 @@ export const FullscreenFilterBuilder: React.FC<FullscreenFilterBuilderProps> = (
                   )}
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="max-h-[500px] overflow-y-auto">
                 {filterCombinations.length === 0 ? (
                   <div className="text-center py-12">
                     <Filter className="h-12 w-12 text-gray-400 mx-auto mb-3" />
