@@ -370,76 +370,66 @@ export const FullscreenFilterBuilder: React.FC<FullscreenFilterBuilderProps> = (
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {filterCombinations.map((combination, index) => (
-                      <Card 
+                      <div 
                         key={combination.id} 
-                        className={`border-2 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 ${combination.color}`}
+                        className="border rounded-lg p-3 bg-white hover:shadow-sm transition-shadow"
                       >
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex items-start gap-3 flex-1">
-                              <div className="flex flex-col items-center">
-                                <Badge className="bg-white border-2 border-gray-300 text-gray-700 font-bold">
-                                  {index + 1}
-                                </Badge>
-                                <div className="w-0.5 h-8 bg-gray-300 mt-2" />
-                              </div>
-                              <div className="flex-1">
-                                <h4 className="font-semibold text-gray-900 text-base mb-1">
-                                  {combination.groupName}
-                                </h4>
-                                <div className="space-y-2">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs font-medium text-gray-600">
-                                      Eventos ({combination.eventIds.length}):
-                                    </span>
-                                    {combination.eventIds.length === 0 && (
-                                      <Badge variant="outline" className="text-xs bg-white/80">
-                                        Todos
-                                      </Badge>
-                                    )}
-                                  </div>
-                                  {combination.eventNames && combination.eventNames.length > 0 && (
-                                    <div className="flex flex-wrap gap-1">
-                                      {combination.eventNames.slice(0, 2).map((name, i) => (
-                                        <Badge key={i} variant="secondary" className="text-xs bg-white/80 font-normal">
-                                          {name}
-                                        </Badge>
-                                      ))}
-                                      {combination.eventNames.length > 2 && (
-                                        <Badge variant="secondary" className="text-xs bg-white/80 font-normal">
-                                          +{combination.eventNames.length - 2} más
-                                        </Badge>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1 ml-2">
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-7 w-7 hover:bg-white/50"
-                                onClick={() => duplicateFilterCombination(combination)}
-                                title="Duplicar combinación"
-                              >
-                                <Copy className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-7 w-7 hover:bg-red-100 text-red-600"
-                                onClick={() => removeFilterCombination(combination.id)}
-                                title="Eliminar combinación"
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 flex-1">
+                            <Badge variant="outline" className="text-xs font-semibold">
+                              {index + 1}
+                            </Badge>
+                            <div className="flex-1">
+                              <span className="text-sm font-medium text-gray-900">
+                                {combination.groupName}
+                              </span>
+                              <span className="text-xs text-gray-500 ml-2">
+                                {combination.eventIds.length === 0 ? (
+                                  'Todos los eventos'
+                                ) : combination.eventIds.length === 1 ? (
+                                  `1 evento`
+                                ) : (
+                                  `${combination.eventIds.length} eventos`
+                                )}
+                              </span>
                             </div>
                           </div>
-                        </CardContent>
-                      </Card>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6"
+                              onClick={() => duplicateFilterCombination(combination)}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6 hover:text-red-600"
+                              onClick={() => removeFilterCombination(combination.id)}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                        {combination.eventNames && combination.eventNames.length > 0 && combination.eventNames[0] !== 'Todos los eventos' && (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {combination.eventNames.slice(0, 3).map((name, i) => (
+                              <span key={i} className="text-xs text-gray-600">
+                                {name}{i < Math.min(2, combination.eventNames.length - 1) && ','}
+                              </span>
+                            ))}
+                            {combination.eventNames.length > 3 && (
+                              <span className="text-xs text-gray-500">
+                                +{combination.eventNames.length - 3} más
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     ))}
                   </div>
                 )}
