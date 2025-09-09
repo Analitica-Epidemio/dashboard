@@ -44,8 +44,11 @@ export function useGruposEno(filters: GrupoEnoFilters = {}) {
 type GrupoEnoResponse = components['schemas']['PaginatedResponse_GrupoEnoInfo_']
 
 // Helper para extraer datos de respuesta exitosa
-export function extractGruposEnoData(response: unknown): GrupoEnoResponse | null {
-  const res = response as { data?: GrupoEnoResponse }
-  if (!res?.data) return null
-  return res.data
+export function extractGruposEnoData(response: unknown): any[] | null {
+  // La respuesta viene como { data: [...], meta: {...}, links: {...} }
+  const res = response as { data?: any[] };
+  if (res?.data && Array.isArray(res.data)) {
+    return res.data;
+  }
+  return null;
 }

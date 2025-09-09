@@ -94,8 +94,11 @@ export function useTiposEnoByGrupos(grupoIds: number[], filters: Omit<TipoEnoFil
 type TipoEnoResponse = components['schemas']['PaginatedResponse_TipoEnoInfo_']
 
 // Helper para extraer datos de respuesta exitosa
-export function extractTiposEnoData(response: unknown): TipoEnoResponse | null {
-  const res = response as { data?: TipoEnoResponse }
-  if (!res?.data) return null
-  return res.data
+export function extractTiposEnoData(response: unknown): any[] | null {
+  // La respuesta viene como { data: [...], meta: {...}, links: {...} }
+  const res = response as { data?: any[] };
+  if (res?.data && Array.isArray(res.data)) {
+    return res.data;
+  }
+  return null;
 }

@@ -62,43 +62,58 @@ const fetchChartData = async (eventId: string): Promise<ChartData[]> => {
 export const useGroups = () => {
   const query = useGruposEno({ per_page: 100 })
   
+  const extractedData = query.data ? extractGruposEnoData(query.data) : null;
+  
+  // extractedData ya es un array directo, no necesita .data
+  const mappedData = extractedData?.map((grupo) => ({
+    id: String(grupo.id),
+    name: grupo.nombre,
+    description: grupo.descripcion
+  }));
+  
   return {
     ...query,
-    data: query.data ? extractGruposEnoData(query.data)?.data?.map((grupo) => ({
-      id: String(grupo.id),
-      name: grupo.nombre,
-      description: grupo.descripcion
-    })) : undefined
+    data: mappedData
   }
 }
 
 export const useAllEvents = () => {
-  const query = useTiposEno({ per_page: 500 })
+  const query = useTiposEno({ per_page: 100 })
+  
+  const extractedData = query.data ? extractTiposEnoData(query.data) : null;
+  
+  // extractedData ya es un array directo, no necesita .data
+  const mappedData = extractedData?.map((tipo) => ({
+    id: String(tipo.id),
+    name: tipo.nombre,
+    groupId: String(tipo.id_grupo_eno),
+    description: tipo.descripcion,
+    groupName: tipo.grupo_nombre
+  }));
   
   return {
     ...query,
-    data: query.data ? extractTiposEnoData(query.data)?.data?.map((tipo) => ({
-      id: String(tipo.id),
-      name: tipo.nombre,
-      groupId: String(tipo.id_grupo_eno),
-      description: tipo.descripcion,
-      groupName: tipo.grupo_nombre
-    })) : undefined
+    data: mappedData
   }
 }
 
 export const useEventsByGroup = (groupId: string | null) => {
   const query = useTiposEnoByGrupo(groupId ? Number(groupId) : null)
   
+  const extractedData = query.data ? extractTiposEnoData(query.data) : null;
+  
+  // extractedData ya es un array directo, no necesita .data
+  const mappedData = extractedData?.map((tipo) => ({
+    id: String(tipo.id),
+    name: tipo.nombre,
+    groupId: String(tipo.id_grupo_eno),
+    description: tipo.descripcion,
+    groupName: tipo.grupo_nombre
+  }));
+  
   return {
     ...query,
-    data: query.data ? extractTiposEnoData(query.data)?.data?.map((tipo) => ({
-      id: String(tipo.id),
-      name: tipo.nombre,
-      groupId: String(tipo.id_grupo_eno),
-      description: tipo.descripcion,
-      groupName: tipo.grupo_nombre
-    })) : undefined
+    data: mappedData
   }
 }
 
