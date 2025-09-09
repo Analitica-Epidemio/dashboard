@@ -219,14 +219,13 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                     <CardTitle className="text-sm">Curva Epidemiológica</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="h-64">
-                      <EpidemiologicalCurveChart 
-                        filters={{
-                          selectedGroupId: combination.groupId,
-                          selectedEventId: combination.eventIds[0], // For now, use first event
-                        }}
-                      />
-                    </div>
+                    <EpidemiologicalCurveChart 
+                      filters={{
+                        selectedGroupId: combination.groupId,
+                        selectedEventId: combination.eventIds[0], // For now, use first event
+                      }}
+                      chartConfig={{ height: 300 }}
+                    />
                   </CardContent>
                 </Card>
 
@@ -236,14 +235,13 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                     <CardTitle className="text-sm">Corredor Endémico</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="h-64">
-                      <EndemicCorridorChart 
-                        filters={{
-                          selectedGroupId: combination.groupId,
-                          selectedEventId: combination.eventIds[0],
-                        }}
-                      />
-                    </div>
+                    <EndemicCorridorChart 
+                      filters={{
+                        selectedGroupId: combination.groupId,
+                        selectedEventId: combination.eventIds[0],
+                      }}
+                      chartConfig={{ height: 300 }}
+                    />
                   </CardContent>
                 </Card>
 
@@ -253,14 +251,13 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                     <CardTitle className="text-sm">Pirámide Poblacional</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="h-64">
-                      <AgePyramidChart 
-                        filters={{
-                          selectedGroupId: combination.groupId,
-                          selectedEventId: combination.eventIds[0],
-                        }}
-                      />
-                    </div>
+                    <AgePyramidChart 
+                      filters={{
+                        selectedGroupId: combination.groupId,
+                        selectedEventId: combination.eventIds[0],
+                      }}
+                      chartConfig={{ height: 300 }}
+                    />
                   </CardContent>
                 </Card>
 
@@ -270,14 +267,13 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                     <CardTitle className="text-sm">Distribución Geográfica</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="h-64">
-                      <UGDPieChart 
-                        filters={{
-                          selectedGroupId: combination.groupId,
-                          selectedEventId: combination.eventIds[0],
-                        }}
-                      />
-                    </div>
+                    <UGDPieChart 
+                      filters={{
+                        selectedGroupId: combination.groupId,
+                        selectedEventId: combination.eventIds[0],
+                      }}
+                      chartConfig={{ height: 300 }}
+                    />
                   </CardContent>
                 </Card>
 
@@ -287,14 +283,13 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                     <CardTitle className="text-sm">Totales Históricos</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="h-64">
-                      <HistoricalTotalsChart 
-                        filters={{
-                          selectedGroupId: combination.groupId,
-                          selectedEventId: combination.eventIds[0],
-                        }}
-                      />
-                    </div>
+                    <HistoricalTotalsChart 
+                      filters={{
+                        selectedGroupId: combination.groupId,
+                        selectedEventId: combination.eventIds[0],
+                      }}
+                      chartConfig={{ height: 300 }}
+                    />
                   </CardContent>
                 </Card>
 
@@ -305,14 +300,13 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                       <CardTitle className="text-sm">Análisis de Intentos</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="h-64">
-                        <SuicideAttemptChart 
-                          filters={{
-                            selectedGroupId: combination.groupId,
-                            selectedEventId: combination.eventIds[0],
-                          }}
-                        />
-                      </div>
+                      <SuicideAttemptChart 
+                        filters={{
+                          selectedGroupId: combination.groupId,
+                          selectedEventId: combination.eventIds[0],
+                        }}
+                        chartConfig={{ height: 300 }}
+                      />
                     </CardContent>
                   </Card>
                 )}
@@ -323,14 +317,13 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                       <CardTitle className="text-sm">Casos de Rabia Animal</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="h-64">
-                        <AnimalRabiesChart 
-                          filters={{
-                            selectedGroupId: combination.groupId,
-                            selectedEventId: combination.eventIds[0],
-                          }}
-                        />
-                      </div>
+                      <AnimalRabiesChart 
+                        filters={{
+                          selectedGroupId: combination.groupId,
+                          selectedEventId: combination.eventIds[0],
+                        }}
+                        chartConfig={{ height: 300 }}
+                      />
                     </CardContent>
                   </Card>
                 )}

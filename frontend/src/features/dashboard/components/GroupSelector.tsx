@@ -1,12 +1,6 @@
 'use client'
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Combobox, ComboboxOption } from '@/components/ui/combobox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
@@ -50,24 +44,24 @@ export function GroupSelector({
     )
   }
 
+  // Convert groups to combobox options
+  const options: ComboboxOption[] = groups.map(group => ({
+    value: group.id,
+    label: group.name
+  }))
+
   return (
     <div className="space-y-2">
       <label className="text-sm font-medium">Seleccionar Grupo</label>
-      <Select 
-        value={selectedGroupId || ''} 
+      <Combobox
+        options={options}
+        value={selectedGroupId || undefined}
         onValueChange={(value) => onGroupChange(value || null)}
-      >
-        <SelectTrigger className="w-[300px]">
-          <SelectValue placeholder="Selecciona un grupo..." />
-        </SelectTrigger>
-        <SelectContent>
-          {groups.map((group) => (
-            <SelectItem key={group.id} value={group.id}>
-              {group.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        placeholder="Buscar o seleccionar grupo..."
+        searchPlaceholder="Buscar grupo de eventos..."
+        emptyMessage="No se encontraron grupos"
+        className="w-full"
+      />
     </div>
   )
 }

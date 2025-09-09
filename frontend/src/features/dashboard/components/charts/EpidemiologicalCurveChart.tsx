@@ -254,7 +254,7 @@ export const EpidemiologicalCurveChart: React.FC<EpidemiologicalCurveChartProps>
       <div>
         <div 
           className="w-full"
-          style={{ height: chartConfig.height || 600 }}
+          style={{ height: chartConfig.height || 400 }}
         >
           <ResponsiveContainer width="100%" height="100%">
             <BarChart

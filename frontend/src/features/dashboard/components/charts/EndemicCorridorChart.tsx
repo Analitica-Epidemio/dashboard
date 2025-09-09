@@ -210,7 +210,7 @@ export const EndemicCorridorChart: React.FC<EndemicCorridorChartProps> = ({
         <div 
           className="w-full"
           style={{ 
-            height: chartConfig.height || 600,
+            height: chartConfig.height || 400,
             backgroundColor: 'rgb(238, 188, 172)' // Background original
           }}
         >

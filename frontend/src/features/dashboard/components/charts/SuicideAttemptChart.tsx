@@ -326,7 +326,7 @@ export const SuicideAttemptChart: React.FC<SuicideAttemptChartProps> = ({
           <TabsContent value="temporal" className="mt-4">
             <div 
               className="w-full"
-              style={{ height: chartConfig.height || 500 }}
+              style={{ height: chartConfig.height || 400 }}
             >
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart
