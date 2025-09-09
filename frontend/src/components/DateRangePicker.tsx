@@ -40,7 +40,6 @@ interface PresetRange {
   label: string;
   value: () => DateRange;
   icon?: React.ReactNode;
-  popular?: boolean;
 }
 
 const presetRanges: PresetRange[] = [
@@ -57,7 +56,6 @@ const presetRanges: PresetRange[] = [
       from: subDays(new Date(), 6),
       to: new Date(),
     }),
-    popular: true,
   },
   {
     label: 'Últimos 30 días',
@@ -65,7 +63,6 @@ const presetRanges: PresetRange[] = [
       from: subDays(new Date(), 29),
       to: new Date(),
     }),
-    popular: true,
   },
   {
     label: 'Últimos 90 días',
@@ -73,7 +70,6 @@ const presetRanges: PresetRange[] = [
       from: subDays(new Date(), 89),
       to: new Date(),
     }),
-    popular: true,
   },
   {
     label: 'Este mes',
@@ -308,19 +304,11 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
                   key={preset.label}
                   variant={activePreset === preset.label ? "default" : "ghost"}
                   size="sm"
-                  className={cn(
-                    "w-full justify-start text-left",
-                    preset.popular && !activePreset && "font-medium"
-                  )}
+                  className="w-full justify-start text-left"
                   onClick={() => handlePresetSelect(preset)}
                 >
-                  {preset.popular && <Clock className="mr-2 h-3 w-3" />}
+                  <Clock className="mr-2 h-3 w-3" />
                   {preset.label}
-                  {preset.popular && (
-                    <Badge variant="secondary" className="ml-auto text-xs">
-                      Popular
-                    </Badge>
-                  )}
                 </Button>
               ))}
             </div>
