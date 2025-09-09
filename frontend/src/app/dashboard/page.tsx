@@ -1,41 +1,84 @@
-import { AppSidebar } from "@/components/app-sidebar"
-import { ChartAreaInteractive } from "@/components/chart-area-interactive"
-import { DataTable } from "@/components/data-table"
-import { SectionCards } from "@/components/section-cards"
-import { SiteHeader } from "@/components/site-header"
-import {
-  SidebarInset,
-  SidebarProvider,
-} from "@/components/ui/sidebar"
+"use client";
 
-import data from "./data.json"
+import React, { useState } from "react";
+import { useDashboardFilters } from "@/features/dashboard/hooks/useDashboardFilters";
+import { CollapsibleSidebar } from "@/components/CollapsibleSidebar";
+import { FullscreenFilterBuilder } from "@/features/dashboard/components/FullscreenFilterBuilder";
+import { ComparativeDashboard } from "@/features/dashboard/components/ComparativeDashboard";
 
-export default function Page() {
+interface FilterCombination {
+  id: string;
+  groupId: string | null;
+  groupName?: string;
+  eventIds: number[];
+  eventNames?: string[];
+  label?: string;
+  color?: string;
+}
+
+interface DateRange {
+  from: Date | null;
+  to: Date | null;
+}
+
+export default function EpidemiologyDashboard() {
+  // Estado para controlar qué vista mostrar
+  const [showComparison, setShowComparison] = useState(false);
+  const [appliedDateRange, setAppliedDateRange] = useState<DateRange>({
+    from: null,
+    to: null,
+  });
+  const [appliedCombinations, setAppliedCombinations] = useState<FilterCombination[]>([]);
+
+  // Reutilizamos la lógica existente de filtros
+  const {
+    groups,
+    groupsLoading,
+    groupsError,
+    allEvents,
+    allEventsLoading,
+    allEventsError,
+  } = useDashboardFilters();
+
+  // Manejar aplicación de filtros
+  const handleApplyFilters = (dateRange: DateRange, combinations: FilterCombination[]) => {
+    setAppliedDateRange(dateRange);
+    setAppliedCombinations(combinations);
+    setShowComparison(true);
+  };
+
+  // Volver al constructor de filtros
+  const handleBackToFilters = () => {
+    setShowComparison(false);
+  };
 
   return (
-    <SidebarProvider
-      style={
-        {
-          "--sidebar-width": "calc(var(--spacing) * 72)",
-          "--header-height": "calc(var(--spacing) * 12)",
-        } as React.CSSProperties
-      }
-    >
-      <AppSidebar variant="inset" />
-      <SidebarInset>
-        <SiteHeader />
-        <div className="flex flex-1 flex-col">
-          <div className="@container/main flex flex-1 flex-col gap-2">
-            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-              <SectionCards />
-              <div className="px-4 lg:px-6">
-                <ChartAreaInteractive />
-              </div>
-              <DataTable data={data} />
-            </div>
-          </div>
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
-  )
+    <>
+      {/* Collapsible Navigation Sidebar */}
+      <CollapsibleSidebar />
+
+      {/* Main Content with left padding for collapsed sidebar */}
+      <div className="h-full lg:pl-14">
+        {!showComparison ? (
+          /* Fullscreen Filter Builder */
+          <FullscreenFilterBuilder
+            groups={groups}
+            availableEvents={allEvents}
+            onApplyFilters={handleApplyFilters}
+            groupsLoading={groupsLoading}
+            eventsLoading={allEventsLoading}
+            groupsError={groupsError}
+            eventsError={allEventsError}
+          />
+        ) : (
+          /* Comparative Dashboard with compact filter bar */
+          <ComparativeDashboard
+            dateRange={appliedDateRange}
+            filterCombinations={appliedCombinations}
+            onBack={handleBackToFilters}
+          />
+        )}
+      </div>
+    </>
+  );
 }

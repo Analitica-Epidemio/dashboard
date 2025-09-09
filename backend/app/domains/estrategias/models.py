@@ -45,7 +45,7 @@ class TipoClasificacion(str, Enum):
     )
 
 
-class EventStrategy(SQLModel, table=True):
+class EventStrategy(BaseModel, table=True):
     """
     Estrategia de procesamiento para un tipo de evento epidemiológico.
 
