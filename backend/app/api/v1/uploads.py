@@ -97,9 +97,9 @@ async def upload_csv_async(
         )
         error_response = ErrorResponse(
             error=ErrorDetail(
-                code="CSV_VALIDATION_ERROR"
-                if e.status_code == 400
-                else "FILE_TOO_LARGE",
+                code=(
+                    "CSV_VALIDATION_ERROR" if e.status_code == 400 else "FILE_TOO_LARGE"
+                ),
                 message=e.detail,
                 field="file",
             )
@@ -150,9 +150,6 @@ async def get_job_status(job_id: str) -> SuccessResponse[JobStatusResponse]:
     - `cancelled`: Cancelado por usuario
     """
 
-    logger.info(f"🔍 Getting job status for job_id: {job_id}")
-
-    logger.info("📞 Calling async_service.get_job_status...")
     job_status = await async_service.get_job_status(job_id)
 
     if not job_status:
@@ -161,7 +158,6 @@ async def get_job_status(job_id: str) -> SuccessResponse[JobStatusResponse]:
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} no encontrado"
         )
 
-    logger.info(f"✅ Returning success response for job: {job_id}")
     return SuccessResponse(data=job_status)
 
 

@@ -396,21 +396,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/analytics/grupos": {
+    "/api/v1/tiposEno/": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /**
-         * Obtener grupos de eventos disponibles
-         * @description Obtiene la lista de grupos de eventos disponibles para analytics.
-         *
-         *     Incluye tanto eventos simples como grupos de eventos epidemiológicos
-         *     con sus configuraciones de clasificaciones y gráficos especiales.
-         */
-        get: operations["get_grupos_api_v1_analytics_grupos_get"];
+        /** List Tiposeno */
+        get: operations["list_tiposEno_api_v1_tiposEno__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -419,76 +413,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/analytics/grupos/{grupo_id}": {
+    "/api/v1/gruposEno/": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /**
-         * Obtener detalle de un grupo específico
-         * @description Obtiene el detalle de un grupo específico incluyendo:
-         *     - Información del grupo
-         *     - Lista de eventos dentro del grupo
-         *     - Gráficos disponibles para este grupo
-         *     - Estadísticas básicas de cada evento
-         */
-        get: operations["get_grupo_detalle_api_v1_analytics_grupos__grupo_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/analytics/datos": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Obtener datos para visualización
-         * @description Obtiene datos procesados para una visualización específica.
-         *
-         *     Parámetros:
-         *     - grupo_id: ID del grupo de eventos
-         *     - evento_ids: Lista de eventos específicos (opcional, por defecto todos del grupo)
-         *     - clasificacion: Filtro de clasificación (confirmados, sospechosos, todos)
-         *     - fecha_desde/fecha_hasta: Rango de fechas (opcional)
-         *     - tipo_grafico: Tipo de gráfico solicitado
-         *     - parametros_extra: Parámetros adicionales específicos del gráfico
-         *
-         *     Respuesta incluye:
-         *     - Datos formateados según el tipo de gráfico
-         *     - Metadatos del query y filtros aplicados
-         *     - Información contextual (total casos, fecha generación, etc.)
-         */
-        post: operations["get_datos_visualizacion_api_v1_analytics_datos_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/analytics/grupos/{grupo_id}/preview": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Vista previa rápida de un grupo
-         * @description Obtiene una vista previa rápida de un grupo con estadísticas básicas.
-         *     Útil para mostrar información sin cargar datos completos de visualización.
-         */
-        get: operations["get_preview_grupo_api_v1_analytics_grupos__grupo_id__preview_get"];
+        /** List Gruposeno */
+        get: operations["list_gruposEno_api_v1_gruposEno__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -860,55 +793,6 @@ export interface components {
             updated_at?: string | null;
         };
         /**
-         * ConfiguracionVisualizacion
-         * @description Configuración para tipos de visualización disponibles.
-         */
-        ConfiguracionVisualizacion: {
-            /**
-             * Id
-             * @description ID del tipo de gráfico
-             */
-            id: string;
-            /**
-             * Nombre
-             * @description Nombre descriptivo
-             */
-            nombre: string;
-            /**
-             * Descripcion
-             * @description Descripción del gráfico
-             */
-            descripcion?: string | null;
-            /**
-             * Tipo
-             * @description Tipo: bar, line, pie, area, table, etc
-             */
-            tipo: string;
-            /**
-             * Parametros
-             * @description Parámetros específicos del gráfico
-             */
-            parametros?: {
-                [key: string]: unknown;
-            };
-            /**
-             * Requiere Parametros
-             * @description Parámetros requeridos
-             */
-            requiere_parametros?: string[];
-            /**
-             * Disponible Para Grupos
-             * @description Grupos que pueden usar este gráfico
-             */
-            disponible_para_grupos?: string[];
-            /**
-             * Disponible Para Todos
-             * @description Si está disponible para todos los grupos
-             * @default true
-             */
-            disponible_para_todos: boolean;
-        };
-        /**
          * ContactoInfo
          * @description Información de contactos
          */
@@ -943,107 +827,6 @@ export interface components {
              * @description Contactos embarazadas
              */
             contactos_embarazadas?: number | null;
-        };
-        /**
-         * DatosVisualizacionRequest
-         * @description Request para obtener datos de visualización.
-         */
-        DatosVisualizacionRequest: {
-            /**
-             * Grupo Id
-             * @description ID del grupo
-             */
-            grupo_id: number;
-            /**
-             * Evento Ids
-             * @description IDs específicos de eventos (vacío = todos del grupo)
-             */
-            evento_ids?: number[];
-            /**
-             * Clasificacion
-             * @description Clasificación a filtrar
-             * @default todos
-             */
-            clasificacion: string;
-            /**
-             * Fecha Desde
-             * @description Fecha desde (YYYY-MM-DD)
-             */
-            fecha_desde?: string | null;
-            /**
-             * Fecha Hasta
-             * @description Fecha hasta (YYYY-MM-DD)
-             */
-            fecha_hasta?: string | null;
-            /**
-             * Tipo Grafico
-             * @description Tipo de gráfico solicitado
-             */
-            tipo_grafico: string;
-            /**
-             * Parametros Extra
-             * @description Parámetros adicionales
-             */
-            parametros_extra?: {
-                [key: string]: unknown;
-            };
-        };
-        /**
-         * DatosVisualizacionResponse
-         * @description Respuesta con datos para visualización.
-         */
-        DatosVisualizacionResponse: {
-            /**
-             * Grupo
-             * @description Nombre del grupo
-             */
-            grupo: string;
-            /**
-             * Eventos
-             * @description Nombres de eventos incluidos
-             */
-            eventos: string[];
-            /**
-             * Clasificacion
-             * @description Clasificación filtrada
-             */
-            clasificacion: string;
-            /**
-             * Tipo Grafico
-             * @description Tipo de gráfico
-             */
-            tipo_grafico: string;
-            /**
-             * Datos
-             * @description Datos del gráfico
-             */
-            datos: {
-                [key: string]: unknown;
-            }[];
-            /**
-             * Metadatos
-             * @description Metadatos adicionales
-             */
-            metadatos?: {
-                [key: string]: unknown;
-            };
-            /**
-             * Total Casos
-             * @description Total de casos en el resultado
-             */
-            total_casos: number;
-            /**
-             * Fecha Generacion
-             * @description Timestamp de generación
-             */
-            fecha_generacion: string;
-            /**
-             * Filtros Aplicados
-             * @description Resumen de filtros aplicados
-             */
-            filtros_aplicados: {
-                [key: string]: unknown;
-            };
         };
         /**
          * DiagnosticoInfo
@@ -1341,70 +1124,6 @@ export interface components {
              * @description Extractores de metadata
              */
             metadata_extractors?: components["schemas"]["FilterConditionRequest"][] | null;
-        };
-        /**
-         * EventoDentroGrupo
-         * @description Evento específico dentro de un grupo.
-         */
-        EventoDentroGrupo: {
-            /**
-             * Id
-             * @description ID único del evento
-             */
-            id: number;
-            /**
-             * Tipo Eno Id
-             * @description ID del tipo ENO
-             */
-            tipo_eno_id: number;
-            /**
-             * Nombre
-             * @description Nombre del evento específico
-             */
-            nombre: string;
-            /**
-             * Grupo Id
-             * @description ID del grupo al que pertenece
-             */
-            grupo_id: number;
-            /**
-             * Grupo Nombre
-             * @description Nombre del grupo
-             */
-            grupo_nombre: string;
-            /**
-             * Clasificaciones
-             * @description Clasificaciones específicas (null = usar del grupo)
-             */
-            clasificaciones?: string[] | null;
-            /**
-             * Estrategia
-             * @description Estrategia específica del evento
-             */
-            estrategia?: string | null;
-            /**
-             * Total Casos
-             * @description Total de casos de este evento
-             * @default 0
-             */
-            total_casos: number;
-            /**
-             * Casos Confirmados
-             * @description Casos confirmados
-             * @default 0
-             */
-            casos_confirmados: number;
-            /**
-             * Casos Sospechosos
-             * @description Casos sospechosos
-             * @default 0
-             */
-            casos_sospechosos: number;
-            /**
-             * Ultimo Caso
-             * @description Fecha del último caso
-             */
-            ultimo_caso?: string | null;
         };
         /**
          * EventoDetailResponse
@@ -1952,64 +1671,28 @@ export interface components {
              */
             updated_at?: string | null;
         };
-        /**
-         * GrupoEvento
-         * @description Modelo para grupos de eventos epidemiológicos.
-         */
-        GrupoEvento: {
+        /** GrupoEnoInfo */
+        GrupoEnoInfo: {
             /**
              * Id
-             * @description ID único del grupo
+             * @description ID del grupo ENO
              */
             id: number;
             /**
              * Nombre
-             * @description Nombre del grupo de eventos
+             * @description Nombre del grupo ENO
              */
             nombre: string;
-            /**
-             * Tipo
-             * @description Tipo: 'simple' o 'grupo'
-             */
-            tipo: string;
             /**
              * Descripcion
              * @description Descripción del grupo
              */
             descripcion?: string | null;
             /**
-             * Activo
-             * @description Si está activo para visualización
-             * @default true
+             * Codigo
+             * @description Código del grupo
              */
-            activo: boolean;
-            /**
-             * Clasificaciones Disponibles
-             * @description Clasificaciones disponibles para el grupo
-             */
-            clasificaciones_disponibles: string[];
-            /**
-             * Graficos Especiales
-             * @description Gráficos especiales del grupo
-             */
-            graficos_especiales?: string[];
-            /**
-             * Orden
-             * @description Orden para mostrar en UI
-             * @default 100
-             */
-            orden: number;
-        };
-        /**
-         * GrupoEventoResponse
-         * @description Respuesta para un grupo de eventos.
-         */
-        GrupoEventoResponse: {
-            grupo: components["schemas"]["GrupoEvento"];
-            /** Eventos */
-            eventos: components["schemas"]["EventoDentroGrupo"][];
-            /** Graficos Disponibles */
-            graficos_disponibles: components["schemas"]["ConfiguracionVisualizacion"][];
+            codigo?: string | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -2169,16 +1852,6 @@ export interface components {
             } | null;
         };
         /**
-         * ListaGruposResponse
-         * @description Respuesta para la lista de grupos.
-         */
-        ListaGruposResponse: {
-            /** Grupos */
-            grupos: components["schemas"]["GrupoEvento"][];
-            /** Total */
-            total: number;
-        };
-        /**
          * MuestraInfo
          * @description Información de muestra
          */
@@ -2203,6 +1876,72 @@ export interface components {
              * @description Resultado
              */
             resultado?: string | null;
+        };
+        /** PaginatedResponse[GrupoEnoInfo] */
+        PaginatedResponse_GrupoEnoInfo_: {
+            /**
+             * Data
+             * @description Lista de elementos
+             */
+            data: components["schemas"]["GrupoEnoInfo"][];
+            /**
+             * Meta
+             * @description Información de paginación
+             * @example {
+             *       "page": 1,
+             *       "per_page": 20,
+             *       "total": 100,
+             *       "total_pages": 5
+             *     }
+             */
+            meta: {
+                [key: string]: unknown;
+            };
+            /**
+             * Links
+             * @description Enlaces de navegación
+             * @example {
+             *       "first": "/api/items?page=1",
+             *       "last": "/api/items?page=5",
+             *       "next": "/api/items?page=2"
+             *     }
+             */
+            links?: {
+                [key: string]: string | null;
+            } | null;
+        };
+        /** PaginatedResponse[TipoEnoInfo] */
+        PaginatedResponse_TipoEnoInfo_: {
+            /**
+             * Data
+             * @description Lista de elementos
+             */
+            data: components["schemas"]["TipoEnoInfo"][];
+            /**
+             * Meta
+             * @description Información de paginación
+             * @example {
+             *       "page": 1,
+             *       "per_page": 20,
+             *       "total": 100,
+             *       "total_pages": 5
+             *     }
+             */
+            meta: {
+                [key: string]: unknown;
+            };
+            /**
+             * Links
+             * @description Enlaces de navegación
+             * @example {
+             *       "first": "/api/items?page=1",
+             *       "last": "/api/items?page=5",
+             *       "next": "/api/items?page=2"
+             *     }
+             */
+            links?: {
+                [key: string]: string | null;
+            } | null;
         };
         /**
          * PaginationInfo
@@ -2331,18 +2070,6 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
-        /** SuccessResponse[DatosVisualizacionResponse] */
-        SuccessResponse_DatosVisualizacionResponse_: {
-            /** @description Datos de la respuesta */
-            data: components["schemas"]["DatosVisualizacionResponse"];
-            /**
-             * Meta
-             * @description Metadata opcional (paginación, etc)
-             */
-            meta?: {
-                [key: string]: unknown;
-            } | null;
-        };
         /** SuccessResponse[EventStrategyResponse] */
         SuccessResponse_EventStrategyResponse_: {
             /** @description Datos de la respuesta */
@@ -2383,18 +2110,6 @@ export interface components {
         SuccessResponse_EventoTimelineResponse_: {
             /** @description Datos de la respuesta */
             data: components["schemas"]["EventoTimelineResponse"];
-            /**
-             * Meta
-             * @description Metadata opcional (paginación, etc)
-             */
-            meta?: {
-                [key: string]: unknown;
-            } | null;
-        };
-        /** SuccessResponse[GrupoEventoResponse] */
-        SuccessResponse_GrupoEventoResponse_: {
-            /** @description Datos de la respuesta */
-            data: components["schemas"]["GrupoEventoResponse"];
             /**
              * Meta
              * @description Metadata opcional (paginación, etc)
@@ -2457,39 +2172,10 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
-        /** SuccessResponse[ListaGruposResponse] */
-        SuccessResponse_ListaGruposResponse_: {
-            /** @description Datos de la respuesta */
-            data: components["schemas"]["ListaGruposResponse"];
-            /**
-             * Meta
-             * @description Metadata opcional (paginación, etc)
-             */
-            meta?: {
-                [key: string]: unknown;
-            } | null;
-        };
         /** SuccessResponse[StrategyTestResponse] */
         SuccessResponse_StrategyTestResponse_: {
             /** @description Datos de la respuesta */
             data: components["schemas"]["StrategyTestResponse"];
-            /**
-             * Meta
-             * @description Metadata opcional (paginación, etc)
-             */
-            meta?: {
-                [key: string]: unknown;
-            } | null;
-        };
-        /** SuccessResponse[dict] */
-        SuccessResponse_dict_: {
-            /**
-             * Data
-             * @description Datos de la respuesta
-             */
-            data: {
-                [key: string]: unknown;
-            };
             /**
              * Meta
              * @description Metadata opcional (paginación, etc)
@@ -2504,6 +2190,39 @@ export interface components {
          * @enum {string}
          */
         TipoClasificacion: "CONFIRMADOS" | "SOSPECHOSOS" | "PROBABLES" | "EN_ESTUDIO" | "NEGATIVOS" | "DESCARTADOS" | "NOTIFICADOS" | "CON_RESULTADO_MORTAL" | "SIN_RESULTADO_MORTAL" | "REQUIERE_REVISION";
+        /** TipoEnoInfo */
+        TipoEnoInfo: {
+            /**
+             * Id
+             * @description ID del tipo ENO
+             */
+            id: number;
+            /**
+             * Nombre
+             * @description Nombre del tipo ENO
+             */
+            nombre: string;
+            /**
+             * Descripcion
+             * @description Descripción del tipo
+             */
+            descripcion?: string | null;
+            /**
+             * Codigo
+             * @description Código del tipo
+             */
+            codigo?: string | null;
+            /**
+             * Id Grupo Eno
+             * @description ID del grupo ENO
+             */
+            id_grupo_eno: number;
+            /**
+             * Grupo Nombre
+             * @description Nombre del grupo ENO
+             */
+            grupo_nombre?: string | null;
+        };
         /**
          * TipoFiltro
          * @description Tipos de filtros soportados para clasificación
@@ -3411,99 +3130,22 @@ export interface operations {
             };
         };
     };
-    get_grupos_api_v1_analytics_grupos_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SuccessResponse_ListaGruposResponse_"];
-                };
-            };
-        };
-    };
-    get_grupo_detalle_api_v1_analytics_grupos__grupo_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                grupo_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SuccessResponse_GrupoEventoResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_datos_visualizacion_api_v1_analytics_datos_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DatosVisualizacionRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SuccessResponse_DatosVisualizacionResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_preview_grupo_api_v1_analytics_grupos__grupo_id__preview_get: {
+    list_tiposEno_api_v1_tiposEno__get: {
         parameters: {
             query?: {
-                clasificacion?: string;
+                /** @description Número de página */
+                page?: number;
+                /** @description Elementos por página */
+                per_page?: number;
+                /** @description Filtrar por nombre del tipo */
+                nombre?: string | null;
+                /** @description Filtrar por ID del grupo */
+                grupo_id?: number | null;
+                /** @description Filtrar por múltiples IDs de grupo */
+                grupos?: number[] | null;
             };
             header?: never;
-            path: {
-                grupo_id: number;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -3514,7 +3156,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SuccessResponse_dict_"];
+                    "application/json": components["schemas"]["PaginatedResponse_TipoEnoInfo_"];
                 };
             };
             /** @description Validation Error */
@@ -3524,6 +3166,60 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno del servidor */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_gruposEno_api_v1_gruposEno__get: {
+        parameters: {
+            query?: {
+                /** @description Número de página */
+                page?: number;
+                /** @description Elementos por página */
+                per_page?: number;
+                /** @description Filtrar por nombre */
+                nombre?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_GrupoEnoInfo_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno del servidor */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

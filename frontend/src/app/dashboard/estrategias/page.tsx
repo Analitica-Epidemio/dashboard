@@ -77,7 +77,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppSidebar } from "@/features/layout/components";
 
 // API and types
 import {

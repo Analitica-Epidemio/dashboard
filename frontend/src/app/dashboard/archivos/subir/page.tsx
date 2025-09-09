@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback } from "react";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppSidebar } from "@/features/layout/components";
 
 // Components
 import { FileUploadArea } from "./_components/file-upload-area";
@@ -53,7 +53,7 @@ export default function Page() {
 
   // State for current job ID
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
-  
+
   // State for job error
   const [jobError, setJobError] = useState<string | null>(null);
 
@@ -77,28 +77,34 @@ export default function Page() {
     },
     [selectedSheet]
   );
-  
+
   // Handler para cuando el job falla
-  const handleJobError = useCallback((error: string) => {
-    if (error === "retry") {
-      // Reintentar con el mismo archivo
-      if (originalFile && selectedSheet) {
-        sheetUploadMutation.mutateAsync({
-          originalFile,
-          selectedSheetName: selectedSheet,
-          originalFilename: originalFile.name,
-        }).then((result) => {
-          setCurrentJobId(result.job_id);
-          startPolling(result.job_id);
-        }).catch(() => {
-          // El error se maneja automáticamente por el mutation
-        });
+  const handleJobError = useCallback(
+    (error: string) => {
+      if (error === "retry") {
+        // Reintentar con el mismo archivo
+        if (originalFile && selectedSheet) {
+          sheetUploadMutation
+            .mutateAsync({
+              originalFile,
+              selectedSheetName: selectedSheet,
+              originalFilename: originalFile.name,
+            })
+            .then((result) => {
+              setCurrentJobId(result.job_id);
+              startPolling(result.job_id);
+            })
+            .catch(() => {
+              // El error se maneja automáticamente por el mutation
+            });
+        }
+      } else {
+        setJobError(error);
+        // No reseteamos currentJobId para mantener el componente visible
       }
-    } else {
-      setJobError(error);
-      // No reseteamos currentJobId para mantener el componente visible
-    }
-  }, [originalFile, selectedSheet, sheetUploadMutation, startPolling]);
+    },
+    [originalFile, selectedSheet, sheetUploadMutation, startPolling]
+  );
 
   const handleFileAccepted = useCallback(
     async (file: File) => {
@@ -163,7 +169,7 @@ export default function Page() {
     >
       <AppSidebar variant="inset" />
       <SidebarInset>
-        <div className="flex flex-col min-h-screen bg-background">
+        <div className="flex flex-col overflow-y-scroll bg-background">
           <div className="flex-1 w-full max-w-6xl mx-auto px-6 py-8">
             {/* Breadcrumb de pasos */}
             <UploadSteps currentStep={getCurrentStep()} />

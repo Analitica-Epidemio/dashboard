@@ -2,13 +2,15 @@
 export interface Group {
   id: string
   name: string
+  description?: string | null
 }
 
 export interface Event {
   id: string
   name: string
   groupId: string
-  description?: string
+  description?: string | null
+  groupName?: string | null
 }
 
 export interface ChartDataPoint {

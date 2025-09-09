@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useDashboardFilters } from "@/features/dashboard/hooks/useDashboardFilters";
-import { CollapsibleSidebar } from "@/components/CollapsibleSidebar";
+import { CollapsibleSidebar } from "@/features/layout/components";
 import { FullscreenFilterBuilder } from "@/features/dashboard/components/FullscreenFilterBuilder";
 import { ComparativeDashboard } from "@/features/dashboard/components/ComparativeDashboard";
 
@@ -28,7 +28,9 @@ export default function EpidemiologyDashboard() {
     from: null,
     to: null,
   });
-  const [appliedCombinations, setAppliedCombinations] = useState<FilterCombination[]>([]);
+  const [appliedCombinations, setAppliedCombinations] = useState<
+    FilterCombination[]
+  >([]);
 
   // Reutilizamos la lógica existente de filtros
   const {
@@ -41,7 +43,10 @@ export default function EpidemiologyDashboard() {
   } = useDashboardFilters();
 
   // Manejar aplicación de filtros
-  const handleApplyFilters = (dateRange: DateRange, combinations: FilterCombination[]) => {
+  const handleApplyFilters = (
+    dateRange: DateRange,
+    combinations: FilterCombination[]
+  ) => {
     setAppliedDateRange(dateRange);
     setAppliedCombinations(combinations);
     setShowComparison(true);
@@ -53,12 +58,12 @@ export default function EpidemiologyDashboard() {
   };
 
   return (
-    <>
+    <div className="flex h-screen overflow-hidden">
       {/* Collapsible Navigation Sidebar */}
       <CollapsibleSidebar />
 
-      {/* Main Content with left padding for collapsed sidebar */}
-      <div className="h-full lg:pl-14">
+      {/* Main Content */}
+      <div className="flex-1 overflow-y-scroll">
         {!showComparison ? (
           /* Fullscreen Filter Builder */
           <FullscreenFilterBuilder
@@ -81,6 +86,6 @@ export default function EpidemiologyDashboard() {
           />
         )}
       </div>
-    </>
+    </div>
   );
 }
