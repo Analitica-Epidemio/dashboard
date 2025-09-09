@@ -3,6 +3,7 @@
  * Integración con backend FastAPI
  */
 
+import { env } from '@/env';
 import {
   ApiResponse,
   EpidemiologicalFilters,
@@ -17,7 +18,7 @@ import {
 } from '../types/epidemiological';
 
 // Configuración base del API
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = env.NEXT_PUBLIC_API_HOST;
 const API_VERSION = '/api/v1';
 
 class EpidemiologicalApiService {
@@ -33,7 +34,7 @@ class EpidemiologicalApiService {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
-    
+
     const config: RequestInit = {
       headers: {
         'Content-Type': 'application/json',
@@ -72,21 +73,21 @@ class EpidemiologicalApiService {
         params.append('start_date', filters.dateRange.startDate);
         params.append('end_date', filters.dateRange.endDate);
       }
-      
+
       if (filters.geographicAreas?.length) {
-        filters.geographicAreas.forEach(area => 
+        filters.geographicAreas.forEach(area =>
           params.append('geographic_areas', area)
         );
       }
 
       if (filters.ageGroups?.length) {
-        filters.ageGroups.forEach(group => 
+        filters.ageGroups.forEach(group =>
           params.append('age_groups', group)
         );
       }
 
       if (filters.eventTypes?.length) {
-        filters.eventTypes.forEach(type => 
+        filters.eventTypes.forEach(type =>
           params.append('event_types', type)
         );
       }

@@ -8,6 +8,7 @@ from typing import Dict, List, Optional
 
 from sqlalchemy import JSON, Column, Index, Text
 from sqlmodel import Field, Relationship, SQLModel
+from app.core.models import BaseModel
 
 
 class TipoFiltro(str, Enum):
@@ -166,7 +167,7 @@ class EventStrategy(BaseModel, table=True):
         self._tipo_eno_name = value
 
 
-class ClassificationRule(SQLModel, table=True):
+class ClassificationRule(BaseModel, table=True):
     """
     Regla de clasificación para eventos epidemiológicos.
 
@@ -232,7 +233,7 @@ class ClassificationRule(SQLModel, table=True):
     )
 
 
-class FilterCondition(SQLModel, table=True):
+class FilterCondition(BaseModel, table=True):
     """
     Condición de filtro individual para una regla de clasificación.
 
@@ -312,7 +313,7 @@ class FilterCondition(SQLModel, table=True):
     rule: Optional[ClassificationRule] = Relationship(back_populates="filters")
 
 
-class StrategyChangeLog(SQLModel, table=True):
+class StrategyChangeLog(BaseModel, table=True):
     """
     Log de auditoría para cambios en estrategias.
 
@@ -377,7 +378,7 @@ class StrategyChangeLog(SQLModel, table=True):
     )
 
 
-class EventClassificationAudit(SQLModel, table=True):
+class EventClassificationAudit(BaseModel, table=True):
     """
     Auditoría de clasificaciones aplicadas a eventos epidemiológicos.
 

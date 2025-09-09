@@ -6,6 +6,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 
 from sqlmodel import JSON, Column, Field, SQLModel
+from app.core.models import BaseModel
 
 
 class JobStatus(str, Enum):
@@ -27,7 +28,7 @@ class JobPriority(int, Enum):
     URGENT = 7
 
 
-class ProcessingJob(SQLModel, table=True):
+class ProcessingJob(BaseModel, table=True):
     """
     Modelo para tracking de trabajos de procesamiento asíncrono.
     Arquitectura senior-level con estados, progreso y metadata.

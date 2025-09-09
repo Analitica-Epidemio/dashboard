@@ -14,7 +14,7 @@ export const env = createEnv({
    * `NEXT_PUBLIC_`.
    */
   client: {
-    NEXT_PUBLIC_API_HOST: z.string().url().default("http://localhost:8000"),
+    NEXT_PUBLIC_API_HOST: z.string().url().default("http://localhost:8001"),
     NEXT_PUBLIC_APP_ENV: z
       .enum(["development", "staging", "production"])
       .default("development"),

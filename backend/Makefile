@@ -13,8 +13,121 @@ help: ## Show this help message
 # DESARROLLO (Docker only)
 # =============================================================================
 
-up: ## Start development stack
-	docker compose up
+check-ports: ## Check which ports are available
+	@echo "🔍 Checking port availability..."
+	@for port in 8000 8001 8002 8003; do \
+		if lsof -ti:$$port > /dev/null 2>&1; then \
+			echo "❌ Port $$port (API): IN USE by $$(lsof -ti:$$port | head -1 | xargs ps -p -o comm= 2>/dev/null || echo 'unknown')"; \
+		else \
+			echo "✅ Port $$port (API): Available"; \
+		fi; \
+	done; \
+	for port in 5433 5434 5435; do \
+		if lsof -ti:$$port > /dev/null 2>&1; then \
+			echo "❌ Port $$port (PostgreSQL): IN USE by $$(lsof -ti:$$port | head -1 | xargs ps -p -o comm= 2>/dev/null || echo 'unknown')"; \
+		else \
+			echo "✅ Port $$port (PostgreSQL): Available"; \
+		fi; \
+	done; \
+	for port in 6380 6381 6382; do \
+		if lsof -ti:$$port > /dev/null 2>&1; then \
+			echo "❌ Port $$port (Redis): IN USE by $$(lsof -ti:$$port | head -1 | xargs ps -p -o comm= 2>/dev/null || echo 'unknown')"; \
+		else \
+			echo "✅ Port $$port (Redis): Available"; \
+		fi; \
+	done
+
+up: ## Start development stack with automatic port conflict detection
+	@echo "🔍 Checking for port conflicts..."
+	@# Check if .env.local exists and load it
+	@if [ -f .env.local ]; then \
+		echo "📋 Loading port configuration from .env.local"; \
+		set -a; . ./.env.local; set +a; \
+	fi; \
+	# Function to find available port starting from base port \
+	API_PORT=$${API_PORT:-8000}; \
+	DB_PORT=$${DB_PORT:-5433}; \
+	REDIS_PORT=$${REDIS_PORT:-6380}; \
+	# Check if configured ports are available \
+	if lsof -ti:$$API_PORT > /dev/null 2>&1; then \
+		echo "⚠️  Port $$API_PORT (API) is in use, finding alternative..."; \
+		for port in 8000 8001 8002 8003 8004; do \
+			if ! lsof -ti:$$port > /dev/null 2>&1; then \
+				API_PORT=$$port; \
+				break; \
+			fi; \
+		done; \
+	fi; \
+	if lsof -ti:$$DB_PORT > /dev/null 2>&1; then \
+		echo "⚠️  Port $$DB_PORT (PostgreSQL) is in use, finding alternative..."; \
+		for port in 5433 5434 5435 5436; do \
+			if ! lsof -ti:$$port > /dev/null 2>&1; then \
+				DB_PORT=$$port; \
+				break; \
+			fi; \
+		done; \
+	fi; \
+	if lsof -ti:$$REDIS_PORT > /dev/null 2>&1; then \
+		echo "⚠️  Port $$REDIS_PORT (Redis) is in use, finding alternative..."; \
+		for port in 6380 6381 6382 6383; do \
+			if ! lsof -ti:$$port > /dev/null 2>&1; then \
+				REDIS_PORT=$$port; \
+				break; \
+			fi; \
+		done; \
+	fi; \
+	echo "✅ Using ports: API=$$API_PORT, PostgreSQL=$$DB_PORT, Redis=$$REDIS_PORT"; \
+	if [ ! -f .env.local ]; then \
+		echo "💡 Tip: Create .env.local (see .env.local.example) to set custom ports"; \
+	fi; \
+	echo "📝 Update your .env file with these ports:"; \
+	echo "   DATABASE_URL=postgresql+asyncpg://epidemiologia_user:epidemiologia_password@localhost:$$DB_PORT/epidemiologia_db"; \
+	echo "   REDIS_URL=redis://localhost:$$REDIS_PORT/0"; \
+	echo "   CELERY_BROKER_URL=redis://localhost:$$REDIS_PORT/0"; \
+	API_PORT=$$API_PORT DB_PORT=$$DB_PORT REDIS_PORT=$$REDIS_PORT docker compose up
+
+up-d: ## Start development stack in detached mode with port detection
+	@echo "🔍 Checking for port conflicts..."
+	@# Check if .env.local exists and load it
+	@if [ -f .env.local ]; then \
+		echo "📋 Loading port configuration from .env.local"; \
+		set -a; . ./.env.local; set +a; \
+	fi; \
+	API_PORT=$${API_PORT:-8000}; \
+	DB_PORT=$${DB_PORT:-5433}; \
+	REDIS_PORT=$${REDIS_PORT:-6380}; \
+	# Check if configured ports are available \
+	if lsof -ti:$$API_PORT > /dev/null 2>&1; then \
+		echo "⚠️  Port $$API_PORT (API) is in use, finding alternative..."; \
+		for port in 8000 8001 8002 8003 8004; do \
+			if ! lsof -ti:$$port > /dev/null 2>&1; then \
+				API_PORT=$$port; \
+				break; \
+			fi; \
+		done; \
+	fi; \
+	if lsof -ti:$$DB_PORT > /dev/null 2>&1; then \
+		echo "⚠️  Port $$DB_PORT (PostgreSQL) is in use, finding alternative..."; \
+		for port in 5433 5434 5435 5436; do \
+			if ! lsof -ti:$$port > /dev/null 2>&1; then \
+				DB_PORT=$$port; \
+				break; \
+			fi; \
+		done; \
+	fi; \
+	if lsof -ti:$$REDIS_PORT > /dev/null 2>&1; then \
+		echo "⚠️  Port $$REDIS_PORT (Redis) is in use, finding alternative..."; \
+		for port in 6380 6381 6382 6383; do \
+			if ! lsof -ti:$$port > /dev/null 2>&1; then \
+				REDIS_PORT=$$port; \
+				break; \
+			fi; \
+		done; \
+	fi; \
+	echo "✅ Starting in background with ports: API=$$API_PORT, PostgreSQL=$$DB_PORT, Redis=$$REDIS_PORT"; \
+	API_PORT=$$API_PORT DB_PORT=$$DB_PORT REDIS_PORT=$$REDIS_PORT docker compose up -d; \
+	echo "🚀 Services started! Check logs with 'make logs'"; \
+	echo "🌐 API available at: http://localhost:$$API_PORT"
 
 down: ## Stop development stack
 	docker compose down
