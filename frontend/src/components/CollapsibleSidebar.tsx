@@ -4,18 +4,18 @@
  * Navigation only - matches AppSidebar items
  */
 
-import React, { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import React, { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
+} from "@/components/ui/tooltip";
 import {
   IconDashboard,
   IconListDetails,
@@ -31,7 +31,7 @@ import {
   IconDatabase,
   IconReport,
   IconFileWord,
-} from '@tabler/icons-react';
+} from "@tabler/icons-react";
 
 interface CollapsibleSidebarProps {
   className?: string;
@@ -48,78 +48,78 @@ interface NavItem {
 // Main navigation items - matching AppSidebar
 const navMain: NavItem[] = [
   {
-    id: 'dashboard',
-    title: 'Dashboard',
+    id: "dashboard",
+    title: "Dashboard",
     icon: IconDashboard,
-    url: '/dashboard',
+    url: "/dashboard",
   },
   {
-    id: 'eventos',
-    title: 'Eventos',
+    id: "eventos",
+    title: "Eventos",
     icon: IconListDetails,
-    url: '/eventos',
+    url: "/dashboard/eventos",
   },
   {
-    id: 'analytics',
-    title: 'Analytics',
+    id: "analytics",
+    title: "Analytics",
     icon: IconChartBar,
-    url: '/analytics',
+    url: "/analytics",
   },
   {
-    id: 'projects',
-    title: 'Projects',
+    id: "projects",
+    title: "Projects",
     icon: IconFolder,
-    url: '#',
+    url: "#",
   },
   {
-    id: 'team',
-    title: 'Team',
+    id: "team",
+    title: "Team",
     icon: IconUsers,
-    url: '#',
+    url: "#",
   },
 ];
 
 // Documents section
 const documents: NavItem[] = [
   {
-    id: 'data-library',
-    title: 'Data Library',
+    id: "data-library",
+    title: "Data Library",
     icon: IconDatabase,
-    url: '#',
+    url: "#",
   },
   {
-    id: 'reports',
-    title: 'Reports',
+    id: "reports",
+    title: "Reports",
     icon: IconReport,
-    url: '#',
+    url: "#",
   },
   {
-    id: 'word-assistant',
-    title: 'Word Assistant',
+    id: "word-assistant",
+    title: "Word Assistant",
     icon: IconFileWord,
-    url: '#',
+    url: "#",
   },
 ];
 
 // Secondary navigation
 const navSecondary: NavItem[] = [
   {
-    id: 'configuracion',
-    title: 'Configuración de Estrategias',
+    id: "configuracion",
+    title: "Configuración de Estrategias",
     icon: IconSettings,
-    url: '/configuracion',
+    url: "/dashboard/estrategias",
   },
   {
-    id: 'help',
-    title: 'Get Help',
+    id: "help",
+    title: "Get Help",
     icon: IconHelp,
-    url: '#',
+    url: "#",
   },
   {
-    id: 'search',
-    title: 'Search',
+    id: "search",
+    title: "Search",
     icon: IconSearch,
-    url: '#',
+    url: "#",
   },
 ];
 
@@ -155,7 +155,7 @@ export const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
       clearTimeout(hoverTimeout);
       setHoverTimeout(null);
     }
-    
+
     if (!isPinned) {
       setIsExpanded(false);
     }
@@ -169,14 +169,14 @@ export const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
   };
 
   const isActiveRoute = (url: string) => {
-    if (url === '#') return false;
+    if (url === "#") return false;
     return pathname.startsWith(url);
   };
 
   const renderNavItem = (item: NavItem, showLabel: boolean) => {
     const Icon = item.icon;
     const isActive = isActiveRoute(item.url);
-    
+
     if (showLabel) {
       return (
         <a
@@ -231,7 +231,7 @@ export const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
     <>
       {/* Backdrop overlay when expanded (not pinned) */}
       {isExpanded && !isPinned && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 transition-opacity duration-200"
           onClick={() => setIsExpanded(false)}
         />
@@ -264,10 +264,12 @@ export const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
                     className="h-8 w-8"
                     onClick={togglePin}
                   >
-                    <IconChevronLeft className={cn(
-                      "h-4 w-4 transition-transform",
-                      isPinned && "rotate-180"
-                    )} />
+                    <IconChevronLeft
+                      className={cn(
+                        "h-4 w-4 transition-transform",
+                        isPinned && "rotate-180"
+                      )}
+                    />
                   </Button>
                 </>
               ) : (
@@ -312,7 +314,7 @@ export const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
               <div className="py-2 px-2 space-y-1">
                 {navSecondary.map((item) => renderNavItem(item, isExpanded))}
               </div>
-              
+
               {/* User Section */}
               <div className="p-2 border-t border-gray-200">
                 {isExpanded ? (
@@ -320,7 +322,9 @@ export const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
                     <div className="h-7 w-7 rounded-full bg-gray-300" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">shadcn</p>
-                      <p className="text-xs text-gray-500 truncate">m@example.com</p>
+                      <p className="text-xs text-gray-500 truncate">
+                        m@example.com
+                      </p>
                     </div>
                   </div>
                 ) : (
