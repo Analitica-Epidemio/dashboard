@@ -115,7 +115,7 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
-    command: ["uv", "run", "celery", "-A", "app.core.celery_app:celery_app", "worker", "--loglevel=info", "--concurrency=2"]
+    command: ["uv", "run", "celery", "-A", "app.core.celery_app:celery_app", "worker", "--loglevel=info", "--concurrency=2", "--queues=default,file_processing,maintenance"]
 
 # =============================================================================
 # Volúmenes con nombres descriptivos

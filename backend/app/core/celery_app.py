@@ -22,6 +22,10 @@ def create_celery_app() -> Celery:
     Factory function para crear la aplicación Celery.
     Permite configuración flexible y testing.
     """
+    
+    logger.info("🚀 Creating Celery application...")
+    logger.info(f"📡 Redis Broker URL: {settings.CELERY_BROKER_URL}")
+    logger.info(f"🗄️ Redis Result Backend: {settings.CELERY_RESULT_BACKEND}")
 
     celery_app = Celery(
         "epidemiologia_dashboard",
@@ -32,6 +36,8 @@ def create_celery_app() -> Celery:
             # Agregar más módulos de tasks aquí
         ],
     )
+    
+    logger.info("✅ Celery application created successfully")
 
     # Configuración optimizada para procesamiento de archivos
     celery_app.conf.update(
@@ -87,7 +93,37 @@ def create_celery_app() -> Celery:
             },
         },
     )
+    
+    # Test Redis connection on startup
+    logger.info("🔍 Testing Redis connection...")
+    try:
+        # Import redis client to test connection
+        import redis
+        redis_url_parts = settings.REDIS_URL.replace('redis://', '').split(':')
+        redis_host = redis_url_parts[0]
+        redis_port_db = redis_url_parts[1].split('/')
+        redis_port = int(redis_port_db[0])
+        redis_db = int(redis_port_db[1]) if len(redis_port_db) > 1 else 0
+        
+        logger.info(f"🔗 Attempting to connect to Redis at {redis_host}:{redis_port}, DB: {redis_db}")
+        
+        redis_client = redis.Redis(host=redis_host, port=redis_port, db=redis_db, socket_connect_timeout=5)
+        redis_client.ping()
+        logger.info("✅ Redis connection successful!")
+        
+        # Test basic operations
+        test_key = "celery_test_connection"
+        redis_client.set(test_key, "test_value", ex=10)
+        result = redis_client.get(test_key)
+        logger.info(f"✅ Redis write/read test successful: {result}")
+        redis_client.delete(test_key)
+        
+    except Exception as e:
+        logger.error(f"❌ Redis connection failed: {str(e)}")
+        logger.error(f"❌ Full error details: {type(e).__name__}: {str(e)}")
+        logger.warning("⚠️ Celery will not work properly without Redis!")
 
+    logger.info("🎯 Celery configuration completed")
     return celery_app
 
 

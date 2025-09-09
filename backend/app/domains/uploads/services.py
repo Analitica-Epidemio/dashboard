@@ -109,12 +109,25 @@ class AsyncFileProcessingService:
 
             # Lanzar task asíncrona de Celery
             logger.info("🔥 Importing and launching Celery task...")
+            logger.info(f"🔍 Celery broker URL: {celery_app.conf.broker_url}")
+            logger.info(f"🔍 Celery backend URL: {celery_app.conf.result_backend}")
+            
+            # Test Celery connection before launching task
+            try:
+                logger.info("🧪 Testing Celery connection...")
+                celery_app.control.ping(timeout=5)
+                logger.info("✅ Celery ping successful")
+            except Exception as e:
+                logger.error(f"❌ Celery connection test failed: {str(e)}")
+                logger.error("This might indicate Redis is not running or not accessible")
+            
             from app.domains.uploads.tasks import process_csv_file
-
             logger.info("📦 process_csv_file imported successfully")
 
+            logger.info(f"🚀 Launching Celery task with args: job_id={created_job.id}, file_path={file_path}")
             celery_task = process_csv_file.delay(created_job.id, str(file_path))
             logger.info(f"✅ Celery task launched - task_id: {celery_task.id}")
+            logger.info(f"📊 Task state: {celery_task.state}")
 
             # Asociar task ID con job
             logger.info("🔗 Associating Celery task ID with job...")
@@ -225,8 +238,13 @@ class AsyncFileProcessingService:
             return
 
         try:
+            logger.info(f"🔄 Syncing job {job.id} with Celery task {job.celery_task_id}")
+            logger.info(f"🔍 Using Celery broker: {celery_app.conf.broker_url}")
+            
             # Obtener resultado de Celery
             celery_result = AsyncResult(job.celery_task_id, app=celery_app)
+            logger.info(f"📊 Celery task state: {celery_result.state}")
+            logger.info(f"🎯 Celery task ready: {celery_result.ready()}")
 
             if celery_result.ready():
                 if celery_result.successful():

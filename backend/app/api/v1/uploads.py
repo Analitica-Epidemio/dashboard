@@ -60,6 +60,29 @@ async def upload_csv_async(
     logger.info(
         f"📤 Starting CSV upload - filename: {original_filename}, sheet: {sheet_name}, file type: {file.content_type}"
     )
+    
+    # Log Redis/Celery configuration at request time
+    from app.core.celery_app import celery_app
+    logger.info(f"🔍 Current Celery broker: {celery_app.conf.broker_url}")
+    logger.info(f"🔍 Current Celery backend: {celery_app.conf.result_backend}")
+    
+    # Test Redis availability
+    try:
+        import redis
+        from app.core.config import settings
+        redis_url_parts = settings.REDIS_URL.replace('redis://', '').split(':')
+        redis_host = redis_url_parts[0]
+        redis_port_db = redis_url_parts[1].split('/')
+        redis_port = int(redis_port_db[0])
+        redis_db = int(redis_port_db[1]) if len(redis_port_db) > 1 else 0
+        
+        logger.info(f"🧪 Testing Redis connection to {redis_host}:{redis_port}, DB: {redis_db}")
+        redis_client = redis.Redis(host=redis_host, port=redis_port, db=redis_db, socket_connect_timeout=2)
+        redis_client.ping()
+        logger.info("✅ Redis is accessible from upload endpoint")
+    except Exception as redis_error:
+        logger.error(f"❌ Redis connection test failed in upload endpoint: {str(redis_error)}")
+        logger.error(f"❌ Redis error type: {type(redis_error).__name__}")
 
     try:
         # Log archivo details
@@ -150,6 +173,12 @@ async def get_job_status(job_id: str) -> SuccessResponse[JobStatusResponse]:
     - `cancelled`: Cancelado por usuario
     """
 
+    logger.info(f"🔍 Getting status for job: {job_id}")
+    
+    # Log Redis/Celery status when checking job
+    from app.core.celery_app import celery_app
+    logger.info(f"🔍 Celery broker for status check: {celery_app.conf.broker_url}")
+    
     job_status = await async_service.get_job_status(job_id)
 
     if not job_status:
@@ -157,6 +186,9 @@ async def get_job_status(job_id: str) -> SuccessResponse[JobStatusResponse]:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} no encontrado"
         )
+        
+    logger.info(f"✅ Job {job_id} found with status: {job_status.status}")
+    logger.info(f"📊 Job progress: {job_status.progress_percentage}%")
 
     return SuccessResponse(data=job_status)
 

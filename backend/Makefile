@@ -39,16 +39,13 @@ check-ports: ## Check which ports are available
 
 up: ## Start development stack with automatic port conflict detection
 	@echo "🔍 Checking for port conflicts..."
-	@# Check if .env.local exists and load it
 	@if [ -f .env.local ]; then \
 		echo "📋 Loading port configuration from .env.local"; \
 		set -a; . ./.env.local; set +a; \
 	fi; \
-	# Function to find available port starting from base port \
 	API_PORT=$${API_PORT:-8000}; \
 	DB_PORT=$${DB_PORT:-5433}; \
 	REDIS_PORT=$${REDIS_PORT:-6380}; \
-	# Check if configured ports are available \
 	if lsof -ti:$$API_PORT > /dev/null 2>&1; then \
 		echo "⚠️  Port $$API_PORT (API) is in use, finding alternative..."; \
 		for port in 8000 8001 8002 8003 8004; do \
@@ -88,7 +85,6 @@ up: ## Start development stack with automatic port conflict detection
 
 up-d: ## Start development stack in detached mode with port detection
 	@echo "🔍 Checking for port conflicts..."
-	@# Check if .env.local exists and load it
 	@if [ -f .env.local ]; then \
 		echo "📋 Loading port configuration from .env.local"; \
 		set -a; . ./.env.local; set +a; \
@@ -96,7 +92,6 @@ up-d: ## Start development stack in detached mode with port detection
 	API_PORT=$${API_PORT:-8000}; \
 	DB_PORT=$${DB_PORT:-5433}; \
 	REDIS_PORT=$${REDIS_PORT:-6380}; \
-	# Check if configured ports are available \
 	if lsof -ti:$$API_PORT > /dev/null 2>&1; then \
 		echo "⚠️  Port $$API_PORT (API) is in use, finding alternative..."; \
 		for port in 8000 8001 8002 8003 8004; do \
