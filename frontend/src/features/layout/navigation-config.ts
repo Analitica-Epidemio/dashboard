@@ -3,6 +3,7 @@ import {
   IconListDetails,
   IconFileUpload,
   IconSettings,
+  IconChartLine,
 } from "@tabler/icons-react";
 
 export interface NavItem {
@@ -38,6 +39,12 @@ export const navigationConfig = {
       title: "Subir Archivo",
       icon: IconFileUpload,
       url: "/dashboard/archivos/subir",
+    },
+    {
+      id: "charts",
+      title: "Charts",
+      icon: IconChartLine,
+      url: "/dashboard/charts",
     },
     {
       id: "estrategias",

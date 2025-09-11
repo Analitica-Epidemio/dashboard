@@ -1,8 +1,8 @@
-"""
+"""initial
 
-Revision ID: 63764c59d17f
+Revision ID: a19cd800a9c4
 Revises: 
-Create Date: 2025-08-28 08:59:28.150968
+Create Date: 2025-09-11 12:01:00.599323
 
 """
 from typing import Sequence, Union
@@ -13,7 +13,7 @@ import sqlmodel  # Always import sqlmodel for SQLModel types
 
 
 # revision identifiers, used by Alembic.
-revision: str = '63764c59d17f'
+revision: str = 'a19cd800a9c4'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -60,6 +60,22 @@ def upgrade() -> None:
     sa.Column('descripcion', sqlmodel.sql.sqltypes.AutoString(length=150), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_table('dashboard_charts',
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('codigo', sqlmodel.sql.sqltypes.AutoString(length=50), nullable=False),
+    sa.Column('nombre', sqlmodel.sql.sqltypes.AutoString(length=100), nullable=False),
+    sa.Column('descripcion', sa.Text(), nullable=True),
+    sa.Column('funcion_procesamiento', sqlmodel.sql.sqltypes.AutoString(length=100), nullable=False),
+    sa.Column('condiciones_display', sa.JSON(), nullable=True),
+    sa.Column('tipo_visualizacion', sqlmodel.sql.sqltypes.AutoString(length=50), nullable=False),
+    sa.Column('configuracion_chart', sa.JSON(), nullable=True),
+    sa.Column('orden', sa.Integer(), nullable=False),
+    sa.Column('activo', sa.Boolean(), nullable=False),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_dashboard_charts_codigo'), 'dashboard_charts', ['codigo'], unique=True)
     op.create_table('determinacion',
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
@@ -281,6 +297,8 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('classification_rule',
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('strategy_id', sa.Integer(), nullable=False),
     sa.Column('classification', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
@@ -307,6 +325,8 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('strategy_change_log',
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('strategy_id', sa.Integer(), nullable=False),
     sa.Column('change_type', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
@@ -368,6 +388,7 @@ def upgrade() -> None:
     sa.Column('requiere_revision_especie', sa.Boolean(), nullable=True),
     sa.Column('datos_originales_csv', sa.JSON(), nullable=True),
     sa.Column('metadata_clasificacion', sa.JSON(), nullable=True),
+    sa.Column('clasificacion_manual', sqlmodel.sql.sqltypes.AutoString(length=500), nullable=True),
     sa.Column('clasificacion_estrategia', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=True),
     sa.Column('metadata_extraida', sa.JSON(), nullable=True),
     sa.Column('es_positivo', sa.Boolean(), nullable=True),
@@ -382,6 +403,8 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_evento_id_evento_caso'), 'evento', ['id_evento_caso'], unique=True)
     op.create_table('filter_condition',
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('rule_id', sa.Integer(), nullable=True),
     sa.Column('strategy_id', sa.Integer(), nullable=True),
@@ -489,6 +512,8 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('event_classification_audit',
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('id_evento', sa.Integer(), nullable=False),
     sa.Column('strategy_id', sa.Integer(), nullable=False),
@@ -701,6 +726,8 @@ def downgrade() -> None:
     op.drop_table('grupo_eno')
     op.drop_index(op.f('ix_determinacion_codigo'), table_name='determinacion')
     op.drop_table('determinacion')
+    op.drop_index(op.f('ix_dashboard_charts_codigo'), table_name='dashboard_charts')
+    op.drop_table('dashboard_charts')
     op.drop_table('comorbilidad')
     op.drop_index(op.f('ix_ciudadano_tipo_documento'), table_name='ciudadano')
     op.drop_index(op.f('ix_ciudadano_numero_documento'), table_name='ciudadano')

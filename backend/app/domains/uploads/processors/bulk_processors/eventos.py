@@ -7,6 +7,11 @@ import pandas as pd
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
+from app.domains.uploads.utils.epidemiological_calculations import (
+    calcular_semana_epidemiologica,
+    calcular_edad
+)
+
 from app.domains.ciudadanos.models import AmbitosConcurrenciaEvento
 from app.domains.eventos.models import (
     AntecedenteEpidemiologico,
@@ -228,6 +233,23 @@ class EventosBulkProcessor(BulkProcessorBase):
                 # Sobrescribir con los valores agregados correctos
                 evento_dict["fecha_minima_evento"] = fecha_minima_evento
                 evento_dict["fecha_inicio_sintomas"] = fecha_inicio_sintomas_mas_temprana
+                
+                # Calcular campos epidemiológicos
+                # Semana epidemiológica basada en fecha_minima_evento
+                semana_epi, anio_epi = calcular_semana_epidemiologica(fecha_minima_evento)
+                evento_dict["semana_epidemiologica_apertura"] = semana_epi
+                evento_dict["anio_epidemiologico_apertura"] = anio_epi
+                
+                # Si hay fecha de inicio de síntomas, calcular también esa semana
+                if fecha_inicio_sintomas_mas_temprana:
+                    semana_sintomas, _ = calcular_semana_epidemiologica(fecha_inicio_sintomas_mas_temprana)
+                    evento_dict["semana_epidemiologica_sintomas"] = semana_sintomas
+                
+                # Calcular edad al momento del evento
+                fecha_nac = self._safe_date(primera_fila.get(Columns.FECHA_NACIMIENTO))
+                if fecha_nac:
+                    edad = calcular_edad(fecha_nac, fecha_minima_evento)
+                    evento_dict["edad_anos_al_momento_apertura"] = edad
                 
                 # Actualizar establecimientos con los valores priorizados
                 if estab_consulta_final:

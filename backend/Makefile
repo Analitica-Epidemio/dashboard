@@ -213,8 +213,6 @@ reset-db: ## Reset ONLY database (keeps Redis cache)
 	docker compose up -d db
 	@echo "Waiting for database to be ready..."
 	@sleep 5
-	@make migrate
-	@make seed
 	@echo "✅ Database reset complete (Redis intact)"
 
 reset-all: ## Reset EVERYTHING (database + Redis)

@@ -25,8 +25,8 @@ export default function EpidemiologyDashboard() {
   // Estado para controlar qué vista mostrar
   const [showComparison, setShowComparison] = useState(false);
   const [appliedDateRange, setAppliedDateRange] = useState<DateRange>({
-    from: null,
-    to: null,
+    from: new Date(2020, 0, 1), // 1 de enero 2020
+    to: new Date(2025, 11, 31), // 31 de diciembre 2025
   });
   const [appliedCombinations, setAppliedCombinations] = useState<
     FilterCombination[]

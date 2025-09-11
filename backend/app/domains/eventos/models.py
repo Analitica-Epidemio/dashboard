@@ -204,6 +204,11 @@ class Evento(BaseModel, table=True):
     )
 
     # Campos agregados para clasificación con estrategias
+    clasificacion_manual: Optional[str] = Field(
+        None,
+        max_length=500,
+        description="Clasificación original del CSV antes del procesamiento",
+    )
     clasificacion_estrategia: Optional[str] = Field(
         None,
         max_length=255,

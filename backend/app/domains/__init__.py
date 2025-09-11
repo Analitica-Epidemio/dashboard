@@ -18,6 +18,7 @@ from . import (
     localidades,
     salud,
     uploads,
+    charts,
 )
 
 __all__ = [
@@ -30,4 +31,5 @@ __all__ = [
     "estrategias",
     "investigaciones",
     "uploads",
+    "charts",
 ]

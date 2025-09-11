@@ -430,6 +430,105 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/charts/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get All Chart Templates
+         * @description Obtener todos los templates de charts disponibles.
+         *
+         *     **Browse-First Architecture:** Mostrar inmediatamente todos los charts disponibles.
+         *     Los usuarios pueden aplicar filtros después si lo desean.
+         *
+         *     **Returns:** Lista completa de templates disponibles
+         */
+        get: operations["get_all_chart_templates_api_v1_charts_templates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/charts/execute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Execute Chart
+         * @description Ejecutar un chart con filtros dinámicos.
+         *
+         *     **Dynamic Filtering:** No requiere configuración previa por ENO.
+         *     Los filtros se aplican dinámicamente en runtime.
+         *
+         *     **Returns:** Datos del chart procesados
+         */
+        post: operations["execute_chart_api_v1_charts_execute_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/charts/filters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Available Filters
+         * @description Obtener todos los filtros disponibles globalmente.
+         *
+         *     **Global Filters:** Filtros dinámicos que funcionan con cualquier chart.
+         *     Los filtros específicos se determinan por el template del chart.
+         *
+         *     **Returns:** Lista de filtros disponibles con sus configuraciones
+         */
+        get: operations["get_available_filters_api_v1_charts_filters_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/charts/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Chart Availability
+         * @description Obtener disponibilidad completa de charts y filtros.
+         *
+         *     **Overview Endpoint:** Información completa para construir la UI inicial.
+         *
+         *     **Returns:** Charts disponibles, filtros globales y contexto
+         */
+        get: operations["get_chart_availability_api_v1_charts_availability_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/": {
         parameters: {
             query?: never;
@@ -654,6 +753,124 @@ export interface components {
              */
             sheet_name: string;
         };
+        /**
+         * ChartAvailabilityResponse
+         * @description Disponibilidad de charts para un contexto específico
+         */
+        ChartAvailabilityResponse: {
+            /** Total Charts */
+            total_charts: number;
+            /** Charts Disponibles */
+            charts_disponibles: components["schemas"]["ChartTemplateResponse"][];
+            /** Filtros Disponibles */
+            filtros_disponibles: components["schemas"]["FilterDefinitionResponse"][];
+        };
+        /**
+         * ChartDataResponse
+         * @description Datos de un chart ejecutado
+         */
+        ChartDataResponse: {
+            /** Chart Id */
+            chart_id: number;
+            /** Chart Codigo */
+            chart_codigo: string;
+            /** Titulo */
+            titulo: string;
+            /** Descripcion */
+            descripcion?: string | null;
+            tipo_visualizacion: components["schemas"]["ChartVisualizationType"];
+            /** Data */
+            data: {
+                [key: string]: unknown;
+            };
+            /** Configuracion Chart */
+            configuracion_chart?: {
+                [key: string]: unknown;
+            };
+            /** Filtros Aplicados */
+            filtros_aplicados?: {
+                [key: string]: unknown;
+            };
+            /** Parametros Aplicados */
+            parametros_aplicados?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Timestamp Generacion
+             * Format: date-time
+             */
+            timestamp_generacion: string;
+            /** Tiempo Ejecucion Ms */
+            tiempo_ejecucion_ms?: number | null;
+            /** Total Registros */
+            total_registros?: number | null;
+            /** Registros Filtrados */
+            registros_filtrados?: number | null;
+            /** Mensaje */
+            mensaje?: string | null;
+        };
+        /**
+         * ChartTemplateResponse
+         * @description Template de chart para browse-first UI
+         */
+        ChartTemplateResponse: {
+            /** Id */
+            id: number;
+            /** Codigo */
+            codigo: string;
+            /** Nombre */
+            nombre: string;
+            /** Descripcion */
+            descripcion: string | null;
+            /** Categoria */
+            categoria: string;
+            tipo_visualizacion: components["schemas"]["ChartVisualizationType"];
+            /** Tipo Eno Compatible */
+            tipo_eno_compatible?: string[] | null;
+            /** Filtros Requeridos */
+            filtros_requeridos?: string[];
+            /** Filtros Opcionales */
+            filtros_opcionales?: string[];
+            /** Parametros Disponibles */
+            parametros_disponibles?: {
+                [key: string]: unknown;
+            };
+            /** Parametros Default */
+            parametros_default?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Orden Sugerido
+             * @default 0
+             */
+            orden_sugerido: number;
+            /**
+             * Es Publico
+             * @default true
+             */
+            es_publico: boolean;
+            /**
+             * Requiere Autenticacion
+             * @default false
+             */
+            requiere_autenticacion: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * ChartVisualizationType
+         * @description Tipos de visualización disponibles
+         * @enum {string}
+         */
+        ChartVisualizationType: "line" | "bar" | "pie" | "area" | "scatter" | "heatmap" | "map" | "table" | "metric";
         /**
          * CiudadanoInfo
          * @description Información del ciudadano
@@ -1563,6 +1780,32 @@ export interface components {
             total: number;
         };
         /**
+         * ExecuteChartRequest
+         * @description Request para ejecutar un chart
+         */
+        ExecuteChartRequest: {
+            /** Chart Codigo */
+            chart_codigo: string;
+            /** Filtros */
+            filtros?: {
+                [key: string]: unknown;
+            };
+            /** Parametros */
+            parametros?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Usar Cache
+             * @default true
+             */
+            usar_cache: boolean;
+            /**
+             * Formato Respuesta
+             * @default json
+             */
+            formato_respuesta: string;
+        };
+        /**
          * FilterConditionRequest
          * @description Request DTO para condiciones de filtro.
          */
@@ -1671,6 +1914,40 @@ export interface components {
              */
             updated_at?: string | null;
         };
+        /**
+         * FilterDefinitionResponse
+         * @description Definición de un filtro disponible
+         */
+        FilterDefinitionResponse: {
+            /** Codigo */
+            codigo: string;
+            /** Nombre */
+            nombre: string;
+            /** Descripcion */
+            descripcion: string | null;
+            tipo_filtro: components["schemas"]["FilterType"];
+            /** Configuracion */
+            configuracion?: {
+                [key: string]: unknown;
+            };
+            /** Valor Default */
+            valor_default?: unknown | null;
+            /**
+             * Es Requerido
+             * @default false
+             */
+            es_requerido: boolean;
+            /** Opciones */
+            opciones?: {
+                [key: string]: unknown;
+            }[] | null;
+        };
+        /**
+         * FilterType
+         * @description Tipos de filtros disponibles
+         * @enum {string}
+         */
+        FilterType: "date_range" | "single_select" | "multi_select" | "number_range" | "text_input" | "boolean" | "eno_selector" | "department_selector";
         /** GrupoEnoInfo */
         GrupoEnoInfo: {
             /**
@@ -2070,6 +2347,30 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /** SuccessResponse[ChartAvailabilityResponse] */
+        SuccessResponse_ChartAvailabilityResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["ChartAvailabilityResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[ChartDataResponse] */
+        SuccessResponse_ChartDataResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["ChartDataResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
         /** SuccessResponse[EventStrategyResponse] */
         SuccessResponse_EventStrategyResponse_: {
             /** @description Datos de la respuesta */
@@ -2157,6 +2458,21 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /** SuccessResponse[List[ChartTemplateResponse]] */
+        SuccessResponse_List_ChartTemplateResponse__: {
+            /**
+             * Data
+             * @description Datos de la respuesta
+             */
+            data: components["schemas"]["ChartTemplateResponse"][];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
         /** SuccessResponse[List[EventStrategyResponse]] */
         SuccessResponse_List_EventStrategyResponse__: {
             /**
@@ -2164,6 +2480,21 @@ export interface components {
              * @description Datos de la respuesta
              */
             data: components["schemas"]["EventStrategyResponse"][];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[List[FilterDefinitionResponse]] */
+        SuccessResponse_List_FilterDefinitionResponse__: {
+            /**
+             * Data
+             * @description Datos de la respuesta
+             */
+            data: components["schemas"]["FilterDefinitionResponse"][];
             /**
              * Meta
              * @description Metadata opcional (paginación, etc)
@@ -3202,6 +3533,179 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaginatedResponse_GrupoEnoInfo_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno del servidor */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_all_chart_templates_api_v1_charts_templates_get: {
+        parameters: {
+            query?: {
+                /** @description Filtrar por categoría */
+                categoria?: string | null;
+                /** @description Filtrar por tipo de visualización */
+                tipo_visualizacion?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_List_ChartTemplateResponse__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno del servidor */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    execute_chart_api_v1_charts_execute_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExecuteChartRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_ChartDataResponse_"];
+                };
+            };
+            /** @description Parámetros inválidos */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Chart no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno del servidor */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_available_filters_api_v1_charts_filters_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_List_FilterDefinitionResponse__"];
+                };
+            };
+            /** @description Error interno del servidor */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_chart_availability_api_v1_charts_availability_get: {
+        parameters: {
+            query?: {
+                /** @description Filtrar por código de ENO */
+                tipo_eno_codigo?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_ChartAvailabilityResponse_"];
                 };
             };
             /** @description Validation Error */
