@@ -89,10 +89,10 @@ class ChartDataProcessor:
         # Construir query para obtener casos por semana epidemiológica
         query = """
         SELECT 
-            EXTRACT(WEEK FROM fecha_minima_evento) as semana,
+            semana_epidemiologica_apertura as semana,
             COUNT(*) as casos
         FROM evento
-        WHERE fecha_minima_evento IS NOT NULL
+        WHERE semana_epidemiologica_apertura IS NOT NULL
         """
         
         params = {}
@@ -165,12 +165,12 @@ class ChartDataProcessor:
         # Query para obtener datos históricos por semana
         query = """
         SELECT 
-            EXTRACT(WEEK FROM fecha_minima_evento) as semana,
-            EXTRACT(YEAR FROM fecha_minima_evento) as año,
+            semana_epidemiologica_apertura as semana,
+            anio_epidemiologico_apertura as año,
             COUNT(*) as casos
         FROM evento
         WHERE fecha_minima_evento >= CURRENT_DATE - INTERVAL '5 years'
-            AND fecha_minima_evento IS NOT NULL
+            AND semana_epidemiologica_apertura IS NOT NULL
         """
         
         params = {}
@@ -242,10 +242,10 @@ class ChartDataProcessor:
         # Obtener casos del año actual
         current_year_query = """
         SELECT 
-            EXTRACT(WEEK FROM fecha_minima_evento) as semana,
+            semana_epidemiologica_apertura as semana,
             COUNT(*) as casos
         FROM evento
-        WHERE EXTRACT(YEAR FROM fecha_minima_evento) = EXTRACT(YEAR FROM CURRENT_DATE)
+        WHERE anio_epidemiologico_apertura = EXTRACT(YEAR FROM CURRENT_DATE)
         """
         
         if filtros.get("grupo_id"):
@@ -336,7 +336,7 @@ class ChartDataProcessor:
             COUNT(*) as casos
         FROM evento e
         LEFT JOIN ciudadano c ON e.codigo_ciudadano = c.codigo_ciudadano
-        WHERE 1=1
+        WHERE e.edad_anos_al_momento_apertura IS NOT NULL
         """
         
         params = {}
@@ -377,31 +377,62 @@ class ChartDataProcessor:
             elif sexo in ['FEMENINO', 'F']:
                 female_data[grupo_edad] = casos
         
+        # Para pirámide vertical, sumar masculino + femenino por grupo de edad
+        total_data = []
+        for g in age_groups:
+            total = abs(male_data[g]) + female_data[g]  # abs para convertir negativos de masculino
+            total_data.append(total)
+        
         return {
             "type": "bar",
             "data": {
                 "labels": age_groups,
                 "datasets": [
                     {
-                        "label": "Masculino",
-                        "data": [male_data[g] for g in age_groups],
-                        "backgroundColor": "rgba(54, 162, 235, 0.5)"
-                    },
-                    {
-                        "label": "Femenino",
-                        "data": [female_data[g] for g in age_groups],
-                        "backgroundColor": "rgba(255, 99, 132, 0.5)"
+                        "label": "Total Casos",
+                        "data": total_data,
+                        "backgroundColor": [
+                            "rgba(255, 99, 132, 0.7)" if i % 2 == 0 else "rgba(54, 162, 235, 0.7)" 
+                            for i in range(len(total_data))
+                        ],
+                        "borderColor": [
+                            "rgba(255, 99, 132, 1)" if i % 2 == 0 else "rgba(54, 162, 235, 1)" 
+                            for i in range(len(total_data))
+                        ],
+                        "borderWidth": 1
                     }
                 ]
             },
             "options": {
-                "indexAxis": "y",
+                "responsive": True,
+                "maintainAspectRatio": False,
+                "plugins": {
+                    "legend": {
+                        "display": False
+                    },
+                    "title": {
+                        "display": True,
+                        "text": "Pirámide Poblacional - Casos por Grupo de Edad"
+                    }
+                },
                 "scales": {
                     "x": {
-                        "ticks": {
-                            "callback": "function(value) { return Math.abs(value); }"
+                        "title": {
+                            "display": True,
+                            "text": "Grupos de Edad"
+                        }
+                    },
+                    "y": {
+                        "beginAtZero": True,
+                        "title": {
+                            "display": True,
+                            "text": "Número de Casos"
                         }
                     }
+                },
+                "interaction": {
+                    "intersect": False,
+                    "mode": "index"
                 }
             }
         }
@@ -482,10 +513,10 @@ class ChartDataProcessor:
         """
         query = """
         SELECT 
-            EXTRACT(YEAR FROM fecha_minima_evento) as año,
+            anio_epidemiologico_apertura as año,
             COUNT(*) as casos
         FROM evento
-        WHERE fecha_minima_evento IS NOT NULL
+        WHERE anio_epidemiologico_apertura IS NOT NULL
         """
         
         params = {}

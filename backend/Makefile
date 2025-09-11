@@ -206,7 +206,7 @@ clean: ## Remove all containers, volumes and clean cache
 
 reset-db: ## Reset ONLY database (keeps Redis cache)
 	@echo "⚠️  WARNING: This will delete ALL database data (keeps Redis)"
-	@read -p "Are you sure? (y/N): " confirm && [ "$$confirm" = "y" ] || exit 1
+	@printf "Are you sure? (y/N): "; read confirm && [ "$$confirm" = "y" ] || exit 1
 	docker compose stop db
 	docker compose rm -f db
 	docker volume rm $$(docker volume ls -q | grep postgres) 2>/dev/null || true
@@ -217,7 +217,7 @@ reset-db: ## Reset ONLY database (keeps Redis cache)
 
 reset-all: ## Reset EVERYTHING (database + Redis)
 	@echo "⚠️  WARNING: This will delete ALL data (database + Redis)"
-	@read -p "Are you sure? (y/N): " confirm && [ "$$confirm" = "y" ] || exit 1
+	@printf "Are you sure? (y/N): "; read confirm && [ "$$confirm" = "y" ] || exit 1
 	docker compose down -v
 	docker compose up -d db redis
 	@sleep 5

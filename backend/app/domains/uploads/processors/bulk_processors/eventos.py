@@ -115,26 +115,40 @@ class EventosBulkProcessor(BulkProcessorBase):
             for tipo_id, nombre in self.context.session.execute(stmt).all()
         }
 
-        # Crear nuevos tipos
-        nuevos_tipos = []
+        # Crear todos los tipos (nuevos y existentes) para forzar actualización
+        todos_tipos = []
         for tipo_nombre, grupo_codigo in tipos_data.items():
-            if tipo_nombre not in existing_mapping:
-                # Generar código slug desde el nombre (ya está en mayúsculas)
-                codigo_slug = tipo_nombre.replace(" ", "_").replace("-", "_")
-                nuevos_tipos.append(
-                    {
-                        "nombre": tipo_nombre,  # Ya está en mayúsculas
-                        "codigo": codigo_slug,  # También en mayúsculas
-                        "descripcion": f"Tipo {tipo_nombre} (importado del CSV)",
-                        "id_grupo_eno": grupo_mapping[grupo_codigo],
-                        "created_at": self._get_current_timestamp(),
-                        "updated_at": self._get_current_timestamp(),
-                    }
-                )
+            # Generar código slug desde el nombre (ya está en mayúsculas)
+            codigo_slug = tipo_nombre.replace(" ", "_").replace("-", "_")
+            todos_tipos.append(
+                {
+                    "nombre": tipo_nombre,  # Ya está en mayúsculas
+                    "codigo": codigo_slug,  # También en mayúsculas
+                    "descripcion": f"Tipo {tipo_nombre} (importado del CSV)",
+                    "id_grupo_eno": grupo_mapping[grupo_codigo],
+                    "created_at": self._get_current_timestamp(),
+                    "updated_at": self._get_current_timestamp(),
+                }
+            )
 
-        if nuevos_tipos:
-            stmt = pg_insert(TipoEno.__table__).values(nuevos_tipos)
-            upsert_stmt = stmt.on_conflict_do_nothing(index_elements=["codigo"])
+        if todos_tipos:
+            # Log para verificar asignación de grupos
+            self.logger.info(f"Actualizando {len(todos_tipos)} tipos ENO con sus grupos correctos:")
+            for tipo in todos_tipos[:3]:  # Mostrar solo los primeros 3
+                grupo_nombre = next(
+                    (k for k, v in grupo_mapping.items() if v == tipo["id_grupo_eno"]), 
+                    "DESCONOCIDO"
+                )
+                self.logger.info(f"  {tipo['nombre']} -> grupo_id={tipo['id_grupo_eno']} ({grupo_nombre})")
+            
+            stmt = pg_insert(TipoEno.__table__).values(todos_tipos)
+            upsert_stmt = stmt.on_conflict_do_update(
+                index_elements=["codigo"],
+                set_={
+                    "id_grupo_eno": stmt.excluded.id_grupo_eno,
+                    "updated_at": stmt.excluded.updated_at,
+                }
+            )
             self.context.session.execute(upsert_stmt)
 
             # Re-obtener el mapping completo
@@ -250,6 +264,9 @@ class EventosBulkProcessor(BulkProcessorBase):
                 if fecha_nac:
                     edad = calcular_edad(fecha_nac, fecha_minima_evento)
                     evento_dict["edad_anos_al_momento_apertura"] = edad
+                else:
+                    # Si no hay fecha de nacimiento, poner None explícitamente
+                    evento_dict["edad_anos_al_momento_apertura"] = None
                 
                 # Actualizar establecimientos con los valores priorizados
                 if estab_consulta_final:
@@ -286,6 +303,10 @@ class EventosBulkProcessor(BulkProcessorBase):
                 "fecha_inicio_sintomas": stmt.excluded.fecha_inicio_sintomas,
                 "clasificacion_estrategia": stmt.excluded.clasificacion_estrategia,
                 "fecha_minima_evento": stmt.excluded.fecha_minima_evento,
+                "semana_epidemiologica_apertura": stmt.excluded.semana_epidemiologica_apertura,
+                "anio_epidemiologico_apertura": stmt.excluded.anio_epidemiologico_apertura,
+                "semana_epidemiologica_sintomas": stmt.excluded.semana_epidemiologica_sintomas,
+                "edad_anos_al_momento_apertura": stmt.excluded.edad_anos_al_momento_apertura,
                 "id_establecimiento_consulta": stmt.excluded.id_establecimiento_consulta,
                 "id_establecimiento_notificacion": stmt.excluded.id_establecimiento_notificacion,
                 "id_establecimiento_carga": stmt.excluded.id_establecimiento_carga,
