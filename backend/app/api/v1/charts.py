@@ -12,6 +12,7 @@ from sqlalchemy import select, text
 from app.core.database import get_async_session
 from app.domains.charts.models import DashboardChart
 from app.domains.charts.processors import ChartDataProcessor
+from app.domains.charts.conditions import ChartConditionResolver
 
 logger = logging.getLogger(__name__)
 
@@ -44,37 +45,19 @@ async def get_dashboard_charts(
     }
     
     # Obtener charts aplicables
-    query = select(DashboardChart).where(DashboardChart.activo == True)
-    
-    # TODO: Aplicar lógica de condiciones_display cuando tengamos datos reales
-    # Por ahora, devolver todos los charts activos
-    
-    query = query.order_by(DashboardChart.orden)
-    
+    query = select(DashboardChart).where(DashboardChart.activo == True).order_by(DashboardChart.orden)
     result = await db.execute(query)
-    charts_config = result.scalars().all()
+    all_charts = result.scalars().all()
     
-    # Procesar cada chart
+    # Resolver condiciones usando códigos estables
+    condition_resolver = ChartConditionResolver(db)
+    charts_config = await condition_resolver.get_applicable_charts(filtros, all_charts)
+    
+    # Procesar cada chart aplicable
     processor = ChartDataProcessor(db)
     charts_data = []
     
     for chart_config in charts_config:
-        # Verificar si el chart aplica según condiciones
-        should_include = True
-        
-        if chart_config.condiciones_display:
-            conditions = chart_config.condiciones_display
-            logger.debug(f"Chart {chart_config.codigo} tiene condiciones: {conditions}")
-            
-            # Si hay condición de grupo, verificar que NO coincida
-            # (solo mostrar charts especiales como suicidio/rabia si NO es dengue)
-            if "grupo" in conditions:
-                # Los charts de suicidio y rabia NO deben mostrarse para dengue
-                should_include = False
-                logger.debug(f"Chart {chart_config.codigo} excluido por condiciones de grupo")
-        
-        if not should_include:
-            continue
             
         # Procesar datos del chart
         try:
@@ -231,3 +214,5 @@ async def get_charts_disponibles(
         }
         for chart in charts
     ]
+
+

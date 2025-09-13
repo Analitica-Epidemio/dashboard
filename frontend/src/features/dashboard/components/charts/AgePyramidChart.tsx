@@ -1,464 +1,245 @@
-/**
- * Componente de Pirámide Poblacional por Edad
- * Gráfico de barras horizontales con distribución por sexo
- */
+"use client";
 
-import React, { useMemo } from 'react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  Cell,
-} from 'recharts';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, Users, User, UserCheck } from 'lucide-react';
-import {
-  EpidemiologicalFilters,
-  ChartConfig,
-} from '../../types';
-import { useAgeCases } from '../../hooks/useEpidemiologicalData';
+import React, { useEffect, useRef } from "react";
+import * as d3 from "d3";
 
-// Configuración de colores (replicando el original)
-const GENDER_COLORS = {
-  male: 'rgb(54, 162, 235)',     // Azul para masculino
-  female: 'rgb(255, 99, 132)',   // Rosa para femenino
-  total: 'rgb(75, 192, 192)',    // Verde para total
-} as const;
-
-interface AgePyramidChartProps {
-  filters?: EpidemiologicalFilters;
-  chartConfig?: ChartConfig;
-  onAgeGroupSelect?: (ageGroup: string) => void;
-  showPercentages?: boolean;
-  orientation?: 'horizontal' | 'vertical';
+interface PyramidDataPoint {
+  age: string;
+  sex: "M" | "F";
+  value: number;
 }
 
-// Tooltip personalizado para pirámide poblacional
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (!active || !payload || !payload.length) return null;
+interface AgePyramidChartProps {
+  data: PyramidDataPoint[];
+  width?: number;
+  height?: number;
+  className?: string;
+}
 
-  const ageGroup = label;
-  const data = payload[0]?.payload;
+export function AgePyramidChart({
+  data,
+  width = 800,
+  height = 500,
+  className = "",
+}: AgePyramidChartProps) {
+  const svgRef = useRef<SVGSVGElement>(null);
+  console.log({ data });
 
-  // Obtener valores absolutos para mostrar
-  const maleValue = Math.abs(data?.male || 0);
-  const femaleValue = data?.female || 0;
-  const total = maleValue + femaleValue;
+  useEffect(() => {
+    if (!data || data.length === 0) return;
 
-  return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-w-sm">
-      <div className="border-b border-gray-200 pb-2 mb-2">
-        <p className="font-semibold text-gray-800">Grupo etario: {ageGroup}</p>
-        <p className="text-sm text-gray-600">
-          Total casos: {total.toLocaleString()}
-        </p>
-      </div>
+    const svg = d3.select(svgRef.current);
+    svg.selectAll("*").remove(); // Limpiar contenido previo
 
-      <div className="space-y-2">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div 
-              className="w-3 h-3 rounded" 
-              style={{ backgroundColor: GENDER_COLORS.male }}
-            />
-            <User className="h-3 w-3 text-blue-500" />
-            <span className="text-sm text-gray-700">Masculino:</span>
-          </div>
-          <div className="text-right">
-            <span className="text-sm font-medium text-gray-900">
-              {maleValue.toLocaleString()}
-            </span>
-            <span className="text-xs text-gray-500 block">
-              {total > 0 ? ((maleValue / total) * 100).toFixed(1) : 0}%
-            </span>
-          </div>
-        </div>
+    const margin = { top: 20, right: 60, bottom: 30, left: 60 };
+    const chartWidth = width - margin.left - margin.right;
+    const chartHeight = height - margin.top - margin.bottom;
 
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div 
-              className="w-3 h-3 rounded" 
-              style={{ backgroundColor: GENDER_COLORS.female }}
-            />
-            <UserCheck className="h-3 w-3 text-pink-500" />
-            <span className="text-sm text-gray-700">Femenino:</span>
-          </div>
-          <div className="text-right">
-            <span className="text-sm font-medium text-gray-900">
-              {femaleValue.toLocaleString()}
-            </span>
-            <span className="text-xs text-gray-500 block">
-              {total > 0 ? ((femaleValue / total) * 100).toFixed(1) : 0}%
-            </span>
-          </div>
-        </div>
-      </div>
+    // Obtener grupos de edad únicos y ordenarlos
+    const ageGroups = [...new Set(data.map((d) => d.age))];
+    const sortedAgeGroups = [
+      "0-4",
+      "5-9",
+      "10-14",
+      "15-19",
+      "20-24",
+      "25-29",
+      "30-34",
+      "35-39",
+      "40-44",
+      "45-49",
+      "50-54",
+      "55-59",
+      "60-64",
+      "65+",
+    ].filter((age) => ageGroups.includes(age));
 
-      <div className="border-t border-gray-200 pt-2 mt-2">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-700">Ratio M/F:</span>
-          <span className="text-sm font-medium text-gray-900">
-            {femaleValue > 0 ? (maleValue / femaleValue).toFixed(2) : 'N/A'}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-};
+    // Separar datos por sexo
+    const maleData = data.filter((d) => d.sex === "M");
+    const femaleData = data.filter((d) => d.sex === "F");
 
-// Componente de estadísticas demográficas
-const DemographicStats: React.FC<{
-  statistics: any;
-  showPercentages: boolean;
-}> = ({ statistics, showPercentages }) => {
-  const totalCases = statistics.totalCases;
-  const maleTotal = statistics.genderDistribution?.male || 0;
-  const femaleTotal = statistics.genderDistribution?.female || 0;
-  const malePercentage = totalCases > 0 ? (maleTotal / totalCases) * 100 : 0;
-  const femalePercentage = totalCases > 0 ? (femaleTotal / totalCases) * 100 : 0;
+    // Encontrar el valor máximo para las escalas
+    const maxValue = Math.max(...data.map((d) => d.value));
 
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-      <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-        <div className="flex items-center gap-2 mb-1">
-          <User className="h-4 w-4 text-blue-500" />
-          <span className="text-sm font-medium text-blue-800">Masculino</span>
-        </div>
-        <div className="text-lg font-bold text-blue-900">
-          {maleTotal.toLocaleString()}
-        </div>
-        {showPercentages && (
-          <div className="text-sm text-blue-700">
-            {malePercentage.toFixed(1)}%
-          </div>
-        )}
-      </div>
+    // Configurar escalas
+    const yScale = d3
+      .scaleBand()
+      .domain(sortedAgeGroups)
+      .range([chartHeight, 0])
+      .padding(0.1);
 
-      <div className="p-3 bg-pink-50 rounded-lg border border-pink-200">
-        <div className="flex items-center gap-2 mb-1">
-          <UserCheck className="h-4 w-4 text-pink-500" />
-          <span className="text-sm font-medium text-pink-800">Femenino</span>
-        </div>
-        <div className="text-lg font-bold text-pink-900">
-          {femaleTotal.toLocaleString()}
-        </div>
-        {showPercentages && (
-          <div className="text-sm text-pink-700">
-            {femalePercentage.toFixed(1)}%
-          </div>
-        )}
-      </div>
+    const xScaleLeft = d3
+      .scaleLinear()
+      .domain([0, maxValue])
+      .range([chartWidth / 2, 0]);
 
-      <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-        <div className="flex items-center gap-2 mb-1">
-          <Users className="h-4 w-4 text-gray-500" />
-          <span className="text-sm font-medium text-gray-800">Total</span>
-        </div>
-        <div className="text-lg font-bold text-gray-900">
-          {totalCases.toLocaleString()}
-        </div>
-        <div className="text-sm text-gray-700">
-          Ratio M/F: {femaleTotal > 0 ? (maleTotal / femaleTotal).toFixed(2) : 'N/A'}
-        </div>
-      </div>
-    </div>
-  );
-};
+    const xScaleRight = d3
+      .scaleLinear()
+      .domain([0, maxValue])
+      .range([chartWidth / 2, chartWidth]);
 
-// Función para formatear etiquetas de edad
-const formatAgeGroup = (ageGroup: string): string => {
-  return ageGroup
-    .replace('_', '-')
-    .replace('YEARS', 'años')
-    .replace('MONTHS', 'meses')
-    .replace('PLUS', '+');
-};
+    // Crear contenedor principal
+    const g = svg
+      .attr("width", width)
+      .attr("height", height)
+      .append("g")
+      .attr("transform", `translate(${margin.left},${margin.top})`);
 
-export const AgePyramidChart: React.FC<AgePyramidChartProps> = ({
-  filters,
-  chartConfig = {},
-  onAgeGroupSelect,
-  showPercentages = false,
-  orientation = 'horizontal',
-}) => {
-  const {
-    processedData,
-    loading,
-    error,
-    refetch,
-  } = useAgeCases(filters);
+    // Dibujar barras masculinas (izquierda)
+    g.selectAll(".bar-male")
+      .data(maleData)
+      .enter()
+      .append("rect")
+      .attr("class", "bar-male")
+      .attr("fill", "#3b82f6") // Azul
+      .attr("x", (d) => xScaleLeft(d.value))
+      .attr("y", (d) => yScale(d.age)!)
+      .attr("width", (d) => xScaleLeft(0) - xScaleLeft(d.value))
+      .attr("height", yScale.bandwidth())
+      .attr("opacity", 0.7);
 
-  // Preparar datos para la pirámide
-  const { chartData, statistics, title, maxValue } = useMemo(() => {
-    if (!processedData) {
-      return { 
-        chartData: [], 
-        statistics: null, 
-        title: '', 
-        maxValue: 0 
-      };
-    }
+    // Dibujar barras femeninas (derecha)
+    g.selectAll(".bar-female")
+      .data(femaleData)
+      .enter()
+      .append("rect")
+      .attr("class", "bar-female")
+      .attr("fill", "#ef4444") // Rojo
+      .attr("x", chartWidth / 2)
+      .attr("y", (d) => yScale(d.age)!)
+      .attr("width", (d) => xScaleRight(d.value) - xScaleRight(0))
+      .attr("height", yScale.bandwidth())
+      .attr("opacity", 0.7);
 
-    const { chartData, statistics } = processedData;
+    // Agregar etiquetas de valores en las barras masculinas
+    g.selectAll(".label-male")
+      .data(maleData.filter((d) => d.value > 0))
+      .enter()
+      .append("text")
+      .attr("class", "label-male")
+      .attr("text-anchor", "end")
+      .attr("x", (d) => xScaleLeft(d.value) - 4)
+      .attr("y", (d) => yScale(d.age)! + yScale.bandwidth() / 2)
+      .attr("dy", "0.35em")
+      .attr("fill", "white")
+      .attr("font-size", "12px")
+      .attr("font-weight", "bold")
+      .text((d) => d.value.toLocaleString());
 
-    // Encontrar el valor máximo para escalar el gráfico
-    const maxCases = Math.max(
-      ...chartData.map(d => Math.max(Math.abs(d.male), d.female))
-    );
+    // Agregar etiquetas de valores en las barras femeninas
+    g.selectAll(".label-female")
+      .data(femaleData.filter((d) => d.value > 0))
+      .enter()
+      .append("text")
+      .attr("class", "label-female")
+      .attr("text-anchor", "start")
+      .attr("x", (d) => xScaleRight(d.value) + 4)
+      .attr("y", (d) => yScale(d.age)! + yScale.bandwidth() / 2)
+      .attr("dy", "0.35em")
+      .attr("fill", "white")
+      .attr("font-size", "12px")
+      .attr("font-weight", "bold")
+      .text((d) => d.value.toLocaleString());
 
-    // Ordenar grupos etarios de menor a mayor edad
-    const sortedData = [...chartData].sort((a, b) => {
-      // Extraer números de los grupos etarios para ordenamiento
-      const aNum = parseInt(a.ageGroup.match(/\d+/)?.[0] || '0');
-      const bNum = parseInt(b.ageGroup.match(/\d+/)?.[0] || '0');
-      return aNum - bNum;
-    });
+    // Agregar eje Y (grupos de edad)
+    const yAxis = d3.axisLeft(yScale);
+    g.append("g")
+      .attr("class", "y-axis")
+      .attr("transform", `translate(${chartWidth / 2}, 0)`)
+      .call(yAxis)
+      .selectAll("text")
+      .attr("font-size", "12px")
+      .attr("fill", "#374151");
 
-    const chartTitle = `Distribución por Edad y Sexo - ${
-      statistics.totalCases.toLocaleString()
-    } casos totales`;
+    // Agregar eje X izquierdo (masculino)
+    const xAxisLeft = d3
+      .axisBottom(xScaleLeft)
+      .tickFormat((d) => Math.abs(d as number).toLocaleString());
 
-    return {
-      chartData: sortedData.map(d => ({
-        ...d,
-        ageGroup: formatAgeGroup(d.ageGroup),
-      })),
-      statistics,
-      title: chartTitle,
-      maxValue: maxCases,
-    };
-  }, [processedData]);
+    g.append("g")
+      .attr("class", "x-axis-left")
+      .attr("transform", `translate(0, ${chartHeight})`)
+      .call(xAxisLeft)
+      .selectAll("text")
+      .attr("font-size", "10px")
+      .attr("fill", "#6b7280");
 
-  if (loading) {
+    // Agregar eje X derecho (femenino)
+    const xAxisRight = d3.axisBottom(xScaleRight);
+    g.append("g")
+      .attr("class", "x-axis-right")
+      .attr("transform", `translate(0, ${chartHeight})`)
+      .call(xAxisRight)
+      .selectAll("text")
+      .attr("font-size", "10px")
+      .attr("fill", "#6b7280");
+
+    // Agregar línea central
+    g.append("line")
+      .attr("x1", chartWidth / 2)
+      .attr("x2", chartWidth / 2)
+      .attr("y1", 0)
+      .attr("y2", chartHeight)
+      .attr("stroke", "#d1d5db")
+      .attr("stroke-width", 1);
+
+    // Agregar etiquetas de sexo
+    g.append("text")
+      .attr("text-anchor", "end")
+      .attr("x", chartWidth / 2 - 10)
+      .attr("y", -5)
+      .attr("fill", "#3b82f6")
+      .attr("font-size", "14px")
+      .attr("font-weight", "bold")
+      .text("Masculino");
+
+    g.append("text")
+      .attr("text-anchor", "start")
+      .attr("x", chartWidth / 2 + 10)
+      .attr("y", -5)
+      .attr("fill", "#ef4444")
+      .attr("font-size", "14px")
+      .attr("font-weight", "bold")
+      .text("Femenino");
+
+    // Agregar título del eje Y
+    g.append("text")
+      .attr("text-anchor", "middle")
+      .attr("transform", `rotate(-90)`)
+      .attr("x", -chartHeight / 2)
+      .attr("y", -40)
+      .attr("fill", "#374151")
+      .attr("font-size", "12px")
+      .attr("font-weight", "bold")
+      .text("Grupos de Edad");
+
+    // Agregar título del eje X
+    g.append("text")
+      .attr("text-anchor", "middle")
+      .attr("x", chartWidth / 2)
+      .attr("y", chartHeight + margin.bottom)
+      .attr("fill", "#374151")
+      .attr("font-size", "12px")
+      .attr("font-weight", "bold")
+      .text("Número de Casos");
+  }, [data, width, height]);
+
+  // Si no hay datos, mostrar mensaje
+  if (!data || data.length === 0) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="flex items-center gap-2">
-          <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full" />
-          <span>Cargando pirámide poblacional...</span>
+      <div className={`population-pyramid ${className}`}>
+        <div className="flex items-center justify-center h-64 text-gray-500">
+          No hay datos disponibles para la pirámide poblacional
         </div>
       </div>
     );
   }
 
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center h-96 gap-4">
-        <AlertTriangle className="h-12 w-12 text-red-500" />
-        <div className="text-center">
-          <p className="text-lg font-semibold text-gray-800">Error al cargar datos</p>
-          <p className="text-sm text-gray-600">{error}</p>
-          <button
-            onClick={refetch}
-            className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-          >
-            Reintentar
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="w-full">
-      {statistics && (
-        <div className="mb-4">
-          <DemographicStats 
-            statistics={statistics} 
-            showPercentages={showPercentages} 
-          />
-        </div>
-      )}
-
-      <div>
-        <div 
-          className="w-full"
-          style={{ height: chartConfig.height || 400 }}
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              layout={orientation === 'horizontal' ? 'horizontal' : 'vertical'}
-              margin={{ top: 20, right: 30, left: 40, bottom: 60 }}
-              onClick={(data) => {
-                if (data?.activePayload?.[0]?.payload && onAgeGroupSelect) {
-                  const point = data.activePayload[0].payload;
-                  onAgeGroupSelect(point.ageGroup);
-                }
-              }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(128, 128, 128, 0.2)" />
-              
-              {orientation === 'horizontal' ? (
-                <>
-                  <XAxis 
-                    type="number"
-                    domain={[-maxValue * 1.1, maxValue * 1.1]}
-                    tick={{ fontSize: 12 }}
-                    tickLine={{ stroke: '#666' }}
-                    axisLine={{ stroke: '#666' }}
-                    label={{ value: 'Casos', position: 'insideBottom', offset: -10 }}
-                    tickFormatter={(value) => Math.abs(value).toLocaleString()}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="ageGroup"
-                    tick={{ fontSize: 11 }}
-                    tickLine={{ stroke: '#666' }}
-                    axisLine={{ stroke: '#666' }}
-                    width={80}
-                  />
-                </>
-              ) : (
-                <>
-                  <XAxis
-                    dataKey="ageGroup"
-                    tick={{ fontSize: 11, angle: -45 }}
-                    tickLine={{ stroke: '#666' }}
-                    axisLine={{ stroke: '#666' }}
-                    height={80}
-                  />
-                  <YAxis
-                    domain={[0, maxValue * 1.1]}
-                    tick={{ fontSize: 12 }}
-                    tickLine={{ stroke: '#666' }}
-                    axisLine={{ stroke: '#666' }}
-                    label={{ value: 'Casos', angle: -90, position: 'insideLeft' }}
-                  />
-                </>
-              )}
-
-              {/* Barra para masculino (valores negativos en horizontal) */}
-              <Bar
-                dataKey="male"
-                fill={GENDER_COLORS.male}
-                stroke="rgba(255, 255, 255, 0.8)"
-                strokeWidth={1}
-                name="Masculino"
-                radius={orientation === 'vertical' ? [4, 4, 0, 0] : undefined}
-              />
-
-              {/* Barra para femenino */}
-              <Bar
-                dataKey="female"
-                fill={GENDER_COLORS.female}
-                stroke="rgba(255, 255, 255, 0.8)"
-                strokeWidth={1}
-                name="Femenino"
-                radius={orientation === 'vertical' ? [4, 4, 0, 0] : undefined}
-              />
-
-              <Tooltip content={<CustomTooltip />} />
-              
-              <Legend
-                layout="horizontal"
-                verticalAlign="top"
-                align="center"
-                wrapperStyle={{ paddingBottom: '20px' }}
-                payload={[
-                  { value: 'Masculino', type: 'rect', color: GENDER_COLORS.male },
-                  { value: 'Femenino', type: 'rect', color: GENDER_COLORS.female },
-                ]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Línea central para pirámide horizontal */}
-        {orientation === 'horizontal' && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="w-px bg-gray-300 opacity-50" style={{ height: '80%' }} />
-          </div>
-        )}
-
-        {/* Ranking de grupos etarios */}
-        {statistics && chartData.length > 0 && (
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <h4 className="text-sm font-semibold text-gray-800 mb-2">
-                Grupos con más casos
-              </h4>
-              <div className="space-y-1">
-                {chartData
-                  .map(d => ({
-                    ageGroup: d.ageGroup,
-                    total: Math.abs(d.male) + d.female,
-                  }))
-                  .sort((a, b) => b.total - a.total)
-                  .slice(0, 5)
-                  .map((group, index) => (
-                    <div key={group.ageGroup} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs">
-                          {index + 1}
-                        </Badge>
-                        <span className="text-sm text-gray-700">{group.ageGroup}</span>
-                      </div>
-                      <span className="text-sm font-medium">
-                        {group.total.toLocaleString()}
-                      </span>
-                    </div>
-                  ))
-                }
-              </div>
-            </div>
-
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <h4 className="text-sm font-semibold text-gray-800 mb-2">
-                Distribución por sexo
-              </h4>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-700">Casos masculinos:</span>
-                  <div className="text-right">
-                    <span className="text-sm font-medium">
-                      {statistics.genderDistribution.male.toLocaleString()}
-                    </span>
-                    {showPercentages && (
-                      <span className="text-xs text-gray-500 block">
-                        {((statistics.genderDistribution.male / statistics.totalCases) * 100).toFixed(1)}%
-                      </span>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-700">Casos femeninos:</span>
-                  <div className="text-right">
-                    <span className="text-sm font-medium">
-                      {statistics.genderDistribution.female.toLocaleString()}
-                    </span>
-                    {showPercentages && (
-                      <span className="text-xs text-gray-500 block">
-                        {((statistics.genderDistribution.female / statistics.totalCases) * 100).toFixed(1)}%
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-gray-200">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-800">Ratio M/F:</span>
-                    <span className="text-sm font-bold text-gray-900">
-                      {statistics.genderDistribution.female > 0 
-                        ? (statistics.genderDistribution.male / statistics.genderDistribution.female).toFixed(2)
-                        : 'N/A'
-                      }
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+    <div className={`population-pyramid ${className}`}>
+      <svg ref={svgRef} className="w-full h-auto" />
     </div>
   );
-};
+}
 
 export default AgePyramidChart;

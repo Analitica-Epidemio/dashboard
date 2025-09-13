@@ -54,6 +54,7 @@ class ChartDataProcessor:
             "casos_edad": self.process_casos_edad,
             "intento_suicidio": self.process_intento_suicidio,
             "rabia_animal": self.process_rabia_animal,
+            "proporcion_ira": self.process_proporcion_ira,
         }
         
         processor_func = processor_map.get(chart_config.funcion_procesamiento)
@@ -377,63 +378,34 @@ class ChartDataProcessor:
             elif sexo in ['FEMENINO', 'F']:
                 female_data[grupo_edad] = casos
         
-        # Para pirámide vertical, sumar masculino + femenino por grupo de edad
-        total_data = []
-        for g in age_groups:
-            total = abs(male_data[g]) + female_data[g]  # abs para convertir negativos de masculino
-            total_data.append(total)
+        # Preparar datos para D3.js - formato de pirámide poblacional
+        # Incluir todos los grupos de edad, incluso con 0 casos
+        pyramid_data = []
+        for age_group in age_groups:
+            male_count = abs(male_data[age_group])  # Convertir negativos a positivos
+            female_count = female_data[age_group]
+            
+            # Siempre agregar entrada para masculino
+            pyramid_data.append({
+                "age": age_group,
+                "sex": "M",
+                "value": male_count
+            })
+            
+            # Siempre agregar entrada para femenino
+            pyramid_data.append({
+                "age": age_group,
+                "sex": "F", 
+                "value": female_count
+            })
         
         return {
-            "type": "bar",
-            "data": {
-                "labels": age_groups,
-                "datasets": [
-                    {
-                        "label": "Total Casos",
-                        "data": total_data,
-                        "backgroundColor": [
-                            "rgba(255, 99, 132, 0.7)" if i % 2 == 0 else "rgba(54, 162, 235, 0.7)" 
-                            for i in range(len(total_data))
-                        ],
-                        "borderColor": [
-                            "rgba(255, 99, 132, 1)" if i % 2 == 0 else "rgba(54, 162, 235, 1)" 
-                            for i in range(len(total_data))
-                        ],
-                        "borderWidth": 1
-                    }
-                ]
-            },
-            "options": {
-                "responsive": True,
-                "maintainAspectRatio": False,
-                "plugins": {
-                    "legend": {
-                        "display": False
-                    },
-                    "title": {
-                        "display": True,
-                        "text": "Pirámide Poblacional - Casos por Grupo de Edad"
-                    }
-                },
-                "scales": {
-                    "x": {
-                        "title": {
-                            "display": True,
-                            "text": "Grupos de Edad"
-                        }
-                    },
-                    "y": {
-                        "beginAtZero": True,
-                        "title": {
-                            "display": True,
-                            "text": "Número de Casos"
-                        }
-                    }
-                },
-                "interaction": {
-                    "intersect": False,
-                    "mode": "index"
-                }
+            "type": "d3_pyramid",
+            "data": pyramid_data,
+            "metadata": {
+                "age_groups": age_groups,
+                "total_male": sum(abs(male_data[g]) for g in age_groups),
+                "total_female": sum(female_data[g] for g in age_groups)
             }
         }
     
@@ -812,5 +784,98 @@ class ChartDataProcessor:
                         "rgba(255, 99, 132, 0.5)"
                     ][:len(rows)]
                 }]
+            }
+        }
+    
+    async def process_proporcion_ira(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Procesa datos para proporción de IRA (Infecciones Respiratorias Agudas)
+        Basado en unidades centinela
+        """
+        query = """
+        SELECT 
+            CASE 
+                WHEN LOWER(t.nombre) LIKE '%ira%' OR LOWER(t.nombre) LIKE '%respiratoria%' THEN 'IRA'
+                WHEN LOWER(t.nombre) LIKE '%irag%' OR LOWER(t.nombre) LIKE '%grave%' THEN 'IRAG'
+                WHEN LOWER(t.nombre) LIKE '%neumonia%' THEN 'Neumonía'
+                WHEN LOWER(t.nombre) LIKE '%bronquiolitis%' THEN 'Bronquiolitis'
+                ELSE 'Otras respiratorias'
+            END as tipo_respiratorio,
+            COUNT(*) as casos
+        FROM evento e
+        JOIN tipo_eno t ON e.id_tipo_eno = t.id
+        JOIN grupo_eno g ON t.id_grupo_eno = g.id
+        WHERE LOWER(g.nombre) LIKE '%respiratoria%' 
+           OR LOWER(t.nombre) LIKE '%ira%' 
+           OR LOWER(t.nombre) LIKE '%respiratoria%'
+        """
+        
+        params = {}
+        
+        if filtros.get("grupo_id"):
+            query += " AND t.id_grupo_eno = :grupo_id"
+            params["grupo_id"] = filtros["grupo_id"]
+            
+        if filtros.get("evento_id"):
+            query += " AND e.id_tipo_eno = :evento_id"
+            params["evento_id"] = filtros["evento_id"]
+            
+        if filtros.get("fecha_desde"):
+            query += " AND e.fecha_minima_evento >= :fecha_desde"
+            params["fecha_desde"] = self._parse_date(filtros["fecha_desde"])
+            
+        if filtros.get("fecha_hasta"):
+            query += " AND e.fecha_minima_evento <= :fecha_hasta"
+            params["fecha_hasta"] = self._parse_date(filtros["fecha_hasta"])
+            
+        query += " GROUP BY tipo_respiratorio ORDER BY casos DESC"
+        
+        result = await self.db.execute(text(query), params)
+        rows = result.fetchall()
+        
+        logger.info(f"Proporción IRA - Filas encontradas: {len(rows)}")
+        if rows and len(rows) > 0:
+            logger.info(f"Proporción IRA - Tipos: {rows}")
+        
+        if not rows:
+            return {
+                "type": "pie",
+                "data": {
+                    "labels": ["Sin datos"],
+                    "datasets": [{
+                        "data": [1],
+                        "backgroundColor": ["rgba(200, 200, 200, 0.5)"]
+                    }]
+                }
+            }
+        
+        # Calcular total para proporciones
+        total_casos = sum(row[1] for row in rows)
+        
+        return {
+            "type": "pie",
+            "data": {
+                "labels": [row[0] for row in rows],
+                "datasets": [{
+                    "data": [row[1] for row in rows],
+                    "backgroundColor": [
+                        "rgba(54, 162, 235, 0.7)",   # IRA - Azul
+                        "rgba(255, 99, 132, 0.7)",   # IRAG - Rojo
+                        "rgba(255, 206, 86, 0.7)",   # Neumonía - Amarillo
+                        "rgba(75, 192, 192, 0.7)",   # Bronquiolitis - Verde
+                        "rgba(153, 102, 255, 0.7)",  # Otras - Púrpura
+                    ][:len(rows)]
+                }]
+            },
+            "metadata": {
+                "total_casos": total_casos,
+                "proporciones": [
+                    {
+                        "tipo": row[0],
+                        "casos": row[1],
+                        "porcentaje": round((row[1] / total_casos) * 100, 2) if total_casos > 0 else 0
+                    }
+                    for row in rows
+                ]
             }
         }

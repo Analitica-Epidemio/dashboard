@@ -11,6 +11,7 @@ from app.domains.uploads.utils.epidemiological_calculations import (
     calcular_semana_epidemiologica,
     calcular_edad
 )
+from app.core.utils.codigo_generator import CodigoGenerator
 
 from app.domains.ciudadanos.models import AmbitosConcurrenciaEvento
 from app.domains.eventos.models import (
@@ -37,9 +38,11 @@ class EventosBulkProcessor(BulkProcessorBase):
 
         # Extraer grupos únicos de la columna GRUPO_EVENTO
         for grupo in df[Columns.GRUPO_EVENTO].dropna().unique():
-            grupo_str = str(grupo).strip().upper()  # Normalizar a mayúsculas
+            grupo_str = str(grupo).strip()
             if grupo_str:
-                grupos_set.add(grupo_str)
+                # Generar código kebab-case estable
+                codigo = CodigoGenerator.generar_codigo_kebab(grupo_str)
+                grupos_set.add(codigo)
 
         if not grupos_set:
             return {}
@@ -53,15 +56,28 @@ class EventosBulkProcessor(BulkProcessorBase):
             for grupo_id, codigo in self.context.session.execute(stmt).all()
         }
 
+        # Mapear códigos a nombres originales para crear grupos
+        codigo_to_original = {}
+        for grupo in df[Columns.GRUPO_EVENTO].dropna().unique():
+            grupo_str = str(grupo).strip()
+            if grupo_str:
+                codigo = CodigoGenerator.generar_codigo_kebab(grupo_str)
+                codigo_to_original[codigo] = grupo_str
+
         # Crear nuevos grupos
         nuevos_grupos = []
         for grupo_codigo in grupos_set:
             if grupo_codigo not in existing_mapping:
+                nombre_original = codigo_to_original.get(grupo_codigo, grupo_codigo)
+                grupo_data = CodigoGenerator.generar_par_grupo(
+                    nombre_original, 
+                    f"Grupo {CodigoGenerator.capitalizar_nombre(nombre_original)} (importado del CSV)"
+                )
                 nuevos_grupos.append(
                     {
-                        "nombre": grupo_codigo,  # Nombre en mayúsculas
-                        "codigo": grupo_codigo,  # Código en mayúsculas
-                        "descripcion": f"Grupo {grupo_codigo} (importado del CSV)",
+                        "nombre": grupo_data["nombre"],  # Capitalizado correctamente
+                        "codigo": grupo_data["codigo"],  # kebab-case
+                        "descripcion": grupo_data["descripcion"],
                         "created_at": self._get_current_timestamp(),
                         "updated_at": self._get_current_timestamp(),
                     }
@@ -87,7 +103,7 @@ class EventosBulkProcessor(BulkProcessorBase):
         self, df: pd.DataFrame, grupo_mapping: Dict[str, int]
     ) -> Dict[str, int]:
         """Get or create tipo ENO entries from DataFrame."""
-        tipos_data = {}  # {nombre_tipo: grupo_codigo}
+        tipos_data = {}  # {codigo_tipo: (nombre_original, grupo_codigo)}
 
         # Extraer tipos únicos con sus grupos
         for _, row in df.iterrows():
@@ -95,36 +111,39 @@ class EventosBulkProcessor(BulkProcessorBase):
             grupo = self._clean_string(row.get(Columns.GRUPO_EVENTO))
 
             if tipo and grupo:
-                # Normalizar ambos a mayúsculas
-                tipo_upper = tipo.upper()
-                grupo_upper = grupo.upper()
+                # Generar códigos kebab-case estables
+                tipo_codigo = CodigoGenerator.generar_codigo_kebab(tipo)
+                grupo_codigo = CodigoGenerator.generar_codigo_kebab(grupo)
 
-                if grupo_upper in grupo_mapping:
-                    tipos_data[tipo_upper] = grupo_upper
+                if grupo_codigo in grupo_mapping:
+                    tipos_data[tipo_codigo] = (tipo, grupo_codigo)
 
         if not tipos_data:
             return {}
 
-        # Verificar existentes (los nombres ahora están en mayúsculas)
-        tipos_nombres = list(tipos_data.keys())
-        stmt = select(TipoEno.id, TipoEno.nombre).where(
-            TipoEno.nombre.in_(tipos_nombres)
+        # Verificar existentes por código
+        tipos_codigos = list(tipos_data.keys())
+        stmt = select(TipoEno.id, TipoEno.codigo).where(
+            TipoEno.codigo.in_(tipos_codigos)
         )
         existing_mapping = {
-            nombre: tipo_id
-            for tipo_id, nombre in self.context.session.execute(stmt).all()
+            codigo: tipo_id
+            for tipo_id, codigo in self.context.session.execute(stmt).all()
         }
 
         # Crear todos los tipos (nuevos y existentes) para forzar actualización
         todos_tipos = []
-        for tipo_nombre, grupo_codigo in tipos_data.items():
-            # Generar código slug desde el nombre (ya está en mayúsculas)
-            codigo_slug = tipo_nombre.replace(" ", "_").replace("-", "_")
+        for tipo_codigo, (nombre_original, grupo_codigo) in tipos_data.items():
+            # Generar datos del tipo con formato correcto
+            tipo_data = CodigoGenerator.generar_par_tipo(
+                nombre_original,
+                f"Tipo {CodigoGenerator.capitalizar_nombre(nombre_original)} (importado del CSV)"
+            )
             todos_tipos.append(
                 {
-                    "nombre": tipo_nombre,  # Ya está en mayúsculas
-                    "codigo": codigo_slug,  # También en mayúsculas
-                    "descripcion": f"Tipo {tipo_nombre} (importado del CSV)",
+                    "nombre": tipo_data["nombre"],  # Capitalizado correctamente
+                    "codigo": tipo_data["codigo"],  # kebab-case
+                    "descripcion": tipo_data["descripcion"],
                     "id_grupo_eno": grupo_mapping[grupo_codigo],
                     "created_at": self._get_current_timestamp(),
                     "updated_at": self._get_current_timestamp(),
@@ -151,13 +170,13 @@ class EventosBulkProcessor(BulkProcessorBase):
             )
             self.context.session.execute(upsert_stmt)
 
-            # Re-obtener el mapping completo
-            stmt = select(TipoEno.id, TipoEno.nombre).where(
-                TipoEno.nombre.in_(tipos_nombres)
+            # Re-obtener el mapping completo por código
+            stmt = select(TipoEno.id, TipoEno.codigo).where(
+                TipoEno.codigo.in_(tipos_codigos)
             )
             existing_mapping = {
-                nombre: tipo_id
-                for tipo_id, nombre in self.context.session.execute(stmt).all()
+                codigo: tipo_id
+                for tipo_id, codigo in self.context.session.execute(stmt).all()
             }
 
         return existing_mapping

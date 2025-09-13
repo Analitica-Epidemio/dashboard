@@ -45,8 +45,8 @@ DASHBOARD_CHARTS = [
         "descripcion": "Distribución por edad y sexo",
         "funcion_procesamiento": "piramide_poblacional",
         "condiciones_display": None,
-        "tipo_visualizacion": "bar",
-        "configuracion_chart": {"height": 300},
+        "tipo_visualizacion": "d3_pyramid",
+        "configuracion_chart": {"height": 500},
         "orden": 3,
         "activo": True
     },
@@ -99,7 +99,7 @@ DASHBOARD_CHARTS = [
         "nombre": "Análisis Intentos Suicidio",
         "descripcion": "Métodos y factores",
         "funcion_procesamiento": "intento_suicidio",
-        "condiciones_display": {"grupo": ["SALUD_MENTAL", "SUICIDIO"]},
+        "condiciones_display": {"grupo_codigos": ["lesiones-intencionales"]},
         "tipo_visualizacion": "bar",
         "configuracion_chart": {"height": 300},
         "orden": 8,
@@ -110,10 +110,21 @@ DASHBOARD_CHARTS = [
         "nombre": "Casos Rabia Animal",
         "descripcion": "Distribución por especie",
         "funcion_procesamiento": "rabia_animal",
-        "condiciones_display": {"grupo": ["ZOONOSIS", "RABIA"]},
+        "condiciones_display": {"grupo_codigos": ["rabia"]},
         "tipo_visualizacion": "bar",
         "configuracion_chart": {"height": 300},
         "orden": 9,
+        "activo": True
+    },
+    {
+        "codigo": "proporcion_ira",
+        "nombre": "Proporción IRA",
+        "descripcion": "Distribución de infecciones respiratorias agudas",
+        "funcion_procesamiento": "proporcion_ira",
+        "condiciones_display": {"grupo_codigos": ["infecciones-respiratorias-agudas"]},
+        "tipo_visualizacion": "pie",
+        "configuracion_chart": {"height": 400},
+        "orden": 10,
         "activo": True
     }
 ]
