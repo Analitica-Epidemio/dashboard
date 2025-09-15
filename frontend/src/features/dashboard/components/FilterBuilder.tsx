@@ -276,6 +276,28 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
                 </p>
               </div>
             )}
+
+            {/* Selector de Clasificaciones */}
+            {currentFilter.groupId && (
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                  Clasificaciones (opcional)
+                </label>
+                <ClassificationSelector
+                  selectedClassifications={currentFilter.clasificaciones || []}
+                  onClassificationChange={(classifications) =>
+                    setCurrentFilter({
+                      ...currentFilter,
+                      clasificaciones: classifications,
+                    })
+                  }
+                  placeholder="Todas las clasificaciones"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Filtrar por estado epidemiológico
+                </p>
+              </div>
+            )}
           </div>
 
           <Separator />
@@ -322,16 +344,25 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
                               {combination.groupName}
                             </span>
                           </div>
-                          <div className="flex flex-wrap gap-1">
-                            {combination.eventNames?.slice(0, 3).map((name, i) => (
-                              <Badge key={i} variant="secondary" className="text-xs">
-                                {name}
-                              </Badge>
-                            ))}
-                            {combination.eventNames && combination.eventNames.length > 3 && (
-                              <Badge variant="secondary" className="text-xs">
-                                +{combination.eventNames.length - 3}
-                              </Badge>
+                          <div className="space-y-1">
+                            <div className="flex flex-wrap gap-1">
+                              {combination.eventNames?.slice(0, 3).map((name, i) => (
+                                <Badge key={i} variant="secondary" className="text-xs">
+                                  {name}
+                                </Badge>
+                              ))}
+                              {combination.eventNames && combination.eventNames.length > 3 && (
+                                <Badge variant="secondary" className="text-xs">
+                                  +{combination.eventNames.length - 3}
+                                </Badge>
+                              )}
+                            </div>
+                            {combination.clasificaciones && combination.clasificaciones.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                <ClassificationBadges
+                                  classifications={combination.clasificaciones}
+                                />
+                              </div>
                             )}
                           </div>
                         </div>

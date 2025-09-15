@@ -15,10 +15,10 @@ logger = logging.getLogger(__name__)
 
 class ChartDataProcessor:
     """Procesador de datos para charts del dashboard"""
-    
+
     def __init__(self, db: AsyncSession):
         self.db = db
-    
+
     def _parse_date(self, date_str: Optional[str]) -> Optional[date]:
         """Convierte string de fecha a objeto date"""
         if not date_str:
@@ -27,7 +27,64 @@ class ChartDataProcessor:
             return datetime.strptime(date_str, "%Y-%m-%d").date()
         except (ValueError, TypeError):
             return None
-    
+
+    def _apply_common_filters(self, query: str, filtros: Dict[str, Any], params: Dict[str, Any]) -> tuple[str, Dict[str, Any]]:
+        """
+        Aplica filtros comunes a las queries incluyendo clasificación
+
+        Args:
+            query: Query SQL base
+            filtros: Filtros del dashboard
+            params: Parámetros de la query
+
+        Returns:
+            Tupla con (query modificada, params actualizados)
+        """
+        if filtros.get("grupo_id"):
+            query += """
+                AND id_tipo_eno IN (
+                    SELECT id FROM tipo_eno WHERE id_grupo_eno = :grupo_id
+                )
+            """
+            params["grupo_id"] = filtros["grupo_id"]
+
+        if filtros.get("evento_id"):
+            query += " AND id_tipo_eno = :evento_id"
+            params["evento_id"] = filtros["evento_id"]
+
+        # Filtro por clasificación estrategia
+        if filtros.get("clasificaciones"):
+            clasificaciones = filtros["clasificaciones"]
+            if isinstance(clasificaciones, str):
+                clasificaciones = [clasificaciones]
+            query += " AND clasificacion_estrategia = ANY(:clasificaciones)"
+            params["clasificaciones"] = clasificaciones
+
+
+        if filtros.get("fecha_desde"):
+            query += " AND fecha_minima_evento >= :fecha_desde"
+            params["fecha_desde"] = self._parse_date(filtros["fecha_desde"])
+
+        if filtros.get("fecha_hasta"):
+            query += " AND fecha_minima_evento <= :fecha_hasta"
+            params["fecha_hasta"] = self._parse_date(filtros["fecha_hasta"])
+
+        return query, params
+
+    def _add_classification_filter(self, query: str, filtros: Dict[str, Any], params: Dict[str, Any], table_alias: str = "") -> str:
+        """Helper para agregar filtro de clasificación a cualquier query"""
+        if filtros.get("clasificaciones"):
+            clasificaciones = filtros["clasificaciones"]
+            if isinstance(clasificaciones, str):
+                clasificaciones = [clasificaciones]
+
+            # Agregar alias de tabla si se proporciona
+            field = f"{table_alias}.clasificacion_estrategia" if table_alias else "clasificacion_estrategia"
+            query += f" AND {field} = ANY(:clasificaciones)"
+            params["clasificaciones"] = clasificaciones
+
+        return query
+
     async def process_chart(
         self, 
         chart_config: Any,
@@ -106,15 +163,18 @@ class ChartDataProcessor:
                 )
             """
             params["grupo_id"] = filtros["grupo_id"]
-            
+
         if filtros.get("evento_id"):
             query += " AND id_tipo_eno = :evento_id"
             params["evento_id"] = filtros["evento_id"]
-            
+
+        # Filtro por clasificación estrategia
+        query = self._add_classification_filter(query, filtros, params)
+
         if filtros.get("fecha_desde"):
             query += " AND fecha_minima_evento >= :fecha_desde"
             params["fecha_desde"] = self._parse_date(filtros["fecha_desde"])
-            
+
         if filtros.get("fecha_hasta"):
             query += " AND fecha_minima_evento <= :fecha_hasta"
             params["fecha_hasta"] = self._parse_date(filtros["fecha_hasta"])
@@ -187,7 +247,10 @@ class ChartDataProcessor:
         if filtros.get("evento_id"):
             query += " AND id_tipo_eno = :evento_id"
             params["evento_id"] = filtros["evento_id"]
-            
+
+        # Filtro por clasificación estrategia
+        query = self._add_classification_filter(query, filtros, params)
+
         query += " GROUP BY semana, año ORDER BY semana, año"
         
         result = await self.db.execute(text(query), params)
@@ -258,7 +321,10 @@ class ChartDataProcessor:
             
         if filtros.get("evento_id"):
             current_year_query += " AND id_tipo_eno = :evento_id"
-            
+
+        # Filtro por clasificación estrategia
+        current_year_query = self._add_classification_filter(current_year_query, filtros, params)
+
         current_year_query += " GROUP BY semana ORDER BY semana"
         
         current_result = await self.db.execute(text(current_year_query), params)
@@ -353,7 +419,10 @@ class ChartDataProcessor:
         if filtros.get("evento_id"):
             query += " AND e.id_tipo_eno = :evento_id"
             params["evento_id"] = filtros["evento_id"]
-            
+
+        # Filtro por clasificación estrategia
+        query = self._add_classification_filter(query, filtros, params, "e")
+
         query += " GROUP BY grupo_edad, sexo ORDER BY grupo_edad"
         
         result = await self.db.execute(text(query), params)
@@ -435,7 +504,10 @@ class ChartDataProcessor:
         if filtros.get("evento_id"):
             query += " AND e.id_tipo_eno = :evento_id"
             params["evento_id"] = filtros["evento_id"]
-            
+
+        # Filtro por clasificación estrategia
+        query = self._add_classification_filter(query, filtros, params, "e")
+
         query += " GROUP BY lugar ORDER BY casos DESC LIMIT 10"
         
         result = await self.db.execute(text(query), params)
@@ -504,7 +576,10 @@ class ChartDataProcessor:
         if filtros.get("evento_id"):
             query += " AND id_tipo_eno = :evento_id"
             params["evento_id"] = filtros["evento_id"]
-            
+
+        # Filtro por clasificación estrategia
+        query = self._add_classification_filter(query, filtros, params)
+
         query += " GROUP BY año ORDER BY año"
         
         result = await self.db.execute(text(query), params)
@@ -566,7 +641,10 @@ class ChartDataProcessor:
         if filtros.get("evento_id"):
             query += " AND e.id_tipo_eno = :evento_id"
             params["evento_id"] = filtros["evento_id"]
-            
+
+        # Filtro por clasificación estrategia
+        query = self._add_classification_filter(query, filtros, params, "e")
+
         query += " GROUP BY sexo"
         
         result = await self.db.execute(text(query), params)

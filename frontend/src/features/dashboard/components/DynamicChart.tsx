@@ -239,7 +239,7 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
   };
 
   return (
-    <Card>
+    <Card className="dynamic-chart">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm">{nombre}</CardTitle>
         {descripcion && <p className="text-xs text-gray-600">{descripcion}</p>}

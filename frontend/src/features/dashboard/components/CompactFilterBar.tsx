@@ -6,13 +6,15 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
+import {
   Calendar,
   Filter,
   Edit,
   X,
   ChevronDown,
   ChevronUp,
+  Download,
+  FileText,
 } from 'lucide-react';
 
 interface FilterCombination {
@@ -21,6 +23,7 @@ interface FilterCombination {
   groupName?: string;
   eventIds: number[];
   eventNames?: string[];
+  clasificaciones?: string[];
   label?: string;
   color?: string;
 }
@@ -34,6 +37,7 @@ interface CompactFilterBarProps {
   dateRange: DateRange;
   filterCombinations: FilterCombination[];
   onEditFilters: () => void;
+  onGenerateZipReport?: () => void;
   expanded?: boolean;
   onToggleExpand?: () => void;
 }
@@ -42,6 +46,7 @@ export const CompactFilterBar: React.FC<CompactFilterBarProps> = ({
   dateRange,
   filterCombinations,
   onEditFilters,
+  onGenerateZipReport,
   expanded = false,
   onToggleExpand,
 }) => {
@@ -126,6 +131,20 @@ export const CompactFilterBar: React.FC<CompactFilterBarProps> = ({
               </Button>
             )}
             
+            {/* Generate ZIP Report */}
+            {onGenerateZipReport && filterCombinations.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onGenerateZipReport}
+                title={`Generar ${filterCombinations.length} reportes PDF en ZIP`}
+                className="bg-blue-50 border-blue-200 hover:bg-blue-100"
+              >
+                <Download className="h-4 w-4 mr-1" />
+                Descargar Reportes ({filterCombinations.length})
+              </Button>
+            )}
+
             <Button
               variant="outline"
               size="sm"

@@ -25,6 +25,7 @@ async def get_dashboard_charts(
     evento_id: int = Query(None, description="ID del evento seleccionado"),
     fecha_desde: str = Query(None, description="Fecha desde"),
     fecha_hasta: str = Query(None, description="Fecha hasta"),
+    clasificaciones: List[str] = Query(None, description="Filtrar por clasificaciones estratégicas"),
     db: AsyncSession = Depends(get_async_session)
 ) -> Dict[str, Any]:
     """
@@ -41,7 +42,8 @@ async def get_dashboard_charts(
         "grupo_id": grupo_id,
         "evento_id": evento_id,
         "fecha_desde": fecha_desde,
-        "fecha_hasta": fecha_hasta
+        "fecha_hasta": fecha_hasta,
+        "clasificaciones": clasificaciones
     }
     
     # Obtener charts aplicables
@@ -90,6 +92,7 @@ async def get_indicadores(
     evento_id: int = Query(None, description="ID del evento seleccionado"),
     fecha_desde: str = Query(None, description="Fecha desde"),
     fecha_hasta: str = Query(None, description="Fecha hasta"),
+    clasificaciones: List[str] = Query(None, description="Filtrar por clasificaciones estratégicas"),
     db: AsyncSession = Depends(get_async_session)
 ) -> Dict[str, Any]:
     """
@@ -131,7 +134,11 @@ async def get_indicadores(
     if fecha_hasta:
         query_casos += " AND e.fecha_minima_evento <= :fecha_hasta"
         params["fecha_hasta"] = datetime.strptime(fecha_hasta, "%Y-%m-%d").date()
-    
+
+    if clasificaciones:
+        query_casos += " AND e.clasificacion_estrategia = ANY(:clasificaciones)"
+        params["clasificaciones"] = clasificaciones
+
     # Ejecutar query de casos
     result_casos = await db.execute(text(query_casos), params)
     total_casos = result_casos.scalar() or 0
@@ -161,7 +168,11 @@ async def get_indicadores(
     if fecha_hasta:
         query_areas += " AND e.fecha_minima_evento <= :fecha_hasta"
         # params ya tiene las fechas convertidas
-    
+
+    if clasificaciones:
+        query_areas += " AND e.clasificacion_estrategia = ANY(:clasificaciones)"
+        # params ya tiene las clasificaciones
+
     result_areas = await db.execute(text(query_areas), params)
     areas_afectadas = result_areas.scalar() or 0
     
@@ -183,7 +194,8 @@ async def get_indicadores(
             "grupo_id": grupo_id,
             "evento_id": evento_id,
             "fecha_desde": fecha_desde,
-            "fecha_hasta": fecha_hasta
+            "fecha_hasta": fecha_hasta,
+            "clasificaciones": clasificaciones
         }
     }
 

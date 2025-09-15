@@ -219,9 +219,6 @@ class Evento(BaseModel, table=True):
         sa_column=Column(JSON),
         description="Metadata extraída por la estrategia de clasificación",
     )
-    es_positivo: Optional[bool] = Field(
-        None, description="Indica si el caso es positivo según la clasificación"
-    )
     confidence_score: Optional[float] = Field(
         None, description="Score de confianza de la clasificación (0-1)"
     )

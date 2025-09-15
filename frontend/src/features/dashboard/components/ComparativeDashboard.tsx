@@ -7,12 +7,12 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CompactFilterBar } from './CompactFilterBar';
-import { 
+import {
   Activity,
-  TrendingUp,
-  Users,
   AlertTriangle,
+  FileText,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 // Import dynamic chart components
 import { DynamicChart } from './DynamicChart';
@@ -25,6 +25,7 @@ interface FilterCombination {
   groupName?: string;
   eventIds: number[];
   eventNames?: string[];
+  clasificaciones?: string[];
   label?: string;
   color?: string;
 }
@@ -57,17 +58,19 @@ const DynamicChartsColumn: React.FC<{
     eventoId: combination.eventIds?.[0] || null,
     fechaDesde: formatDateForApi(dateRange.from),
     fechaHasta: formatDateForApi(dateRange.to),
+    clasificaciones: combination.clasificaciones || [],
   });
 
   // Fetch indicadores data
-  const { 
-    data: indicadores, 
-    isLoading: indicadoresLoading 
+  const {
+    data: indicadores,
+    isLoading: indicadoresLoading
   } = useDashboardIndicadores({
     grupoId: combination.groupId ? parseInt(combination.groupId) : null,
     eventoId: combination.eventIds?.[0] || null,
     fechaDesde: formatDateForApi(dateRange.from),
     fechaHasta: formatDateForApi(dateRange.to),
+    clasificaciones: combination.clasificaciones || [],
   });
 
   if (isLoading) {
@@ -196,12 +199,60 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
 
   const columnStyle = calculateColumnStyle();
 
-  // Format date range for display
-  const formatDateRange = () => {
-    if (!dateRange.from || !dateRange.to) return '';
-    const options: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'short', year: 'numeric' };
-    return `${dateRange.from.toLocaleDateString('es', options)} - ${dateRange.to.toLocaleDateString('es', options)}`;
+
+  // Generate ZIP report with all combinations
+  const handleGenerateZipReport = async () => {
+    try {
+      const apiHost = process.env.NEXT_PUBLIC_API_HOST || 'http://localhost:8000';
+
+      // Prepare report request
+      const reportRequest = {
+        date_range: {
+          from: dateRange.from?.toISOString().split('T')[0] || '',
+          to: dateRange.to?.toISOString().split('T')[0] || '',
+        },
+        combinations: filterCombinations.map(combo => ({
+          id: combo.id,
+          group_id: combo.groupId ? parseInt(combo.groupId) : null,
+          group_name: combo.groupName || '',
+          event_ids: combo.eventIds || [],
+          event_names: combo.eventNames || [],
+          clasificaciones: combo.clasificaciones || [],
+        })),
+        format: 'pdf'
+      };
+
+      // Make API request
+      const response = await fetch(`${apiHost}/api/v1/reports/generate-zip`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(reportRequest),
+      });
+
+      if (!response.ok) {
+        throw new Error('Error generating ZIP report');
+      }
+
+      // Download ZIP file
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `reporte_epidemiologico_${new Date().toISOString().split('T')[0]}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      console.log(`✅ Generated ZIP report with ${filterCombinations.length} PDFs`);
+    } catch (error) {
+      console.error('Error generating ZIP report:', error);
+      alert('Error al generar el reporte ZIP. Por favor intente nuevamente.');
+    }
   };
+
 
 
   if (filterCombinations.length === 0) {
@@ -221,12 +272,13 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
   }
 
   return (
-    <div className="h-full bg-gray-50 flex flex-col">
+    <div className="h-full bg-gray-50 flex flex-col dashboard-comparative-container">
       {/* Compact Filter Bar */}
       <CompactFilterBar
         dateRange={dateRange}
         filterCombinations={filterCombinations}
         onEditFilters={onBack || (() => {})}
+        onGenerateZipReport={handleGenerateZipReport}
         expanded={expandedFilters}
         onToggleExpand={() => setExpandedFilters(!expandedFilters)}
       />
