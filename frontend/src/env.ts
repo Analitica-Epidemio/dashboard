@@ -6,7 +6,9 @@ export const env = createEnv({
    * Specify your server-side environment variables schema here. This way you can ensure the app
    * isn't built with invalid env vars.
    */
-  server: {},
+  server: {
+    SECRET_KEY: z.string().min(1),
+  },
 
   /**
    * Specify your client-side environment variables schema here. This way you can ensure the app
@@ -27,6 +29,7 @@ export const env = createEnv({
   runtimeEnv: {
     NEXT_PUBLIC_API_HOST: process.env.NEXT_PUBLIC_API_HOST,
     NEXT_PUBLIC_APP_ENV: process.env.NEXT_PUBLIC_APP_ENV,
+    SECRET_KEY: process.env.SECRET_KEY,
   },
 
   /**

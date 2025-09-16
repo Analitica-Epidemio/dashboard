@@ -2,14 +2,13 @@
 
 import { useQuery } from '@tanstack/react-query'
 import type { ChartData } from '../types'
-import { useGruposEno, extractGruposEnoData } from '@/lib/api/gruposEno'
-import { useTiposEno, useTiposEnoByGrupo, extractTiposEnoData } from '@/lib/api/tiposEno'
+import { $api } from '@/lib/api/client'
 
 // Fetch chart data - mock data for now
 const fetchChartData = async (eventId: string): Promise<ChartData[]> => {
   // TODO: Connect to actual chart endpoints when available
   // For now, return mock data to keep the UI functional
-  
+
   const generateRandomData = (baseValue: number, points: number = 12) => {
     const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
     return months.slice(0, points).map((month) => ({
@@ -27,7 +26,7 @@ const fetchChartData = async (eventId: string): Promise<ChartData[]> => {
   }
 
   const baseValue = Math.floor(Math.random() * 100 + 20)
-  
+
   const charts: ChartData[] = [
     {
       title: `Evolución mensual - Evento ${eventId}`,
@@ -54,23 +53,26 @@ const fetchChartData = async (eventId: string): Promise<ChartData[]> => {
       color: '#ff7c7c'
     }
   ]
-  
+
   return charts
 }
 
-// React Query hooks
+// React Query hooks using $api directly
 export const useGroups = () => {
-  const query = useGruposEno({ per_page: 100 })
-  
-  const extractedData = query.data ? extractGruposEnoData(query.data) : null;
-  
-  // extractedData ya es un array directo, no necesita .data
-  const mappedData = extractedData?.map((grupo) => ({
+  const query = $api.useQuery('get', '/api/v1/gruposEno/', {
+    params: {
+      query: {
+        per_page: 100
+      }
+    }
+  })
+
+  const mappedData = query.data?.data?.map((grupo) => ({
     id: String(grupo.id),
     name: grupo.nombre,
     description: grupo.descripcion
   }));
-  
+
   return {
     ...query,
     data: mappedData
@@ -78,19 +80,22 @@ export const useGroups = () => {
 }
 
 export const useAllEvents = () => {
-  const query = useTiposEno({ per_page: 100 })
-  
-  const extractedData = query.data ? extractTiposEnoData(query.data) : null;
-  
-  // extractedData ya es un array directo, no necesita .data
-  const mappedData = extractedData?.map((tipo) => ({
+  const query = $api.useQuery('get', '/api/v1/tiposEno/', {
+    params: {
+      query: {
+        per_page: 100
+      }
+    }
+  })
+
+  const mappedData = query.data?.data?.map((tipo) => ({
     id: String(tipo.id),
     name: tipo.nombre,
     groupId: String(tipo.id_grupo_eno),
     description: tipo.descripcion,
     groupName: tipo.grupo_nombre
   }));
-  
+
   return {
     ...query,
     data: mappedData
@@ -98,19 +103,24 @@ export const useAllEvents = () => {
 }
 
 export const useEventsByGroup = (groupId: string | null) => {
-  const query = useTiposEnoByGrupo(groupId ? Number(groupId) : null)
-  
-  const extractedData = query.data ? extractTiposEnoData(query.data) : null;
-  
-  // extractedData ya es un array directo, no necesita .data
-  const mappedData = extractedData?.map((tipo) => ({
+  const query = $api.useQuery('get', '/api/v1/tiposEno/', {
+    params: {
+      query: {
+        per_page: 100,
+        id_grupo_eno: groupId ? Number(groupId) : undefined
+      }
+    },
+    enabled: !!groupId
+  })
+
+  const mappedData = query.data?.data?.map((tipo) => ({
     id: String(tipo.id),
     name: tipo.nombre,
     groupId: String(tipo.id_grupo_eno),
     description: tipo.descripcion,
     groupName: tipo.grupo_nombre
   }));
-  
+
   return {
     ...query,
     data: mappedData

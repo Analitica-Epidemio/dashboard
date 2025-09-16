@@ -4,45 +4,85 @@
 import { useQuery } from '@tanstack/react-query';
 import { env } from '@/env';
 
-interface DashboardChartsParams {
+export interface DashboardChartsParams {
   grupoId?: number | null;
   eventoId?: number | null;
   fechaDesde?: string | null;
   fechaHasta?: string | null;
+  clasificaciones?: string[];
 }
 
-interface ChartData {
+export interface ChartConfig {
+  height?: number;
+  [key: string]: any;
+}
+
+export interface ChartDataset {
+  label: string;
+  data: number[];
+  backgroundColor?: string | string[];
+  borderColor?: string;
+  [key: string]: any;
+}
+
+export interface ChartDataStructure {
+  type: 'line' | 'bar' | 'pie' | 'doughnut' | 'radar' | string;
+  data: {
+    labels: string[];
+    datasets: ChartDataset[];
+  };
+}
+
+export interface ChartData {
   codigo: string;
   nombre: string;
   descripcion?: string;
   tipo: string;
-  data: any;
-  config: any;
+  data: ChartDataStructure;
+  config: ChartConfig;
 }
 
-interface DashboardChartsResponse {
+export interface DashboardChartsData {
   charts: ChartData[];
   total: number;
   filtros_aplicados: any;
 }
 
+export interface DashboardChartsApiResponse {
+  data: DashboardChartsData;
+  meta: any;
+}
+
 export function useDashboardCharts(params: DashboardChartsParams) {
-  return useQuery<DashboardChartsResponse>({
+  return useQuery<DashboardChartsApiResponse>({
     queryKey: ['dashboard-charts', params],
     queryFn: async () => {
       const queryParams = new URLSearchParams();
-      
+
       if (params.grupoId) queryParams.append('grupo_id', params.grupoId.toString());
       if (params.eventoId) queryParams.append('evento_id', params.eventoId.toString());
       if (params.fechaDesde) queryParams.append('fecha_desde', params.fechaDesde);
       if (params.fechaHasta) queryParams.append('fecha_hasta', params.fechaHasta);
-      
-      const response = await fetch(`${env.NEXT_PUBLIC_API_HOST}/api/v1/charts/dashboard?${queryParams.toString()}`);
-      
+      if (params.clasificaciones && params.clasificaciones.length > 0) {
+        params.clasificaciones.forEach(c => queryParams.append('clasificaciones', c));
+      }
+
+      // Obtener el token de la sesión
+      const { getSession } = await import('next-auth/react');
+      const session = await getSession();
+
+      const response = await fetch(`${env.NEXT_PUBLIC_API_HOST}/api/v1/charts/dashboard?${queryParams.toString()}`, {
+        headers: {
+          ...(session?.accessToken && {
+            'Authorization': `Bearer ${session.accessToken}`
+          })
+        }
+      });
+
       if (!response.ok) {
         throw new Error(`Error fetching charts: ${response.statusText}`);
       }
-      
+
       return response.json();
     },
     enabled: !!params.grupoId, // Solo ejecutar si hay grupo seleccionado

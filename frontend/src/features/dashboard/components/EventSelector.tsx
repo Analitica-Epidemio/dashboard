@@ -1,15 +1,11 @@
 'use client'
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { useState, useEffect } from 'react'
+import { InfiniteCombobox, type ComboboxOption } from '@/components/ui/infinite-combobox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
+import { useInfiniteEvents } from '../services/paginatedQueries'
 import type { Event } from '../types'
 
 interface EventSelectorProps {
@@ -19,16 +15,40 @@ interface EventSelectorProps {
   disabled?: boolean
   loading?: boolean
   error?: Error | null
+  groupId?: string | null
 }
 
-export function EventSelector({ 
-  events, 
-  selectedEventId, 
-  onEventChange, 
-  disabled, 
-  loading, 
-  error 
+export function EventSelector({
+  events: fallbackEvents,
+  selectedEventId,
+  onEventChange,
+  disabled,
+  loading: fallbackLoading,
+  error: fallbackError,
+  groupId
 }: EventSelectorProps) {
+  const [search, setSearch] = useState('')
+
+  // Use infinite scroll hook for events
+  const {
+    events,
+    hasMore,
+    isLoading,
+    loadMore,
+    error: infiniteError,
+    isError
+  } = useInfiniteEvents(groupId || undefined, search)
+
+  // Reset search when group changes
+  useEffect(() => {
+    setSearch('')
+  }, [groupId])
+
+  // Use fallback events if infinite query hasn't loaded yet
+  const displayEvents = events.length > 0 ? events : fallbackEvents
+  const loading = isLoading && events.length === 0
+  const error = isError ? infiniteError : fallbackError
+
   if (loading) {
     return (
       <div className="space-y-2">
@@ -45,38 +65,40 @@ export function EventSelector({
         <Alert variant="destructive" className="w-[300px]">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            {error.message || 'Error al cargar eventos'}
+            {error?.message || 'Error al cargar eventos'}
           </AlertDescription>
         </Alert>
       </div>
     )
   }
 
+  // Convert events to combobox options
+  const options: ComboboxOption[] = displayEvents.map(event => ({
+    value: event.id,
+    label: event.name
+  }))
+
   return (
     <div className="space-y-2">
       <label className="text-sm font-medium">Seleccionar Evento</label>
-      <Select 
-        value={selectedEventId || ''} 
+      <InfiniteCombobox
+        options={options}
+        value={selectedEventId || undefined}
         onValueChange={(value) => onEventChange(value || null)}
-        disabled={disabled || events.length === 0}
-      >
-        <SelectTrigger className="w-[300px]">
-          <SelectValue 
-            placeholder={
-              disabled || events.length === 0 
-                ? "Primero selecciona un grupo..." 
-                : "Selecciona un evento..."
-            } 
-          />
-        </SelectTrigger>
-        <SelectContent>
-          {events.map((event) => (
-            <SelectItem key={event.id} value={event.id}>
-              {event.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        onSearch={setSearch}
+        onLoadMore={loadMore}
+        hasMore={hasMore}
+        isLoading={isLoading}
+        disabled={disabled || !groupId}
+        placeholder={
+          disabled || !groupId
+            ? "Primero selecciona un grupo..."
+            : "Buscar o seleccionar evento..."
+        }
+        searchPlaceholder="Buscar evento..."
+        emptyMessage="No se encontraron eventos"
+        className="w-full"
+      />
     </div>
   )
 }

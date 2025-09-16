@@ -20,7 +20,8 @@ import {
   IconMenu2,
   IconChevronLeft,
 } from "@tabler/icons-react";
-import { navigationConfig, getNavigationItems, getUserData } from "../navigation-config";
+import { navigationConfig, getNavigationItems } from "../navigation-config";
+import { useAuth } from "@/features/auth/hooks";
 
 interface CollapsibleSidebarProps {
   className?: string;
@@ -34,9 +35,15 @@ export const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const [isPinned, setIsPinned] = useState(false);
   const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
-  
+
   const navItems = getNavigationItems();
-  const userData = getUserData();
+  const { user } = useAuth();
+
+  const userData = {
+    name: user?.name || "Usuario",
+    email: user?.email || "usuario@epidemio.com",
+    avatar: user?.image || "/avatars/default.jpg",
+  };
 
   // Clear timeout on unmount
   useEffect(() => {

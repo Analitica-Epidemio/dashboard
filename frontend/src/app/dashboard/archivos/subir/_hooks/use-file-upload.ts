@@ -64,10 +64,19 @@ async function uploadSelectedSheetAsync(params: SheetUploadParams): Promise<Asyn
   formData.append("original_filename", originalFilename);
   formData.append("sheet_name", selectedSheetName);
 
-  // Usar endpoint asíncrono moderno
+  // Obtener el token de la sesión
+  const { getSession } = await import('next-auth/react');
+  const session = await getSession();
+
+  // Usar endpoint asíncrono moderno con autenticación
   const response = await fetch(getUploadCsvAsyncUrl(), {
     method: "POST",
     body: formData,
+    headers: {
+      ...(session?.accessToken && {
+        'Authorization': `Bearer ${session.accessToken}`
+      })
+    }
   });
 
   const result = await response.json();

@@ -6,13 +6,17 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
+import {
   Calendar,
   Filter,
   Edit,
   X,
   ChevronDown,
   ChevronUp,
+  Download,
+  FileText,
+  Loader2,
+  ExternalLink,
 } from 'lucide-react';
 
 interface FilterCombination {
@@ -21,6 +25,7 @@ interface FilterCombination {
   groupName?: string;
   eventIds: number[];
   eventNames?: string[];
+  clasificaciones?: string[];
   label?: string;
   color?: string;
 }
@@ -34,16 +39,24 @@ interface CompactFilterBarProps {
   dateRange: DateRange;
   filterCombinations: FilterCombination[];
   onEditFilters: () => void;
+  onGenerateZipReport?: () => void;
+  onGenerateSignedUrl?: () => void;
   expanded?: boolean;
   onToggleExpand?: () => void;
+  isGeneratingReport?: boolean;
+  isGeneratingSignedUrl?: boolean;
 }
 
 export const CompactFilterBar: React.FC<CompactFilterBarProps> = ({
   dateRange,
   filterCombinations,
   onEditFilters,
+  onGenerateZipReport,
+  onGenerateSignedUrl,
   expanded = false,
   onToggleExpand,
+  isGeneratingReport = false,
+  isGeneratingSignedUrl = false,
 }) => {
   const formatDateRange = () => {
     if (!dateRange.from || !dateRange.to) return 'Sin rango';
@@ -126,6 +139,44 @@ export const CompactFilterBar: React.FC<CompactFilterBarProps> = ({
               </Button>
             )}
             
+            {/* Generate Signed URL for SSR */}
+            {onGenerateSignedUrl && filterCombinations.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onGenerateSignedUrl}
+                disabled={isGeneratingSignedUrl}
+                title="Generar URL para vista de reporte"
+                className="bg-green-50 border-green-200 hover:bg-green-100"
+              >
+                {isGeneratingSignedUrl ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <ExternalLink className="h-4 w-4 mr-1" />
+                )}
+                {isGeneratingSignedUrl ? 'Generando URL...' : 'Vista Reporte'}
+              </Button>
+            )}
+
+            {/* Generate ZIP Report */}
+            {onGenerateZipReport && filterCombinations.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onGenerateZipReport}
+                disabled={isGeneratingReport}
+                title={`Generar ${filterCombinations.length} reportes PDF en ZIP`}
+                className="bg-blue-50 border-blue-200 hover:bg-blue-100"
+              >
+                {isGeneratingReport ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4 mr-1" />
+                )}
+                {isGeneratingReport ? 'Generando...' : `Descargar Reportes (${filterCombinations.length})`}
+              </Button>
+            )}
+
             <Button
               variant="outline"
               size="sm"

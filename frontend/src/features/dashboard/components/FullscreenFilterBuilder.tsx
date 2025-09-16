@@ -23,6 +23,11 @@ import {
 } from 'lucide-react';
 import { GroupSelector } from './GroupSelector';
 import { EventSelector } from './EventSelector';
+import {
+  ClassificationSelector,
+  ClassificationBadges,
+  TipoClasificacion
+} from './ClassificationSelector';
 
 interface FilterCombination {
   id: string;
@@ -30,6 +35,7 @@ interface FilterCombination {
   groupName?: string;
   eventIds: number[];
   eventNames?: string[];
+  clasificaciones?: TipoClasificacion[];
   label?: string;
   color?: string;
 }
@@ -110,11 +116,12 @@ export const FullscreenFilterBuilder: React.FC<FullscreenFilterBuilderProps> = (
       id: `filter-${Date.now()}`,
       groupId: currentFilter.groupId,
       groupName: group?.name,
-      eventIds: currentFilter.eventIds.length > 0 ? currentFilter.eventIds : 
+      eventIds: currentFilter.eventIds.length > 0 ? currentFilter.eventIds :
                 currentAvailableEvents.map(e => e.id),
-      eventNames: currentFilter.eventIds.length > 0 ? 
-                  selectedEvents.map(e => e.name) : 
+      eventNames: currentFilter.eventIds.length > 0 ?
+                  selectedEvents.map(e => e.name) :
                   ['Todos los eventos'],
+      clasificaciones: currentFilter.clasificaciones,
       color: COMBINATION_COLORS[filterCombinations.length % COMBINATION_COLORS.length],
     };
 
@@ -329,6 +336,28 @@ export const FullscreenFilterBuilder: React.FC<FullscreenFilterBuilderProps> = (
                     </div>
                   )}
 
+                  {/* Classification selector */}
+                  {currentFilter.groupId && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 block mb-2">
+                        3. Selecciona Clasificaciones (opcional)
+                      </label>
+                      <ClassificationSelector
+                        selectedClassifications={currentFilter.clasificaciones || []}
+                        onClassificationChange={(classifications) =>
+                          setCurrentFilter({
+                            ...currentFilter,
+                            clasificaciones: classifications,
+                          })
+                        }
+                        placeholder="Todas las clasificaciones"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Filtrar por estado epidemiológico (confirmados, sospechosos, etc.)
+                      </p>
+                    </div>
+                  )}
+
                   {/* Add button */}
                   {currentFilter.groupId && (
                     <div className="flex justify-end">
@@ -429,7 +458,7 @@ export const FullscreenFilterBuilder: React.FC<FullscreenFilterBuilderProps> = (
                           <div className="mt-2 flex flex-wrap gap-1">
                             {combination.eventNames.slice(0, 3).map((name, i) => (
                               <span key={i} className="text-xs text-gray-600">
-                                {name}{i < Math.min(2, combination.eventNames.length - 1) && ','}
+                                {name}{i < Math.min(2, combination.eventNames!.length - 1) && ','}
                               </span>
                             ))}
                             {combination.eventNames.length > 3 && (
@@ -437,6 +466,13 @@ export const FullscreenFilterBuilder: React.FC<FullscreenFilterBuilderProps> = (
                                 +{combination.eventNames.length - 3} más
                               </span>
                             )}
+                          </div>
+                        )}
+                        {combination.clasificaciones && combination.clasificaciones.length > 0 && (
+                          <div className="mt-2">
+                            <ClassificationBadges
+                              classifications={combination.clasificaciones}
+                            />
                           </div>
                         )}
                       </div>

@@ -58,7 +58,17 @@ export function useJobProgress(): UseJobProgressReturn {
     try {
       setState(prev => ({ ...prev, isLoading: true, error: null }));
 
-      const response = await fetch(getJobStatusUrl(jobId));
+      // Obtener el token de la sesión
+      const { getSession } = await import('next-auth/react');
+      const session = await getSession();
+
+      const response = await fetch(getJobStatusUrl(jobId), {
+        headers: {
+          ...(session?.accessToken && {
+            'Authorization': `Bearer ${session.accessToken}`
+          })
+        }
+      });
       const result = await response.json();
 
       if (!response.ok) {
@@ -141,8 +151,17 @@ export function useJobProgress(): UseJobProgressReturn {
     try {
       setState(prev => ({ ...prev, isLoading: true, error: null }));
 
+      // Obtener el token de la sesión
+      const { getSession } = await import('next-auth/react');
+      const session = await getSession();
+
       const response = await fetch(getCancelJobUrl(currentJobIdRef.current), {
         method: "DELETE",
+        headers: {
+          ...(session?.accessToken && {
+            'Authorization': `Bearer ${session.accessToken}`
+          })
+        }
       });
 
       if (!response.ok) {

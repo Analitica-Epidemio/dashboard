@@ -53,22 +53,12 @@ export const navigationConfig = {
       url: "/dashboard/estrategias",
     },
   ] as NavItem[],
-  
-  user: {
-    name: "Usuario",
-    email: "usuario@epidemio.com",
-    avatar: "/avatars/default.jpg",
-  } as UserData,
-  
+
   appName: "Epidemiología",
 };
 
 export function getNavigationItems() {
   return navigationConfig.navMain;
-}
-
-export function getUserData() {
-  return navigationConfig.user;
 }
 
 export function getAppName() {

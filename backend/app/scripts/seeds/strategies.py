@@ -12,16 +12,17 @@ from typing import Dict, List, Optional
 # Agregar el directorio raíz al path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from sqlalchemy import create_engine, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
-from app.domains.estrategias.models import (
+
+from app.domains.eventos_epidemiologicos.clasificacion.models import (
     ClassificationRule,
     EventStrategy,
     FilterCondition,
     TipoClasificacion,
     TipoFiltro,
 )
-from app.domains.eventos.models import GrupoEno, TipoEno
+from app.domains.eventos_epidemiologicos.eventos.models import GrupoEno, TipoEno
 
 
 class StrategySeeder:
@@ -91,35 +92,35 @@ class StrategySeeder:
 
         # Lista de tipos ENO requeridos (NOMBRES EXACTOS DEL CSV)
         tipos_required = [
-            ("Dengue", "DENGUE"),
-            ("Tuberculosis", "TUBERCULOSIS"),
-            ("Sífilis", "SIFILIS"),
-            ("VIH", "VIH"),
-            ("SUH - Sindrome Urémico Hemolítico", "SUH"),
-            ("Intento de Suicidio", "SUICIDIO"),
-            ("Intoxicación/Exposición por Monóxido de Carbono", "INT_MON_CARBONO"),
-            ("Estudio de SARS-COV-2 en situaciones especiales", "SARS_COV2_ESPECIAL"),
+            ("Dengue", "dengue"),
+            ("Tuberculosis", "tuberculosis"),
+            ("Sífilis", "sifilis"),
+            ("VIH", "vih"),
+            ("SUH - Sindrome Urémico Hemolítico", "suh-sindrome-uremico-hemolitico"),
+            ("Intento de Suicidio", "intento-de-suicidio"),
+            ("Intoxicación/Exposición por Monóxido de Carbono", "intoxicacion-exposicion-por-monoxido-de-carbono"),
+            ("Estudio de SARS-COV-2 en situaciones especiales", "estudio-de-sars-cov-2-en-situaciones-especiales"),
             (
                 "Unidad Centinela de Infección Respiratoria Aguda Grave (UC-IRAG)",
-                "UC_IRAG",
+                "unidad-centinela-de-infeccion-respiratoria-aguda-grave-uc-irag",
             ),
-            ("Sífilis en personas gestantes", "SIFILIS_GESTANTES"),
-            ("Diarrea aguda", "DIARREA_AGUDA"),
-            ("Meningoencefalitis", "MENINGO"),
+            ("Sífilis en personas gestantes", "sifilis-en-personas-gestantes"),
+            ("Diarrea aguda", "diarrea-aguda"),
+            ("Meningoencefalitis", "meningoencefalitis"),
             (
                 "Otras infecciones invasivas (bacterianas y otras)",
-                "OTRAS_INFECCIONES_INVASIVAS",
+                "otras-infecciones-invasivas-bacterianas-y-otras",
             ),
-            ("Hidatidosis", "HIDATIDOSIS"),
-            ("Accidente potencialmente rábico (APR)", "APR_RABIA"),
-            ("Hantavirosis", "HANTAVIRUS"),
-            ("Araneísmo-Envenenamiento por Latrodectus (Latrodectismo)", "ARANEISMO"),
-            ("Chagas crónico", "CHAGAS_CRONICO"),
-            ("Brucelosis", "BRUCELOSIS"),
-            ("Sospecha de brote de ETA", "BROTE_ETA"),
-            ("Coqueluche", "COQUELUCHE"),
-            ("Hepatitis B", "HEP_B"),
-            ("Hepatitis C", "HEP_C"),
+            ("Hidatidosis", "hidatidosis"),
+            ("Accidente potencialmente rábico (APR)", "accidente-potencialmente-rabico-apr"),
+            ("Hantavirosis", "hantavirosis"),
+            ("Araneísmo-Envenenamiento por Latrodectus (Latrodectismo)", "araneismo-envenenamiento-por-latrodectus-latrodectismo"),
+            ("Chagas crónico", "chagas-cronico"),
+            ("Brucelosis", "brucelosis"),
+            ("Sospecha de brote de ETA", "sospecha-de-brote-de-eta"),
+            ("Coqueluche", "coqueluche"),
+            ("Hepatitis B", "hepatitis-b"),
+            ("Hepatitis C", "hepatitis-c"),
         ]
 
         for nombre, codigo in tipos_required:
@@ -129,19 +130,18 @@ class StrategySeeder:
 
     def _get_or_create_grupo_eno(self, nombre: str, descripcion: str) -> GrupoEno:
         """Obtiene o crea un grupo ENO."""
-        # Convertir a mayúsculas para consistencia
-        nombre_upper = nombre.upper()
-        codigo_upper = "VIGILANCIA"
+        # Usar kebab-case para código
+        codigo_kebab = "vigilancia-epidemiologica"
 
-        # Buscar existente por nombre en mayúsculas
+        # Buscar existente por nombre (sin convertir a mayúsculas)
         result = self.session.execute(
-            select(GrupoEno).where(GrupoEno.nombre == nombre_upper)
+            select(GrupoEno).where(GrupoEno.nombre == nombre)
         )
         grupo = result.scalar_one_or_none()
 
         if not grupo:
             grupo = GrupoEno(
-                nombre=nombre_upper, descripcion=descripcion, codigo=codigo_upper
+                nombre=nombre, descripcion=descripcion, codigo=codigo_kebab
             )
             self.session.add(grupo)
             self.session.flush()
@@ -153,22 +153,18 @@ class StrategySeeder:
     ) -> TipoEno:
         """Obtiene o crea un tipo ENO."""
 
-        # Convertir a mayúsculas para consistencia
-        nombre_upper = nombre.upper()
-        codigo_upper = codigo.upper()
-
-        # Buscar existente por nombre en mayúsculas
+        # Buscar existente por código kebab-case
         result = self.session.execute(
-            select(TipoEno).where(TipoEno.nombre == nombre_upper)
+            select(TipoEno).where(TipoEno.codigo == codigo)
         )
         tipo_eno = result.scalar_one_or_none()
 
         if not tipo_eno:
             tipo_eno = TipoEno(
-                nombre=nombre_upper,
-                codigo=codigo_upper,
+                nombre=nombre,
+                codigo=codigo,  # kebab-case
                 id_grupo_eno=grupo_id,
-                descripcion=f"Eventos de tipo {nombre_upper}",
+                descripcion=f"Eventos de tipo {nombre}",
             )
             self.session.add(tipo_eno)
             self.session.flush()
@@ -204,7 +200,7 @@ class StrategySeeder:
 
         strategy = EventStrategy(
             tipo_eno_id=tipo_eno.id,
-            name=strategy_name.upper(),
+            name=strategy_name,  # No convertir a mayúsculas
             description=description,
             notas_admin=notas_admin,
             casos_especiales=casos_especiales,
@@ -1273,6 +1269,7 @@ class StrategySeeder:
 def main():
     """Función principal para ejecutar el seed."""
     import os
+
     from sqlmodel import create_engine
 
     try:

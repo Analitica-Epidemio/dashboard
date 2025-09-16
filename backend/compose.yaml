@@ -62,17 +62,22 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
       SECRET_KEY: ${SECRET_KEY:-development_secret_key_change_in_production}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000,http://host.docker.internal:3000}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0}
       PYTHONPATH: /app
       PYTHONDONTWRITEBYTECODE: 1
       PYTHONUNBUFFERED: 1
+      # Playwright configuration
+      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+      # Frontend URL for Playwright to capture (host.docker.internal works on Mac/Windows)
+      FRONTEND_URL: ${FRONTEND_URL:-http://host.docker.internal:3000}
     ports:
       - "${API_PORT:-8000}:8000"
     volumes:
       - .:/app:cached  # cached mejora rendimiento en macOS
       - /app/.venv      # Preservar dependencias
       - ./uploads:/app/uploads
+      - playwright-cache:/ms-playwright  # Cache de browsers de Playwright
     depends_on:
       db:
         condition: service_healthy
@@ -86,6 +91,23 @@ services:
           target: /app/app
         - action: rebuild
           path: pyproject.toml
+
+  # =============================================================================
+  # pgweb - Interfaz web moderna y minimalista para PostgreSQL (solo desarrollo)
+  # =============================================================================
+  pgweb:
+    image: sosedoff/pgweb:latest
+    container_name: ${COMPOSE_PROJECT_NAME:-epi}_pgweb_dev
+    environment:
+      DATABASE_URL: postgres://${DB_USER:-epidemiologia_user}:${DB_PASSWORD:-epidemiologia_password}@db:5432/${DB_NAME:-epidemiologia_db}?sslmode=disable
+      PGWEB_DATABASE_URL: postgres://${DB_USER:-epidemiologia_user}:${DB_PASSWORD:-epidemiologia_password}@db:5432/${DB_NAME:-epidemiologia_db}?sslmode=disable
+    ports:
+      - "${PGWEB_PORT:-8081}:8081"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    command: /usr/bin/pgweb --bind=0.0.0.0 --listen=8081
 
   # =============================================================================
   # Celery Worker
@@ -125,6 +147,8 @@ volumes:
     name: ${COMPOSE_PROJECT_NAME:-epi}_postgres_data_dev
   redis_data:
     name: ${COMPOSE_PROJECT_NAME:-epi}_redis_data_dev
+  playwright-cache:
+    name: ${COMPOSE_PROJECT_NAME:-epi}_playwright_cache
 
 # =============================================================================
 # Red personalizada

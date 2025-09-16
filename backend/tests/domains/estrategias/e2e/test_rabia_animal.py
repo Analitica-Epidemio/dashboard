@@ -7,7 +7,7 @@ usando casos reales y la lógica legacy como referencia.
 
 import pandas as pd
 
-from app.domains.estrategias.detectors import MetadataExtractor, TipoSujetoDetector
+from app.domains.eventos_epidemiologicos.clasificacion.detectors import MetadataExtractor, TipoSujetoDetector
 from tests.domains.estrategias.fixtures.csv_samples import RABIA_SAMPLES
 
 

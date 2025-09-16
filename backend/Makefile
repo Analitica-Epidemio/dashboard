@@ -192,6 +192,9 @@ rollback: ## Rollback last migration
 seed: ## Seed database with initial data
 	docker compose exec api uv run python -m app.scripts.seed
 
+create-superadmin: ## Create initial superadmin user interactively
+	docker compose exec -it api uv run python -m app.commands.create_superadmin
+
 # =============================================================================
 # LIMPIEZA
 # =============================================================================
