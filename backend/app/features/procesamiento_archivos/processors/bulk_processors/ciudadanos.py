@@ -11,9 +11,9 @@ from app.domains.sujetos_epidemiologicos.ciudadanos_models import (
     CiudadanoComorbilidades,
     CiudadanoDatos,
     CiudadanoDomicilio,
-    ViajesCiudadano,
 )
-from app.domains.atencion_medica.salud_models.models import Comorbilidad
+from app.domains.sujetos_epidemiologicos.viajes_models import ViajesCiudadano
+from app.domains.atencion_medica.salud_models import Comorbilidad
 
 from ..core.columns import Columns
 from .base import BulkProcessorBase
