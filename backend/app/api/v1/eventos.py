@@ -23,6 +23,8 @@ from sqlalchemy.orm import selectinload
 
 from app.core.database import get_async_session
 from app.core.schemas.response import ErrorResponse, SuccessResponse
+from app.core.security import RequireAnyRole
+from app.domains.auth.models import User
 from app.domains.ciudadanos.models import (
     Animal,
     Ciudadano,
@@ -445,8 +447,9 @@ async def list_eventos(
     requiere_revision: Optional[bool] = None,
     # Ordenamiento
     sort_by: EventoSortBy = EventoSortBy.FECHA_DESC,
-    # DB
+    # DB and Auth
     db: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(RequireAnyRole()),
 ) -> SuccessResponse[EventoListResponse]:
     """
     Lista eventos epidemiológicos con filtros y paginación.
@@ -717,6 +720,7 @@ async def get_evento_detail(
     evento_id: int,
     include_relations: bool = Query(True, description="Incluir datos relacionados"),
     db: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(RequireAnyRole()),
 ) -> SuccessResponse[EventoDetailResponse]:
     """
     Obtiene el detalle completo de un evento.
@@ -1049,7 +1053,9 @@ async def get_evento_detail(
     },
 )
 async def get_evento_timeline(
-    evento_id: int, db: AsyncSession = Depends(get_async_session)
+    evento_id: int,
+    db: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(RequireAnyRole())
 ) -> SuccessResponse[EventoTimelineResponse]:
     """
     Obtiene el timeline cronológico de un evento.
@@ -1204,6 +1210,7 @@ async def export_eventos(
     clasificacion: Optional[str] = None,
     formato: str = Query("csv", description="Formato de exportación (csv/excel)"),
     db: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(RequireAnyRole()),
 ):
     """
     Exporta eventos filtrados a CSV o Excel.

@@ -17,6 +17,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
 from app.core.schemas.response import ErrorResponse, SuccessResponse
+from app.core.security import RequireAnyRole, RequireSuperadmin
+from app.domains.auth.models import User
 from app.domains.estrategias.repositories import EventStrategyRepository
 from app.domains.estrategias.schemas import (
     AuditLogResponse,
@@ -44,6 +46,7 @@ async def list_strategies(
     active_only: Optional[bool] = None,
     tipo_eno_id: Optional[int] = None,
     db: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(RequireAnyRole()),
 ) -> SuccessResponse[List[EventStrategyResponse]]:
     """
     Listar todas las estrategias de clasificación.
@@ -89,7 +92,9 @@ async def list_strategies(
     },
 )
 async def get_strategy(
-    strategy_id: int, db: AsyncSession = Depends(get_async_session)
+    strategy_id: int,
+    db: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(RequireAnyRole())
 ) -> SuccessResponse[EventStrategyResponse]:
     """
     Obtener una estrategia específica por ID.
@@ -139,7 +144,9 @@ async def get_strategy(
     },
 )
 async def create_strategy(
-    strategy_data: EventStrategyCreate, db: AsyncSession = Depends(get_async_session)
+    strategy_data: EventStrategyCreate,
+    db: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(RequireSuperadmin())
 ) -> SuccessResponse[EventStrategyResponse]:
     """
     Crear nueva estrategia de clasificación.
@@ -199,6 +206,7 @@ async def update_strategy(
     strategy_id: int,
     strategy_data: EventStrategyUpdate,
     db: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(RequireSuperadmin()),
 ) -> SuccessResponse[EventStrategyResponse]:
     """
     Actualizar estrategia existente.
@@ -255,7 +263,10 @@ async def update_strategy(
     },
 )
 async def delete_strategy(
-    strategy_id: int, force: bool = False, db: AsyncSession = Depends(get_async_session)
+    strategy_id: int,
+    force: bool = False,
+    db: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(RequireSuperadmin())
 ):
     """
     Eliminar estrategia.
@@ -320,7 +331,9 @@ async def delete_strategy(
     },
 )
 async def activate_strategy(
-    strategy_id: int, db: AsyncSession = Depends(get_async_session)
+    strategy_id: int,
+    db: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(RequireSuperadmin())
 ) -> SuccessResponse[EventStrategyResponse]:
     """
     Activar estrategia.
@@ -375,6 +388,7 @@ async def test_strategy(
     strategy_id: int,
     test_data: StrategyTestRequest,
     db: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(RequireAnyRole()),
 ) -> SuccessResponse[StrategyTestResponse]:
     """
     Probar estrategia con datos de ejemplo.
@@ -442,7 +456,10 @@ async def test_strategy(
     },
 )
 async def get_strategy_audit_log(
-    strategy_id: int, limit: int = 50, db: AsyncSession = Depends(get_async_session)
+    strategy_id: int,
+    limit: int = 50,
+    db: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(RequireAnyRole())
 ) -> SuccessResponse[List[AuditLogResponse]]:
     """
     Obtener historial de auditoría de una estrategia.
