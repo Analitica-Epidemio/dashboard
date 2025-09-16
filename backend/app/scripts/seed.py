@@ -19,6 +19,7 @@ import os
 
 from app.scripts.seeds.charts import main as seed_charts
 from app.scripts.seeds.strategies import main as seed_strategies
+from app.scripts.seeds.seed_departamentos_chubut import main as seed_departamentos
 
 # Configurar logging
 logging.basicConfig(
@@ -39,16 +40,13 @@ def get_database_url():
 def run_all_seeds():
     """Ejecuta todos los seeds del sistema."""
     logger.info("🚀 Iniciando carga de datos iniciales...")
-    
-    # Seeds a ejecutar en orden
+
     seeds = [
+        ("Departamentos Chubut", seed_departamentos),
         ("Estrategias", seed_strategies),
         ("Charts", seed_charts),
-        # Agregar más seeds aquí cuando se creen:
-        # ("Establecimientos", seed_establecimientos),
-        # ("Usuarios", seed_usuarios),
     ]
-    
+
     for name, seed_func in seeds:
         try:
             logger.info(f"📦 Ejecutando seed: {name}")
@@ -69,7 +67,7 @@ def main():
     )
     parser.add_argument(
         "--only",
-        choices=["strategies", "charts", "all"],
+        choices=["departamentos", "strategies", "charts", "all"],
         default="all",
         help="Ejecutar solo un seed específico"
     )
@@ -80,8 +78,11 @@ def main():
     )
     
     args = parser.parse_args()
-    
-    if args.only == "strategies":
+
+    if args.only == "departamentos":
+        logger.info("Ejecutando solo seed de departamentos...")
+        seed_departamentos()
+    elif args.only == "strategies":
         logger.info("Ejecutando solo seed de estrategias...")
         seed_strategies()
     elif args.only == "charts":

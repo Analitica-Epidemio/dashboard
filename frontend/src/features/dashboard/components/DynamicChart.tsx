@@ -231,6 +231,25 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
           </div>
         );
 
+      case "mapa":
+        // Renderizar mapa geográfico de Chubut
+        if (!data.data || !data.data.departamentos) {
+          return (
+            <div className="flex items-center justify-center h-48 text-gray-500">
+              No hay datos geográficos disponibles
+            </div>
+          );
+        }
+
+        // Import dinámico del componente de mapa
+        const ChubutMapChart = React.lazy(() => import("./charts/ChubutMapChart"));
+
+        return (
+          <React.Suspense fallback={<div>Cargando mapa...</div>}>
+            <ChubutMapChart data={data.data} />
+          </React.Suspense>
+        );
+
       default:
         return (
           <div className="flex items-center justify-center h-48 text-gray-500">

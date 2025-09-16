@@ -24,7 +24,7 @@ class IndicadoresResponse(BaseModel):
 
     total_casos: int = Field(..., description="Total de casos registrados")
     tasa_incidencia: float = Field(..., description="Tasa de incidencia por 100.000 habitantes")
-    areas_afectadas: int = Field(..., description="Número de áreas/establecimientos afectados")
+    areas_afectadas: int = Field(..., description="Número de departamentos afectados")
     letalidad: float = Field(..., description="Tasa de letalidad en porcentaje")
     filtros_aplicados: Dict[str, Any] = Field(..., description="Filtros que se aplicaron a la consulta")
 
@@ -44,7 +44,7 @@ async def get_indicadores(
     Calcula:
     - Total de casos
     - Tasa de incidencia (por 100.000 habitantes)
-    - Áreas afectadas (localidades/establecimientos únicos)
+    - Áreas afectadas (departamentos únicos)
     - Letalidad (si hay datos de fallecidos)
     """
 
@@ -86,10 +86,13 @@ async def get_indicadores(
     result_casos = await db.execute(text(query_casos), params)
     total_casos = result_casos.scalar() or 0
 
-    # Query para áreas afectadas (establecimientos únicos)
+    # Query para áreas afectadas (departamentos únicos)
     query_areas = """
-    SELECT COUNT(DISTINCT COALESCE(e.id_establecimiento_notificacion, 0)) as areas_afectadas
+    SELECT COUNT(DISTINCT COALESCE(d.id_departamento_indec, 0)) as areas_afectadas
     FROM evento e
+    LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
+    LEFT JOIN localidad l ON est.id_localidad_establecimiento = l.id_localidad_indec
+    LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
     WHERE 1=1
     """
 

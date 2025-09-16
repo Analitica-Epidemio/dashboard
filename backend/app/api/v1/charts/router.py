@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from .get_dashboard import get_dashboard_charts
 from .get_disponibles import get_charts_disponibles
 from .get_indicadores import get_indicadores
+from .get_mapa_geografico import get_mapa_geografico
 
 router = APIRouter(prefix="/charts", tags=["Charts"])
 
@@ -28,5 +29,12 @@ router.add_api_route(
 router.add_api_route(
     "/disponibles",
     get_charts_disponibles,
+    methods=["GET"]
+)
+
+# Get geographic map data endpoint
+router.add_api_route(
+    "/mapa-geografico",
+    get_mapa_geografico,
     methods=["GET"]
 )

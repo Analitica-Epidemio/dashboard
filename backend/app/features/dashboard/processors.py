@@ -106,6 +106,7 @@ class ChartDataProcessor:
             "corredor_endemico": self.process_corredor_endemico,
             "piramide_poblacional": self.process_piramide_poblacional,
             "distribucion_geografica": self.process_distribucion_geografica,
+            "mapa_geografico": self.process_mapa_geografico,
             "totales_historicos": self.process_totales_historicos,
             "torta_sexo": self.process_torta_sexo,
             "casos_edad": self.process_casos_edad,
@@ -480,14 +481,16 @@ class ChartDataProcessor:
     
     async def process_distribucion_geografica(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Procesa datos para distribución geográfica (por departamento/establecimiento)
+        Procesa datos para distribución geográfica (por departamento)
         """
         query = """
-        SELECT 
-            COALESCE(est.nombre, 'Sin datos') as lugar,
+        SELECT
+            COALESCE(d.nombre, 'Sin datos') as lugar,
             COUNT(*) as casos
         FROM evento e
         LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
+        LEFT JOIN localidad l ON est.id_localidad_establecimiento = l.id_localidad_indec
+        LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
         WHERE 1=1
         """
         
@@ -550,7 +553,97 @@ class ChartDataProcessor:
                 }]
             }
         }
-    
+
+    async def process_mapa_geografico(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Procesa datos para mapa geográfico con departamentos de Chubut
+        """
+        from datetime import datetime
+        from app.core.constants.geografia_chubut import (
+            DEPARTAMENTOS_CHUBUT,
+            POBLACION_DEPARTAMENTOS,
+            get_zona_ugd
+        )
+
+        # Query para obtener casos por departamento
+        query = """
+        SELECT
+            COALESCE(d.id_departamento_indec, 0) as codigo_indec,
+            COUNT(*) as casos
+        FROM evento e
+        LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
+        LEFT JOIN localidad l ON est.id_localidad_establecimiento = l.id_localidad_indec
+        LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
+        WHERE d.id_provincia_indec = 26
+        """
+
+        params = {"provincia_id": 26}
+
+        if filtros.get("grupo_id"):
+            query += """
+                AND e.id_tipo_eno IN (
+                    SELECT id FROM tipo_eno WHERE id_grupo_eno = :grupo_id
+                )
+            """
+            params["grupo_id"] = filtros["grupo_id"]
+
+        if filtros.get("evento_id"):
+            query += " AND e.id_tipo_eno = :evento_id"
+            params["evento_id"] = filtros["evento_id"]
+
+        # Filtro por clasificación estrategia
+        query = self._add_classification_filter(query, filtros, params, "e")
+
+        if filtros.get("fecha_desde"):
+            query += " AND e.fecha_minima_evento >= :fecha_desde"
+            # Convert string to date if necessary
+            fecha_desde = filtros["fecha_desde"]
+            if isinstance(fecha_desde, str):
+                fecha_desde = datetime.strptime(fecha_desde, "%Y-%m-%d").date()
+            params["fecha_desde"] = fecha_desde
+
+        if filtros.get("fecha_hasta"):
+            query += " AND e.fecha_minima_evento <= :fecha_hasta"
+            # Convert string to date if necessary
+            fecha_hasta = filtros["fecha_hasta"]
+            if isinstance(fecha_hasta, str):
+                fecha_hasta = datetime.strptime(fecha_hasta, "%Y-%m-%d").date()
+            params["fecha_hasta"] = fecha_hasta
+
+        query += " GROUP BY d.id_departamento_indec"
+
+        result = await self.db.execute(text(query), params)
+        rows = result.fetchall()
+
+        # Crear mapa de casos por departamento
+        casos_por_departamento = {row.codigo_indec: row.casos for row in rows if row.codigo_indec}
+
+        # Construir datos para todos los departamentos
+        departamentos_data = []
+        for codigo_indec in DEPARTAMENTOS_CHUBUT.keys():
+            casos = casos_por_departamento.get(codigo_indec, 0)
+            poblacion = POBLACION_DEPARTAMENTOS.get(codigo_indec, 0)
+            tasa_incidencia = round((casos / poblacion) * 100000, 2) if poblacion > 0 else 0.0
+
+            departamentos_data.append({
+                "codigo_indec": codigo_indec,
+                "nombre": DEPARTAMENTOS_CHUBUT[codigo_indec],
+                "zona_ugd": get_zona_ugd(codigo_indec),
+                "poblacion": poblacion,
+                "casos": casos,
+                "tasa_incidencia": tasa_incidencia
+            })
+
+        logger.info(f"Mapa geográfico - Departamentos con casos: {len(casos_por_departamento)}")
+
+        return {
+            "type": "mapa",
+            "data": {
+                "departamentos": departamentos_data,
+                "total_casos": sum(casos_por_departamento.values())
+            }
+        }
+
     async def process_totales_historicos(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
         """
         Procesa datos para totales históricos por año
