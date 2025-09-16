@@ -47,7 +47,7 @@ DASHBOARD_CHARTS = [
         "funcion_procesamiento": "piramide_poblacional",
         "condiciones_display": None,
         "tipo_visualizacion": "d3_pyramid",
-        "configuracion_chart": {"height": 500},
+        "configuracion_chart": {"height": 300},
         "orden": 3,
         "activo": True
     },

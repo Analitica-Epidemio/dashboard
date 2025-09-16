@@ -206,13 +206,9 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
 
       case "d3_pyramid":
         // Renderizar pirámide poblacional con D3
-        console.log("DynamicChart recibió d3_pyramid data:", data);
+        const pyramidHeight = config.height || 300;
 
         if (!data.data || !Array.isArray(data.data)) {
-          console.log(
-            "DynamicChart - No hay datos válidos para pirámide:",
-            data.data
-          );
           return (
             <div className="flex items-center justify-center h-48 text-gray-500">
               No hay datos para la pirámide poblacional
@@ -220,14 +216,9 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
           );
         }
 
-        console.log(
-          "DynamicChart enviando datos a AgePyramidChart:",
-          data.data
-        );
-
         return (
-          <div className="w-full">
-            <AgePyramidChart data={data.data} width={800} height={400} />
+          <div className="w-full" style={{ height: pyramidHeight }}>
+            <AgePyramidChart data={data.data} width={800} height={pyramidHeight} />
           </div>
         );
 
