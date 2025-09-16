@@ -1031,6 +1031,44 @@ export interface components {
             sheet_name: string;
         };
         /**
+         * ChartDataItem
+         * @description Modelo para un chart individual del dashboard
+         */
+        ChartDataItem: {
+            /**
+             * Codigo
+             * @description Código único del chart
+             */
+            codigo: string;
+            /**
+             * Nombre
+             * @description Nombre del chart
+             */
+            nombre: string;
+            /**
+             * Descripcion
+             * @description Descripción del chart
+             */
+            descripcion?: string | null;
+            /**
+             * Tipo
+             * @description Tipo de visualización
+             */
+            tipo: string;
+            /**
+             * Data
+             * @description Datos del chart
+             */
+            data: unknown;
+            /**
+             * Config
+             * @description Configuración adicional del chart
+             */
+            config?: {
+                [key: string]: unknown;
+            };
+        };
+        /**
          * CiudadanoInfo
          * @description Información del ciudadano
          */
@@ -1203,6 +1241,29 @@ export interface components {
              * @description Contactos embarazadas
              */
             contactos_embarazadas?: number | null;
+        };
+        /**
+         * DashboardChartsResponse
+         * @description Response model para charts del dashboard
+         */
+        DashboardChartsResponse: {
+            /**
+             * Charts
+             * @description Lista de charts con sus datos
+             */
+            charts: components["schemas"]["ChartDataItem"][];
+            /**
+             * Total
+             * @description Total de charts aplicables
+             */
+            total: number;
+            /**
+             * Filtros Aplicados
+             * @description Filtros que se aplicaron
+             */
+            filtros_aplicados: {
+                [key: string]: unknown;
+            };
         };
         /**
          * DiagnosticoInfo
@@ -2524,6 +2585,18 @@ export interface components {
         SuccessResponse_AsyncJobResponse_: {
             /** @description Datos de la respuesta */
             data: components["schemas"]["AsyncJobResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[DashboardChartsResponse] */
+        SuccessResponse_DashboardChartsResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["DashboardChartsResponse"];
             /**
              * Meta
              * @description Metadata opcional (paginación, etc)
@@ -4216,15 +4289,15 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description ID del grupo seleccionado */
-                grupo_id?: number;
+                grupo_id?: number | null;
                 /** @description ID del evento seleccionado */
-                evento_id?: number;
-                /** @description Fecha desde */
-                fecha_desde?: string;
-                /** @description Fecha hasta */
-                fecha_hasta?: string;
+                evento_id?: number | null;
+                /** @description Fecha desde (formato: YYYY-MM-DD) */
+                fecha_desde?: string | null;
+                /** @description Fecha hasta (formato: YYYY-MM-DD) */
+                fecha_hasta?: string | null;
                 /** @description Filtrar por clasificaciones estratégicas */
-                clasificaciones?: string[];
+                clasificaciones?: string[] | null;
             };
             header?: never;
             path?: never;
@@ -4238,9 +4311,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["SuccessResponse_DashboardChartsResponse_"];
                 };
             };
             /** @description Validation Error */
