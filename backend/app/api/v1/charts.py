@@ -10,6 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, text
 
 from app.core.database import get_async_session
+from app.core.security import RequireAnyRole
+from app.domains.auth.models import User
 from app.domains.charts.models import DashboardChart
 from app.domains.charts.processors import ChartDataProcessor
 from app.domains.charts.conditions import ChartConditionResolver
@@ -26,17 +28,18 @@ async def get_dashboard_charts(
     fecha_desde: str = Query(None, description="Fecha desde"),
     fecha_hasta: str = Query(None, description="Fecha hasta"),
     clasificaciones: List[str] = Query(None, description="Filtrar por clasificaciones estratégicas"),
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(RequireAnyRole())
 ) -> Dict[str, Any]:
     """
     Obtiene los charts aplicables y sus datos según los filtros
-    
-    Simple: 
+
+    Simple:
     1. Busca qué charts aplican según las condiciones
     2. Procesa los datos de cada chart
     3. Devuelve todo listo para renderizar
     """
-    
+
     # Preparar filtros
     filtros = {
         "grupo_id": grupo_id,
@@ -93,7 +96,8 @@ async def get_indicadores(
     fecha_desde: str = Query(None, description="Fecha desde"),
     fecha_hasta: str = Query(None, description="Fecha hasta"),
     clasificaciones: List[str] = Query(None, description="Filtrar por clasificaciones estratégicas"),
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(RequireAnyRole())
 ) -> Dict[str, Any]:
     """
     Obtiene los indicadores de resumen para el dashboard
@@ -202,7 +206,8 @@ async def get_indicadores(
 
 @router.get("/disponibles")
 async def get_charts_disponibles(
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(RequireAnyRole())
 ) -> List[Dict[str, Any]]:
     """
     Lista todos los charts disponibles sin procesar datos

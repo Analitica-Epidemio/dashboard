@@ -1,12 +1,15 @@
-"""Middleware personalizado para manejo de excepciones y otros aspectos transversales."""
+"""Middleware personalizado para manejo de excepciones, autenticación y otros aspectos transversales."""
 
 import time
 import traceback
+import logging
 from typing import Any, Callable
 from uuid import uuid4
+from functools import wraps
 
-from fastapi import FastAPI, HTTPException, Request, Response, status
+from fastapi import FastAPI, HTTPException, Request, Response, status, Depends
 from fastapi.responses import JSONResponse
+from fastapi.security import HTTPBearer
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.core.exceptions import (
@@ -21,6 +24,9 @@ from app.core.exceptions import (
     ValidationException,
 )
 from app.core.schemas.response import ErrorDetail, ErrorResponse
+
+logger = logging.getLogger(__name__)
+security = HTTPBearer()
 
 
 class ExceptionHandlerMiddleware(BaseHTTPMiddleware):
@@ -163,8 +169,26 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         return response
 
 
+class AuthMiddleware(BaseHTTPMiddleware):
+    """
+    Global authentication middleware
+    Simple middleware for CORS preflight handling only
+    Authentication is handled explicitly by FastAPI dependencies
+    """
+
+    async def dispatch(self, request: Request, call_next):
+        # Skip for OPTIONS requests (CORS preflight)
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
+        return await call_next(request)
+
+
 def setup_middleware(app: FastAPI) -> None:
     """Configura todos los middlewares de la aplicación."""
+
+    # Middleware de autenticación (debe ir primero)
+    app.add_middleware(AuthMiddleware)
 
     # Middleware de logging (debe ir antes del manejo de excepciones)
     app.add_middleware(RequestLoggingMiddleware)

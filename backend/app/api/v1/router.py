@@ -12,10 +12,12 @@ from app.api.v1.tipos_eno import router as tipos_router
 from app.api.v1.grupos_eno import router as grupos_router
 from app.api.v1.charts import router as charts_router
 from app.api.v1.reports import router as reports_router
+from app.api.v1.auth import router as auth_router
 
 api_router = APIRouter(prefix="/api/v1")
 
 # Incluir routers
+api_router.include_router(auth_router)
 api_router.include_router(hello_router)
 api_router.include_router(uploads_router)
 api_router.include_router(estrategias_router)

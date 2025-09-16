@@ -11,6 +11,8 @@ from pydantic import BaseModel
 import io
 
 from app.core.database import get_async_session
+from app.core.security import RequireAnyRole
+from app.domains.auth.models import User
 from app.domains.reports.playwright_generator import playwright_generator
 from app.domains.reports.zip_generator import zip_generator
 from app.api.v1.charts import get_dashboard_charts, get_indicadores
@@ -41,7 +43,8 @@ class ReportRequest(BaseModel):
 @router.post("/generate")
 async def generate_report(
     request: ReportRequest,
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(RequireAnyRole())
 ) -> Response:
     """
     Genera un reporte PDF usando Playwright para capturar la página del frontend.
@@ -88,7 +91,8 @@ async def generate_report(
 @router.post("/generate-zip")
 async def generate_zip_report(
     request: ReportRequest,
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(RequireAnyRole())
 ) -> Response:
     """
     Generate ZIP report with multiple PDFs (one per combination) generated in parallel.
@@ -134,7 +138,8 @@ async def generate_zip_report(
 @router.post("/preview")
 async def preview_report(
     request: ReportRequest,
-    db: AsyncSession = Depends(get_async_session)
+    db: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(RequireAnyRole())
 ) -> Dict[str, Any]:
     """
     Obtiene los datos que se incluirían en el reporte sin generar el PDF

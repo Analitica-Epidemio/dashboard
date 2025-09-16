@@ -11,10 +11,12 @@ Arquitectura sin legacy:
 import logging
 import traceback
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status, Depends
 from fastapi.responses import JSONResponse
 
 from app.core.schemas.response import ErrorDetail, ErrorResponse, SuccessResponse
+from app.core.security import RequireAnyRole
+from app.domains.auth.models import User
 from app.domains.uploads.schemas import AsyncJobResponse, JobStatusResponse
 from app.domains.uploads.services import async_service
 
@@ -38,6 +40,7 @@ async def upload_csv_async(
     file: UploadFile = File(..., description="Archivo CSV epidemiológico"),
     original_filename: str = Form(..., description="Nombre del archivo Excel original"),
     sheet_name: str = Form(..., description="Nombre de la hoja convertida"),
+    current_user: User = Depends(RequireAnyRole())
 ):
     """
     Procesamiento asíncrono de CSV con Celery.
@@ -155,7 +158,10 @@ async def upload_csv_async(
     response_model=SuccessResponse[JobStatusResponse],
     responses={404: {"model": ErrorResponse, "description": "Job no encontrado"}},
 )
-async def get_job_status(job_id: str) -> SuccessResponse[JobStatusResponse]:
+async def get_job_status(
+    job_id: str,
+    current_user: User = Depends(RequireAnyRole())
+) -> SuccessResponse[JobStatusResponse]:
     """
     Obtener estado de un job de procesamiento.
 
@@ -203,7 +209,10 @@ async def get_job_status(job_id: str) -> SuccessResponse[JobStatusResponse]:
         },
     },
 )
-async def cancel_job(job_id: str):
+async def cancel_job(
+    job_id: str,
+    current_user: User = Depends(RequireAnyRole())
+):
     """
     Cancelar un job en progreso.
 
