@@ -32,7 +32,7 @@ def create_celery_app() -> Celery:
         broker=settings.CELERY_BROKER_URL,
         backend=settings.CELERY_RESULT_BACKEND,
         include=[
-            "app.domains.uploads.tasks",
+            "app.features.procesamiento_archivos.tasks",
             # Agregar más módulos de tasks aquí
         ],
     )
@@ -58,11 +58,11 @@ def create_celery_app() -> Celery:
         # Task routing y priority
         task_default_queue="default",
         task_routes={
-            "app.domains.uploads.tasks.process_csv_file": {
+            "app.features.procesamiento_archivos.tasks.process_csv_file": {
                 "queue": "file_processing",
                 "priority": 5,
             },
-            "app.domains.uploads.tasks.cleanup_old_files": {
+            "app.features.procesamiento_archivos.tasks.cleanup_old_files": {
                 "queue": "maintenance",
                 "priority": 1,
             },
@@ -82,12 +82,12 @@ def create_celery_app() -> Celery:
         # Beat scheduler (para tareas periódicas)
         beat_schedule={
             "cleanup-old-files": {
-                "task": "app.domains.uploads.tasks.cleanup_old_files",
+                "task": "app.features.procesamiento_archivos.tasks.cleanup_old_files",
                 "schedule": 3600.0,  # Cada hora
                 "options": {"queue": "maintenance"},
             },
             "cleanup-old-jobs": {
-                "task": "app.domains.uploads.tasks.cleanup_old_jobs",
+                "task": "app.features.procesamiento_archivos.tasks.cleanup_old_jobs",
                 "schedule": 7200.0,  # Cada 2 horas
                 "options": {"queue": "maintenance"},
             },

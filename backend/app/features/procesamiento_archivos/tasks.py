@@ -44,7 +44,7 @@ def convert_numpy_types(obj):
     return obj
 
 
-@file_processing_task(name="app.domains.uploads.tasks.process_csv_file")
+@file_processing_task(name="app.features.procesamiento_archivos.tasks.process_csv_file")
 def process_csv_file(self, job_id: str, file_path: str) -> Dict[str, Any]:
     """
     Procesa archivo CSV de forma simple y eficiente.
@@ -165,7 +165,7 @@ def process_csv_file(self, job_id: str, file_path: str) -> Dict[str, Any]:
                 logger.warning(f"No se pudo eliminar archivo temporal: {e}")
 
 
-@maintenance_task(name="app.domains.uploads.tasks.cleanup_old_files")
+@maintenance_task(name="app.features.procesamiento_archivos.tasks.cleanup_old_files")
 def cleanup_old_files() -> Dict[str, Any]:
     """Limpia archivos temporales antiguos."""
     logger.info("Limpiando archivos antiguos")
@@ -199,7 +199,7 @@ def cleanup_old_files() -> Dict[str, Any]:
         return {"status": "failed", "error": str(e)}
 
 
-@maintenance_task(name="app.domains.uploads.tasks.cleanup_old_jobs")
+@maintenance_task(name="app.features.procesamiento_archivos.tasks.cleanup_old_jobs")
 def cleanup_old_jobs() -> Dict[str, Any]:
     """Limpia jobs antiguos según políticas de retención."""
     logger.info("Limpiando jobs antiguos")
