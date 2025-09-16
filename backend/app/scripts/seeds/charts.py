@@ -19,7 +19,7 @@ from app.features.dashboard.models import DashboardChart
 # Configuración de charts basados en el sistema Chubut
 DASHBOARD_CHARTS = [
     {
-        "codigo": "curva_epidemiologica",
+        "codigo": "curva-epidemiologica",
         "nombre": "Curva Epidemiológica",
         "descripcion": "Casos por semana epidemiológica",
         "funcion_procesamiento": "curva_epidemiologica",
@@ -30,7 +30,7 @@ DASHBOARD_CHARTS = [
         "activo": True
     },
     {
-        "codigo": "corredor_endemico",
+        "codigo": "corredor-endemico",
         "nombre": "Corredor Endémico",
         "descripcion": "Comparación con histórico",
         "funcion_procesamiento": "corredor_endemico",
@@ -41,7 +41,7 @@ DASHBOARD_CHARTS = [
         "activo": True
     },
     {
-        "codigo": "piramide_poblacional",
+        "codigo": "piramide-poblacional",
         "nombre": "Pirámide Poblacional",
         "descripcion": "Distribución por edad y sexo",
         "funcion_procesamiento": "piramide_poblacional",
@@ -52,7 +52,7 @@ DASHBOARD_CHARTS = [
         "activo": True
     },
     {
-        "codigo": "distribucion_geografica",
+        "codigo": "distribucion-geografica",
         "nombre": "Distribución Geográfica",
         "descripcion": "Casos por departamento/UGD",
         "funcion_procesamiento": "distribucion_geografica",
@@ -63,7 +63,7 @@ DASHBOARD_CHARTS = [
         "activo": True
     },
     {
-        "codigo": "totales_historicos",
+        "codigo": "totales-historicos",
         "nombre": "Totales Históricos",
         "descripcion": "Evolución anual de casos",
         "funcion_procesamiento": "totales_historicos",
@@ -74,7 +74,7 @@ DASHBOARD_CHARTS = [
         "activo": True
     },
     {
-        "codigo": "torta_sexo",
+        "codigo": "torta-sexo",
         "nombre": "Distribución por Sexo",
         "descripcion": "Proporción de casos por sexo",
         "funcion_procesamiento": "torta_sexo",
@@ -85,7 +85,7 @@ DASHBOARD_CHARTS = [
         "activo": True
     },
     {
-        "codigo": "casos_edad",
+        "codigo": "casos-edad",
         "nombre": "Casos por Edad",
         "descripcion": "Distribución por grupos etarios",
         "funcion_procesamiento": "casos_edad",
@@ -96,7 +96,7 @@ DASHBOARD_CHARTS = [
         "activo": True
     },
     {
-        "codigo": "intento_suicidio",
+        "codigo": "intento-suicidio",
         "nombre": "Análisis Intentos Suicidio",
         "descripcion": "Métodos y factores",
         "funcion_procesamiento": "intento_suicidio",
@@ -107,7 +107,7 @@ DASHBOARD_CHARTS = [
         "activo": True
     },
     {
-        "codigo": "rabia_animal",
+        "codigo": "rabia-animal",
         "nombre": "Casos Rabia Animal",
         "descripcion": "Distribución por especie",
         "funcion_procesamiento": "rabia_animal",
@@ -118,7 +118,7 @@ DASHBOARD_CHARTS = [
         "activo": True
     },
     {
-        "codigo": "proporcion_ira",
+        "codigo": "proporcion-ira",
         "nombre": "Proporción IRA",
         "descripcion": "Distribución de infecciones respiratorias agudas",
         "funcion_procesamiento": "proporcion_ira",
