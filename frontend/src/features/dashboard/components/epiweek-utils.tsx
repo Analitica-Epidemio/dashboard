@@ -20,18 +20,27 @@ export function getEpiWeek(date: Date): { year: number; week: number } {
 
   // Inicio de SE1 = domingo anterior al primer jueves
   const se1Start = new Date(firstThursday);
-  se1Start.setDate(se1Start.getDate() - ((firstThursday.getDay() + 1) % 7)); // domingo anterior
+  se1Start.setDate(se1Start.getDate() - firstThursday.getDay()); // domingo anterior
 
   if (date < se1Start) {
     return getEpiWeek(new Date(date.getFullYear() - 1, 11, 31)); // recursivo
   }
 
-  const daysDiff = Math.floor((date.getTime() - se1Start.getTime()) / (1000 * 60 * 60 * 24));
-  const week = Math.floor(daysDiff / 7) + 1;
+  let weekStart = new Date(se1Start);
+  let week = 1;
 
-  const epiYear = (week === 1) ? se1Start.getFullYear() : date.getFullYear();
+  while (true) {
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6); // sábado
 
-  return { year: epiYear, week };
+    if (date >= weekStart && date <= weekEnd) {
+      return { year: weekStart.getFullYear(), week };
+    }
+
+    // avanzar a la siguiente semana
+    weekStart.setDate(weekStart.getDate() + 7);
+    week++;
+	}
 }
 
 /**
@@ -43,10 +52,8 @@ export function epiWeekToDates(year: number, week: number): { start: Date; end: 
   while (firstThursday.getDay() !== 4) {
     firstThursday.setDate(firstThursday.getDate() + 1);
   }
-
   const se1Start = new Date(firstThursday);
-  se1Start.setDate(se1Start.getDate() - ((firstThursday.getDay() + 1) % 7));
-
+  se1Start.setDate(se1Start.getDate() - firstThursday.getDay());
   const start = new Date(se1Start);
   start.setDate(start.getDate() + (week - 1) * 7);
   const end = new Date(start);
@@ -54,8 +61,3 @@ export function epiWeekToDates(year: number, week: number): { start: Date; end: 
 
   return { start, end };
 }
-
-
-
-
-
