@@ -143,7 +143,7 @@ const ChubutMapChart: React.FC<ChubutMapChartProps> = ({ data }) => {
       )}
 
       {/* Leyenda */}
-      <div className="absolute bottom-4 right-4 bg-white/80 backdrop-blur-sm rounded-lg p-3 shadow-lg z-10">
+      <div className="absolute bottom-2 right-4 bg-white/80 backdrop-blur-sm rounded-lg p-3 shadow-lg z-10">
         <div className="text-xs font-semibold mb-2">Tasa de incidencia</div>
         <div className="text-xs text-gray-600 mb-2">(por 100.000 hab.)</div>
         <div className="flex flex-col gap-1">
