@@ -5,7 +5,8 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 
-from sqlmodel import Field, Relationship, SQLModel
+from sqlalchemy import Column, DateTime
+from sqlmodel import Field, SQLModel
 
 
 class UserRole(str, Enum):
@@ -39,14 +40,29 @@ class User(SQLModel, table=True):
     is_email_verified: bool = Field(default=False)
     email_verification_token: Optional[str] = Field(default=None, max_length=255)
     password_reset_token: Optional[str] = Field(default=None, max_length=255)
-    password_reset_expires: Optional[datetime] = Field(default=None)
+    password_reset_expires: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True))
+    )
 
     # Audit fields
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: Optional[datetime] = Field(default=None)
-    last_login: Optional[datetime] = Field(default=None)
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(DateTime(timezone=True))
+    )
+    updated_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True))
+    )
+    last_login: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True))
+    )
     login_attempts: int = Field(default=0)
-    locked_until: Optional[datetime] = Field(default=None)
+    locked_until: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True))
+    )
 
 
 class UserSession(SQLModel, table=True):
@@ -63,13 +79,19 @@ class UserSession(SQLModel, table=True):
     device_fingerprint: Optional[str] = Field(default=None, max_length=255)
 
     # Session lifecycle
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    expires_at: datetime
-    last_activity: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(DateTime(timezone=True))
+    )
+    expires_at: datetime = Field(sa_column=Column(DateTime(timezone=True)))
+    last_activity: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(DateTime(timezone=True))
+    )
     is_active: bool = Field(default=True)
 
-    # Relationships
-    user: Optional[User] = Relationship()
+    # Relationships (disabled to avoid sync/async conflicts)
+    # user: Optional[User] = Relationship()
 
 
 class UserLogin(SQLModel, table=True):
@@ -87,7 +109,10 @@ class UserLogin(SQLModel, table=True):
     user_agent: Optional[str] = Field(default=None, max_length=500)
 
     # Timing
-    attempted_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    attempted_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(DateTime(timezone=True))
+    )
 
-    # Relationships
-    user: Optional[User] = Relationship()
+    # Relationships (disabled to avoid sync/async conflicts)
+    # user: Optional[User] = Relationship()

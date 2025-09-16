@@ -28,7 +28,7 @@ def validate_password(password: str) -> tuple[bool, str]:
 
 def create_superadmin():
     """Create superadmin user interactively"""
-    print("🔐 Creación de Super Administrador")
+    print("🔐 Gestión de Super Administrador")
     print("=" * 40)
 
     # Create sync engine and session
@@ -37,19 +37,88 @@ def create_superadmin():
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=sync_engine)
 
     with SessionLocal() as db:
-        # Check if any superadmin exists
-        result = db.execute(
-            select(User).where(User.role == UserRole.SUPERADMIN)
-        )
-        existing_superadmin = result.scalar_one_or_none()
+        # Check for existing users
+        result = db.execute(select(User).order_by(User.role, User.email))
+        all_users = result.scalars().all()
 
-        if existing_superadmin:
-            print("⚠️  Ya existe un superadmin en el sistema.")
-            print(f"   Email: {existing_superadmin.email}")
-            print(f"   Nombre: {existing_superadmin.nombre} {existing_superadmin.apellido}")
+        if all_users:
+            print(f"⚠️  Ya existen {len(all_users)} usuario(s) en el sistema:")
 
-            confirm = input("¿Desea crear otro superadmin? (y/N): ").lower().strip()
-            if confirm not in ['y', 'yes', 'sí', 'si']:
+            superadmins = [u for u in all_users if u.role == UserRole.SUPERADMIN]
+            others = [u for u in all_users if u.role != UserRole.SUPERADMIN]
+
+            if superadmins:
+                print("\n🔐 Superadmins:")
+                for i, admin in enumerate(superadmins, 1):
+                    print(f"   {i}. {admin.email} ({admin.nombre} {admin.apellido})")
+
+            if others:
+                print("\n👤 Otros usuarios:")
+                start_idx = len(superadmins) + 1
+                for i, user in enumerate(others, start_idx):
+                    print(f"   {i}. {user.email} ({user.nombre} {user.apellido}) - {user.role.value}")
+
+            print("\n¿Qué desea hacer?")
+            print("   1. Crear un nuevo superadmin")
+            print("   2. Actualizar contraseña de cualquier usuario")
+            print("   3. Salir")
+
+            choice = input("\nSeleccione una opción (1-3): ").strip()
+
+            if choice == "2":
+                # Update password
+                print("\n📝 Actualizar contraseña")
+                print("-" * 20)
+
+                # Select user to update
+                while True:
+                    user_choice = input(f"\nSeleccione el número del usuario (1-{len(all_users)}): ").strip()
+                    try:
+                        idx = int(user_choice) - 1
+                        if 0 <= idx < len(all_users):
+                            # Combine lists in same order as displayed
+                            combined_users = superadmins + others
+                            selected_user = combined_users[idx]
+                            break
+                        else:
+                            print("❌ Número inválido")
+                    except ValueError:
+                        print("❌ Por favor ingrese un número")
+
+                print(f"\n✅ Seleccionado: {selected_user.email}")
+
+                # Get new password (WITHOUT validation)
+                while True:
+                    password = getpass("🔑 Nueva contraseña: ")
+                    if not password:
+                        print("❌ La contraseña no puede estar vacía.")
+                        continue
+
+                    password_confirm = getpass("🔑 Confirmar contraseña: ")
+                    if password != password_confirm:
+                        print("❌ Las contraseñas no coinciden.")
+                        continue
+                    break
+
+                # Update password
+                try:
+                    selected_user.hashed_password = PasswordSecurity.get_password_hash(password)
+                    selected_user.locked_until = None  # Unlock if locked
+                    selected_user.login_attempts = 0  # Reset login attempts
+
+                    db.commit()
+                    db.refresh(selected_user)
+
+                    print(f"\n✅ Contraseña actualizada exitosamente para {selected_user.email}!")
+                    print("🎉 Ya puede iniciar sesión con la nueva contraseña.")
+
+                except Exception as e:
+                    print(f"\n❌ Error actualizando contraseña: {str(e)}")
+                    sys.exit(1)
+
+                return
+
+            elif choice == "3" or choice != "1":
                 print("❌ Operación cancelada.")
                 return
             print()
@@ -69,7 +138,7 @@ def create_superadmin():
             result = db.execute(
                 select(User).where(User.email == email)
             )
-            if result.scalar_one_or_none():
+            if result.first():
                 print("❌ Este email ya está registrado.")
                 continue
             break
@@ -100,11 +169,7 @@ def create_superadmin():
                 print("❌ La contraseña es obligatoria.")
                 continue
 
-            is_valid, error_msg = validate_password(password)
-            if not is_valid:
-                print(f"❌ {error_msg}")
-                continue
-
+            # NO validation for superadmin password - allow any password
             password_confirm = getpass("🔑 Confirmar contraseña: ")
             if password != password_confirm:
                 print("❌ Las contraseñas no coinciden.")

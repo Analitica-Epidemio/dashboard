@@ -1,44 +1,48 @@
-"use client"
+"use client";
 
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Checkbox } from "@/components/ui/checkbox"
-import { LoadingSpinner } from "@/components/ui/loading-spinner"
-import { useAuth } from '@/features/auth/hooks'
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { useAuth } from "@/features/auth/hooks";
 
 // Validation schema
 const loginSchema = z.object({
   email: z
     .string()
-    .min(1, 'El email es obligatorio')
-    .email('Formato de email inválido'),
-  password: z
-    .string()
-    .min(1, 'La contraseña es obligatoria')
-    .min(8, 'La contraseña debe tener al menos 8 caracteres'),
+    .min(1, "El email es obligatorio")
+    .email("Formato de email inválido"),
+  password: z.string().min(1, "La contraseña es obligatoria"),
   remember_me: z.boolean(),
-})
+});
 
-type LoginFormData = z.infer<typeof loginSchema>
+type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
-  const { login, isLoggingIn, loginError } = useAuth()
+  const { login, isLoggingIn, loginError } = useAuth();
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
-    mode: 'onChange',
+    mode: "onChange",
     defaultValues: {
-      email: '',
-      password: '',
+      email: "",
+      password: "",
       remember_me: false,
     },
-  })
+  });
 
   const {
     register,
@@ -46,13 +50,13 @@ export default function LoginPage() {
     watch,
     setValue,
     formState: { errors, isValid },
-  } = form
+  } = form;
 
-  const rememberMe = watch('remember_me')
+  const rememberMe = watch("remember_me");
 
   const onSubmit = handleSubmit((data) => {
-    login(data)
-  })
+    login(data);
+  });
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
@@ -70,9 +74,7 @@ export default function LoginPage() {
           <CardContent className="space-y-4">
             {loginError && (
               <Alert variant="destructive">
-                <AlertDescription>
-                  {loginError}
-                </AlertDescription>
+                <AlertDescription>{loginError}</AlertDescription>
               </Alert>
             )}
 
@@ -84,10 +86,10 @@ export default function LoginPage() {
                 id="email"
                 type="email"
                 placeholder="tu.email@ejemplo.com"
-                {...register('email')}
+                {...register("email")}
                 disabled={isLoggingIn}
                 className="transition-colors"
-                aria-invalid={errors.email ? 'true' : 'false'}
+                aria-invalid={errors.email ? "true" : "false"}
               />
               {errors.email && (
                 <p className="text-sm text-red-600" role="alert">
@@ -104,10 +106,10 @@ export default function LoginPage() {
                 id="password"
                 type="password"
                 placeholder="••••••••"
-                {...register('password')}
+                {...register("password")}
                 disabled={isLoggingIn}
                 className="transition-colors"
-                aria-invalid={errors.password ? 'true' : 'false'}
+                aria-invalid={errors.password ? "true" : "false"}
               />
               {errors.password && (
                 <p className="text-sm text-red-600" role="alert">
@@ -120,7 +122,9 @@ export default function LoginPage() {
               <Checkbox
                 id="remember"
                 checked={rememberMe}
-                onCheckedChange={(checked) => setValue('remember_me', checked as boolean)}
+                onCheckedChange={(checked) =>
+                  setValue("remember_me", checked as boolean)
+                }
                 disabled={isLoggingIn}
               />
               <Label htmlFor="remember" className="text-sm text-slate-600">
@@ -141,7 +145,7 @@ export default function LoginPage() {
                   Iniciando sesión...
                 </>
               ) : (
-                'Iniciar Sesión'
+                "Iniciar Sesión"
               )}
             </Button>
           </CardFooter>
@@ -157,5 +161,5 @@ export default function LoginPage() {
         </div>
       </Card>
     </div>
-  )
+  );
 }

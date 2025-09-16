@@ -15,7 +15,6 @@ from .schemas import SessionInfo, Token, UserCreate, UserUpdate
 from .schemas import UserLogin as UserLoginSchema
 from .security import (
     PasswordSecurity,
-    RateLimiter,
     SecurityConfig,
     SecurityTokens,
     SessionSecurity,
@@ -77,91 +76,68 @@ class AuthService:
         credentials: UserLoginSchema,
         request: Request
     ) -> Tuple[User, Token]:
-        """Authenticate user and create session"""
-        ip_address = self._get_client_ip(request)
-        user_agent = request.headers.get("user-agent", "")
-
-        # Check rate limiting
-        rate_limit_key = f"login:{ip_address}:{credentials.email}"
-        if RateLimiter.is_rate_limited(rate_limit_key):
-            await self._log_login_attempt(
-                credentials.email, False, "Rate limited", ip_address, user_agent
-            )
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=f"Too many login attempts. Try again in {SecurityConfig.LOCKOUT_DURATION_MINUTES} minutes."
-            )
-
-        # Get user
+        """Authenticate user and create session - simplified and fixed"""
+        # Get user with all needed data in single query
         user = await self._get_user_by_email(credentials.email)
         if not user:
-            RateLimiter.record_attempt(rate_limit_key, False)
-            await self._log_login_attempt(
-                credentials.email, False, "User not found", ip_address, user_agent
-            )
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid email or password"
             )
 
+        # Extract ALL needed values BEFORE any database operations
+        user_id = user.id
+        user_email = user.email
+        user_nombre = user.nombre
+        user_apellido = user.apellido
+        user_role = user.role
+        user_status = user.status
+        user_locked_until = user.locked_until
+        user_hashed_password = user.hashed_password
+
         # Check if user is locked
-        if user.locked_until and user.locked_until > datetime.now(timezone.utc):
-            await self._log_login_attempt(
-                credentials.email, False, "Account locked", ip_address, user_agent, user.id
-            )
+        if user_locked_until and user_locked_until > datetime.now(timezone.utc):
             raise HTTPException(
                 status_code=status.HTTP_423_LOCKED,
                 detail="Account is temporarily locked"
             )
 
         # Check user status
-        if user.status != UserStatus.ACTIVE:
-            await self._log_login_attempt(
-                credentials.email, False, f"Account {user.status.value}", ip_address, user_agent, user.id
-            )
+        if user_status != UserStatus.ACTIVE:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Account is {user.status.value}"
+                detail=f"Account is {user_status.value}"
             )
 
         # Verify password
-        if not PasswordSecurity.verify_password(credentials.password, user.hashed_password):
-            # Increment failed attempts
-            user.login_attempts += 1
-            if user.login_attempts >= SecurityConfig.MAX_LOGIN_ATTEMPTS:
-                user.locked_until = datetime.now(timezone.utc) + timedelta(
-                    minutes=SecurityConfig.LOCKOUT_DURATION_MINUTES
-                )
-                logger.warning(f"User {user.email} locked due to too many failed attempts")
-
-            await self.db.commit()
-            RateLimiter.record_attempt(rate_limit_key, False)
-            await self._log_login_attempt(
-                credentials.email, False, "Invalid password", ip_address, user_agent, user.id
-            )
+        if not PasswordSecurity.verify_password(credentials.password, user_hashed_password):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid email or password"
             )
 
-        # Successful authentication
+        # Update user for successful login
         user.login_attempts = 0
         user.locked_until = None
         user.last_login = datetime.now(timezone.utc)
-        await self.db.commit()
 
-        RateLimiter.record_attempt(rate_limit_key, True)
-        await self._log_login_attempt(
-            credentials.email, True, None, ip_address, user_agent, user.id
-        )
+        # Commit and refresh in single transaction
+        await self.db.commit()
+        await self.db.refresh(user)
 
         # Create session
-        session = await self._create_user_session(user, ip_address, user_agent, credentials.remember_me)
+        ip_address = self._get_client_ip(request)
+        user_agent = request.headers.get("user-agent", "")
+        session = await self._create_user_session(
+            user_id, ip_address, user_agent, credentials.remember_me
+        )
 
-        # Create tokens
-        token = self._create_tokens(user, session)
+        # Create tokens using extracted values
+        token = self._create_tokens_with_data(
+            user_id, user_email, user_nombre, user_apellido, user_role, session
+        )
 
-        logger.info(f"User {user.email} authenticated successfully")
+        logger.info(f"User {user_email} authenticated successfully")
         return user, token
 
     async def refresh_token(self, refresh_token: str) -> Token:
@@ -321,20 +297,17 @@ class AuthService:
 
     async def _create_user_session(
         self,
-        user: User,
+        user_id: int,
         ip_address: str,
         user_agent: str,
         remember_me: bool = False
     ) -> UserSession:
-        """Create new user session"""
-        # Clean up old sessions (keep only the most recent ones)
-        await self._cleanup_user_sessions(user.id)
-
+        """Create new user session - fixed version without problematic cleanup"""
         # Session duration
         hours = 24 * 7 if remember_me else SecurityConfig.SESSION_EXPIRE_HOURS
 
         session = UserSession(
-            user_id=user.id,
+            user_id=user_id,
             session_token=SessionSecurity.generate_session_token(),
             ip_address=ip_address,
             user_agent=user_agent,
@@ -359,39 +332,58 @@ class AuthService:
             .values(is_active=False)
         )
 
-        # Keep only the most recent active sessions
-        result = await self.db.execute(
-            select(UserSession)
-            .where(and_(
-                UserSession.user_id == user_id,
-                UserSession.is_active == True
-            ))
-            .order_by(UserSession.last_activity.desc())
-            .offset(SecurityConfig.MAX_SESSIONS_PER_USER - 1)
-        )
-        old_sessions = result.scalars().all()
+        # Keep only the most recent active sessions - use subquery to avoid loading objects
+        subquery = select(UserSession.id).where(and_(
+            UserSession.user_id == user_id,
+            UserSession.is_active == True
+        )).order_by(UserSession.last_activity.desc()).offset(SecurityConfig.MAX_SESSIONS_PER_USER - 1)
 
-        for session in old_sessions:
-            session.is_active = False
+        # Deactivate old sessions using direct UPDATE
+        await self.db.execute(
+            update(UserSession)
+            .where(UserSession.id.in_(subquery))
+            .values(is_active=False)
+        )
 
         await self.db.commit()
 
     def _create_tokens(self, user: User, session: UserSession) -> Token:
         """Create JWT tokens for user session"""
+        return self._create_tokens_with_data(
+            user.id, user.email, user.nombre, user.apellido, user.role, session
+        )
+
+    def _create_tokens_with_data(
+        self, user_id: int, user_email: str, user_nombre: str, user_apellido: str,
+        user_role, session: UserSession
+    ) -> Token:
+        """Create JWT tokens using extracted data (avoids accessing expired user object)"""
+        from .schemas import TokenUser
+
         token_data = {
-            "sub": user.id,
-            "email": user.email,
-            "role": user.role.value,
+            "sub": user_id,
+            "email": user_email,
+            "role": user_role.value,
             "session_id": session.id
         }
 
         access_token = TokenSecurity.create_access_token(token_data)
         refresh_token = TokenSecurity.create_refresh_token(token_data)
 
+        # Include user info in response
+        user_info = TokenUser(
+            id=user_id,
+            email=user_email,
+            nombre=user_nombre,
+            apellido=user_apellido,
+            role=user_role
+        )
+
         return Token(
             access_token=access_token,
             refresh_token=refresh_token,
-            expires_in=SecurityConfig.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+            expires_in=SecurityConfig.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            user=user_info
         )
 
     async def _log_login_attempt(

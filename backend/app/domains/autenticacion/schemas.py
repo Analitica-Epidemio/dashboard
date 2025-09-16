@@ -67,12 +67,22 @@ class PasswordResetConfirm(BaseModel):
     new_password: str = Field(min_length=8, max_length=128)
 
 
+class TokenUser(BaseModel):
+    """User info in token response"""
+    id: int
+    email: str
+    nombre: str
+    apellido: str
+    role: UserRole
+
+
 class Token(BaseModel):
-    """JWT Token response"""
+    """JWT Token response with user info"""
     access_token: str
     token_type: str = "bearer"
     expires_in: int
     refresh_token: Optional[str] = None
+    user: Optional[TokenUser] = None
 
 
 class TokenData(BaseModel):

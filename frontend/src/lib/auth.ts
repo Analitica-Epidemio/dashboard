@@ -35,11 +35,16 @@ export const authOptions: NextAuthOptions = {
 
           const data = await response.json();
 
+          // Parse JWT to extract user info
+          const tokenPayload = JSON.parse(
+            Buffer.from(data.access_token.split('.')[1], 'base64').toString()
+          );
+
           return {
-            id: data.user.id,
-            email: data.user.email,
-            name: `${data.user.nombre} ${data.user.apellido}`,
-            role: data.user.role,
+            id: tokenPayload.sub.toString(),
+            email: tokenPayload.email,
+            name: tokenPayload.email, // We don't have name in token, use email temporarily
+            role: tokenPayload.role,
             accessToken: data.access_token,
             refreshToken: data.refresh_token,
           };
