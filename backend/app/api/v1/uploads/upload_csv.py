@@ -5,14 +5,14 @@ Upload CSV endpoint for async processing
 import logging
 import traceback
 
-from fastapi import File, Form, HTTPException, UploadFile, status, Depends
+from fastapi import Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import JSONResponse
 
 from app.core.schemas.response import ErrorDetail, ErrorResponse, SuccessResponse
 from app.core.security import RequireAnyRole
-from app.domains.auth.models import User
-from app.domains.uploads.schemas import AsyncJobResponse
-from app.domains.uploads.services import async_service
+from app.domains.autenticacion.models import User
+from app.features.procesamiento_archivos.schemas import AsyncJobResponse
+from app.features.procesamiento_archivos.services import async_service
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +53,7 @@ async def upload_csv_async(
     # Test Redis availability
     try:
         import redis
+
         from app.core.config import settings
         redis_url_parts = settings.REDIS_URL.replace('redis://', '').split(':')
         redis_host = redis_url_parts[0]

@@ -3,13 +3,14 @@ Delete strategy endpoint
 """
 
 import logging
+
 from fastapi import Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
 from app.core.security import RequireSuperadmin
-from app.domains.auth.models import User
+from app.domains.autenticacion.models import User
 from app.domains.estrategias.repositories import EventStrategyRepository
 
 logger = logging.getLogger(__name__)

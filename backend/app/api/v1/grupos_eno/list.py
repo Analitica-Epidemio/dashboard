@@ -4,17 +4,17 @@ List grupos ENO endpoint
 
 import logging
 from typing import Optional
+
 from fastapi import Depends, HTTPException, Query, status
+from pydantic import BaseModel, Field
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
 
 from app.core.database import get_async_session
 from app.core.schemas.response import PaginatedResponse
 from app.core.security import RequireAnyRole
-from app.domains.auth.models import User
+from app.domains.autenticacion.models import User
 from app.domains.eventos.models import GrupoEno
-from pydantic import BaseModel, Field
-from typing import Optional
 
 
 class GrupoEnoInfo(BaseModel):

@@ -2,18 +2,19 @@
 Get dashboard charts endpoint
 """
 
-from typing import Dict, Any, List
 import logging
+from typing import Any, Dict, List
+
 from fastapi import Depends, Query
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
 from app.core.security import RequireAnyRole
-from app.domains.auth.models import User
+from app.domains.autenticacion.models import User
+from app.domains.charts.conditions import ChartConditionResolver
 from app.domains.charts.models import DashboardChart
 from app.domains.charts.processors import ChartDataProcessor
-from app.domains.charts.conditions import ChartConditionResolver
 
 logger = logging.getLogger(__name__)
 

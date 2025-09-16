@@ -7,8 +7,8 @@ from fastapi.responses import JSONResponse
 
 from app.core.schemas.response import ErrorDetail, ErrorResponse
 from app.core.security import RequireAnyRole
-from app.domains.auth.models import User
-from app.domains.uploads.services import async_service
+from app.domains.autenticacion.models import User
+from app.features.procesamiento_archivos.services import async_service
 
 
 async def cancel_job(

@@ -3,23 +3,25 @@ Auth router - Organizes authentication endpoints by responsibility
 """
 
 from typing import List
+
 from fastapi import APIRouter, status
 
-from app.domains.auth.schemas import Token, UserResponse, SessionInfo
+from app.domains.autenticacion.schemas import SessionInfo, Token, UserResponse
+
+from .change_password import change_password
+from .create_user import create_user
+from .deactivate_user import deactivate_user
+from .get_me import get_current_user_info
+from .get_sessions import get_user_sessions
+from .get_user import get_user
+from .list_users import list_users
 from .login import login, refresh_access_token
 from .logout import logout
 from .logout_all import logout_all_sessions
-from .get_me import get_current_user_info
-from .update_me import update_current_user
-from .change_password import change_password
-from .get_sessions import get_user_sessions
 from .logout_session import logout_session
-from .create_user import create_user
-from .list_users import list_users
-from .get_user import get_user
-from .update_user import update_user
-from .deactivate_user import deactivate_user
 from .unlock_user import unlock_user
+from .update_me import update_current_user
+from .update_user import update_user
 
 # Crear router principal
 router = APIRouter(prefix="/auth", tags=["Authentication"])

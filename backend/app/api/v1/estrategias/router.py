@@ -3,6 +3,7 @@ Estrategias router - Event classification strategies endpoints
 """
 
 from typing import List
+
 from fastapi import APIRouter, status
 
 from app.core.schemas.response import ErrorResponse, SuccessResponse
@@ -11,14 +12,15 @@ from app.domains.estrategias.schemas import (
     EventStrategyResponse,
     StrategyTestResponse,
 )
-from .list_strategies import list_strategies
-from .get_strategy import get_strategy
-from .create_strategy import create_strategy
-from .update_strategy import update_strategy
-from .delete_strategy import delete_strategy
+
 from .activate_strategy import activate_strategy
-from .test_strategy import test_strategy
+from .create_strategy import create_strategy
+from .delete_strategy import delete_strategy
 from .get_audit_log import get_strategy_audit_log
+from .get_strategy import get_strategy
+from .list_strategies import list_strategies
+from .test_strategy import test_strategy
+from .update_strategy import update_strategy
 
 router = APIRouter(prefix="/estrategias", tags=["Estrategias"])
 

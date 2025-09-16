@@ -2,12 +2,11 @@
 Charts router - Dynamic charts endpoints
 """
 
-from typing import Dict, Any, List
 from fastapi import APIRouter
 
 from .get_dashboard import get_dashboard_charts
-from .get_indicadores import get_indicadores
 from .get_disponibles import get_charts_disponibles
+from .get_indicadores import get_indicadores
 
 router = APIRouter(prefix="/charts", tags=["Charts"])
 

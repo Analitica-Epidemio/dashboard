@@ -4,9 +4,9 @@ Get current user information endpoint
 
 from fastapi import Depends
 
-from app.domains.auth.schemas import UserResponse
-from app.domains.auth.dependencies import get_current_user
-from app.domains.auth.models import User
+from app.domains.autenticacion.dependencies import get_current_user
+from app.domains.autenticacion.models import User
+from app.domains.autenticacion.schemas import UserResponse
 
 
 async def get_current_user_info(current_user: User = Depends(get_current_user)) -> UserResponse:

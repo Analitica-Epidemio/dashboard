@@ -2,14 +2,15 @@
 Get charts disponibles endpoint
 """
 
-from typing import Dict, Any, List
+from typing import Any, Dict, List
+
 from fastapi import Depends
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
 from app.core.security import RequireAnyRole
-from app.domains.auth.models import User
+from app.domains.autenticacion.models import User
 from app.domains.charts.models import DashboardChart
 
 

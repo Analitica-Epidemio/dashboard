@@ -4,8 +4,8 @@ Basado en los charts del sistema epidemiologia_chubut.
 """
 import os
 import sys
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
 # Agregar el directorio raíz al path
 sys.path.append(str(Path(__file__).parent.parent.parent))
@@ -13,6 +13,7 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from sqlmodel import select
+
 from app.domains.charts.models import DashboardChart
 
 # Configuración de charts basados en el sistema Chubut

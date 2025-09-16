@@ -3,11 +3,12 @@ Logout all sessions endpoint
 """
 
 import logging
+
 from fastapi import Depends
 
-from app.domains.auth.service import AuthService
-from app.domains.auth.dependencies import get_current_user, get_auth_service
-from app.domains.auth.models import User
+from app.domains.autenticacion.dependencies import get_auth_service, get_current_user
+from app.domains.autenticacion.models import User
+from app.domains.autenticacion.service import AuthService
 
 logger = logging.getLogger(__name__)
 

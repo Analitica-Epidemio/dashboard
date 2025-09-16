@@ -2,17 +2,19 @@
 Generate report endpoint
 """
 
+import io
 import logging
 from datetime import datetime
+
 from fastapi import Depends, HTTPException, Response
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-import io
 
 from app.core.database import get_async_session
 from app.core.security import RequireAnyRole
-from app.domains.auth.models import User
+from app.domains.autenticacion.models import User
 from app.domains.reports.playwright_generator import playwright_generator
+
 from .schemas import ReportRequest
 
 logger = logging.getLogger(__name__)

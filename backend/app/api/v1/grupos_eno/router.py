@@ -5,7 +5,8 @@ Grupos ENO router
 from fastapi import APIRouter
 
 from app.core.schemas.response import ErrorResponse, PaginatedResponse
-from .list import list_grupos_eno, GrupoEnoInfo
+
+from .list import GrupoEnoInfo, list_grupos_eno
 
 router = APIRouter(prefix="/gruposEno", tags=["GruposENO"])
 

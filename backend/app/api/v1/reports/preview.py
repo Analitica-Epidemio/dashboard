@@ -3,16 +3,18 @@ Preview report endpoint
 """
 
 import logging
-from typing import Dict, Any
 from datetime import datetime
+from typing import Any, Dict
+
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_async_session
-from app.core.security import RequireAnyRole
-from app.domains.auth.models import User
 from app.api.v1.charts.get_dashboard import get_dashboard_charts
 from app.api.v1.charts.get_indicadores import get_indicadores
+from app.core.database import get_async_session
+from app.core.security import RequireAnyRole
+from app.domains.autenticacion.models import User
+
 from .schemas import ReportRequest
 
 logger = logging.getLogger(__name__)

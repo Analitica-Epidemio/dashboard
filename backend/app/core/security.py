@@ -3,13 +3,13 @@ Security utilities and RBAC decorators
 Modern role-based access control following 2025 best practices
 """
 import logging
-from typing import Callable, List
 from functools import wraps
+from typing import Callable
 
-from fastapi import HTTPException, status, Depends
+from fastapi import Depends, HTTPException, status
 
-from app.domains.auth.models import User, UserRole, UserStatus
 from app.domains.auth.dependencies import get_current_user
+from app.domains.auth.models import User, UserRole, UserStatus
 
 logger = logging.getLogger(__name__)
 

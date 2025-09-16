@@ -3,11 +3,12 @@ Authentication endpoints - Login and token refresh (public endpoints)
 """
 
 import logging
+
 from fastapi import Depends, Request
 
-from app.domains.auth.service import AuthService
-from app.domains.auth.schemas import UserLogin, Token, RefreshToken
-from app.domains.auth.dependencies import get_auth_service
+from app.domains.autenticacion.dependencies import get_auth_service
+from app.domains.autenticacion.schemas import RefreshToken, Token, UserLogin
+from app.domains.autenticacion.service import AuthService
 
 logger = logging.getLogger(__name__)
 

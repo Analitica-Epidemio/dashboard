@@ -3,13 +3,14 @@ Get job status endpoint
 """
 
 import logging
+
 from fastapi import Depends, HTTPException, status
 
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAnyRole
-from app.domains.auth.models import User
-from app.domains.uploads.schemas import JobStatusResponse
-from app.domains.uploads.services import async_service
+from app.domains.autenticacion.models import User
+from app.features.procesamiento_archivos.schemas import JobStatusResponse
+from app.features.procesamiento_archivos.services import async_service
 
 logger = logging.getLogger(__name__)
 

@@ -3,8 +3,11 @@ Get evento detail endpoint
 """
 
 import logging
+from datetime import date
+from typing import Any, Dict, List, Optional
 
 from fastapi import Depends, HTTPException, Query, status
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -12,18 +15,15 @@ from sqlalchemy.orm import selectinload
 from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAnyRole
-from app.domains.auth.models import User
+from app.domains.autenticacion.models import User
 from app.domains.ciudadanos.models import (
     Animal,
     Ciudadano,
     CiudadanoDomicilio,
 )
-from app.domains.eventos.models import Evento, DetalleEventoSintomas
-from app.domains.localidades.models import Departamento, Localidad
-from datetime import date
-from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, ConfigDict, Field
 from app.domains.estrategias.models import TipoClasificacion
+from app.domains.eventos.models import DetalleEventoSintomas, Evento
+from app.domains.localidades.models import Departamento, Localidad
 
 
 class CiudadanoInfo(BaseModel):

@@ -12,8 +12,9 @@ from typing import Dict, List, Optional
 # Agregar el directorio raíz al path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from sqlalchemy import create_engine, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
+
 from app.domains.estrategias.models import (
     ClassificationRule,
     EventStrategy,
@@ -1273,6 +1274,7 @@ class StrategySeeder:
 def main():
     """Función principal para ejecutar el seed."""
     import os
+
     from sqlmodel import create_engine
 
     try:

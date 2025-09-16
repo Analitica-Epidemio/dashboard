@@ -3,12 +3,17 @@ Get current user sessions endpoint
 """
 
 from typing import List
+
 from fastapi import Depends
 
-from app.domains.auth.service import AuthService
-from app.domains.auth.schemas import SessionInfo
-from app.domains.auth.dependencies import get_current_user, get_auth_service, get_current_user_token
-from app.domains.auth.models import User
+from app.domains.autenticacion.dependencies import (
+    get_auth_service,
+    get_current_user,
+    get_current_user_token,
+)
+from app.domains.autenticacion.models import User
+from app.domains.autenticacion.schemas import SessionInfo
+from app.domains.autenticacion.service import AuthService
 
 
 async def get_user_sessions(

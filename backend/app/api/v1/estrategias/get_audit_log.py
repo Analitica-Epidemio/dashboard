@@ -4,13 +4,14 @@ Get strategy audit log endpoint
 
 import logging
 from typing import List
+
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAnyRole
-from app.domains.auth.models import User
+from app.domains.autenticacion.models import User
 from app.domains.estrategias.repositories import EventStrategyRepository
 from app.domains.estrategias.schemas import AuditLogResponse
 

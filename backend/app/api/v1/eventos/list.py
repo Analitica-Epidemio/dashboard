@@ -4,9 +4,11 @@ Endpoint para listado de eventos epidemiológicos.
 
 import logging
 from datetime import date
-from typing import Optional
+from enum import Enum
+from typing import Any, Dict, List, Optional
 
 from fastapi import Depends, HTTPException, Query, status
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import String, and_, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -14,18 +16,15 @@ from sqlalchemy.orm import selectinload
 from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAnyRole
-from app.domains.auth.models import User
+from app.domains.autenticacion.models import User
 from app.domains.ciudadanos.models import (
     Animal,
     Ciudadano,
     CiudadanoDomicilio,
 )
+from app.domains.estrategias.models import TipoClasificacion
 from app.domains.eventos.models import Evento, TipoEno
 from app.domains.localidades.models import Departamento, Localidad
-from enum import Enum
-from typing import Any, Dict, List
-from pydantic import BaseModel, ConfigDict, Field
-from app.domains.estrategias.models import TipoClasificacion
 
 
 class EventoSortBy(str, Enum):

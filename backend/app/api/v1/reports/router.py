@@ -2,10 +2,8 @@
 Reports router - Report generation endpoints
 """
 
-from typing import Dict, Any
-from fastapi import APIRouter, Response
+from fastapi import APIRouter
 
-from .schemas import ReportRequest
 from .generate import generate_report
 from .generate_zip import generate_zip_report
 from .preview import preview_report

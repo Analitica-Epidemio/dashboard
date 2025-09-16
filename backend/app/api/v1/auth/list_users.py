@@ -3,13 +3,14 @@ List users endpoint
 """
 
 from typing import List
+
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.domains.auth.schemas import UserResponse
-from app.domains.auth.dependencies import require_superadmin
-from app.domains.auth.models import User
+from app.domains.autenticacion.dependencies import require_superadmin
+from app.domains.autenticacion.models import User
+from app.domains.autenticacion.schemas import UserResponse
 
 
 async def list_users(

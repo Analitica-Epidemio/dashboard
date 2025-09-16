@@ -2,13 +2,17 @@
 Uploads router - Async file processing endpoints
 """
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter
 
 from app.core.schemas.response import ErrorResponse, SuccessResponse
-from app.domains.uploads.schemas import AsyncJobResponse, JobStatusResponse
-from .upload_csv import upload_csv_async
-from .get_job_status import get_job_status
+from app.features.procesamiento_archivos.schemas import (
+    AsyncJobResponse,
+    JobStatusResponse,
+)
+
 from .cancel_job import cancel_job
+from .get_job_status import get_job_status
+from .upload_csv import upload_csv_async
 
 router = APIRouter(prefix="/uploads", tags=["Uploads Async"])
 

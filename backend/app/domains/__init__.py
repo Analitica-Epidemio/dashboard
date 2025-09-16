@@ -1,35 +1,18 @@
 """
-Dominios de la aplicación - Arquitectura por dominios cohesivos.
+🦠 DOMINIOS DE NEGOCIO - EPIDEMIOLOGÍA CHUBUT
 
-Cada dominio contiene todos los componentes relacionados:
-- models.py - Modelos de datos
-- repository.py - Acceso a datos
-- service.py - Lógica de negocio
+Esta carpeta contiene SOLO dominios de negocio puros, sin dependencias técnicas.
+
+DOMINIOS:
+├── epidemiologia/     🔥 CORE DOMAIN - Corazón del sistema
+├── personas/          👥 Supporting - Gestión de personas
+├── territorio/        🗺️ Supporting - Contexto geográfico
+├── clinica/          ⚕️ Supporting - Contexto médico
+└── autenticacion/    🔐 Supporting - Gestión de usuarios
+
+REGLAS:
+- Cada dominio es INDEPENDIENTE
+- NO pueden depender de features/
+- Solo comunican via Domain Events
+- Aggregate Roots bien definidos
 """
-
-# Importar todos los dominios disponibles
-from . import (
-    ciudadanos,
-    diagnosticos,
-    establecimientos,
-    estrategias,
-    eventos,
-    investigaciones,
-    localidades,
-    salud,
-    uploads,
-    charts,
-)
-
-__all__ = [
-    "ciudadanos",
-    "localidades",
-    "eventos",
-    "salud",
-    "establecimientos",
-    "diagnosticos",
-    "estrategias",
-    "investigaciones",
-    "uploads",
-    "charts",
-]

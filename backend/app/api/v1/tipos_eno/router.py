@@ -5,7 +5,8 @@ Tipos ENO router
 from fastapi import APIRouter
 
 from app.core.schemas.response import ErrorResponse, PaginatedResponse
-from .list import list_tipos_eno, TipoEnoInfo
+
+from .list import TipoEnoInfo, list_tipos_eno
 
 router = APIRouter(prefix="/tiposEno", tags=["TiposENO"])
 

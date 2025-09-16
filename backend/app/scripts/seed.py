@@ -16,12 +16,9 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 import argparse
 import logging
 import os
-from typing import Optional
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
 
-from app.scripts.seeds.strategies import main as seed_strategies
 from app.scripts.seeds.charts import main as seed_charts
+from app.scripts.seeds.strategies import main as seed_strategies
 
 # Configurar logging
 logging.basicConfig(

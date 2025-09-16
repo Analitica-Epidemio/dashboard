@@ -3,8 +3,11 @@ Get evento timeline endpoint
 """
 
 import logging
+from datetime import date
+from typing import Any, Dict, List, Optional
 
 from fastapi import Depends, HTTPException, status
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -12,11 +15,8 @@ from sqlalchemy.orm import selectinload
 from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAnyRole
-from app.domains.auth.models import User
+from app.domains.autenticacion.models import User
 from app.domains.eventos.models import Evento
-from typing import Any, Dict, List, Optional
-from datetime import date
-from pydantic import BaseModel, Field
 
 
 class EventoTimelineItem(BaseModel):

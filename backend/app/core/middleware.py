@@ -1,13 +1,12 @@
 """Middleware personalizado para manejo de excepciones, autenticación y otros aspectos transversales."""
 
+import logging
 import time
 import traceback
-import logging
 from typing import Any, Callable
 from uuid import uuid4
-from functools import wraps
 
-from fastapi import FastAPI, HTTPException, Request, Response, status, Depends
+from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBearer
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -220,7 +219,7 @@ async def validation_exception_handler(
         )
         errors.append(error_detail.model_dump())
 
-    response: StandardResponse[Any] = StandardResponse.error_response(
+    response: ErrorResponse = ErrorResponse(
         message="Error de validación en los datos proporcionados", errors=errors
     )
 

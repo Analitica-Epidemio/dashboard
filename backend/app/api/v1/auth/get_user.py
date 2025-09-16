@@ -4,10 +4,10 @@ Get user by ID endpoint
 
 from fastapi import Depends, HTTPException, status
 
-from app.domains.auth.service import AuthService
-from app.domains.auth.schemas import UserResponse
-from app.domains.auth.dependencies import get_auth_service, require_superadmin
-from app.domains.auth.models import User
+from app.domains.autenticacion.dependencies import get_auth_service, require_superadmin
+from app.domains.autenticacion.models import User
+from app.domains.autenticacion.schemas import UserResponse
+from app.domains.autenticacion.service import AuthService
 
 
 async def get_user(

@@ -4,16 +4,16 @@ Command to create initial superadmin user
 Usage: uv run python -m app.commands.create_superadmin
 """
 import asyncio
+import re
 import sys
 from getpass import getpass
-import re
+
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import engine
 from app.domains.auth.models import User, UserRole, UserStatus
 from app.domains.auth.security import PasswordSecurity, SecurityTokens
-from app.domains.auth.service import AuthService
-from sqlalchemy import select
 
 
 def validate_email(email: str) -> bool:
@@ -111,7 +111,7 @@ async def create_superadmin():
         print(f"   Email: {email}")
         print(f"   Nombre: {nombre}")
         print(f"   Apellido: {apellido}")
-        print(f"   Rol: Super Administrador")
+        print("   Rol: Super Administrador")
 
         confirm = input("\n¿Crear usuario? (y/N): ").lower().strip()
         if confirm not in ['y', 'yes', 'sí', 'si']:
@@ -138,12 +138,12 @@ async def create_superadmin():
             await db.commit()
             await db.refresh(user)
 
-            print(f"\n✅ Super administrador creado exitosamente!")
+            print("\n✅ Super administrador creado exitosamente!")
             print(f"   ID: {user.id}")
             print(f"   Email: {user.email}")
             print(f"   Nombre: {user.nombre} {user.apellido}")
             print(f"   Fecha de creación: {user.created_at.strftime('%Y-%m-%d %H:%M:%S')}")
-            print(f"\n🎉 Ya puede iniciar sesión en el sistema.")
+            print("\n🎉 Ya puede iniciar sesión en el sistema.")
 
         except Exception as e:
             print(f"\n❌ Error creando el usuario: {str(e)}")

@@ -6,10 +6,11 @@ Organiza los endpoints por responsabilidad.
 from fastapi import APIRouter
 
 from app.core.schemas.response import ErrorResponse, SuccessResponse
-from .get_detail import get_evento_detail, EventoDetailResponse
-from .get_timeline import get_evento_timeline, EventoTimelineResponse
+
 from .export import export_eventos
-from .list import list_eventos, EventoListResponse
+from .get_detail import EventoDetailResponse, get_evento_detail
+from .get_timeline import EventoTimelineResponse, get_evento_timeline
+from .list import EventoListResponse, list_eventos
 
 # Crear router principal
 router = APIRouter(prefix="/eventos", tags=["Eventos"])
