@@ -8,14 +8,14 @@ from typing import Any, Dict, List, Optional
 import pandas as pd
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domains.estrategias.models import (
+from app.domains.eventos_epidemiologicos.clasificacion.models import (
     ClassificationRule,
     EventStrategy,
     FilterCondition,
     TipoClasificacion,
     TipoFiltro,
 )
-from app.domains.estrategias.repositories import (
+from app.domains.eventos_epidemiologicos.clasificacion.repositories import (
     ClassificationRuleRepository,
     EventStrategyRepository,
 )

@@ -7,7 +7,7 @@ from typing import List
 from fastapi import APIRouter, status
 
 from app.core.schemas.response import ErrorResponse, SuccessResponse
-from app.domains.estrategias.schemas import (
+from app.domains.eventos_epidemiologicos.clasificacion.schemas import (
     AuditLogResponse,
     EventStrategyResponse,
     StrategyTestResponse,

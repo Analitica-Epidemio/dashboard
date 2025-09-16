@@ -11,7 +11,7 @@ import pandas as pd
 from sqlalchemy import select
 from sqlmodel import Session
 
-from app.domains.estrategias.models import TipoClasificacion
+from app.domains.eventos_epidemiologicos.clasificacion.models import TipoClasificacion
 
 from ..core.columns import Columns
 from ..core.constants import METADATA_EXTRACTION_TYPES
@@ -32,7 +32,7 @@ class EventClassifier:
 
         # Importar servicio de clasificación
         try:
-            from app.domains.estrategias.sync_services import (
+            from app.domains.eventos_epidemiologicos.clasificacion.sync_services import (
                 SyncEventClassificationService,
             )
 
@@ -43,7 +43,7 @@ class EventClassifier:
 
         # Importar extractor de metadata
         try:
-            from app.domains.estrategias.detectors import TipoSujetoDetector
+            from app.domains.eventos_epidemiologicos.clasificacion.detectors import TipoSujetoDetector
 
             self.tipo_sujeto_detector = TipoSujetoDetector()
         except ImportError:

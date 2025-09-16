@@ -14,7 +14,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from sqlmodel import select
 
-from app.domains.charts.models import DashboardChart
+from app.features.dashboard.models import DashboardChart
 
 # Configuración de charts basados en el sistema Chubut
 DASHBOARD_CHARTS = [

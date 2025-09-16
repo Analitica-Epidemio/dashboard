@@ -16,14 +16,14 @@ from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User
-from app.domains.sujetos_epidemiologicos.ciudadanos_models.models import (
-    Animal,
+from app.domains.sujetos_epidemiologicos.ciudadanos_models import (
     Ciudadano,
     CiudadanoDomicilio,
 )
-from app.domains.estrategias.models import TipoClasificacion
+from app.domains.sujetos_epidemiologicos.animales_models import Animal
+from app.domains.eventos_epidemiologicos.clasificacion.models import TipoClasificacion
 from app.domains.eventos_epidemiologicos.eventos.models import DetalleEventoSintomas, Evento
-from app.domains.localidades.models import Departamento, Localidad
+from app.domains.territorio.geografia_models import Departamento, Localidad
 
 
 class CiudadanoInfo(BaseModel):

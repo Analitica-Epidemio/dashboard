@@ -9,7 +9,7 @@ from sqlmodel import Field, Relationship
 from app.core.models import BaseModel
 
 if TYPE_CHECKING:
-    from app.domains.sujetos_epidemiologicos.ciudadanos_models.models import Ciudadano, CiudadanoComorbilidades
+    from app.domains.sujetos_epidemiologicos.ciudadanos_models import Ciudadano, CiudadanoComorbilidades
     from app.domains.diagnosticos.models import EstudioEvento
     from app.domains.territorio.establecimientos_models.models import Establecimiento
     from app.domains.eventos_epidemiologicos.eventos.models import DetalleEventoSintomas, Evento

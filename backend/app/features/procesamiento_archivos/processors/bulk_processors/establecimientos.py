@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.domains.territorio.establecimientos_models.models import Establecimiento
-from app.domains.localidades.models import Departamento, Localidad, Provincia
+from app.domains.territorio.geografia_models import Departamento, Localidad, Provincia
 
 from ..core.columns import Columns
 from .base import BulkProcessorBase

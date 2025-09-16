@@ -18,7 +18,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, and_, desc, select
 
 from app.core.database import engine
-from app.domains.uploads.models import JobStatus, ProcessingJob
+from app.features.procesamiento_archivos.models import JobStatus, ProcessingJob
 
 logger = logging.getLogger(__name__)
 

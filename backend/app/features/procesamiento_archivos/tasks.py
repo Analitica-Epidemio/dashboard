@@ -15,8 +15,8 @@ from sqlmodel import and_, select
 
 from app.core.celery_app import file_processing_task, maintenance_task
 from app.core.database import Session, engine
-from app.domains.uploads.models import JobStatus, ProcessingJob
-from app.domains.uploads.processors.simple_processor import create_processor
+from app.features.procesamiento_archivos.models import JobStatus, ProcessingJob
+from app.features.procesamiento_archivos.processors.simple_processor import create_processor
 
 logger = logging.getLogger(__name__)
 

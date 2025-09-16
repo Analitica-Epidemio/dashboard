@@ -9,7 +9,7 @@ from app.core.models import BaseModel
 
 if TYPE_CHECKING:
     from app.domains.diagnosticos.models import DiagnosticoEvento
-    from app.domains.localidades.models import Localidad
+    from app.domains.territorio.geografia_models import Localidad
     from app.domains.atencion_medica.salud_models.models import MuestraEvento
 
 

@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_async_session
 from app.core.security import RequireSuperadmin
 from app.domains.autenticacion.models import User
-from app.domains.estrategias.repositories import EventStrategyRepository
+from app.domains.eventos_epidemiologicos.clasificacion.repositories import EventStrategyRepository
 
 logger = logging.getLogger(__name__)
 

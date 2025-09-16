@@ -12,9 +12,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_async_session
 from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User
-from app.domains.charts.conditions import ChartConditionResolver
-from app.domains.charts.models import DashboardChart
-from app.domains.charts.processors import ChartDataProcessor
+from app.features.dashboard.conditions import ChartConditionResolver
+from app.features.dashboard.models import DashboardChart
+from app.features.dashboard.processors import ChartDataProcessor
 
 logger = logging.getLogger(__name__)
 

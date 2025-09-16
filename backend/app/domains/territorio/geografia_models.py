@@ -13,7 +13,7 @@ from sqlmodel import Field, Relationship
 from app.core.models import BaseModel
 
 if TYPE_CHECKING:
-    from app.domains.sujetos_epidemiologicos.ciudadanos_models.models import (
+    from app.domains.sujetos_epidemiologicos.ciudadanos_models import (
         AmbitosConcurrenciaEvento,
         CiudadanoDomicilio,
         ViajesCiudadano,

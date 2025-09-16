@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_async_session
 from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User
-from app.domains.reports.zip_generator import zip_generator
+from app.features.reporteria.zip_generator import zip_generator
 
 from .schemas import ReportRequest
 

@@ -9,7 +9,7 @@ import zipfile
 from datetime import datetime
 from typing import Any, Dict, List
 
-from app.domains.reports.playwright_generator import playwright_generator
+from app.features.reporteria.playwright_generator import playwright_generator
 
 logger = logging.getLogger(__name__)
 

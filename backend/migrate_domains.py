@@ -92,7 +92,7 @@ def update_api_imports():
         "from app.domains.analytics": "from app.features.analitica",
         "from app.domains.auth": "from app.domains.autenticacion",
         "from app.domains.eventos": "from app.domains.epidemiologia.eventos",
-        "from app.domains.estrategias": "from app.domains.epidemiologia.clasificacion",
+        "from app.domains.eventos_epidemiologicos.clasificacion": "from app.domains.epidemiologia.clasificacion",
         "from app.domains.ciudadanos": "from app.domains.personas.ciudadanos",
         "from app.domains.localidades": "from app.domains.territorio.geografia",
         "from app.domains.establecimientos": "from app.domains.territorio.establecimientos",

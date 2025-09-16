@@ -167,7 +167,7 @@ class TestRealDatabaseIntegration:
         )
         from app.domains.eventos.models import TipoEno, GrupoEno
         from app.domains.establecimientos.models import Establecimiento
-        from app.domains.localidades.models import Localidad, Departamento, Provincia
+        from app.domains.territorio.geografia_models import Localidad, Departamento, Provincia
 
         # 1. Process geographic hierarchy first
         estab_processor = EstablecimientosBulkProcessor(context, context.logger)

@@ -9,14 +9,14 @@ from sqlalchemy import and_, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.domains.estrategias.models import (
+from app.domains.eventos_epidemiologicos.clasificacion.models import (
     ClassificationRule,
     EventClassificationAudit,
     EventStrategy,
     FilterCondition,
     TipoClasificacion,
 )
-from app.domains.estrategias.schemas import (
+from app.domains.eventos_epidemiologicos.clasificacion.schemas import (
     EventStrategyCreate,
     EventStrategyUpdate,
 )

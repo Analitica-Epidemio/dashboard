@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_async_session
 from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User
-from app.domains.charts.models import DashboardChart
+from app.features.dashboard.models import DashboardChart
 
 
 async def get_charts_disponibles(

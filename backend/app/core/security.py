@@ -8,8 +8,8 @@ from typing import Callable
 
 from fastapi import Depends, HTTPException, status
 
-from app.domains.auth.dependencies import get_current_user
-from app.domains.auth.models import User, UserRole, UserStatus
+from app.domains.autenticacion.dependencies import get_current_user
+from app.domains.autenticacion.models import User, UserRole, UserStatus
 
 logger = logging.getLogger(__name__)
 

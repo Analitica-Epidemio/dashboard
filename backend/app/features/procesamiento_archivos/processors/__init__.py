@@ -8,12 +8,12 @@ Este módulo contiene los procesadores especializados para:
 - Métricas y reportes
 """
 
-from app.domains.uploads.processors.bulk_processors import MainBulkProcessor
-from app.domains.uploads.processors.classification.classifier import EventClassifier
-from app.domains.uploads.processors.simple_processor import (
+from app.features.procesamiento_archivos.processors.bulk_processors import MainBulkProcessor
+from app.features.procesamiento_archivos.processors.classification.classifier import EventClassifier
+from app.features.procesamiento_archivos.processors.simple_processor import (
     SimpleEpidemiologicalProcessor,
 )
-from app.domains.uploads.processors.validation.validator import OptimizedDataValidator
+from app.features.procesamiento_archivos.processors.validation.validator import OptimizedDataValidator
 
 __all__ = [
     "OptimizedDataValidator",

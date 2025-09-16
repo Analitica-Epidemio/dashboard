@@ -18,9 +18,9 @@ from celery.result import AsyncResult
 from fastapi import HTTPException, UploadFile
 
 from app.core.celery_app import celery_app
-from app.domains.uploads.models import JobPriority, JobStatus, ProcessingJob
-from app.domains.uploads.repositories import job_repository
-from app.domains.uploads.schemas import JobStatusResponse
+from app.features.procesamiento_archivos.models import JobPriority, JobStatus, ProcessingJob
+from app.features.procesamiento_archivos.repositories import job_repository
+from app.features.procesamiento_archivos.schemas import JobStatusResponse
 
 logger = logging.getLogger(__name__)
 
@@ -121,7 +121,7 @@ class AsyncFileProcessingService:
                 logger.error(f"❌ Celery connection test failed: {str(e)}")
                 logger.error("This might indicate Redis is not running or not accessible")
             
-            from app.domains.uploads.tasks import process_csv_file
+            from app.features.procesamiento_archivos.tasks import process_csv_file
             logger.info("📦 process_csv_file imported successfully")
 
             logger.info(f"🚀 Launching Celery task with args: job_id={created_job.id}, file_path={file_path}")

@@ -15,7 +15,7 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.domains.estrategias.models import (
+from app.domains.eventos_epidemiologicos.clasificacion.models import (
     ClassificationRule,
     EventStrategy,
     FilterCondition,

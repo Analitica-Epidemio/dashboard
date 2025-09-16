@@ -12,8 +12,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import engine
-from app.domains.auth.models import User, UserRole, UserStatus
-from app.domains.auth.security import PasswordSecurity, SecurityTokens
+from app.domains.autenticacion.models import User, UserRole, UserStatus
+from app.domains.autenticacion.security import PasswordSecurity, SecurityTokens
 
 
 def validate_email(email: str) -> bool:

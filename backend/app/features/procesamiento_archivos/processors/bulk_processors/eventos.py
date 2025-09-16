@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.core.utils.codigo_generator import CodigoGenerator
-from app.domains.sujetos_epidemiologicos.ciudadanos_models.models import AmbitosConcurrenciaEvento
+from app.domains.sujetos_epidemiologicos.ciudadanos_models import AmbitosConcurrenciaEvento
 from app.domains.eventos_epidemiologicos.eventos.models import (
     AntecedenteEpidemiologico,
     AntecedentesEpidemiologicosEvento,
@@ -18,7 +18,7 @@ from app.domains.eventos_epidemiologicos.eventos.models import (
     TipoEno,
 )
 from app.domains.atencion_medica.salud_models.models import Sintoma
-from app.domains.uploads.utils.epidemiological_calculations import (
+from app.features.procesamiento_archivos.utils.epidemiological_calculations import (
     calcular_edad,
     calcular_semana_epidemiologica,
 )
@@ -576,7 +576,7 @@ class EventosBulkProcessor(BulkProcessorBase):
                 or not str(clasificacion_estrategia).strip()
             ):
                 # Si no hay clasificación del classifier, marcar como requiere revisión
-                from app.domains.estrategias.models import TipoClasificacion
+                from app.domains.eventos_epidemiologicos.clasificacion.models import TipoClasificacion
 
                 clasificacion_estrategia = TipoClasificacion.REQUIERE_REVISION
 

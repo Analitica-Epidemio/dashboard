@@ -7,7 +7,7 @@ from typing import Dict, Optional
 import pandas as pd
 from sqlmodel import Session, select
 
-from app.domains.estrategias.models import (
+from app.domains.eventos_epidemiologicos.clasificacion.models import (
     ClassificationRule,
     EventStrategy,
     FilterCondition,

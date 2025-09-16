@@ -7,7 +7,7 @@ from typing import Any, Dict, Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domains.charts.models import DashboardChart
+from app.features.dashboard.models import DashboardChart
 from app.domains.eventos_epidemiologicos.eventos.models import GrupoEno, TipoEno
 
 logger = logging.getLogger(__name__)
