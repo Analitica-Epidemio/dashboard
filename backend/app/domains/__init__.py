@@ -1,18 +1,21 @@
 """
-🦠 DOMINIOS DE NEGOCIO - EPIDEMIOLOGÍA CHUBUT
+🦠 EPIDEMIOLOGÍA CHUBUT - Dominios de Negocio (FIXED)
 
-Esta carpeta contiene SOLO dominios de negocio puros, sin dependencias técnicas.
+Esta nueva estructura corrige los problemas conceptuales encontrados
+en la arquitectura anterior, aplicando correctamente los principios DDD.
 
-DOMINIOS:
-├── epidemiologia/     🔥 CORE DOMAIN - Corazón del sistema
-├── personas/          👥 Supporting - Gestión de personas
-├── territorio/        🗺️ Supporting - Contexto geográfico
-├── clinica/          ⚕️ Supporting - Contexto médico
-└── autenticacion/    🔐 Supporting - Gestión de usuarios
+DOMINIOS POR BOUNDED CONTEXT:
+├── autenticacion/              🔐 SUPPORTING - Usuarios y sesiones
+├── sujetos_epidemiologicos/    👥🐕 SUPPORTING - Ciudadanos, animales y viajes
+├── eventos_epidemiologicos/    🦠 CORE - Eventos, clasificación y ámbitos
+├── atencion_medica/           ⚕️ SUPPORTING - Síntomas, diagnósticos, muestras
+└── territorio/                🗺️ SUPPORTING - Geografía y establecimientos
 
-REGLAS:
-- Cada dominio es INDEPENDIENTE
-- NO pueden depender de features/
-- Solo comunican via Domain Events
-- Aggregate Roots bien definidos
+PRINCIPIOS APLICADOS:
+✅ Separación clara de responsabilidades
+✅ Nombres que "gritan" el propósito del dominio
+✅ Cohesión conceptual alta
+✅ Acoplamiento bajo entre dominios
+✅ Un archivo = Un concepto específico
+✅ Imports corregidos y actualizados
 """

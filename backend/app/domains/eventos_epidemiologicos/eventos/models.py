@@ -7,7 +7,7 @@ from sqlmodel import Field, Relationship
 from app.core.models import BaseModel
 
 if TYPE_CHECKING:
-    from app.domains.ciudadanos.models import (
+    from app.domains.sujetos_epidemiologicos.ciudadanos_models.models import (
         AmbitosConcurrenciaEvento,
         Animal,
         Ciudadano,
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
         ContactosNotificacion,
         InvestigacionEvento,
     )
-    from app.domains.salud.models import MuestraEvento, Sintoma, VacunasCiudadano
+    from app.domains.atencion_medica.salud_models.models import MuestraEvento, Sintoma, VacunasCiudadano
 
 
 class GrupoEno(BaseModel, table=True):

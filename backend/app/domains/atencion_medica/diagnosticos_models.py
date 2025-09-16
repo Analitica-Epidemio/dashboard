@@ -10,7 +10,7 @@ from app.core.models import BaseModel
 if TYPE_CHECKING:
     from app.domains.establecimientos.models import Establecimiento
     from app.domains.eventos.models import Evento
-    from app.domains.salud.models import MuestraEvento
+    from app.domains.atencion_medica.salud_models.models import MuestraEvento
 
 
 class DiagnosticoEvento(BaseModel, table=True):

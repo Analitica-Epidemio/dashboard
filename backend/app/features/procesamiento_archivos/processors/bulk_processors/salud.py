@@ -8,7 +8,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.domains.establecimientos.models import Establecimiento
 from app.domains.eventos.models import Evento
-from app.domains.salud.models import Muestra, MuestraEvento, Vacuna, VacunasCiudadano
+from app.domains.atencion_medica.salud_models.models import Muestra, MuestraEvento, Vacuna, VacunasCiudadano
 
 from ..core.columns import Columns
 from .base import BulkProcessorBase

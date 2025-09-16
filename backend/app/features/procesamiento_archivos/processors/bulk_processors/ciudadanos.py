@@ -6,14 +6,14 @@ import pandas as pd
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-from app.domains.ciudadanos.models import (
+from app.domains.sujetos_epidemiologicos.ciudadanos_models.models import (
     Ciudadano,
     CiudadanoComorbilidades,
     CiudadanoDatos,
     CiudadanoDomicilio,
     ViajesCiudadano,
 )
-from app.domains.salud.models import Comorbilidad
+from app.domains.atencion_medica.salud_models.models import Comorbilidad
 
 from ..core.columns import Columns
 from .base import BulkProcessorBase

@@ -457,7 +457,7 @@ class AnalyticsService:
     async def _generar_casos_por_edad(self, query) -> List[Dict[str, Any]]:
         """Genera datos para gráfico de casos por edad."""
         # Unir con ciudadano para obtener fecha de nacimiento
-        from app.domains.ciudadanos.models import Ciudadano
+        from app.domains.sujetos_epidemiologicos.ciudadanos_models.models import Ciudadano
 
         resultados = (
             query.join(Ciudadano)
@@ -507,7 +507,7 @@ class AnalyticsService:
 
     async def _generar_torta_sexo(self, query) -> List[Dict[str, Any]]:
         """Genera datos para gráfico de torta por sexo."""
-        from app.domains.ciudadanos.models import Ciudadano
+        from app.domains.sujetos_epidemiologicos.ciudadanos_models.models import Ciudadano
 
         resultados = (
             query.join(Ciudadano)
@@ -543,7 +543,7 @@ class AnalyticsService:
 
     async def _generar_tabla(self, query) -> List[Dict[str, Any]]:
         """Genera datos para tabla."""
-        from app.domains.ciudadanos.models import Ciudadano
+        from app.domains.sujetos_epidemiologicos.ciudadanos_models.models import Ciudadano
 
         resultados = query.join(Ciudadano).limit(100).all()
 
