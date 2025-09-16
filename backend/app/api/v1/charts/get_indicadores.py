@@ -36,7 +36,7 @@ async def get_indicadores(
     fecha_hasta: Optional[date] = Query(None, description="Fecha hasta (formato: YYYY-MM-DD)"),
     clasificaciones: Optional[List[str]] = Query(None, description="Filtrar por clasificaciones estratégicas"),
     db: AsyncSession = Depends(get_async_session),
-    current_user: Optional[User] = RequireAuthOrSignedUrl()
+    current_user: Optional[User] = RequireAuthOrSignedUrl
 ) -> SuccessResponse[IndicadoresResponse]:
     """
     Obtiene los indicadores de resumen para el dashboard

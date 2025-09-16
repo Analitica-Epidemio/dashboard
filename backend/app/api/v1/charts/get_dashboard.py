@@ -48,7 +48,7 @@ async def get_dashboard_charts(
     fecha_hasta: Optional[date] = Query(None, description="Fecha hasta (formato: YYYY-MM-DD)"),
     clasificaciones: Optional[List[str]] = Query(None, description="Filtrar por clasificaciones estratégicas"),
     db: AsyncSession = Depends(get_async_session),
-    current_user: Optional[User] = RequireAuthOrSignedUrl()
+    current_user: Optional[User] = RequireAuthOrSignedUrl
 ) -> SuccessResponse[DashboardChartsResponse]:
     """
     Obtiene los charts aplicables y sus datos según los filtros

@@ -21,26 +21,32 @@ from app.domains.autenticacion.models import User
 
 class ReportFiltersRequest(BaseModel):
     """Request para generar URL firmada"""
+
     filters: List[Dict] = Field(..., description="Lista de combinaciones de filtros")
     date_from: Optional[date] = Field(None, description="Fecha desde")
     date_to: Optional[date] = Field(None, description="Fecha hasta")
-    expires_in: int = Field(3600, description="Tiempo de expiración en segundos", ge=60, le=86400)
+    expires_in: int = Field(
+        3600, description="Tiempo de expiración en segundos", ge=60, le=86400
+    )
 
 
 class SignedUrlResponse(BaseModel):
     """Response con la URL firmada"""
+
     signed_url: str = Field(..., description="URL firmada para acceder al reporte")
     expires_at: int = Field(..., description="Timestamp de expiración")
 
 
 class VerifySignedUrlRequest(BaseModel):
     """Request para verificar URL firmada"""
+
     data: str = Field(..., description="Payload codificado en base64")
     signature: str = Field(..., description="Firma HMAC")
 
 
 class VerifySignedUrlResponse(BaseModel):
     """Response con los datos verificados"""
+
     filters: List[Dict] = Field(..., description="Lista de filtros verificados")
     date_from: Optional[str] = Field(None, description="Fecha desde")
     date_to: Optional[str] = Field(None, description="Fecha hasta")
@@ -61,30 +67,24 @@ def generate_signed_url(filters_data: Dict, expires_in: int = 3600) -> Dict[str,
     """
     # Crear payload con filtros y expiración
     expires_at = int(time.time()) + expires_in
-    payload = {
-        **filters_data,
-        "expires_at": expires_at
-    }
+    payload = {**filters_data, "expires_at": expires_at}
 
     # Serializar payload
-    payload_json = json.dumps(payload, sort_keys=True, separators=(',', ':'))
-    payload_encoded = base64.urlsafe_b64encode(payload_json.encode()).decode().rstrip('=')
+    payload_json = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    payload_encoded = (
+        base64.urlsafe_b64encode(payload_json.encode()).decode().rstrip("=")
+    )
 
     # Generar firma HMAC
     secret_key = settings.SECRET_KEY.encode()
     signature = hmac.new(
-        secret_key,
-        payload_encoded.encode(),
-        hashlib.sha256
+        secret_key, payload_encoded.encode(), hashlib.sha256
     ).hexdigest()
 
     # Construir URL firmada
     signed_url = f"/reports-ssr?data={payload_encoded}&signature={signature}"
 
-    return {
-        "signed_url": signed_url,
-        "expires_at": expires_at
-    }
+    return {"signed_url": signed_url, "expires_at": expires_at}
 
 
 def verify_signed_url(data: str, signature: str) -> Dict:
@@ -102,28 +102,45 @@ def verify_signed_url(data: str, signature: str) -> Dict:
         ValueError: Si la firma es inválida o la URL expiró
     """
     try:
+        print(f"Verifying signed URL")
+        print(f"  Data (first 100 chars): {data[:100]}...")
+        print(f"  Signature: {signature}")
+
+        # IMPORTANTE: Guardar el data original para verificar la firma
+        original_data = data
+
         # Decodificar payload
         # Añadir padding si es necesario
         missing_padding = len(data) % 4
         if missing_padding:
-            data += '=' * (4 - missing_padding)
+            data += "=" * (4 - missing_padding)
 
         payload_json = base64.urlsafe_b64decode(data.encode()).decode()
         payload = json.loads(payload_json)
+        print(f"  Decoded payload keys: {list(payload.keys())}")
 
         # Verificar expiración
         if time.time() > payload.get("expires_at", 0):
+            logger.error(
+                f"URL expired. Current: {time.time()}, Expires: {payload.get('expires_at', 0)}"
+            )
             raise ValueError("URL has expired")
 
-        # Verificar firma
+        # Verificar firma usando el data ORIGINAL (sin padding añadido)
         secret_key = settings.SECRET_KEY.encode()
+        print(f"  Using SECRET_KEY: {settings.SECRET_KEY[:10]}... (first 10 chars)")
+
         expected_signature = hmac.new(
             secret_key,
-            data.encode(),
-            hashlib.sha256
+            original_data.encode(),  # Usar el data original, no el modificado con padding
+            hashlib.sha256,
         ).hexdigest()
 
+        print(f"  Expected signature: {expected_signature}")
+        print(f"  Received signature: {signature}")
+
         if not hmac.compare_digest(signature, expected_signature):
+            logger.error(f"Signature mismatch!")
             raise ValueError("Invalid signature")
 
         # Remover expires_at del payload antes de devolver
@@ -135,8 +152,7 @@ def verify_signed_url(data: str, signature: str) -> Dict:
 
 
 async def generate_report_signed_url(
-    request: ReportFiltersRequest,
-    current_user: User = Depends(RequireAnyRole())
+    request: ReportFiltersRequest, current_user: User = Depends(RequireAnyRole())
 ) -> SuccessResponse[SignedUrlResponse]:
     """
     Genera una URL firmada para acceder a un reporte SSR
@@ -147,22 +163,21 @@ async def generate_report_signed_url(
         "date_from": request.date_from.isoformat() if request.date_from else None,
         "date_to": request.date_to.isoformat() if request.date_to else None,
         "generated_by": current_user.id,  # Para auditoría
-        "generated_at": int(time.time())
+        "generated_at": int(time.time()),
     }
 
     # Generar URL firmada
     result = generate_signed_url(filters_data, request.expires_in)
 
     response = SignedUrlResponse(
-        signed_url=result["signed_url"],
-        expires_at=result["expires_at"]
+        signed_url=result["signed_url"], expires_at=result["expires_at"]
     )
 
     return SuccessResponse(data=response)
 
 
 async def verify_signed_url_endpoint(
-    request: VerifySignedUrlRequest
+    request: VerifySignedUrlRequest,
 ) -> SuccessResponse[VerifySignedUrlResponse]:
     """
     Verifica una URL firmada y devuelve los datos de filtros
@@ -176,11 +191,12 @@ async def verify_signed_url_endpoint(
             date_from=verified_data.get("date_from"),
             date_to=verified_data.get("date_to"),
             generated_by=verified_data["generated_by"],
-            generated_at=verified_data["generated_at"]
+            generated_at=verified_data["generated_at"],
         )
 
         return SuccessResponse(data=response)
 
     except ValueError as e:
         from fastapi import HTTPException
+
         raise HTTPException(status_code=400, detail=str(e))

@@ -97,6 +97,15 @@ async function fetchReportData(
       }
     : {};
 
+  // Debug logging
+  if (signedUrlParams) {
+    console.log('📝 Using signed URL authentication');
+    console.log('  X-Signed-Data:', signedUrlParams.data?.substring(0, 50) + '...');
+    console.log('  X-Signed-Signature:', signedUrlParams.signature?.substring(0, 20) + '...');
+  } else {
+    console.log('🔐 No signed URL params, will use regular auth if available');
+  }
+
   const processedCombinations = [];
 
   for (const combo of combinations) {
