@@ -1069,6 +1069,60 @@ export interface components {
             };
         };
         /**
+         * ChartDisponibleItem
+         * @description Modelo para un chart disponible en el catálogo
+         */
+        ChartDisponibleItem: {
+            /**
+             * Id
+             * @description ID del chart
+             */
+            id: number;
+            /**
+             * Codigo
+             * @description Código único del chart
+             */
+            codigo: string;
+            /**
+             * Nombre
+             * @description Nombre del chart
+             */
+            nombre: string;
+            /**
+             * Descripcion
+             * @description Descripción del chart
+             */
+            descripcion?: string | null;
+            /**
+             * Tipo Visualizacion
+             * @description Tipo de visualización
+             */
+            tipo_visualizacion: string;
+            /**
+             * Condiciones
+             * @description Condiciones de aplicación
+             */
+            condiciones?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /**
+         * ChartsDisponiblesResponse
+         * @description Response model para charts disponibles
+         */
+        ChartsDisponiblesResponse: {
+            /**
+             * Charts
+             * @description Lista de charts disponibles
+             */
+            charts: components["schemas"]["ChartDisponibleItem"][];
+            /**
+             * Total
+             * @description Total de charts disponibles
+             */
+            total: number;
+        };
+        /**
          * CiudadanoInfo
          * @description Información del ciudadano
          */
@@ -2585,6 +2639,18 @@ export interface components {
         SuccessResponse_AsyncJobResponse_: {
             /** @description Datos de la respuesta */
             data: components["schemas"]["AsyncJobResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[ChartsDisponiblesResponse] */
+        SuccessResponse_ChartsDisponiblesResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["ChartsDisponiblesResponse"];
             /**
              * Meta
              * @description Metadata opcional (paginación, etc)
@@ -4380,9 +4446,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    }[];
+                    "application/json": components["schemas"]["SuccessResponse_ChartsDisponiblesResponse_"];
                 };
             };
         };
