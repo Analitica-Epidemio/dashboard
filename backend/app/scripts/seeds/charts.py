@@ -80,7 +80,7 @@ DASHBOARD_CHARTS = [
         "funcion_procesamiento": "torta_sexo",
         "condiciones_display": None,
         "tipo_visualizacion": "pie",
-        "configuracion_chart": {"height": 200},
+        "configuracion_chart": {"height": 300},
         "orden": 6,
         "activo": True
     },

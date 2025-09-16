@@ -49,11 +49,11 @@ const ChubutMapChart: React.FC<ChubutMapChartProps> = ({ data }) => {
 
     const tasa = dept.tasa_incidencia;
     if (tasa === 0) return "#f0f0f0";
-    if (tasa < 10) return "#fee0d2";
-    if (tasa < 50) return "#fcbba1";
-    if (tasa < 100) return "#fc9272";
-    if (tasa < 200) return "#fb6a4a";
-    if (tasa < 500) return "#ef3b2c";
+    if (tasa < 1) return "#fee0d2";
+    if (tasa < 5) return "#fcbba1";
+    if (tasa < 10) return "#fc9272";
+    if (tasa < 20) return "#fb6a4a";
+    if (tasa < 50) return "#ef3b2c";
     return "#cb181d";
   };
 
@@ -116,19 +116,18 @@ const ChubutMapChart: React.FC<ChubutMapChartProps> = ({ data }) => {
   }, [dataByDeptId]);
 
   return (
-    <div className="relative w-full h-full">
-      <div ref={svgRef} className="w-full h-full">
-        <ChubutSvg className="w-full h-auto" />
+    <div className="relative w-full h-full flex justify-center">
+      <div ref={svgRef} className="relative">
+        <ChubutSvg className="w-full h-auto max-w-2xl" />
       </div>
 
       {/* Tooltip */}
       {hoveredDept && (
         <div
-          className="absolute z-50 bg-white rounded-lg shadow-lg p-3 pointer-events-none"
+          className="fixed z-50 bg-white rounded-lg shadow-lg p-3 pointer-events-none"
           style={{
-            left: mousePosition.x + 10,
-            top: mousePosition.y - 10,
-            transform: "translate(0, -100%)",
+            left: mousePosition.x + 15,
+            top: mousePosition.y + 15,
           }}
         >
           <div className="font-semibold text-sm">{hoveredDept.nombre}</div>
@@ -144,63 +143,64 @@ const ChubutMapChart: React.FC<ChubutMapChartProps> = ({ data }) => {
       )}
 
       {/* Leyenda */}
-      <div className="absolute bottom-4 left-4 bg-white rounded p-2 shadow">
-        <div className="text-xs font-semibold mb-1">Tasa de incidencia</div>
+      <div className="absolute bottom-4 right-4 bg-white/80 backdrop-blur-sm rounded-lg p-3 shadow-lg z-10">
+        <div className="text-xs font-semibold mb-2">Tasa de incidencia</div>
+        <div className="text-xs text-gray-600 mb-2">(por 100.000 hab.)</div>
         <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <div
-              className="w-4 h-3"
+              className="w-4 h-3 border border-gray-300"
               style={{ backgroundColor: "#f0f0f0" }}
             ></div>
-            <span className="text-xs">Sin casos</span>
+            <span className="text-xs">0</span>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <div
-              className="w-4 h-3"
+              className="w-4 h-3 border border-gray-300"
               style={{ backgroundColor: "#fee0d2" }}
             ></div>
-            <span className="text-xs">&lt; 10</span>
+            <span className="text-xs">&lt; 1</span>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <div
-              className="w-4 h-3"
+              className="w-4 h-3 border border-gray-300"
               style={{ backgroundColor: "#fcbba1" }}
             ></div>
-            <span className="text-xs">10 - 50</span>
+            <span className="text-xs">1 - 5</span>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <div
-              className="w-4 h-3"
+              className="w-4 h-3 border border-gray-300"
               style={{ backgroundColor: "#fc9272" }}
             ></div>
-            <span className="text-xs">50 - 100</span>
+            <span className="text-xs">5 - 10</span>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <div
-              className="w-4 h-3"
+              className="w-4 h-3 border border-gray-300"
               style={{ backgroundColor: "#fb6a4a" }}
             ></div>
-            <span className="text-xs">100 - 200</span>
+            <span className="text-xs">10 - 20</span>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <div
-              className="w-4 h-3"
+              className="w-4 h-3 border border-gray-300"
               style={{ backgroundColor: "#ef3b2c" }}
             ></div>
-            <span className="text-xs">200 - 500</span>
+            <span className="text-xs">20 - 50</span>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <div
-              className="w-4 h-3"
+              className="w-4 h-3 border border-gray-300"
               style={{ backgroundColor: "#cb181d" }}
             ></div>
-            <span className="text-xs">&gt; 500</span>
+            <span className="text-xs">&ge; 50</span>
           </div>
         </div>
       </div>
 
       {/* Summary */}
-      <div className="absolute top-4 right-4 bg-white rounded p-2 shadow">
+      <div className="absolute top-4 left-4 bg-white/80 backdrop-blur-sm rounded-lg p-3 shadow-lg z-10">
         <div className="text-xs font-semibold">Total Provincial</div>
         <div className="text-lg font-bold">{data.total_casos} casos</div>
       </div>

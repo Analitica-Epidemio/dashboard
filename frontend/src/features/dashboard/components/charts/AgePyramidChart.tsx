@@ -236,8 +236,8 @@ export function AgePyramidChart({
   }
 
   return (
-    <div className={`population-pyramid ${className}`}>
-      <svg ref={svgRef} className="w-full h-auto" />
+    <div className={`population-pyramid ${className} flex justify-center`}>
+      <svg ref={svgRef} />
     </div>
   );
 }

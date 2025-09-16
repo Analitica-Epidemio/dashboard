@@ -156,10 +156,9 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
             <PieChart>
               <Pie
                 data={pieData}
-                cx="50%"
+                cx="40%"
                 cy="50%"
                 labelLine={false}
-                label={(entry) => entry.name}
                 outerRadius={80}
                 fill="#8884d8"
                 dataKey="value"
@@ -172,6 +171,14 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
                 ))}
               </Pie>
               <Tooltip />
+              <Legend
+                verticalAlign="middle"
+                align="right"
+                layout="vertical"
+                formatter={(value: string, entry: any) =>
+                  `${value} (${entry.payload.value})`
+                }
+              />
             </PieChart>
           </ResponsiveContainer>
         );
@@ -217,8 +224,8 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
         }
 
         return (
-          <div className="w-full" style={{ height: pyramidHeight }}>
-            <AgePyramidChart data={data.data} width={800} height={pyramidHeight} />
+          <div className="w-full flex justify-center" style={{ height: pyramidHeight }}>
+            <AgePyramidChart data={data.data} width={600} height={pyramidHeight} />
           </div>
         );
 
