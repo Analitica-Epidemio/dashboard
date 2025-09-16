@@ -52,17 +52,6 @@ DASHBOARD_CHARTS = [
         "activo": True
     },
     {
-        "codigo": "distribucion-geografica",
-        "nombre": "Distribución Geográfica",
-        "descripcion": "Casos por departamento/UGD",
-        "funcion_procesamiento": "distribucion_geografica",
-        "condiciones_display": None,
-        "tipo_visualizacion": "pie",
-        "configuracion_chart": {"height": 300},
-        "orden": 4,
-        "activo": True
-    },
-    {
         "codigo": "mapa-geografico",
         "nombre": "Mapa Geográfico",
         "descripcion": "Visualización geográfica de casos por departamento",
@@ -70,7 +59,7 @@ DASHBOARD_CHARTS = [
         "condiciones_display": None,
         "tipo_visualizacion": "mapa",
         "configuracion_chart": {"height": 500},
-        "orden": 5,
+        "orden": 4,
         "activo": True
     },
     {
@@ -81,7 +70,7 @@ DASHBOARD_CHARTS = [
         "condiciones_display": None,
         "tipo_visualizacion": "bar",
         "configuracion_chart": {"height": 300},
-        "orden": 6,
+        "orden": 5,
         "activo": True
     },
     {
@@ -92,7 +81,7 @@ DASHBOARD_CHARTS = [
         "condiciones_display": None,
         "tipo_visualizacion": "pie",
         "configuracion_chart": {"height": 200},
-        "orden": 7,
+        "orden": 6,
         "activo": True
     },
     {
@@ -103,7 +92,7 @@ DASHBOARD_CHARTS = [
         "condiciones_display": None,
         "tipo_visualizacion": "bar",
         "configuracion_chart": {"height": 300},
-        "orden": 8,
+        "orden": 7,
         "activo": True
     },
     {
@@ -114,7 +103,7 @@ DASHBOARD_CHARTS = [
         "condiciones_display": {"grupo_codigos": ["lesiones-intencionales"]},
         "tipo_visualizacion": "bar",
         "configuracion_chart": {"height": 300},
-        "orden": 9,
+        "orden": 8,
         "activo": True
     },
     {
@@ -125,7 +114,7 @@ DASHBOARD_CHARTS = [
         "condiciones_display": {"grupo_codigos": ["rabia"]},
         "tipo_visualizacion": "bar",
         "configuracion_chart": {"height": 300},
-        "orden": 10,
+        "orden": 9,
         "activo": True
     },
     {
@@ -136,7 +125,7 @@ DASHBOARD_CHARTS = [
         "condiciones_display": {"grupo_codigos": ["infecciones-respiratorias-agudas"]},
         "tipo_visualizacion": "pie",
         "configuracion_chart": {"height": 400},
-        "orden": 11,
+        "orden": 10,
         "activo": True
     }
 ]

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { ChubutSvg } from "@/components/chubut.svg";
 import {
   DEPARTAMENTO_INDEC_TO_SVG,
@@ -26,6 +26,8 @@ interface ChubutMapChartProps {
 const ChubutMapChart: React.FC<ChubutMapChartProps> = ({ data }) => {
   const [hoveredDept, setHoveredDept] = useState<DepartmentData | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const svgRef = useRef<HTMLDivElement>(null);
+
   console.log("ChubutMapChart", data);
 
   // Crear mapa de datos por SVG ID
@@ -39,10 +41,12 @@ const ChubutMapChart: React.FC<ChubutMapChartProps> = ({ data }) => {
     });
     return map;
   }, [data.departamentos]);
-  console.log(dataByDeptId);
 
   // Calcular el color basado en la tasa de incidencia
-  const getColorForDepartment = (dept: DepartmentData) => {
+  const getColorForDepartment = (svgId: string): string => {
+    const dept = dataByDeptId.get(svgId);
+    if (!dept) return "#e0e0e0";
+
     const tasa = dept.tasa_incidencia;
     if (tasa === 0) return "#f0f0f0";
     if (tasa < 10) return "#fee0d2";
@@ -53,31 +57,69 @@ const ChubutMapChart: React.FC<ChubutMapChartProps> = ({ data }) => {
     return "#cb181d";
   };
 
-  const handleDepartmentHover = (deptId: string, event: React.MouseEvent) => {
-    const dept = dataByDeptId.get(deptId);
-    if (dept) {
-      setHoveredDept(dept);
-      setMousePosition({ x: event.clientX, y: event.clientY });
-    }
-  };
+  // Add colors and hover handlers to SVG paths
+  useEffect(() => {
+    if (!svgRef.current) return;
 
-  const handleDepartmentLeave = () => {
-    setHoveredDept(null);
-  };
+    const svgElement = svgRef.current.querySelector("svg");
+    if (!svgElement) return;
+
+    // Find all department groups
+    const departmentGroups = svgElement.querySelectorAll("g[id]");
+
+    departmentGroups.forEach((group) => {
+      const deptId = group.id;
+      const deptData = dataByDeptId.get(deptId);
+
+      if (deptData) {
+        // Find the path element within the group
+        const pathElement = group.querySelector("path");
+        if (pathElement) {
+          // Set the fill color
+          pathElement.style.fill = getColorForDepartment(deptId);
+          pathElement.style.cursor = "pointer";
+          pathElement.style.transition = "all 0.2s ease";
+
+          // Add hover handlers
+          const handleMouseEnter = (e: MouseEvent) => {
+            pathElement.style.opacity = "0.8";
+            pathElement.style.stroke = "#333";
+            pathElement.style.strokeWidth = "2";
+            setHoveredDept(deptData);
+            setMousePosition({ x: e.clientX, y: e.clientY });
+          };
+
+          const handleMouseMove = (e: MouseEvent) => {
+            setMousePosition({ x: e.clientX, y: e.clientY });
+          };
+
+          const handleMouseLeave = () => {
+            pathElement.style.opacity = "1";
+            pathElement.style.stroke = "#666";
+            pathElement.style.strokeWidth = "0.5";
+            setHoveredDept(null);
+          };
+
+          pathElement.addEventListener("mouseenter", handleMouseEnter);
+          pathElement.addEventListener("mousemove", handleMouseMove);
+          pathElement.addEventListener("mouseleave", handleMouseLeave);
+
+          // Cleanup
+          return () => {
+            pathElement.removeEventListener("mouseenter", handleMouseEnter);
+            pathElement.removeEventListener("mousemove", handleMouseMove);
+            pathElement.removeEventListener("mouseleave", handleMouseLeave);
+          };
+        }
+      }
+    });
+  }, [dataByDeptId]);
 
   return (
     <div className="relative w-full h-full">
-      <ChubutSvg
-        className="w-full h-auto"
-        onDepartmentHover={handleDepartmentHover}
-        onDepartmentLeave={handleDepartmentLeave}
-        departmentColors={Object.fromEntries(
-          data.departamentos.map((dept) => [
-            getSvgIdFromIndec(dept.codigo_indec),
-            getColorForDepartment(dept),
-          ])
-        )}
-      />
+      <div ref={svgRef} className="w-full h-full">
+        <ChubutSvg className="w-full h-auto" />
+      </div>
 
       {/* Tooltip */}
       {hoveredDept && (
@@ -95,8 +137,7 @@ const ChubutMapChart: React.FC<ChubutMapChartProps> = ({ data }) => {
             <div>Población: {hoveredDept.poblacion.toLocaleString()}</div>
             <div>Casos: {hoveredDept.casos}</div>
             <div>
-              Tasa de incidencia: {hoveredDept.tasa_incidencia.toFixed(2)} por
-              100.000 hab.
+              Tasa: {hoveredDept.tasa_incidencia.toFixed(2)} por 100.000 hab.
             </div>
           </div>
         </div>
@@ -156,6 +197,12 @@ const ChubutMapChart: React.FC<ChubutMapChartProps> = ({ data }) => {
             <span className="text-xs">&gt; 500</span>
           </div>
         </div>
+      </div>
+
+      {/* Summary */}
+      <div className="absolute top-4 right-4 bg-white rounded p-2 shadow">
+        <div className="text-xs font-semibold">Total Provincial</div>
+        <div className="text-lg font-bold">{data.total_casos} casos</div>
       </div>
     </div>
   );

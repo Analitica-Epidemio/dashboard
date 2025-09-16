@@ -48,11 +48,14 @@ async def get_indicadores(
     - Letalidad (si hay datos de fallecidos)
     """
 
-    # Base query para total de casos
+    # Base query para total de casos - Solo Chubut
     query_casos = """
     SELECT COUNT(*) as total_casos
     FROM evento e
-    WHERE 1=1
+    LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
+    LEFT JOIN localidad l ON est.id_localidad_establecimiento = l.id_localidad_indec
+    LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
+    WHERE d.id_provincia_indec = 26
     """
 
     params = {}
@@ -86,14 +89,14 @@ async def get_indicadores(
     result_casos = await db.execute(text(query_casos), params)
     total_casos = result_casos.scalar() or 0
 
-    # Query para áreas afectadas (departamentos únicos)
+    # Query para áreas afectadas (departamentos únicos) - Solo Chubut
     query_areas = """
     SELECT COUNT(DISTINCT COALESCE(d.id_departamento_indec, 0)) as areas_afectadas
     FROM evento e
     LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
     LEFT JOIN localidad l ON est.id_localidad_establecimiento = l.id_localidad_indec
     LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
-    WHERE 1=1
+    WHERE d.id_provincia_indec = 26
     """
 
     # Aplicar los mismos filtros

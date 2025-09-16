@@ -105,7 +105,6 @@ class ChartDataProcessor:
             "curva_epidemiologica": self.process_curva_epidemiologica,
             "corredor_endemico": self.process_corredor_endemico,
             "piramide_poblacional": self.process_piramide_poblacional,
-            "distribucion_geografica": self.process_distribucion_geografica,
             "mapa_geografico": self.process_mapa_geografico,
             "totales_historicos": self.process_totales_historicos,
             "torta_sexo": self.process_torta_sexo,
@@ -147,11 +146,15 @@ class ChartDataProcessor:
         """
         # Construir query para obtener casos por semana epidemiológica
         query = """
-        SELECT 
-            semana_epidemiologica_apertura as semana,
+        SELECT
+            e.semana_epidemiologica_apertura as semana,
             COUNT(*) as casos
-        FROM evento
-        WHERE semana_epidemiologica_apertura IS NOT NULL
+        FROM evento e
+        LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
+        LEFT JOIN localidad l ON est.id_localidad_establecimiento = l.id_localidad_indec
+        LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
+        WHERE e.semana_epidemiologica_apertura IS NOT NULL
+            AND d.id_provincia_indec = 26
         """
         
         params = {}
@@ -379,12 +382,12 @@ class ChartDataProcessor:
     
     async def process_piramide_poblacional(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Procesa datos para pirámide poblacional
+        Procesa datos para pirámide poblacional - Solo Chubut
         """
         # Query para obtener distribución por edad y sexo
         query = """
-        SELECT 
-            CASE 
+        SELECT
+            CASE
                 WHEN e.edad_anos_al_momento_apertura < 5 THEN '0-4'
                 WHEN e.edad_anos_al_momento_apertura < 10 THEN '5-9'
                 WHEN e.edad_anos_al_momento_apertura < 15 THEN '10-14'
@@ -404,7 +407,11 @@ class ChartDataProcessor:
             COUNT(*) as casos
         FROM evento e
         LEFT JOIN ciudadano c ON e.codigo_ciudadano = c.codigo_ciudadano
+        LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
+        LEFT JOIN localidad l ON est.id_localidad_establecimiento = l.id_localidad_indec
+        LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
         WHERE e.edad_anos_al_momento_apertura IS NOT NULL
+            AND d.id_provincia_indec = 26
         """
         
         params = {}
@@ -476,81 +483,6 @@ class ChartDataProcessor:
                 "age_groups": age_groups,
                 "total_male": sum(abs(male_data[g]) for g in age_groups),
                 "total_female": sum(female_data[g] for g in age_groups)
-            }
-        }
-    
-    async def process_distribucion_geografica(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Procesa datos para distribución geográfica (por departamento)
-        """
-        query = """
-        SELECT
-            COALESCE(d.nombre, 'Sin datos') as lugar,
-            COUNT(*) as casos
-        FROM evento e
-        LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
-        LEFT JOIN localidad l ON est.id_localidad_establecimiento = l.id_localidad_indec
-        LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
-        WHERE 1=1
-        """
-        
-        params = {}
-        
-        if filtros.get("grupo_id"):
-            query += """
-                AND e.id_tipo_eno IN (
-                    SELECT id FROM tipo_eno WHERE id_grupo_eno = :grupo_id
-                )
-            """
-            params["grupo_id"] = filtros["grupo_id"]
-            
-        if filtros.get("evento_id"):
-            query += " AND e.id_tipo_eno = :evento_id"
-            params["evento_id"] = filtros["evento_id"]
-
-        # Filtro por clasificación estrategia
-        query = self._add_classification_filter(query, filtros, params, "e")
-
-        query += " GROUP BY lugar ORDER BY casos DESC LIMIT 10"
-        
-        result = await self.db.execute(text(query), params)
-        rows = result.fetchall()
-        
-        logger.info(f"Distribución geográfica - Filas encontradas: {len(rows)}")
-        if rows and len(rows) > 0:
-            logger.info(f"Distribución geográfica - Top 3 lugares: {rows[:3]}")
-        
-        if not rows:
-            return {
-                "type": "pie",
-                "data": {
-                    "labels": ["Sin datos"],
-                    "datasets": [{
-                        "data": [1],
-                        "backgroundColor": ["rgba(200, 200, 200, 0.5)"]
-                    }]
-                }
-            }
-        
-        return {
-            "type": "pie",
-            "data": {
-                "labels": [row[0] for row in rows],
-                "datasets": [{
-                    "data": [row[1] for row in rows],
-                    "backgroundColor": [
-                        "rgba(255, 99, 132, 0.5)",
-                        "rgba(54, 162, 235, 0.5)",
-                        "rgba(255, 206, 86, 0.5)",
-                        "rgba(75, 192, 192, 0.5)",
-                        "rgba(153, 102, 255, 0.5)",
-                        "rgba(255, 159, 64, 0.5)",
-                        "rgba(199, 199, 199, 0.5)",
-                        "rgba(83, 102, 255, 0.5)",
-                        "rgba(255, 99, 255, 0.5)",
-                        "rgba(99, 255, 132, 0.5)"
-                    ]
-                }]
             }
         }
 
@@ -646,14 +578,18 @@ class ChartDataProcessor:
 
     async def process_totales_historicos(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Procesa datos para totales históricos por año
+        Procesa datos para totales históricos por año - Solo Chubut
         """
         query = """
-        SELECT 
-            anio_epidemiologico_apertura as año,
+        SELECT
+            e.anio_epidemiologico_apertura as año,
             COUNT(*) as casos
-        FROM evento
-        WHERE anio_epidemiologico_apertura IS NOT NULL
+        FROM evento e
+        LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
+        LEFT JOIN localidad l ON est.id_localidad_establecimiento = l.id_localidad_indec
+        LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
+        WHERE e.anio_epidemiologico_apertura IS NOT NULL
+            AND d.id_provincia_indec = 26
         """
         
         params = {}
@@ -705,11 +641,11 @@ class ChartDataProcessor:
     
     async def process_torta_sexo(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Procesa datos para distribución por sexo
+        Procesa datos para distribución por sexo - Solo Chubut
         """
         query = """
-        SELECT 
-            CASE 
+        SELECT
+            CASE
                 WHEN c.sexo_biologico = 'MASCULINO' THEN 'Masculino'
                 WHEN c.sexo_biologico = 'FEMENINO' THEN 'Femenino'
                 WHEN c.sexo_biologico = 'NO_ESPECIFICADO' THEN 'No especificado'
@@ -718,7 +654,10 @@ class ChartDataProcessor:
             COUNT(*) as casos
         FROM evento e
         LEFT JOIN ciudadano c ON e.codigo_ciudadano = c.codigo_ciudadano
-        WHERE 1=1
+        LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
+        LEFT JOIN localidad l ON est.id_localidad_establecimiento = l.id_localidad_indec
+        LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
+        WHERE d.id_provincia_indec = 26
         """
         
         params = {}
@@ -776,11 +715,11 @@ class ChartDataProcessor:
     
     async def process_casos_edad(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Procesa datos para casos por grupos de edad
+        Procesa datos para casos por grupos de edad - Solo Chubut
         """
         query = """
-        SELECT 
-            CASE 
+        SELECT
+            CASE
                 WHEN e.edad_anos_al_momento_apertura < 1 THEN '< 1 año'
                 WHEN e.edad_anos_al_momento_apertura < 5 THEN '1-4'
                 WHEN e.edad_anos_al_momento_apertura < 10 THEN '5-9'
@@ -796,7 +735,10 @@ class ChartDataProcessor:
             COUNT(*) as casos
         FROM evento e
         LEFT JOIN ciudadano c ON e.codigo_ciudadano = c.codigo_ciudadano
-        WHERE 1=1
+        LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
+        LEFT JOIN localidad l ON est.id_localidad_establecimiento = l.id_localidad_indec
+        LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
+        WHERE d.id_provincia_indec = 26
         """
         
         params = {}
