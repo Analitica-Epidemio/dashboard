@@ -10,13 +10,17 @@ import { DynamicChart } from "@/features/dashboard/components/DynamicChart";
 import { env } from "@/env";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { createHmac } from "crypto";
 
 interface PageProps {
-  searchParams: {
+  searchParams: Promise<{
     filters?: string;
     dateFrom?: string;
     dateTo?: string;
-  };
+    // Signed URL parameters
+    data?: string;
+    signature?: string;
+  }>;
 }
 
 interface FilterCombination {
@@ -26,6 +30,54 @@ interface FilterCombination {
   eventIds: number[];
   eventNames?: string[];
   clasificaciones?: string[];
+}
+
+interface VerifiedFilters {
+  filters: FilterCombination[];
+  date_from: string | null;
+  date_to: string | null;
+  generated_by: number;
+  generated_at: number;
+}
+
+/**
+ * Verifica una URL firmada y devuelve los filtros
+ */
+function verifySignedUrl(data: string, signature: string): VerifiedFilters {
+  try {
+    // Decodificar payload
+    let decodedData = data;
+    const missing_padding = decodedData.length % 4;
+    if (missing_padding) {
+      decodedData += '='.repeat(4 - missing_padding);
+    }
+
+    const payloadJson = Buffer.from(decodedData, 'base64url').toString('utf-8');
+    const payload = JSON.parse(payloadJson);
+
+    // Verificar expiración
+    if (Date.now() / 1000 > payload.expires_at) {
+      throw new Error('URL has expired');
+    }
+
+    // Verificar firma - use the same secret as backend
+    const secretKey = env.SECRET_KEY;
+
+    const expectedSignature = createHmac('sha256', secretKey)
+      .update(data)
+      .digest('hex');
+
+    if (signature !== expectedSignature) {
+      throw new Error('Invalid signature');
+    }
+
+    // Remover expires_at del payload y devolver
+    const { expires_at, ...verifiedData } = payload;
+    return verifiedData as VerifiedFilters;
+
+  } catch (error) {
+    throw new Error(`Invalid signed URL: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 }
 
 async function fetchReportData(
@@ -91,16 +143,44 @@ async function fetchReportData(
 }
 
 export default async function ReportsSSRPage({ searchParams }: PageProps) {
-  // Parse filters from URL
+  // Await searchParams as required in Next.js 15
+  const params = await searchParams;
+
+  // Parse filters from URL - either from signed URL or direct parameters
   let filterCombinations: FilterCombination[] = [];
   let dateRange = {
-    from: searchParams.dateFrom || "",
-    to: searchParams.dateTo || "",
+    from: params.dateFrom || "",
+    to: params.dateTo || "",
   };
 
-  if (searchParams.filters) {
+  // Check if we have signed URL parameters
+  if (params.data && params.signature) {
     try {
-      filterCombinations = JSON.parse(searchParams.filters);
+      const verifiedData = verifySignedUrl(params.data, params.signature);
+      filterCombinations = verifiedData.filters;
+      dateRange = {
+        from: verifiedData.date_from || "",
+        to: verifiedData.date_to || "",
+      };
+    } catch (error) {
+      console.error("Error verifying signed URL:", error);
+      return (
+        <div className="min-h-screen bg-white p-8">
+          <div className="text-center py-8">
+            <h1 className="text-2xl font-bold text-red-600 mb-2">
+              URL Inválida o Expirada
+            </h1>
+            <p className="text-gray-600">
+              {error instanceof Error ? error.message : 'Error desconocido'}
+            </p>
+          </div>
+        </div>
+      );
+    }
+  } else if (params.filters) {
+    // Fallback to direct filter parameters
+    try {
+      filterCombinations = JSON.parse(params.filters);
     } catch (e) {
       console.error("Error parsing filters:", e);
     }

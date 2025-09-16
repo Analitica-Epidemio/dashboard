@@ -806,6 +806,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reports/generate-signed-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate signed URL for SSR reports
+         * @description Creates a signed URL that allows access to SSR reports without authentication
+         */
+        post: operations["generate_report_signed_url_api_v1_reports_generate_signed_url_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/verify-signed-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify signed URL
+         * @description Verifies a signed URL and returns the filters data if valid
+         */
+        post: operations["verify_signed_url_endpoint_api_v1_reports_verify_signed_url_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/": {
         parameters: {
             query?: never;
@@ -2513,6 +2553,35 @@ export interface components {
             refresh_token: string;
         };
         /**
+         * ReportFiltersRequest
+         * @description Request para generar URL firmada
+         */
+        ReportFiltersRequest: {
+            /**
+             * Filters
+             * @description Lista de combinaciones de filtros
+             */
+            filters: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Date From
+             * @description Fecha desde
+             */
+            date_from?: string | null;
+            /**
+             * Date To
+             * @description Fecha hasta
+             */
+            date_to?: string | null;
+            /**
+             * Expires In
+             * @description Tiempo de expiración en segundos
+             * @default 3600
+             */
+            expires_in: number;
+        };
+        /**
          * ReportRequest
          * @description Request para generar un reporte
          */
@@ -2555,6 +2624,22 @@ export interface components {
              * @default false
              */
             is_current: boolean;
+        };
+        /**
+         * SignedUrlResponse
+         * @description Response con la URL firmada
+         */
+        SignedUrlResponse: {
+            /**
+             * Signed Url
+             * @description URL firmada para acceder al reporte
+             */
+            signed_url: string;
+            /**
+             * Expires At
+             * @description Timestamp de expiración
+             */
+            expires_at: number;
         };
         /**
          * SintomaInfo
@@ -2773,10 +2858,34 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /** SuccessResponse[SignedUrlResponse] */
+        SuccessResponse_SignedUrlResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["SignedUrlResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
         /** SuccessResponse[StrategyTestResponse] */
         SuccessResponse_StrategyTestResponse_: {
             /** @description Datos de la respuesta */
             data: components["schemas"]["StrategyTestResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[VerifySignedUrlResponse] */
+        SuccessResponse_VerifySignedUrlResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["VerifySignedUrlResponse"];
             /**
              * Meta
              * @description Metadata opcional (paginación, etc)
@@ -3029,6 +3138,55 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /**
+         * VerifySignedUrlRequest
+         * @description Request para verificar URL firmada
+         */
+        VerifySignedUrlRequest: {
+            /**
+             * Data
+             * @description Payload codificado en base64
+             */
+            data: string;
+            /**
+             * Signature
+             * @description Firma HMAC
+             */
+            signature: string;
+        };
+        /**
+         * VerifySignedUrlResponse
+         * @description Response con los datos verificados
+         */
+        VerifySignedUrlResponse: {
+            /**
+             * Filters
+             * @description Lista de filtros verificados
+             */
+            filters: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Date From
+             * @description Fecha desde
+             */
+            date_from?: string | null;
+            /**
+             * Date To
+             * @description Fecha hasta
+             */
+            date_to?: string | null;
+            /**
+             * Generated By
+             * @description ID del usuario que generó la URL
+             */
+            generated_by: number;
+            /**
+             * Generated At
+             * @description Timestamp de generación
+             */
+            generated_at: number;
         };
     };
     responses: never;
@@ -4539,6 +4697,72 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generate_report_signed_url_api_v1_reports_generate_signed_url_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportFiltersRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_SignedUrlResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_signed_url_endpoint_api_v1_reports_verify_signed_url_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifySignedUrlRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_VerifySignedUrlResponse_"];
                 };
             };
             /** @description Validation Error */

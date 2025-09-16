@@ -14,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import { DynamicChart } from "./DynamicChart";
 import { useDashboardCharts } from "../hooks/useDashboardCharts";
 import { useIndicadores } from "@/features/charts/hooks";
+import { $api } from "@/lib/api/client";
+import { useGenerateSignedUrl } from "@/features/reports/hooks";
 
 interface FilterCombination {
   id: string;
@@ -86,6 +88,8 @@ const DynamicChartsColumn: React.FC<{
     );
   }
 
+  console.log({ data });
+
   return (
     <div className="flex-1 overflow-y-auto p-4">
       <div className="space-y-4">
@@ -136,7 +140,7 @@ const DynamicChartsColumn: React.FC<{
         </Card>
 
         {/* Dynamic Charts */}
-        {data?.charts?.map((chart) => (
+        {data?.data?.charts?.map((chart) => (
           <DynamicChart
             key={chart.codigo}
             codigo={chart.codigo}
@@ -149,7 +153,7 @@ const DynamicChartsColumn: React.FC<{
         ))}
 
         {/* If no charts available */}
-        {(!data?.charts || data.charts.length === 0) && (
+        {(!data?.data?.charts || data.data.charts.length === 0) && (
           <Card>
             <CardContent className="p-8 text-center text-gray-500">
               No hay charts disponibles para esta selección
@@ -200,44 +204,11 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
 
   const columnStyle = calculateColumnStyle();
 
-  // Generate ZIP report with all combinations
-  const handleGenerateZipReport = async () => {
-    try {
-      const apiHost =
-        process.env.NEXT_PUBLIC_API_HOST || "http://localhost:8000";
-
-      // Prepare report request
-      const reportRequest = {
-        date_range: {
-          from: dateRange.from?.toISOString().split("T")[0] || "",
-          to: dateRange.to?.toISOString().split("T")[0] || "",
-        },
-        combinations: filterCombinations.map((combo) => ({
-          id: combo.id,
-          group_id: combo.groupId ? parseInt(combo.groupId) : null,
-          group_name: combo.groupName || "",
-          event_ids: combo.eventIds || [],
-          event_names: combo.eventNames || [],
-          clasificaciones: combo.clasificaciones || [],
-        })),
-        format: "pdf",
-      };
-
-      // Make API request
-      const response = await fetch(`${apiHost}/api/v1/reports/generate-zip`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(reportRequest),
-      });
-
-      if (!response.ok) {
-        throw new Error("Error generating ZIP report");
-      }
-
-      // Download ZIP file
-      const blob = await response.blob();
+  // Generate ZIP report mutation
+  const generateZipReportMutation = $api.useMutation("post", "/api/v1/reports/generate-zip", {
+    onSuccess: (data, variables, context) => {
+      // The response should be a blob for file download
+      const blob = new Blob([data as any], { type: 'application/zip' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -252,10 +223,69 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
       console.log(
         `✅ Generated ZIP report with ${filterCombinations.length} PDFs`
       );
-    } catch (error) {
+    },
+    onError: (error) => {
       console.error("Error generating ZIP report:", error);
       alert("Error al generar el reporte ZIP. Por favor intente nuevamente.");
     }
+  });
+
+  // Generate signed URL mutation
+  const generateSignedUrlMutation = useGenerateSignedUrl();
+
+  const handleGenerateZipReport = () => {
+    const reportRequest = {
+      date_range: {
+        from: dateRange.from?.toISOString().split("T")[0] || "",
+        to: dateRange.to?.toISOString().split("T")[0] || "",
+      },
+      combinations: filterCombinations.map((combo) => ({
+        id: combo.id,
+        group_id: combo.groupId ? parseInt(combo.groupId) : null,
+        group_name: combo.groupName || "",
+        event_ids: combo.eventIds || [],
+        event_names: combo.eventNames || [],
+        clasificaciones: combo.clasificaciones || [],
+      })),
+      format: "pdf",
+    };
+
+    generateZipReportMutation.mutate({
+      body: reportRequest
+    });
+  };
+
+  const handleGenerateSignedUrl = () => {
+    const reportRequest = {
+      filters: filterCombinations.map((combo) => ({
+        id: combo.id,
+        groupId: combo.groupId ? parseInt(combo.groupId) : null,
+        groupName: combo.groupName || "",
+        eventIds: combo.eventIds || [],
+        eventNames: combo.eventNames || [],
+        clasificaciones: combo.clasificaciones || [],
+      })),
+      date_from: dateRange.from?.toISOString().split("T")[0] || null,
+      date_to: dateRange.to?.toISOString().split("T")[0] || null,
+      expires_in: 3600, // 1 hour expiration
+    };
+
+    generateSignedUrlMutation.mutate(
+      { body: reportRequest },
+      {
+        onSuccess: (data) => {
+          // Open the signed URL in a new tab
+          const baseUrl = window.location.origin;
+          const fullUrl = `${baseUrl}${data.data.signed_url}`;
+          window.open(fullUrl, '_blank');
+          console.log('✅ Generated signed URL for SSR report');
+        },
+        onError: (error) => {
+          console.error('Error generating signed URL:', error);
+          alert('Error al generar la URL del reporte. Por favor intente nuevamente.');
+        },
+      }
+    );
   };
 
   if (filterCombinations.length === 0) {
@@ -285,8 +315,11 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
         filterCombinations={filterCombinations}
         onEditFilters={onBack || (() => {})}
         onGenerateZipReport={handleGenerateZipReport}
+        onGenerateSignedUrl={handleGenerateSignedUrl}
         expanded={expandedFilters}
         onToggleExpand={() => setExpandedFilters(!expandedFilters)}
+        isGeneratingReport={generateZipReportMutation.isPending}
+        isGeneratingSignedUrl={generateSignedUrlMutation.isPending}
       />
 
       {/* Scrollable columns container */}

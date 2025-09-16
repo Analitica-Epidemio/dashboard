@@ -77,6 +77,10 @@ async def get_dashboard_charts(
     condition_resolver = ChartConditionResolver(db)
     charts_config = await condition_resolver.get_applicable_charts(filtros, all_charts)
 
+    logger.info(f"Charts totales: {len(all_charts)}, Charts aplicables: {len(charts_config)}")
+    if len(charts_config) == 0:
+        logger.warning(f"No hay charts aplicables para filtros: {filtros}")
+
     # Procesar cada chart aplicable
     processor = ChartDataProcessor(db)
     charts_data = []
@@ -101,6 +105,9 @@ async def get_dashboard_charts(
         except Exception as e:
             # Log error pero continuar con otros charts
             logger.error(f"Error procesando chart {chart_config.codigo}: {e}")
+            logger.error(f"Error tipo: {type(e).__name__}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             continue
 
     response = DashboardChartsResponse(

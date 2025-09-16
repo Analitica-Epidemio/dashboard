@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * Componente genérico para renderizar charts dinámicos con Recharts y D3
  */

@@ -4,7 +4,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { env } from '@/env';
 
-interface DashboardChartsParams {
+export interface DashboardChartsParams {
   grupoId?: number | null;
   eventoId?: number | null;
   fechaDesde?: string | null;
@@ -12,23 +12,49 @@ interface DashboardChartsParams {
   clasificaciones?: string[];
 }
 
-interface ChartData {
+export interface ChartConfig {
+  height?: number;
+  [key: string]: any;
+}
+
+export interface ChartDataset {
+  label: string;
+  data: number[];
+  backgroundColor?: string | string[];
+  borderColor?: string;
+  [key: string]: any;
+}
+
+export interface ChartDataStructure {
+  type: 'line' | 'bar' | 'pie' | 'doughnut' | 'radar' | string;
+  data: {
+    labels: string[];
+    datasets: ChartDataset[];
+  };
+}
+
+export interface ChartData {
   codigo: string;
   nombre: string;
   descripcion?: string;
   tipo: string;
-  data: any;
-  config: any;
+  data: ChartDataStructure;
+  config: ChartConfig;
 }
 
-interface DashboardChartsResponse {
+export interface DashboardChartsData {
   charts: ChartData[];
   total: number;
   filtros_aplicados: any;
 }
 
+export interface DashboardChartsApiResponse {
+  data: DashboardChartsData;
+  meta: any;
+}
+
 export function useDashboardCharts(params: DashboardChartsParams) {
-  return useQuery<DashboardChartsResponse>({
+  return useQuery<DashboardChartsApiResponse>({
     queryKey: ['dashboard-charts', params],
     queryFn: async () => {
       const queryParams = new URLSearchParams();

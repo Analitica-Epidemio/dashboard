@@ -70,3 +70,10 @@ export function useReportPreview(request: any, enabled: boolean = false) {
 export function useReportPreviewMutation() {
   return $api.useMutation('post', '/api/v1/reports/preview');
 }
+
+/**
+ * Hook for generating signed URLs for SSR reports
+ */
+export function useGenerateSignedUrl() {
+  return $api.useMutation('post', '/api/v1/reports/generate-signed-url');
+}
