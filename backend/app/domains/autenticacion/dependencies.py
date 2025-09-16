@@ -94,6 +94,39 @@ async def get_current_user(
     return user
 
 
+async def get_current_user_optional(
+    request: Request,
+    db: AsyncSession = Depends(get_async_session)
+) -> Optional[User]:
+    """
+    Get current user if authenticated, None otherwise
+    Does not raise exceptions for missing auth
+    """
+    try:
+        # Check for Authorization header
+        auth_header = request.headers.get("authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return None
+
+        token = auth_header.replace("Bearer ", "")
+
+        # Verify token
+        token_data = TokenSecurity.verify_token(token, "access")
+        if not token_data or not token_data.user_id:
+            return None
+
+        # Get user
+        auth_service = AuthService(db)
+        user = await auth_service._get_user_by_id(token_data.user_id)
+
+        if not user or user.status != UserStatus.ACTIVE:
+            return None
+
+        return user
+    except Exception:
+        return None
+
+
 async def get_current_active_user(
     current_user: User = Depends(get_current_user)
 ) -> User:

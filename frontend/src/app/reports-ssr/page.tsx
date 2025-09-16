@@ -8,8 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DynamicChart } from "@/features/dashboard/components/DynamicChart";
 import { env } from "@/env";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { createHmac } from "crypto";
 
 interface PageProps {
@@ -85,15 +83,18 @@ function verifySignedUrl(data: string, signature: string): VerifiedFilters {
 
 async function fetchReportData(
   combinations: FilterCombination[],
-  dateRange: { from: string; to: string }
+  dateRange: { from: string; to: string },
+  signedUrlParams?: { data: string; signature: string }
 ) {
   // Use the same API host for server-side requests
   const apiHost = env.NEXT_PUBLIC_API_HOST;
 
-  // Get session for authentication
-  const session = await getServerSession(authOptions);
-  const headers: HeadersInit = session?.accessToken
-    ? { Authorization: `Bearer ${session.accessToken}` }
+  // Pass signed URL parameters in headers if available
+  const headers: HeadersInit = signedUrlParams
+    ? {
+        'X-Signed-Data': signedUrlParams.data,
+        'X-Signed-Signature': signedUrlParams.signature,
+      }
     : {};
 
   const processedCombinations = [];
@@ -155,6 +156,7 @@ export default async function ReportsSSRPage({ searchParams }: PageProps) {
     from: params.dateFrom || "",
     to: params.dateTo || "",
   };
+  let signedUrlParams: { data: string; signature: string } | undefined;
 
   // Check if we have signed URL parameters
   if (params.data && params.signature) {
@@ -164,6 +166,11 @@ export default async function ReportsSSRPage({ searchParams }: PageProps) {
       dateRange = {
         from: verifiedData.date_from || "",
         to: verifiedData.date_to || "",
+      };
+      // Store signed URL params to pass to backend
+      signedUrlParams = {
+        data: params.data,
+        signature: params.signature,
       };
     } catch (error) {
       console.error("Error verifying signed URL:", error);
@@ -189,8 +196,8 @@ export default async function ReportsSSRPage({ searchParams }: PageProps) {
     }
   }
 
-  // Fetch data server-side
-  const reportData = await fetchReportData(filterCombinations, dateRange);
+  // Fetch data server-side - pass signed URL params if available
+  const reportData = await fetchReportData(filterCombinations, dateRange, signedUrlParams);
   console.log(reportData);
 
   const formatDate = (dateStr: string | null) => {

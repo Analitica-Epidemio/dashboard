@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
-from app.core.security import RequireAnyRole
+from app.core.security import RequireAuthOrSignedUrl
 from app.domains.autenticacion.models import User
 from app.features.dashboard.conditions import ChartConditionResolver
 from app.features.dashboard.models import DashboardChart
@@ -48,7 +48,7 @@ async def get_dashboard_charts(
     fecha_hasta: Optional[date] = Query(None, description="Fecha hasta (formato: YYYY-MM-DD)"),
     clasificaciones: Optional[List[str]] = Query(None, description="Filtrar por clasificaciones estratégicas"),
     db: AsyncSession = Depends(get_async_session),
-    current_user: User = Depends(RequireAnyRole())
+    current_user: Optional[User] = RequireAuthOrSignedUrl()
 ) -> SuccessResponse[DashboardChartsResponse]:
     """
     Obtiene los charts aplicables y sus datos según los filtros
