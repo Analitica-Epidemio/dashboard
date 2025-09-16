@@ -3,15 +3,14 @@
 Command to create initial superadmin user
 Usage: uv run python -m app.commands.create_superadmin
 """
-import asyncio
 import re
 import sys
 from getpass import getpass
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import sessionmaker
 
-from app.core.database import engine
+from app.core.config import settings
 from app.domains.autenticacion.models import User, UserRole, UserStatus
 from app.domains.autenticacion.security import PasswordSecurity, SecurityTokens
 
@@ -27,14 +26,19 @@ def validate_password(password: str) -> tuple[bool, str]:
     return PasswordSecurity.validate_password_strength(password)
 
 
-async def create_superadmin():
+def create_superadmin():
     """Create superadmin user interactively"""
     print("🔐 Creación de Super Administrador")
     print("=" * 40)
 
-    async with AsyncSession(engine) as db:
+    # Create sync engine and session
+    sync_database_url = settings.DATABASE_URL.replace('+asyncpg', '')
+    sync_engine = create_engine(sync_database_url)
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=sync_engine)
+
+    with SessionLocal() as db:
         # Check if any superadmin exists
-        result = await db.execute(
+        result = db.execute(
             select(User).where(User.role == UserRole.SUPERADMIN)
         )
         existing_superadmin = result.scalar_one_or_none()
@@ -62,7 +66,7 @@ async def create_superadmin():
                 continue
 
             # Check if email already exists
-            result = await db.execute(
+            result = db.execute(
                 select(User).where(User.email == email)
             )
             if result.scalar_one_or_none():
@@ -135,8 +139,8 @@ async def create_superadmin():
             )
 
             db.add(user)
-            await db.commit()
-            await db.refresh(user)
+            db.commit()
+            db.refresh(user)
 
             print("\n✅ Super administrador creado exitosamente!")
             print(f"   ID: {user.id}")
@@ -150,10 +154,10 @@ async def create_superadmin():
             sys.exit(1)
 
 
-async def main():
+def main():
     """Main entry point"""
     try:
-        await create_superadmin()
+        create_superadmin()
     except KeyboardInterrupt:
         print("\n\n❌ Operación cancelada por el usuario.")
         sys.exit(1)
@@ -163,4 +167,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

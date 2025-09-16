@@ -1,8 +1,8 @@
-"""initial
+"""add authentication tables
 
-Revision ID: a19cd800a9c4
+Revision ID: 5c8b75de8560
 Revises: 
-Create Date: 2025-09-11 12:01:00.599323
+Create Date: 2025-09-16 03:24:55.174238
 
 """
 from typing import Sequence, Union
@@ -13,7 +13,7 @@ import sqlmodel  # Always import sqlmodel for SQLModel types
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'a19cd800a9c4'
+revision: str = '5c8b75de8560'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -60,22 +60,6 @@ def upgrade() -> None:
     sa.Column('descripcion', sqlmodel.sql.sqltypes.AutoString(length=150), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_table('dashboard_charts',
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('codigo', sqlmodel.sql.sqltypes.AutoString(length=50), nullable=False),
-    sa.Column('nombre', sqlmodel.sql.sqltypes.AutoString(length=100), nullable=False),
-    sa.Column('descripcion', sa.Text(), nullable=True),
-    sa.Column('funcion_procesamiento', sqlmodel.sql.sqltypes.AutoString(length=100), nullable=False),
-    sa.Column('condiciones_display', sa.JSON(), nullable=True),
-    sa.Column('tipo_visualizacion', sqlmodel.sql.sqltypes.AutoString(length=50), nullable=False),
-    sa.Column('configuracion_chart', sa.JSON(), nullable=True),
-    sa.Column('orden', sa.Integer(), nullable=False),
-    sa.Column('activo', sa.Boolean(), nullable=False),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_dashboard_charts_codigo'), 'dashboard_charts', ['codigo'], unique=True)
     op.create_table('determinacion',
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
@@ -103,33 +87,6 @@ def upgrade() -> None:
     sa.Column('descripcion', sqlmodel.sql.sqltypes.AutoString(length=150), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_table('processing_jobs',
-    sa.Column('id', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-    sa.Column('job_type', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-    sa.Column('status', sa.Enum('PENDING', 'IN_PROGRESS', 'COMPLETED', 'FAILED', 'CANCELLED', name='jobstatus'), nullable=False),
-    sa.Column('priority', sa.Enum('LOW', 'NORMAL', 'HIGH', 'URGENT', name='jobpriority'), nullable=False),
-    sa.Column('progress_percentage', sa.Integer(), nullable=False),
-    sa.Column('current_step', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
-    sa.Column('total_steps', sa.Integer(), nullable=False),
-    sa.Column('completed_steps', sa.Integer(), nullable=False),
-    sa.Column('original_filename', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-    sa.Column('file_path', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
-    sa.Column('file_size', sa.Integer(), nullable=True),
-    sa.Column('sheet_name', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
-    sa.Column('total_rows', sa.Integer(), nullable=True),
-    sa.Column('columns', sa.JSON(), nullable=True),
-    sa.Column('validation_errors', sa.JSON(), nullable=True),
-    sa.Column('job_metadata', sa.JSON(), nullable=True),
-    sa.Column('error_message', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
-    sa.Column('error_traceback', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('started_at', sa.DateTime(), nullable=True),
-    sa.Column('completed_at', sa.DateTime(), nullable=True),
-    sa.Column('updated_at', sa.DateTime(), nullable=False),
-    sa.Column('celery_task_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
-    sa.Column('created_by', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
-    sa.PrimaryKeyConstraint('id')
-    )
     op.create_table('provincia',
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
@@ -151,6 +108,26 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_sintoma_id_snvs_signo_sintoma'), 'sintoma', ['id_snvs_signo_sintoma'], unique=True)
+    op.create_table('users',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('email', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
+    sa.Column('hashed_password', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
+    sa.Column('nombre', sqlmodel.sql.sqltypes.AutoString(length=100), nullable=False),
+    sa.Column('apellido', sqlmodel.sql.sqltypes.AutoString(length=100), nullable=False),
+    sa.Column('role', sa.Enum('SUPERADMIN', 'EPIDEMIOLOGO', name='userrole'), nullable=False),
+    sa.Column('status', sa.Enum('ACTIVE', 'INACTIVE', 'SUSPENDED', name='userstatus'), nullable=False),
+    sa.Column('is_email_verified', sa.Boolean(), nullable=False),
+    sa.Column('email_verification_token', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=True),
+    sa.Column('password_reset_token', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=True),
+    sa.Column('password_reset_expires', sa.DateTime(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=True),
+    sa.Column('last_login', sa.DateTime(), nullable=True),
+    sa.Column('login_attempts', sa.Integer(), nullable=False),
+    sa.Column('locked_until', sa.DateTime(), nullable=True),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
     op.create_table('vacuna',
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
@@ -207,6 +184,36 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_tipo_eno_codigo'), 'tipo_eno', ['codigo'], unique=True)
+    op.create_table('user_logins',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=True),
+    sa.Column('email_attempted', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
+    sa.Column('success', sa.Boolean(), nullable=False),
+    sa.Column('failure_reason', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=True),
+    sa.Column('ip_address', sqlmodel.sql.sqltypes.AutoString(length=45), nullable=True),
+    sa.Column('user_agent', sqlmodel.sql.sqltypes.AutoString(length=500), nullable=True),
+    sa.Column('attempted_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_user_logins_email_attempted'), 'user_logins', ['email_attempted'], unique=False)
+    op.create_index(op.f('ix_user_logins_user_id'), 'user_logins', ['user_id'], unique=False)
+    op.create_table('user_sessions',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('session_token', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
+    sa.Column('ip_address', sqlmodel.sql.sqltypes.AutoString(length=45), nullable=True),
+    sa.Column('user_agent', sqlmodel.sql.sqltypes.AutoString(length=500), nullable=True),
+    sa.Column('device_fingerprint', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('expires_at', sa.DateTime(), nullable=False),
+    sa.Column('last_activity', sa.DateTime(), nullable=False),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_user_sessions_session_token'), 'user_sessions', ['session_token'], unique=True)
+    op.create_index(op.f('ix_user_sessions_user_id'), 'user_sessions', ['user_id'], unique=False)
     op.create_table('event_strategy',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('tipo_eno_id', sa.Integer(), nullable=False),
@@ -391,7 +398,6 @@ def upgrade() -> None:
     sa.Column('clasificacion_manual', sqlmodel.sql.sqltypes.AutoString(length=500), nullable=True),
     sa.Column('clasificacion_estrategia', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=True),
     sa.Column('metadata_extraida', sa.JSON(), nullable=True),
-    sa.Column('es_positivo', sa.Boolean(), nullable=True),
     sa.Column('confidence_score', sa.Float(), nullable=True),
     sa.ForeignKeyConstraint(['codigo_ciudadano'], ['ciudadano.codigo_ciudadano'], ),
     sa.ForeignKeyConstraint(['id_animal'], ['animal.id'], ),
@@ -706,6 +712,12 @@ def downgrade() -> None:
     op.drop_index('idx_event_strategy_tipo_eno', table_name='event_strategy')
     op.drop_index('idx_event_strategy_active', table_name='event_strategy')
     op.drop_table('event_strategy')
+    op.drop_index(op.f('ix_user_sessions_user_id'), table_name='user_sessions')
+    op.drop_index(op.f('ix_user_sessions_session_token'), table_name='user_sessions')
+    op.drop_table('user_sessions')
+    op.drop_index(op.f('ix_user_logins_user_id'), table_name='user_logins')
+    op.drop_index(op.f('ix_user_logins_email_attempted'), table_name='user_logins')
+    op.drop_table('user_logins')
     op.drop_index(op.f('ix_tipo_eno_codigo'), table_name='tipo_eno')
     op.drop_table('tipo_eno')
     op.drop_index(op.f('ix_tecnica_codigo'), table_name='tecnica')
@@ -715,19 +727,18 @@ def downgrade() -> None:
     op.drop_table('departamento')
     op.drop_table('ciudadano_comorbilidades')
     op.drop_table('vacuna')
+    op.drop_index(op.f('ix_users_email'), table_name='users')
+    op.drop_table('users')
     op.drop_index(op.f('ix_sintoma_id_snvs_signo_sintoma'), table_name='sintoma')
     op.drop_table('sintoma')
     op.drop_index(op.f('ix_provincia_nombre'), table_name='provincia')
     op.drop_index(op.f('ix_provincia_id_provincia_indec'), table_name='provincia')
     op.drop_table('provincia')
-    op.drop_table('processing_jobs')
     op.drop_table('muestra')
     op.drop_index(op.f('ix_grupo_eno_codigo'), table_name='grupo_eno')
     op.drop_table('grupo_eno')
     op.drop_index(op.f('ix_determinacion_codigo'), table_name='determinacion')
     op.drop_table('determinacion')
-    op.drop_index(op.f('ix_dashboard_charts_codigo'), table_name='dashboard_charts')
-    op.drop_table('dashboard_charts')
     op.drop_table('comorbilidad')
     op.drop_index(op.f('ix_ciudadano_tipo_documento'), table_name='ciudadano')
     op.drop_index(op.f('ix_ciudadano_numero_documento'), table_name='ciudadano')
