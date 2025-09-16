@@ -49,34 +49,37 @@ function verifySignedUrl(data: string, signature: string): VerifiedFilters {
     let decodedData = data;
     const missing_padding = decodedData.length % 4;
     if (missing_padding) {
-      decodedData += '='.repeat(4 - missing_padding);
+      decodedData += "=".repeat(4 - missing_padding);
     }
 
-    const payloadJson = Buffer.from(decodedData, 'base64url').toString('utf-8');
+    const payloadJson = Buffer.from(decodedData, "base64url").toString("utf-8");
     const payload = JSON.parse(payloadJson);
 
     // Verificar expiración
     if (Date.now() / 1000 > payload.expires_at) {
-      throw new Error('URL has expired');
+      throw new Error("URL has expired");
     }
 
     // Verificar firma - use the same secret as backend
     const secretKey = env.SECRET_KEY;
 
-    const expectedSignature = createHmac('sha256', secretKey)
+    const expectedSignature = createHmac("sha256", secretKey)
       .update(data)
-      .digest('hex');
+      .digest("hex");
 
     if (signature !== expectedSignature) {
-      throw new Error('Invalid signature');
+      throw new Error("Invalid signature");
     }
 
     // Remover expires_at del payload y devolver
     const { expires_at, ...verifiedData } = payload;
     return verifiedData as VerifiedFilters;
-
   } catch (error) {
-    throw new Error(`Invalid signed URL: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Invalid signed URL: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
   }
 }
 
@@ -90,7 +93,7 @@ async function fetchReportData(
   // Get session for authentication
   const session = await getServerSession(authOptions);
   const headers: HeadersInit = session?.accessToken
-    ? { 'Authorization': `Bearer ${session.accessToken}` }
+    ? { Authorization: `Bearer ${session.accessToken}` }
     : {};
 
   const processedCombinations = [];
@@ -126,8 +129,8 @@ async function fetchReportData(
 
       processedCombinations.push({
         ...combo,
-        indicadores,
-        charts: chartsData.charts || [],
+        indicadores: indicadores.data || indicadores,
+        charts: chartsData.data?.charts || chartsData.charts || [],
       });
     } catch (error) {
       console.error("Error fetching data for combination:", error);
@@ -171,7 +174,7 @@ export default async function ReportsSSRPage({ searchParams }: PageProps) {
               URL Inválida o Expirada
             </h1>
             <p className="text-gray-600">
-              {error instanceof Error ? error.message : 'Error desconocido'}
+              {error instanceof Error ? error.message : "Error desconocido"}
             </p>
           </div>
         </div>
@@ -188,6 +191,7 @@ export default async function ReportsSSRPage({ searchParams }: PageProps) {
 
   // Fetch data server-side
   const reportData = await fetchReportData(filterCombinations, dateRange);
+  console.log(reportData);
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "";
@@ -275,7 +279,10 @@ export default async function ReportsSSRPage({ searchParams }: PageProps) {
                   <Card>
                     <CardContent className="p-4">
                       <div className="text-2xl font-bold">
-                        {combination.indicadores.tasa_incidencia.toFixed(2)}
+                        {typeof combination.indicadores.tasa_incidencia ===
+                        "number"
+                          ? combination.indicadores.tasa_incidencia.toFixed(2)
+                          : combination.indicadores.tasa_incidencia}
                       </div>
                       <div className="text-sm text-gray-600">
                         Tasa Incidencia
@@ -301,7 +308,9 @@ export default async function ReportsSSRPage({ searchParams }: PageProps) {
                   <Card>
                     <CardContent className="p-4">
                       <div className="text-2xl font-bold">
-                        {combination.indicadores.letalidad.toFixed(2)}%
+                        {typeof combination.indicadores.letalidad === "number"
+                          ? `${combination.indicadores.letalidad.toFixed(2)}%`
+                          : `${combination.indicadores.letalidad}%`}
                       </div>
                       <div className="text-sm text-gray-600">Letalidad</div>
                     </CardContent>
