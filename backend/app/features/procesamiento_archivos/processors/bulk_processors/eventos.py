@@ -562,7 +562,9 @@ class EventosBulkProcessor(BulkProcessorBase):
 
             # Obtener tipo ENO desde el nombre del evento
             evento_nombre = self._clean_string(row.get(Columns.EVENTO))
-            id_tipo_eno = tipo_mapping.get(evento_nombre)
+            # Convertir nombre a código kebab-case para buscar en el mapping
+            evento_codigo = CodigoGenerator.generar_codigo_kebab(evento_nombre) if evento_nombre else None
+            id_tipo_eno = tipo_mapping.get(evento_codigo)
 
             # No debería fallar ya que creamos todos los tipos dinámicamente
             if not id_tipo_eno:
