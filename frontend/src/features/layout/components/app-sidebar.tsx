@@ -2,7 +2,8 @@
 
 import * as React from "react"
 import { IconInnerShadowTop } from "@tabler/icons-react"
-import { navigationConfig, getNavigationItems, getUserData } from "../navigation-config"
+import { navigationConfig, getNavigationItems } from "../navigation-config"
+import { useAuth } from "@/features/auth/hooks"
 
 import { NavMain } from "./nav-main"
 import { NavUser } from "./nav-user"
@@ -19,7 +20,13 @@ import {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const navItems = getNavigationItems();
-  const userData = getUserData();
+  const { user } = useAuth();
+
+  const userData = {
+    name: user?.name || "Usuario",
+    email: user?.email || "usuario@epidemio.com",
+    avatar: user?.image || "/avatars/default.jpg",
+  };
   
   return (
     <Sidebar collapsible="offcanvas" {...props}>

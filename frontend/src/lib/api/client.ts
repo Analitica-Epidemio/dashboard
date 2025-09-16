@@ -1,15 +1,16 @@
 /**
  * API Client with OpenAPI Types + TanStack Query
- * Modern implementation using openapi-react-query
+ * Modern implementation using openapi-react-query with NextAuth
  */
 
 import createFetchClient from 'openapi-fetch';
 import createClient from 'openapi-react-query';
 import type { paths } from './types';
+import { getSession } from 'next-auth/react';
 import { env } from '@/env';
 
 /**
- * Create fetch client with auth interceptors
+ * Create fetch client pointing to FastAPI backend
  */
 const fetchClient = createFetchClient<paths>({
   baseUrl: env.NEXT_PUBLIC_API_HOST,
@@ -18,51 +19,20 @@ const fetchClient = createFetchClient<paths>({
 // Add request interceptor for auth token
 fetchClient.use({
   async onRequest({ request }) {
-    const token = localStorage.getItem('auth_access_token');
+    const session = await getSession();
 
-    if (token) {
-      request.headers.set('Authorization', `Bearer ${token}`);
+    if (session?.accessToken) {
+      request.headers.set('Authorization', `Bearer ${session.accessToken}`);
     }
 
     return request;
   },
 
-  async onResponse({ response, request }) {
-    // Handle 401 - token expired
+  async onResponse({ response }) {
+    // Handle 401 - redirect to login (NextAuth will handle token refresh automatically)
     if (response.status === 401) {
-      // Try to refresh token
-      const refreshToken = localStorage.getItem('auth_refresh_token');
-
-      if (refreshToken) {
-        try {
-          const refreshResponse = await fetch(`${env.NEXT_PUBLIC_API_HOST}/api/v1/auth/refresh`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refresh_token: refreshToken }),
-          });
-
-          if (refreshResponse.ok) {
-            const tokens = await refreshResponse.json();
-            localStorage.setItem('auth_access_token', tokens.access_token);
-            localStorage.setItem('auth_refresh_token', tokens.refresh_token);
-
-            // Retry original request with new token
-            const newRequest = request.clone();
-            newRequest.headers.set('Authorization', `Bearer ${tokens.access_token}`);
-            return fetch(newRequest);
-          }
-        } catch {
-          // Refresh failed
-        }
-      }
-
-      // Clear tokens and redirect to login
-      localStorage.removeItem('auth_access_token');
-      localStorage.removeItem('auth_refresh_token');
-
-      // Only redirect if we're in the browser and not already on login page
       if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-        window.location.href = '/';
+        window.location.href = '/login';
       }
     }
 
