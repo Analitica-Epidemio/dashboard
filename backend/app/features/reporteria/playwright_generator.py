@@ -5,10 +5,14 @@ Captures the frontend report page as PDF with exact UI
 import asyncio
 import logging
 import os
+import time
 from typing import Dict, Optional
 from urllib.parse import urlencode
 
 from playwright.async_api import async_playwright
+
+# Import the signed URL generator
+from app.api.v1.reports.signed_url import generate_signed_url
 
 logger = logging.getLogger(__name__)
 
@@ -52,16 +56,35 @@ class PlaywrightReportGenerator:
                     viewport={'width': 1280, 'height': 1024}
                 )
 
-                # Build SSR report page URL with parameters
-                params = {
-                    'dateFrom': date_range.get('from', ''),
-                    'dateTo': date_range.get('to', ''),
-                    'filters': self._serialize_combinations(combinations)
+                # Generate signed URL for the report
+                # Format combinations to match the expected structure
+                formatted_filters = []
+                for combo in combinations:
+                    formatted_filter = {
+                        "id": combo.get("id", f"combo_{int(time.time() * 1000)}"),
+                        "groupId": combo.get("group_id"),
+                        "groupName": combo.get("group_name", ""),
+                        "eventIds": combo.get("event_ids", []),
+                        "eventNames": combo.get("event_names", []),
+                        "clasificaciones": combo.get("clasificaciones", [])
+                    }
+                    formatted_filters.append(formatted_filter)
+
+                # Create signed URL data
+                filters_data = {
+                    "filters": formatted_filters,
+                    "date_from": date_range.get('from'),
+                    "date_to": date_range.get('to'),
+                    "generated_by": 0,  # System generated (no user)
+                    "generated_at": int(time.time())
                 }
 
-                # Use print-optimized page that renders server-side
-                report_url = f"{self.frontend_url}/reports-print?{urlencode(params)}"
-                logger.info(f"Navigating to report page: {report_url}")
+                # Generate signed URL (expires in 5 minutes for PDF generation)
+                signed_url_data = generate_signed_url(filters_data, expires_in=300)
+
+                # Build the complete URL
+                report_url = f"{self.frontend_url}{signed_url_data['signed_url']}"
+                logger.info(f"Navigating to SSR report page with signed URL: {report_url[:100]}...")
 
                 # Navigate to report page
                 await page.goto(report_url, wait_until='networkidle')
