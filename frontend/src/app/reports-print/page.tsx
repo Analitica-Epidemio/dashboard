@@ -6,6 +6,8 @@
 import React from "react";
 import { env } from "@/env";
 import { PrintReportClient } from "./PrintReportClient";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 interface PageProps {
   searchParams: {
@@ -29,6 +31,13 @@ async function fetchReportData(
   dateRange: { from: string; to: string }
 ) {
   const apiHost = env.NEXT_PUBLIC_API_HOST;
+
+  // Get session for authentication
+  const session = await getServerSession(authOptions);
+  const headers: HeadersInit = session?.accessToken
+    ? { 'Authorization': `Bearer ${session.accessToken}` }
+    : {};
+
   const processedCombinations = [];
 
   for (const combo of combinations) {
@@ -45,17 +54,17 @@ async function fetchReportData(
         );
       }
 
-      // Fetch indicators
+      // Fetch indicators with authentication
       const indicadoresRes = await fetch(
         `${apiHost}/api/v1/charts/indicadores?${params.toString()}`,
-        { cache: "no-store" }
+        { cache: "no-store", headers }
       );
       const indicadores = await indicadoresRes.json();
 
-      // Fetch charts
+      // Fetch charts with authentication
       const chartsRes = await fetch(
         `${apiHost}/api/v1/charts/dashboard?${params.toString()}`,
-        { cache: "no-store" }
+        { cache: "no-store", headers }
       );
       const chartsData = await chartsRes.json();
 

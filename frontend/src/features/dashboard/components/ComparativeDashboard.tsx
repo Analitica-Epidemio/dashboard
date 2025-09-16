@@ -3,21 +3,17 @@
  * Displays charts in columns for each filter combination
  */
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { CompactFilterBar } from './CompactFilterBar';
-import {
-  Activity,
-  AlertTriangle,
-  FileText,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { CompactFilterBar } from "./CompactFilterBar";
+import { Activity, AlertTriangle, FileText } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 // Import dynamic chart components
-import { DynamicChart } from './DynamicChart';
-import { useDashboardCharts } from '../hooks/useDashboardCharts';
-import { useDashboardIndicadores } from '../hooks/useDashboardIndicadores';
+import { DynamicChart } from "./DynamicChart";
+import { useDashboardCharts } from "../hooks/useDashboardCharts";
+import { useIndicadores } from "@/features/charts/hooks";
 
 interface FilterCombination {
   id: string;
@@ -49,7 +45,7 @@ const DynamicChartsColumn: React.FC<{
   // Format dates for API
   const formatDateForApi = (date: Date | null) => {
     if (!date) return null;
-    return date.toISOString().split('T')[0];
+    return date.toISOString().split("T")[0];
   };
 
   // Fetch charts data
@@ -62,15 +58,12 @@ const DynamicChartsColumn: React.FC<{
   });
 
   // Fetch indicadores data
-  const {
-    data: indicadores,
-    isLoading: indicadoresLoading
-  } = useDashboardIndicadores({
-    grupoId: combination.groupId ? parseInt(combination.groupId) : null,
-    eventoId: combination.eventIds?.[0] || null,
-    fechaDesde: formatDateForApi(dateRange.from),
-    fechaHasta: formatDateForApi(dateRange.to),
-    clasificaciones: combination.clasificaciones || [],
+  const { data: indicadores, isLoading: indicadoresLoading } = useIndicadores({
+    grupo_id: combination.groupId ? parseInt(combination.groupId) : undefined,
+    evento_id: combination.eventIds?.[0] || undefined,
+    fecha_desde: formatDateForApi(dateRange.from) || undefined,
+    fecha_hasta: formatDateForApi(dateRange.to) || undefined,
+    clasificaciones: combination.clasificaciones || undefined,
   });
 
   if (isLoading) {
@@ -109,25 +102,33 @@ const DynamicChartsColumn: React.FC<{
               <div>
                 <p className="text-xs text-gray-600">Total Casos</p>
                 <p className="text-lg font-semibold">
-                  {indicadoresLoading ? '...' : (indicadores?.total_casos || 0).toLocaleString()}
+                  {indicadoresLoading
+                    ? "..."
+                    : (indicadores?.data?.total_casos || 0).toLocaleString()}
                 </p>
               </div>
               <div>
                 <p className="text-xs text-gray-600">Tasa Incidencia</p>
                 <p className="text-lg font-semibold">
-                  {indicadoresLoading ? '...' : `${indicadores?.tasa_incidencia || 0}/100k`}
+                  {indicadoresLoading
+                    ? "..."
+                    : `${indicadores?.data?.tasa_incidencia || 0}/100k`}
                 </p>
               </div>
               <div>
                 <p className="text-xs text-gray-600">Áreas Afectadas</p>
                 <p className="text-lg font-semibold">
-                  {indicadoresLoading ? '...' : (indicadores?.areas_afectadas || 0)}
+                  {indicadoresLoading
+                    ? "..."
+                    : indicadores?.data?.areas_afectadas || 0}
                 </p>
               </div>
               <div>
                 <p className="text-xs text-gray-600">Letalidad</p>
                 <p className="text-lg font-semibold">
-                  {indicadoresLoading ? '...' : `${indicadores?.letalidad || 0}%`}
+                  {indicadoresLoading
+                    ? "..."
+                    : `${indicadores?.data?.letalidad || 0}%`}
                 </p>
               </div>
             </div>
@@ -166,94 +167,96 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
   onBack,
 }) => {
   const [expandedFilters, setExpandedFilters] = useState(false);
-  
+
   // Calculate column width based on number of combinations
   const calculateColumnStyle = () => {
     const count = filterCombinations.length;
-    
+
     if (count === 0) return {};
-    
+
     // Single column: full width
     if (count === 1) {
       return {
-        minWidth: '100%',
-        maxWidth: '100%',
+        minWidth: "100%",
+        maxWidth: "100%",
       };
     }
-    
+
     // Two columns: 50% each
     if (count === 2) {
       return {
-        minWidth: '50%',
-        maxWidth: '50%',
+        minWidth: "50%",
+        maxWidth: "50%",
       };
     }
-    
+
     // Three or more: min 400px, max based on available space
     return {
-      minWidth: '400px',
+      minWidth: "400px",
       maxWidth: `${100 / Math.min(count, 3)}%`,
-      flex: '1 1 400px',
+      flex: "1 1 400px",
     };
   };
 
   const columnStyle = calculateColumnStyle();
 
-
   // Generate ZIP report with all combinations
   const handleGenerateZipReport = async () => {
     try {
-      const apiHost = process.env.NEXT_PUBLIC_API_HOST || 'http://localhost:8000';
+      const apiHost =
+        process.env.NEXT_PUBLIC_API_HOST || "http://localhost:8000";
 
       // Prepare report request
       const reportRequest = {
         date_range: {
-          from: dateRange.from?.toISOString().split('T')[0] || '',
-          to: dateRange.to?.toISOString().split('T')[0] || '',
+          from: dateRange.from?.toISOString().split("T")[0] || "",
+          to: dateRange.to?.toISOString().split("T")[0] || "",
         },
-        combinations: filterCombinations.map(combo => ({
+        combinations: filterCombinations.map((combo) => ({
           id: combo.id,
           group_id: combo.groupId ? parseInt(combo.groupId) : null,
-          group_name: combo.groupName || '',
+          group_name: combo.groupName || "",
           event_ids: combo.eventIds || [],
           event_names: combo.eventNames || [],
           clasificaciones: combo.clasificaciones || [],
         })),
-        format: 'pdf'
+        format: "pdf",
       };
 
       // Make API request
       const response = await fetch(`${apiHost}/api/v1/reports/generate-zip`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(reportRequest),
       });
 
       if (!response.ok) {
-        throw new Error('Error generating ZIP report');
+        throw new Error("Error generating ZIP report");
       }
 
       // Download ZIP file
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
-      a.download = `reporte_epidemiologico_${new Date().toISOString().split('T')[0]}.zip`;
+      a.download = `reporte_epidemiologico_${
+        new Date().toISOString().split("T")[0]
+      }.zip`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
 
-      console.log(`✅ Generated ZIP report with ${filterCombinations.length} PDFs`);
+      console.log(
+        `✅ Generated ZIP report with ${filterCombinations.length} PDFs`
+      );
     } catch (error) {
-      console.error('Error generating ZIP report:', error);
-      alert('Error al generar el reporte ZIP. Por favor intente nuevamente.');
+      console.error("Error generating ZIP report:", error);
+      alert("Error al generar el reporte ZIP. Por favor intente nuevamente.");
     }
   };
-
-
 
   if (filterCombinations.length === 0) {
     return (
@@ -261,9 +264,12 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
         <Card className="max-w-md">
           <CardContent className="p-8 text-center">
             <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No hay filtros aplicados</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              No hay filtros aplicados
+            </h3>
             <p className="text-gray-600 mb-4">
-              Configura al menos una combinación de filtros para comenzar el análisis comparativo
+              Configura al menos una combinación de filtros para comenzar el
+              análisis comparativo
             </p>
           </CardContent>
         </Card>
@@ -285,7 +291,10 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
 
       {/* Scrollable columns container */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden bg-gray-50">
-        <div className="flex h-full" style={{ minWidth: `${filterCombinations.length * 400}px` }}>
+        <div
+          className="flex h-full"
+          style={{ minWidth: `${filterCombinations.length * 400}px` }}
+        >
           {filterCombinations.map((combination, index) => (
             <div
               key={combination.id}
@@ -308,18 +317,22 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
                           {name}
                         </Badge>
                       ))}
-                      {combination.eventNames && combination.eventNames.length > 2 && (
-                        <Badge variant="secondary" className="text-xs">
-                          +{combination.eventNames.length - 2} más
-                        </Badge>
-                      )}
+                      {combination.eventNames &&
+                        combination.eventNames.length > 2 && (
+                          <Badge variant="secondary" className="text-xs">
+                            +{combination.eventNames.length - 2} más
+                          </Badge>
+                        )}
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Charts Container with proper scroll */}
-              <DynamicChartsColumn combination={combination} dateRange={dateRange} />
+              <DynamicChartsColumn
+                combination={combination}
+                dateRange={dateRange}
+              />
             </div>
           ))}
         </div>

@@ -3,29 +3,41 @@ Get indicadores endpoint
 """
 
 import logging
-from datetime import datetime
-from typing import Any, Dict, List
+from datetime import date, datetime
+from typing import Any, Dict, List, Optional
 
 from fastapi import Depends, Query
+from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
+from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User
 
 logger = logging.getLogger(__name__)
 
 
+class IndicadoresResponse(BaseModel):
+    """Response model para indicadores del dashboard"""
+
+    total_casos: int = Field(..., description="Total de casos registrados")
+    tasa_incidencia: float = Field(..., description="Tasa de incidencia por 100.000 habitantes")
+    areas_afectadas: int = Field(..., description="Número de áreas/establecimientos afectados")
+    letalidad: float = Field(..., description="Tasa de letalidad en porcentaje")
+    filtros_aplicados: Dict[str, Any] = Field(..., description="Filtros que se aplicaron a la consulta")
+
+
 async def get_indicadores(
-    grupo_id: int = Query(None, description="ID del grupo seleccionado"),
-    evento_id: int = Query(None, description="ID del evento seleccionado"),
-    fecha_desde: str = Query(None, description="Fecha desde"),
-    fecha_hasta: str = Query(None, description="Fecha hasta"),
-    clasificaciones: List[str] = Query(None, description="Filtrar por clasificaciones estratégicas"),
+    grupo_id: Optional[int] = Query(None, description="ID del grupo seleccionado"),
+    evento_id: Optional[int] = Query(None, description="ID del evento seleccionado"),
+    fecha_desde: Optional[date] = Query(None, description="Fecha desde (formato: YYYY-MM-DD)"),
+    fecha_hasta: Optional[date] = Query(None, description="Fecha hasta (formato: YYYY-MM-DD)"),
+    clasificaciones: Optional[List[str]] = Query(None, description="Filtrar por clasificaciones estratégicas"),
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(RequireAnyRole())
-) -> Dict[str, Any]:
+) -> SuccessResponse[IndicadoresResponse]:
     """
     Obtiene los indicadores de resumen para el dashboard
 
@@ -60,11 +72,11 @@ async def get_indicadores(
 
     if fecha_desde:
         query_casos += " AND e.fecha_minima_evento >= :fecha_desde"
-        params["fecha_desde"] = datetime.strptime(fecha_desde, "%Y-%m-%d").date()
+        params["fecha_desde"] = fecha_desde
 
     if fecha_hasta:
         query_casos += " AND e.fecha_minima_evento <= :fecha_hasta"
-        params["fecha_hasta"] = datetime.strptime(fecha_hasta, "%Y-%m-%d").date()
+        params["fecha_hasta"] = fecha_hasta
 
     if clasificaciones:
         query_casos += " AND e.clasificacion_estrategia = ANY(:clasificaciones)"
@@ -116,16 +128,18 @@ async def get_indicadores(
 
     logger.info(f"Indicadores - Total casos: {total_casos}, Áreas: {areas_afectadas}, Tasa: {tasa_incidencia}")
 
-    return {
-        "total_casos": total_casos,
-        "tasa_incidencia": tasa_incidencia,
-        "areas_afectadas": areas_afectadas,
-        "letalidad": letalidad,
-        "filtros_aplicados": {
+    response = IndicadoresResponse(
+        total_casos=total_casos,
+        tasa_incidencia=tasa_incidencia,
+        areas_afectadas=areas_afectadas,
+        letalidad=letalidad,
+        filtros_aplicados={
             "grupo_id": grupo_id,
             "evento_id": evento_id,
-            "fecha_desde": fecha_desde,
-            "fecha_hasta": fecha_hasta,
+            "fecha_desde": fecha_desde.isoformat() if fecha_desde else None,
+            "fecha_hasta": fecha_hasta.isoformat() if fecha_hasta else None,
             "clasificaciones": clasificaciones
         }
-    }
+    )
+
+    return SuccessResponse(data=response)

@@ -15,14 +15,14 @@ export function getUploadCsvAsyncUrl(): string {
  * Get the URL for checking job status
  */
 export function getJobStatusUrl(jobId: string): string {
-  return `${env.NEXT_PUBLIC_API_HOST}/api/v1/jobs/${jobId}`;
+  return `${env.NEXT_PUBLIC_API_HOST}/api/v1/uploads/jobs/${jobId}/status`;
 }
 
 /**
  * Get the URL for canceling a job
  */
 export function getCancelJobUrl(jobId: string): string {
-  return `${env.NEXT_PUBLIC_API_HOST}/api/v1/jobs/${jobId}/cancel`;
+  return `${env.NEXT_PUBLIC_API_HOST}/api/v1/uploads/jobs/${jobId}`;
 }
 
 /**

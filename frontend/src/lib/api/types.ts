@@ -271,7 +271,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/uploads/csv": {
+    "/api/v1/uploads/csv-async": {
         parameters: {
             query?: never;
             header?: never;
@@ -298,7 +298,7 @@ export interface paths {
          *
          *     **Returns:** Job ID para seguimiento del progreso
          */
-        post: operations["upload_csv_async_api_v1_uploads_csv_post"];
+        post: operations["upload_csv_async_api_v1_uploads_csv_async_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1011,8 +1011,8 @@ export interface components {
              */
             user_agent?: string | null;
         };
-        /** Body_upload_csv_async_api_v1_uploads_csv_post */
-        Body_upload_csv_async_api_v1_uploads_csv_post: {
+        /** Body_upload_csv_async_api_v1_uploads_csv_async_post */
+        Body_upload_csv_async_api_v1_uploads_csv_async_post: {
             /**
              * File
              * Format: binary
@@ -2100,6 +2100,39 @@ export interface components {
             detail?: components["schemas"]["ValidationError"][];
         };
         /**
+         * IndicadoresResponse
+         * @description Response model para indicadores del dashboard
+         */
+        IndicadoresResponse: {
+            /**
+             * Total Casos
+             * @description Total de casos registrados
+             */
+            total_casos: number;
+            /**
+             * Tasa Incidencia
+             * @description Tasa de incidencia por 100.000 habitantes
+             */
+            tasa_incidencia: number;
+            /**
+             * Areas Afectadas
+             * @description Número de áreas/establecimientos afectados
+             */
+            areas_afectadas: number;
+            /**
+             * Letalidad
+             * @description Tasa de letalidad en porcentaje
+             */
+            letalidad: number;
+            /**
+             * Filtros Aplicados
+             * @description Filtros que se aplicaron a la consulta
+             */
+            filtros_aplicados: {
+                [key: string]: unknown;
+            };
+        };
+        /**
          * InternacionInfo
          * @description Información de internación
          */
@@ -2539,6 +2572,18 @@ export interface components {
         SuccessResponse_EventoTimelineResponse_: {
             /** @description Datos de la respuesta */
             data: components["schemas"]["EventoTimelineResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[IndicadoresResponse] */
+        SuccessResponse_IndicadoresResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["IndicadoresResponse"];
             /**
              * Meta
              * @description Metadata opcional (paginación, etc)
@@ -3283,7 +3328,7 @@ export interface operations {
             };
         };
     };
-    upload_csv_async_api_v1_uploads_csv_post: {
+    upload_csv_async_api_v1_uploads_csv_async_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -3292,7 +3337,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "multipart/form-data": components["schemas"]["Body_upload_csv_async_api_v1_uploads_csv_post"];
+                "multipart/form-data": components["schemas"]["Body_upload_csv_async_api_v1_uploads_csv_async_post"];
             };
         };
         responses: {
@@ -4213,15 +4258,15 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description ID del grupo seleccionado */
-                grupo_id?: number;
+                grupo_id?: number | null;
                 /** @description ID del evento seleccionado */
-                evento_id?: number;
-                /** @description Fecha desde */
-                fecha_desde?: string;
-                /** @description Fecha hasta */
-                fecha_hasta?: string;
+                evento_id?: number | null;
+                /** @description Fecha desde (formato: YYYY-MM-DD) */
+                fecha_desde?: string | null;
+                /** @description Fecha hasta (formato: YYYY-MM-DD) */
+                fecha_hasta?: string | null;
                 /** @description Filtrar por clasificaciones estratégicas */
-                clasificaciones?: string[];
+                clasificaciones?: string[] | null;
             };
             header?: never;
             path?: never;
@@ -4235,9 +4280,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["SuccessResponse_IndicadoresResponse_"];
                 };
             };
             /** @description Validation Error */

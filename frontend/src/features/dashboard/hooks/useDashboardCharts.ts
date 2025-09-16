@@ -32,7 +32,7 @@ export function useDashboardCharts(params: DashboardChartsParams) {
     queryKey: ['dashboard-charts', params],
     queryFn: async () => {
       const queryParams = new URLSearchParams();
-      
+
       if (params.grupoId) queryParams.append('grupo_id', params.grupoId.toString());
       if (params.eventoId) queryParams.append('evento_id', params.eventoId.toString());
       if (params.fechaDesde) queryParams.append('fecha_desde', params.fechaDesde);
@@ -40,13 +40,23 @@ export function useDashboardCharts(params: DashboardChartsParams) {
       if (params.clasificaciones && params.clasificaciones.length > 0) {
         params.clasificaciones.forEach(c => queryParams.append('clasificaciones', c));
       }
-      
-      const response = await fetch(`${env.NEXT_PUBLIC_API_HOST}/api/v1/charts/dashboard?${queryParams.toString()}`);
-      
+
+      // Obtener el token de la sesión
+      const { getSession } = await import('next-auth/react');
+      const session = await getSession();
+
+      const response = await fetch(`${env.NEXT_PUBLIC_API_HOST}/api/v1/charts/dashboard?${queryParams.toString()}`, {
+        headers: {
+          ...(session?.accessToken && {
+            'Authorization': `Bearer ${session.accessToken}`
+          })
+        }
+      });
+
       if (!response.ok) {
         throw new Error(`Error fetching charts: ${response.statusText}`);
       }
-      
+
       return response.json();
     },
     enabled: !!params.grupoId, // Solo ejecutar si hay grupo seleccionado
