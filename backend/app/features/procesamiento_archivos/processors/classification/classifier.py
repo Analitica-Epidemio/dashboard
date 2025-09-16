@@ -209,7 +209,7 @@ class EventClassifier:
 
         # Los tipos ENO ahora están en mayúsculas en la BD
         try:
-            from app.domains.eventos.models import TipoEno
+            from app.domains.eventos_epidemiologicos.eventos.models import TipoEno
 
             result = self.session.execute(
                 select(TipoEno).where(TipoEno.nombre == evento_normalized)

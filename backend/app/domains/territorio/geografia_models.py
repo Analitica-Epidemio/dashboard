@@ -18,7 +18,7 @@ if TYPE_CHECKING:
         CiudadanoDomicilio,
         ViajesCiudadano,
     )
-    from app.domains.establecimientos.models import Establecimiento
+    from app.domains.territorio.establecimientos_models.models import Establecimiento
 
 
 class Provincia(BaseModel, table=True):

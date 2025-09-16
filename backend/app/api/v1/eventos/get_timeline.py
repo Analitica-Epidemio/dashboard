@@ -16,7 +16,7 @@ from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User
-from app.domains.eventos.models import Evento
+from app.domains.eventos_epidemiologicos.eventos.models import Evento
 
 
 class EventoTimelineItem(BaseModel):

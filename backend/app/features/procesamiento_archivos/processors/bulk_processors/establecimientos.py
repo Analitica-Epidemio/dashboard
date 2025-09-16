@@ -6,7 +6,7 @@ import pandas as pd
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-from app.domains.establecimientos.models import Establecimiento
+from app.domains.territorio.establecimientos_models.models import Establecimiento
 from app.domains.localidades.models import Departamento, Localidad, Provincia
 
 from ..core.columns import Columns

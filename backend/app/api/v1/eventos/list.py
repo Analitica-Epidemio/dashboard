@@ -23,7 +23,7 @@ from app.domains.sujetos_epidemiologicos.ciudadanos_models.models import (
     CiudadanoDomicilio,
 )
 from app.domains.estrategias.models import TipoClasificacion
-from app.domains.eventos.models import Evento, TipoEno
+from app.domains.eventos_epidemiologicos.eventos.models import Evento, TipoEno
 from app.domains.localidades.models import Departamento, Localidad
 
 

@@ -10,7 +10,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.domains.estrategias.models import TipoClasificacion
-from app.domains.eventos.models import Evento, TipoEno
+from app.domains.eventos_epidemiologicos.eventos.models import Evento, TipoEno
 
 from .schemas import (
     ConfiguracionVisualizacion,

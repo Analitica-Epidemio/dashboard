@@ -10,7 +10,7 @@ from app.core.models import BaseModel
 from app.core.shared.enums import OrigenFinanciamiento
 
 if TYPE_CHECKING:
-    from app.domains.eventos.models import Evento
+    from app.domains.eventos_epidemiologicos.eventos.models import Evento
 
 
 class InvestigacionEvento(BaseModel, table=True):

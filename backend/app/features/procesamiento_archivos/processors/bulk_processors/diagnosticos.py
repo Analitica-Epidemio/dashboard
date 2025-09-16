@@ -12,7 +12,7 @@ from app.domains.diagnosticos.models import (
     InternacionEvento,
     TratamientoEvento,
 )
-from app.domains.eventos.models import Evento
+from app.domains.eventos_epidemiologicos.eventos.models import Evento
 
 from ..core.columns import Columns
 from .base import BulkProcessorBase

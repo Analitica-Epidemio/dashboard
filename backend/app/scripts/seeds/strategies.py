@@ -22,7 +22,7 @@ from app.domains.estrategias.models import (
     TipoClasificacion,
     TipoFiltro,
 )
-from app.domains.eventos.models import GrupoEno, TipoEno
+from app.domains.eventos_epidemiologicos.eventos.models import GrupoEno, TipoEno
 
 
 class StrategySeeder:

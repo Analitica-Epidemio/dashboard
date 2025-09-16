@@ -20,7 +20,7 @@ from app.domains.estrategias.schemas import (
     EventStrategyCreate,
     EventStrategyUpdate,
 )
-from app.domains.eventos.models import TipoEno
+from app.domains.eventos_epidemiologicos.eventos.models import TipoEno
 
 
 class EventStrategyRepository:

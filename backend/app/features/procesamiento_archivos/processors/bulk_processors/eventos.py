@@ -9,7 +9,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.core.utils.codigo_generator import CodigoGenerator
 from app.domains.sujetos_epidemiologicos.ciudadanos_models.models import AmbitosConcurrenciaEvento
-from app.domains.eventos.models import (
+from app.domains.eventos_epidemiologicos.eventos.models import (
     AntecedenteEpidemiologico,
     AntecedentesEpidemiologicosEvento,
     DetalleEventoSintomas,
