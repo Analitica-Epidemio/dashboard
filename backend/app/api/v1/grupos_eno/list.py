@@ -23,9 +23,8 @@ class GrupoEnoInfo(BaseModel):
     descripcion: Optional[str] = Field(
         None, max_length=500, description="Descripción del grupo"
     )
-    codigo: Optional[str] = Field(
-        None, max_length=200, description="Código del grupo"
-    )
+    codigo: Optional[str] = Field(None, max_length=200, description="Código del grupo")
+
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +59,7 @@ async def list_grupos_eno(
         # Ejecutar query
         result = await db.execute(query)
         grupos = result.scalars().all()
+        print(grupos)
 
         # Convertir a modelo de respuesta
         grupos_info = [
@@ -67,7 +67,7 @@ async def list_grupos_eno(
                 id=grupo.id,
                 nombre=grupo.nombre,
                 descripcion=grupo.descripcion,
-                codigo=grupo.codigo
+                codigo=grupo.codigo,
             )
             for grupo in grupos
         ]
@@ -81,14 +81,30 @@ async def list_grupos_eno(
                 "page": page,
                 "per_page": per_page,
                 "total": total,
-                "total_pages": total_pages
+                "total_pages": total_pages,
             },
             links={
-                "first": f"/api/v1/gruposEno?page=1&per_page={per_page}" if total_pages > 0 else None,
-                "prev": f"/api/v1/gruposEno?page={page-1}&per_page={per_page}" if page > 1 else None,
-                "next": f"/api/v1/gruposEno?page={page+1}&per_page={per_page}" if page < total_pages else None,
-                "last": f"/api/v1/gruposEno?page={total_pages}&per_page={per_page}" if total_pages > 0 else None
-            }
+                "first": (
+                    f"/api/v1/gruposEno?page=1&per_page={per_page}"
+                    if total_pages > 0
+                    else None
+                ),
+                "prev": (
+                    f"/api/v1/gruposEno?page={page-1}&per_page={per_page}"
+                    if page > 1
+                    else None
+                ),
+                "next": (
+                    f"/api/v1/gruposEno?page={page+1}&per_page={per_page}"
+                    if page < total_pages
+                    else None
+                ),
+                "last": (
+                    f"/api/v1/gruposEno?page={total_pages}&per_page={per_page}"
+                    if total_pages > 0
+                    else None
+                ),
+            },
         )
     except Exception as e:
         logger.error(f"💥 Error listando grupos ENO: {str(e)}")
