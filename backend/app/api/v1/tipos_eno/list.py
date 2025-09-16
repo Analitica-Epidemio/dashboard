@@ -1,18 +1,22 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from app.core.database import get_async_session
-from app.core.schemas.response import ErrorResponse, PaginatedResponse
-from app.core.security import RequireAnyRole
-from app.domains.auth.models import User
-from app.domains.eventos.models import TipoEno, GrupoEno
-from pydantic import BaseModel, Field
+"""
+List tipos ENO endpoint
+"""
+
+import logging
 from typing import List, Optional
+from fastapi import Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
-import logging
 
-logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/tiposEno", tags=["TiposENO"])
+from app.core.database import get_async_session
+from app.core.schemas.response import PaginatedResponse
+from app.core.security import RequireAnyRole
+from app.domains.auth.models import User
+from app.domains.eventos.models import TipoEno
+from pydantic import BaseModel, Field
+from typing import Optional
+
 
 class TipoEnoInfo(BaseModel):
     id: int = Field(..., description="ID del tipo ENO")
@@ -30,14 +34,10 @@ class TipoEnoInfo(BaseModel):
         None, description="Nombre del grupo ENO"
     )
 
-@router.get(
-    "/",
-    response_model=PaginatedResponse[TipoEnoInfo],
-    responses={
-        500: {"model": ErrorResponse, "description": "Error interno del servidor"}
-    },
-)
-async def list_tiposEno(
+logger = logging.getLogger(__name__)
+
+
+async def list_tipos_eno(
     page: int = Query(1, ge=1, description="Número de página"),
     per_page: int = Query(20, ge=1, le=100, description="Elementos por página"),
     nombre: Optional[str] = Query(None, description="Filtrar por nombre del tipo"),
@@ -49,7 +49,7 @@ async def list_tiposEno(
     try:
         # Construir query base con join para obtener el nombre del grupo
         query = select(TipoEno).options(selectinload(TipoEno.grupo_eno))
-        
+
         # Aplicar filtros
         if nombre:
             query = query.where(TipoEno.nombre.ilike(f"%{nombre}%"))
@@ -57,7 +57,7 @@ async def list_tiposEno(
             query = query.where(TipoEno.id_grupo_eno == grupo_id)
         if grupos:
             query = query.where(TipoEno.id_grupo_eno.in_(grupos))
-        
+
         # Contar total de elementos
         count_query = select(func.count()).select_from(TipoEno)
         if nombre:
@@ -66,18 +66,18 @@ async def list_tiposEno(
             count_query = count_query.where(TipoEno.id_grupo_eno == grupo_id)
         if grupos:
             count_query = count_query.where(TipoEno.id_grupo_eno.in_(grupos))
-        
+
         total_result = await db.execute(count_query)
         total = total_result.scalar() or 0
-        
+
         # Aplicar paginación
         offset = (page - 1) * per_page
         query = query.offset(offset).limit(per_page)
-        
+
         # Ejecutar query
         result = await db.execute(query)
         tipos = result.scalars().all()
-        
+
         # Convertir a modelo de respuesta
         tipos_info = [
             TipoEnoInfo(
@@ -90,10 +90,10 @@ async def list_tiposEno(
             )
             for tipo in tipos
         ]
-        
+
         # Calcular páginas totales
         total_pages = (total + per_page - 1) // per_page if total > 0 else 0
-        
+
         return PaginatedResponse(
             data=tipos_info,
             meta={
@@ -115,4 +115,3 @@ async def list_tiposEno(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error obteniendo tipos de eventos: {str(e)}",
         )
-    

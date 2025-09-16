@@ -1,17 +1,20 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+"""
+List grupos ENO endpoint
+"""
+
+import logging
+from typing import Optional
+from fastapi import Depends, HTTPException, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
+
 from app.core.database import get_async_session
-from app.core.schemas.response import ErrorResponse, PaginatedResponse
+from app.core.schemas.response import PaginatedResponse
 from app.core.security import RequireAnyRole
 from app.domains.auth.models import User
 from app.domains.eventos.models import GrupoEno
 from pydantic import BaseModel, Field
-from typing import List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
-import logging
-
-logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/gruposEno", tags=["GruposENO"])
+from typing import Optional
 
 
 class GrupoEnoInfo(BaseModel):
@@ -24,14 +27,10 @@ class GrupoEnoInfo(BaseModel):
         None, max_length=200, description="Código del grupo"
     )
 
-@router.get(
-    "/",
-    response_model=PaginatedResponse[GrupoEnoInfo],
-    responses={
-        500: {"model": ErrorResponse, "description": "Error interno del servidor"}
-    },
-)
-async def list_gruposEno(
+logger = logging.getLogger(__name__)
+
+
+async def list_grupos_eno(
     page: int = Query(1, ge=1, description="Número de página"),
     per_page: int = Query(20, ge=1, le=100, description="Elementos por página"),
     nombre: Optional[str] = Query(None, description="Filtrar por nombre"),
@@ -41,27 +40,27 @@ async def list_gruposEno(
     try:
         # Construir query base
         query = select(GrupoEno)
-        
+
         # Aplicar filtros
         if nombre:
             query = query.where(GrupoEno.nombre.ilike(f"%{nombre}%"))
-        
+
         # Contar total de elementos
         count_query = select(func.count()).select_from(GrupoEno)
         if nombre:
             count_query = count_query.where(GrupoEno.nombre.ilike(f"%{nombre}%"))
-        
+
         total_result = await db.execute(count_query)
         total = total_result.scalar() or 0
-        
+
         # Aplicar paginación
         offset = (page - 1) * per_page
         query = query.offset(offset).limit(per_page)
-        
+
         # Ejecutar query
         result = await db.execute(query)
         grupos = result.scalars().all()
-        
+
         # Convertir a modelo de respuesta
         grupos_info = [
             GrupoEnoInfo(
@@ -72,10 +71,10 @@ async def list_gruposEno(
             )
             for grupo in grupos
         ]
-        
+
         # Calcular páginas totales
         total_pages = (total + per_page - 1) // per_page if total > 0 else 0
-        
+
         return PaginatedResponse(
             data=grupos_info,
             meta={
