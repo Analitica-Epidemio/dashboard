@@ -88,9 +88,16 @@ from app.domains.territorio.establecimientos_models import (
     Establecimiento,
 )
 
-# 📊 DASHBOARD FEATURES
+# 📊 FEATURES MODELS (para detección de Alembic)
+# Idealmente estos deberían estar en domains, pero por ahora están en features
 from app.features.dashboard.models import (
     DashboardChart,
+)
+from app.features.procesamiento_archivos.models import (
+    ProcessingJob,
+)
+from app.features.analitica.models import (
+    DatamartEpidemiologia,
 )
 
 # Export all models for external access
@@ -141,6 +148,8 @@ __all__ = [
     "Departamento",
     "Localidad",
     "Establecimiento",
-    # Dashboard
+    # Features
     "DashboardChart",
+    "ProcessingJob",
+    "DatamartEpidemiologia",
 ]
