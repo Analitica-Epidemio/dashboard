@@ -14,8 +14,7 @@ import { Button } from "@/components/ui/button";
 import { DynamicChart } from "./DynamicChart";
 import { useDashboardCharts } from "../hooks/useDashboardCharts";
 import { useIndicadores } from "@/features/charts/hooks";
-import { $api } from "@/lib/api/client";
-import { useGenerateSignedUrl } from "@/features/reports/hooks";
+import { useGenerateZipReport, useGenerateSignedUrl } from "@/features/reports/hooks";
 
 interface FilterCombination {
   id: string;
@@ -204,31 +203,8 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
 
   const columnStyle = calculateColumnStyle();
 
-  // Generate ZIP report mutation
-  const generateZipReportMutation = $api.useMutation("post", "/api/v1/reports/generate-zip", {
-    onSuccess: (data, variables, context) => {
-      // The response should be a blob for file download
-      const blob = new Blob([data as any], { type: 'application/zip' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `reporte_epidemiologico_${
-        new Date().toISOString().split("T")[0]
-      }.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-
-      console.log(
-        `✅ Generated ZIP report with ${filterCombinations.length} PDFs`
-      );
-    },
-    onError: (error) => {
-      console.error("Error generating ZIP report:", error);
-      alert("Error al generar el reporte ZIP. Por favor intente nuevamente.");
-    }
-  });
+  // Generate ZIP report mutation using the new hook
+  const generateZipReportMutation = useGenerateZipReport();
 
   // Generate signed URL mutation
   const generateSignedUrlMutation = useGenerateSignedUrl();
