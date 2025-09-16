@@ -25,7 +25,7 @@ class SecurityConfig:
 
     # JWT settings
     ALGORITHM = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES = 30
+    ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours for development
     REFRESH_TOKEN_EXPIRE_DAYS = 7
 
     # Session settings
@@ -140,6 +140,9 @@ class TokenSecurity:
         Verify and decode JWT token
         Returns TokenData if valid, None if invalid
         """
+        import logging
+        logger = logging.getLogger(__name__)
+
         try:
             payload = jwt.decode(
                 token,
@@ -149,16 +152,23 @@ class TokenSecurity:
 
             # Check token type
             if payload.get("type") != token_type:
+                logger.warning(f"Token type mismatch. Expected: {token_type}, Got: {payload.get('type')}")
                 return None
 
-            # Extract token data
-            user_id: int = payload.get("sub")
+            # Extract token data (sub is a string per JWT standard)
+            user_id_str = payload.get("sub")
+            if user_id_str is None:
+                return None
+
+            try:
+                user_id: int = int(user_id_str)  # Convert string sub to int
+            except (ValueError, TypeError):
+                logger.warning(f"Invalid user_id in token: {user_id_str}")
+                return None
+
             email: str = payload.get("email")
             role: str = payload.get("role")
             session_id: int = payload.get("session_id")
-
-            if user_id is None:
-                return None
 
             token_data = TokenData(
                 user_id=user_id,
@@ -168,7 +178,11 @@ class TokenSecurity:
             )
             return token_data
 
-        except (JWTError, ValidationError):
+        except JWTError as e:
+            logger.warning(f"JWT validation error: {str(e)}")
+            return None
+        except ValidationError as e:
+            logger.warning(f"Token data validation error: {str(e)}")
             return None
 
 

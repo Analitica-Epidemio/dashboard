@@ -19,19 +19,37 @@ const fetchClient = createFetchClient<paths>({
 // Add request interceptor for auth token
 fetchClient.use({
   async onRequest({ request }) {
+    // Get the session - this will include the access token
     const session = await getSession();
 
     if (session?.accessToken) {
       request.headers.set('Authorization', `Bearer ${session.accessToken}`);
     }
 
+    // Log for debugging
+    if (typeof window !== 'undefined') {
+      console.log('API Request:', request.url);
+      console.log('Session:', session);
+      console.log('Has token:', !!session?.accessToken);
+      if (session?.accessToken) {
+        console.log('Token (first 20 chars):', session.accessToken.substring(0, 20) + '...');
+      }
+      console.log('Headers:', Object.fromEntries(request.headers.entries()));
+    }
+
     return request;
   },
 
   async onResponse({ response }) {
-    // Handle 401 - redirect to login (NextAuth will handle token refresh automatically)
+    // Log for debugging
+    if (typeof window !== 'undefined') {
+      console.log('API Response:', response.url, 'Status:', response.status);
+    }
+
+    // Handle 401 - redirect to login
     if (response.status === 401) {
       if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+        // Clear session and redirect
         window.location.href = '/login';
       }
     }

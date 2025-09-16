@@ -1,6 +1,7 @@
 """
 Authentication dependencies for FastAPI
 """
+import logging
 from typing import List, Optional
 
 from fastapi import Depends, HTTPException, Request, status
@@ -14,6 +15,7 @@ from .schemas import TokenData
 from .security import SessionSecurity, TokenSecurity, create_credentials_exception
 from .service import AuthService
 
+logger = logging.getLogger(__name__)
 security = HTTPBearer()
 
 
@@ -36,9 +38,12 @@ async def get_current_user_token(
     else:
         token_str = str(token)
 
+    logger.debug(f"Token validation attempt for token starting with: {token_str[:20]}...")
+
     # Verify token
     token_data = TokenSecurity.verify_token(token_str, "access")
     if not token_data or not token_data.user_id:
+        logger.warning("Token validation failed: Invalid or missing token data")
         raise create_credentials_exception()
 
     # Validate session if present
@@ -46,18 +51,23 @@ async def get_current_user_token(
         auth_service = AuthService(db)
         session = await auth_service._get_session(token_data.session_id)
         if not session or not session.is_active:
+            logger.warning(f"Session validation failed: Session {token_data.session_id} not found or inactive")
             raise create_credentials_exception("Session expired")
 
         # Check session expiry
         if SessionSecurity.is_session_expired(session.expires_at):
+            from datetime import datetime, timezone
+            logger.warning(f"Session {token_data.session_id} expired. Expiry: {session.expires_at}, Current: {datetime.now(timezone.utc)}")
             session.is_active = False
             await db.commit()
             raise create_credentials_exception("Session expired")
 
-        # Update last activity
-        session.last_activity = SessionSecurity.get_session_expiry(0)  # Current time
+        # Update last activity to current time
+        from datetime import datetime, timezone
+        session.last_activity = datetime.now(timezone.utc)
         await db.commit()
 
+    logger.debug(f"Token validated successfully for user_id: {token_data.user_id}")
     return token_data
 
 

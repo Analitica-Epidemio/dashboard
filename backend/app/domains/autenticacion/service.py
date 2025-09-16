@@ -361,7 +361,7 @@ class AuthService:
         from .schemas import TokenUser
 
         token_data = {
-            "sub": user_id,
+            "sub": str(user_id),  # JWT standard requires sub to be a string
             "email": user_email,
             "role": user_role.value,
             "session_id": session.id
