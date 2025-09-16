@@ -88,6 +88,11 @@ from app.domains.territorio.establecimientos_models import (
     Establecimiento,
 )
 
+# 📊 DASHBOARD FEATURES
+from app.features.dashboard.models import (
+    DashboardChart,
+)
+
 # Export all models for external access
 __all__ = [
     # Autenticacion
@@ -136,4 +141,6 @@ __all__ = [
     "Departamento",
     "Localidad",
     "Establecimiento",
+    # Dashboard
+    "DashboardChart",
 ]
