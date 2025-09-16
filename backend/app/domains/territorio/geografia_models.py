@@ -14,11 +14,11 @@ from app.core.models import BaseModel
 
 if TYPE_CHECKING:
     from app.domains.sujetos_epidemiologicos.ciudadanos_models import (
-        AmbitosConcurrenciaEvento,
         CiudadanoDomicilio,
-        ViajesCiudadano,
     )
-    from app.domains.territorio.establecimientos_models.models import Establecimiento
+    from app.domains.sujetos_epidemiologicos.viajes_models import ViajesCiudadano
+    from app.domains.eventos_epidemiologicos.ambitos_models import AmbitosConcurrenciaEvento
+    from app.domains.territorio.establecimientos_models import Establecimiento
 
 
 class Provincia(BaseModel, table=True):

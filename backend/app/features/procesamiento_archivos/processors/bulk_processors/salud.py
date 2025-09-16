@@ -6,9 +6,9 @@ import pandas as pd
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-from app.domains.territorio.establecimientos_models.models import Establecimiento
+from app.domains.territorio.establecimientos_models import Establecimiento
 from app.domains.eventos_epidemiologicos.eventos.models import Evento
-from app.domains.atencion_medica.salud_models.models import Muestra, MuestraEvento, Vacuna, VacunasCiudadano
+from app.domains.atencion_medica.salud_models import Muestra, MuestraEvento, Vacuna, VacunasCiudadano
 
 from ..core.columns import Columns
 from .base import BulkProcessorBase

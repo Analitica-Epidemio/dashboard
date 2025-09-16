@@ -6,7 +6,7 @@ import pandas as pd
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-from app.domains.diagnosticos.models import (
+from app.domains.atencion_medica.diagnosticos_models import (
     DiagnosticoEvento,
     EstudioEvento,
     InternacionEvento,

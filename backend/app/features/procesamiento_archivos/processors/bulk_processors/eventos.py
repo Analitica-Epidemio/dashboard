@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.core.utils.codigo_generator import CodigoGenerator
-from app.domains.sujetos_epidemiologicos.ciudadanos_models import AmbitosConcurrenciaEvento
+from app.domains.eventos_epidemiologicos.ambitos_models import AmbitosConcurrenciaEvento
 from app.domains.eventos_epidemiologicos.eventos.models import (
     AntecedenteEpidemiologico,
     AntecedentesEpidemiologicosEvento,
@@ -17,7 +17,7 @@ from app.domains.eventos_epidemiologicos.eventos.models import (
     GrupoEno,
     TipoEno,
 )
-from app.domains.atencion_medica.salud_models.models import Sintoma
+from app.domains.atencion_medica.salud_models import Sintoma
 from app.features.procesamiento_archivos.utils.epidemiological_calculations import (
     calcular_edad,
     calcular_semana_epidemiologica,
