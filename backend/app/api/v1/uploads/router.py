@@ -18,7 +18,7 @@ router = APIRouter(prefix="/uploads", tags=["Uploads Async"])
 
 # Upload CSV endpoint
 router.add_api_route(
-    "/csv",
+    "/csv-async",
     upload_csv_async,
     methods=["POST"],
     responses={
