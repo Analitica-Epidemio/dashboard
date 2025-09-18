@@ -63,7 +63,7 @@ export function MultiSelect({
   // Get labels for selected values
   const selectedLabels = React.useMemo(() => {
     return selected
-      .map(value => options.find(opt => opt.value === value)?.label)
+      .map((value) => options.find((opt) => opt.value === value)?.label)
       .filter(Boolean) as string[];
   }, [selected, options]);
 
@@ -88,7 +88,7 @@ export function MultiSelect({
     if (selected.length === options.length) {
       onChange([]);
     } else {
-      onChange(options.map(opt => opt.value));
+      onChange(options.map((opt) => opt.value));
     }
   };
 
@@ -110,9 +110,9 @@ export function MultiSelect({
             {selected.length > 0 ? (
               selected.length <= 2 ? (
                 selectedLabels.map((label, index) => (
-                  <Badge 
-                    key={selected[index]} 
-                    variant="secondary" 
+                  <Badge
+                    key={selected[index]}
+                    variant="secondary"
                     className="mr-1"
                   >
                     {label}
@@ -120,7 +120,7 @@ export function MultiSelect({
                       className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
-                          handleRemove(selected[index], e as any);
+                          handleRemove(selected[index], e);
                         }
                       }}
                       onMouseDown={(e) => {
@@ -140,7 +140,7 @@ export function MultiSelect({
                     className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
-                        handleClearAll(e as any);
+                        handleClearAll(e);
                       }
                     }}
                     onMouseDown={(e) => {
@@ -162,8 +162,8 @@ export function MultiSelect({
       </PopoverTrigger>
       <PopoverContent className="w-full p-0" align="start">
         <Command shouldFilter={false}>
-          <CommandInput 
-            placeholder={searchPlaceholder} 
+          <CommandInput
+            placeholder={searchPlaceholder}
             value={search}
             onValueChange={setSearch}
           />
@@ -188,7 +188,7 @@ export function MultiSelect({
                   : "Seleccionar todos"}
               </CommandItem>
             )}
-            
+
             {/* Suggestions when no search */}
             {!search && selected.length === 0 && options.length > 5 && (
               <>
@@ -217,7 +217,7 @@ export function MultiSelect({
                 </div>
               </>
             )}
-            
+
             {/* Regular options */}
             {filteredOptions.map((option) => (
               <CommandItem

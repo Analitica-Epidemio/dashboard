@@ -18,7 +18,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import type { ChartData } from '../types'
+import type { ChartData } from '../../types'
 
 interface ChartCardProps {
   chartData: ChartData
@@ -97,7 +97,7 @@ function PieChartComponent({ data }: { data: ChartData['data'] }) {
           fill="#8884d8"
           dataKey="value"
         >
-          {data.map((_, index) => (
+          {data.map((_entry: unknown, index: number) => (
             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
           ))}
         </Pie>
@@ -107,6 +107,8 @@ function PieChartComponent({ data }: { data: ChartData['data'] }) {
     </ResponsiveContainer>
   )
 }
+
+export const ChartComponents = { LineChartComponent, BarChartComponent, AreaChartComponent, PieChartComponent }
 
 export function ChartCard({ chartData }: ChartCardProps) {
   const renderChart = () => {

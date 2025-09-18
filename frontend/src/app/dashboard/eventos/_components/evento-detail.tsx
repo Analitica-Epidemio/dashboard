@@ -414,7 +414,7 @@ export function EventoDetail({ eventoId, onClose }: EventoDetailProps) {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {evento.sintomas.map((sintoma: any) => (
+                  {evento.sintomas.map((sintoma) => (
                     <div
                       key={sintoma.id}
                       className="flex items-center justify-between py-2 border-b last:border-b-0"
@@ -445,7 +445,7 @@ export function EventoDetail({ eventoId, onClose }: EventoDetailProps) {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {evento.muestras.map((muestra: any) => (
+                  {evento.muestras.map((muestra) => (
                     <div
                       key={muestra.id}
                       className="space-y-1 py-2 border-b last:border-b-0"
@@ -489,7 +489,7 @@ export function EventoDetail({ eventoId, onClose }: EventoDetailProps) {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {evento.diagnosticos.map((diagnostico: any) => (
+                  {evento.diagnosticos.map((diagnostico) => (
                     <div
                       key={diagnostico.id}
                       className="space-y-1 py-2 border-b last:border-b-0"
@@ -566,7 +566,7 @@ export function EventoDetail({ eventoId, onClose }: EventoDetailProps) {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {evento.tratamientos.map((tratamiento: any) => (
+                  {evento.tratamientos.map((tratamiento) => (
                     <div
                       key={tratamiento.id}
                       className="space-y-2 p-3 border rounded-lg"
@@ -621,7 +621,7 @@ export function EventoDetail({ eventoId, onClose }: EventoDetailProps) {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {evento.internaciones.map((internacion: any) => (
+                  {evento.internaciones.map((internacion) => (
                     <div
                       key={internacion.id}
                       className="space-y-2 p-3 border rounded-lg"
@@ -688,7 +688,7 @@ export function EventoDetail({ eventoId, onClose }: EventoDetailProps) {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {evento.investigaciones.map((inv: any) => (
+                  {evento.investigaciones.map((inv) => (
                     <div
                       key={inv.id}
                       className="space-y-2 p-3 border rounded-lg"
@@ -735,7 +735,7 @@ export function EventoDetail({ eventoId, onClose }: EventoDetailProps) {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {evento.contactos.map((contacto: any) => (
+                  {evento.contactos.map((contacto) => (
                     <div
                       key={contacto.id}
                       className="space-y-2 p-3 border rounded-lg"
@@ -817,7 +817,7 @@ export function EventoDetail({ eventoId, onClose }: EventoDetailProps) {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {evento.ambitos_concurrencia.map((ambito: any) => (
+                    {evento.ambitos_concurrencia.map((ambito) => (
                       <div
                         key={ambito.id}
                         className="space-y-2 p-3 border rounded-lg"
@@ -870,7 +870,7 @@ export function EventoDetail({ eventoId, onClose }: EventoDetailProps) {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {evento.antecedentes.map((antecedente: any) => (
+                  {evento.antecedentes.map((antecedente) => (
                     <div
                       key={antecedente.id}
                       className="flex items-center justify-between py-2 border-b last:border-b-0"

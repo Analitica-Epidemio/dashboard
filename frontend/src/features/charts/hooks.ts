@@ -25,7 +25,7 @@ export function useDashboardCharts(filters?: ChartFilters) {
     '/api/v1/charts/dashboard',
     {
       params: {
-        query: filters as any,
+        query: filters,
       },
     },
     {
@@ -43,7 +43,7 @@ export function useIndicadores(filters?: ChartFilters) {
     '/api/v1/charts/indicadores',
     {
       params: {
-        query: filters as any,
+        query: filters,
       },
     },
     {

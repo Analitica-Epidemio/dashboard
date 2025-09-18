@@ -3,7 +3,7 @@
  * Gráfico de torta con estadísticas detalladas
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from "react";
 import {
   PieChart,
   Pie,
@@ -16,46 +16,51 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-} from 'recharts';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { AlertTriangle, PieChart as PieChartIcon, BarChart3, MapPin } from 'lucide-react';
+} from "recharts";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-  EpidemiologicalFilters,
-  ChartConfig,
-} from '../../types';
-import { useUGDCases } from '../../hooks/useEpidemiologicalData';
+  AlertTriangle,
+  PieChart as PieChartIcon,
+  BarChart3,
+  MapPin,
+} from "lucide-react";
+import { EpidemiologicalFilters, ChartConfig } from "../../types";
+import { useUGDCases } from "../../hooks/useEpidemiologicalData";
+import type { TooltipProps, UGDChartPayload } from "../../types/recharts";
 
 // Paleta de colores para UGDs (replicando el original)
 const UGD_COLORS = [
-  'rgb(255, 99, 132)',    // Rosa
-  'rgb(54, 162, 235)',    // Azul
-  'rgb(255, 205, 86)',    // Amarillo
-  'rgb(75, 192, 192)',    // Verde agua
-  'rgb(153, 102, 255)',   // Púrpura
-  'rgb(255, 159, 64)',    // Naranja
-  'rgb(199, 199, 199)',   // Gris
-  'rgb(83, 102, 255)',    // Azul índigo
-  'rgb(255, 99, 255)',    // Magenta
-  'rgb(99, 255, 132)',    // Verde claro
-  'rgb(132, 99, 255)',    // Violeta
-  'rgb(255, 132, 99)',    // Salmón
+  "rgb(255, 99, 132)", // Rosa
+  "rgb(54, 162, 235)", // Azul
+  "rgb(255, 205, 86)", // Amarillo
+  "rgb(75, 192, 192)", // Verde agua
+  "rgb(153, 102, 255)", // Púrpura
+  "rgb(255, 159, 64)", // Naranja
+  "rgb(199, 199, 199)", // Gris
+  "rgb(83, 102, 255)", // Azul índigo
+  "rgb(255, 99, 255)", // Magenta
+  "rgb(99, 255, 132)", // Verde claro
+  "rgb(132, 99, 255)", // Violeta
+  "rgb(255, 132, 99)", // Salmón
 ] as const;
 
 interface UGDPieChartProps {
   filters?: EpidemiologicalFilters;
   chartConfig?: ChartConfig;
   onUGDSelect?: (ugdName: string) => void;
-  chartType?: 'pie' | 'bar';
+  chartType?: "pie" | "bar";
   showMortalityData?: boolean;
   minPercentageForLabel?: number;
 }
 
 // Tooltip personalizado para gráfico de torta
-const CustomTooltip = ({ active, payload }: any) => {
+const CustomTooltip: React.FC<TooltipProps<UGDChartPayload>> = ({ active, payload }) => {
   if (!active || !payload || !payload.length) return null;
 
   const data = payload[0].payload;
+
+  if (!data) return null;
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-w-sm">
@@ -70,20 +75,20 @@ const CustomTooltip = ({ active, payload }: any) => {
             {data.value.toLocaleString()}
           </span>
         </div>
-        
+
         <div className="flex items-center justify-between gap-4">
           <span className="text-sm text-gray-700">Porcentaje:</span>
           <span className="text-sm font-medium text-gray-900">
-            {data.percentage.toFixed(1)}%
+            {(data.percentage ?? 0).toFixed(1)}%
           </span>
         </div>
 
-        {data.mortalityRate > 0 && (
+        {data.mortalityRate && data.mortalityRate > 0 && (
           <div className="border-t border-gray-200 pt-2 mt-2">
             <div className="flex items-center justify-between gap-4">
               <span className="text-sm text-red-600">Tasa letalidad:</span>
               <span className="text-sm font-medium text-red-700">
-                {data.mortalityRate.toFixed(2)}%
+                {(data.mortalityRate ?? 0).toFixed(2)}%
               </span>
             </div>
           </div>
@@ -95,8 +100,20 @@ const CustomTooltip = ({ active, payload }: any) => {
 
 // Etiquetas personalizadas para el gráfico de torta
 const renderCustomizedLabel = ({
-  cx, cy, midAngle, innerRadius, outerRadius, percent, name
-}: any) => {
+  cx,
+  cy,
+  midAngle,
+  innerRadius,
+  outerRadius,
+  percent,
+}: {
+  cx: number;
+  cy: number;
+  midAngle: number;
+  innerRadius: number;
+  outerRadius: number;
+  percent: number;
+}) => {
   // Solo mostrar etiqueta si el porcentaje es significativo
   if (percent < 0.05) return null; // 5% mínimo
 
@@ -110,11 +127,11 @@ const renderCustomizedLabel = ({
       x={x}
       y={y}
       fill="white"
-      textAnchor={x > cx ? 'start' : 'end'}
+      textAnchor={x > cx ? "start" : "end"}
       dominantBaseline="central"
       fontSize={12}
       fontWeight="bold"
-      style={{ textShadow: '1px 1px 1px rgba(0,0,0,0.5)' }}
+      style={{ textShadow: "1px 1px 1px rgba(0,0,0,0.5)" }}
     >
       {`${(percent * 100).toFixed(0)}%`}
     </text>
@@ -136,18 +153,18 @@ const UGDStats: React.FC<{
         <div className="text-lg font-bold text-blue-900">
           {statistics.totalUGDs}
         </div>
-        <div className="text-sm text-blue-700">
-          Unidades activas
-        </div>
+        <div className="text-sm text-blue-700">Unidades activas</div>
       </div>
 
       <div className="p-3 bg-green-50 rounded-lg border border-green-200">
         <div className="flex items-center gap-2 mb-1">
           <PieChartIcon className="h-4 w-4 text-green-500" />
-          <span className="text-sm font-medium text-green-800">UGD Principal</span>
+          <span className="text-sm font-medium text-green-800">
+            UGD Principal
+          </span>
         </div>
         <div className="text-lg font-bold text-green-900 truncate">
-          {topUGDs[0]?.name || 'N/A'}
+          {topUGDs[0]?.name || "N/A"}
         </div>
         <div className="text-sm text-green-700">
           {topUGDs[0]?.percentage.toFixed(1)}% del total
@@ -157,14 +174,18 @@ const UGDStats: React.FC<{
       <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
         <div className="flex items-center gap-2 mb-1">
           <BarChart3 className="h-4 w-4 text-gray-500" />
-          <span className="text-sm font-medium text-gray-800">Concentración</span>
+          <span className="text-sm font-medium text-gray-800">
+            Concentración
+          </span>
         </div>
         <div className="text-lg font-bold text-gray-900">
-          {topUGDs.slice(0, 3).reduce((sum, ugd) => sum + ugd.percentage, 0).toFixed(1)}%
+          {topUGDs
+            .slice(0, 3)
+            .reduce((sum, ugd) => sum + ugd.percentage, 0)
+            .toFixed(1)}
+          %
         </div>
-        <div className="text-sm text-gray-700">
-          Top 3 UGDs
-        </div>
+        <div className="text-sm text-gray-700">Top 3 UGDs</div>
       </div>
     </div>
   );
@@ -174,27 +195,22 @@ export const UGDPieChart: React.FC<UGDPieChartProps> = ({
   filters,
   chartConfig = {},
   onUGDSelect,
-  chartType = 'pie',
+  chartType = "pie",
   showMortalityData = true,
   minPercentageForLabel = 5,
 }) => {
   const [selectedUGD, setSelectedUGD] = useState<string | null>(null);
-  
-  const {
-    processedData,
-    loading,
-    error,
-    refetch,
-  } = useUGDCases(filters);
+
+  const { processedData, loading, error, refetch } = useUGDCases(filters);
 
   // Preparar datos para visualización
   const { chartData, statistics, title, topUGDs } = useMemo(() => {
     if (!processedData) {
-      return { 
-        chartData: [], 
-        statistics: null, 
-        title: '', 
-        topUGDs: [] 
+      return {
+        chartData: [],
+        statistics: null,
+        title: "",
+        topUGDs: [],
       };
     }
 
@@ -207,11 +223,11 @@ export const UGDPieChart: React.FC<UGDPieChartProps> = ({
     }));
 
     // Ordenar por casos para ranking
-    const sortedForRanking = [...dataWithColors].sort((a, b) => b.value - a.value);
+    const sortedForRanking = [...dataWithColors].sort(
+      (a, b) => b.value - a.value
+    );
 
-    const chartTitle = `Distribución por Unidad de Gestión de Datos (UGD) - ${
-      statistics.totalCases.toLocaleString()
-    } casos`;
+    const chartTitle = `Distribución por Unidad de Gestión de Datos (UGD) - ${statistics.totalCases.toLocaleString()} casos`;
 
     return {
       chartData: dataWithColors,
@@ -221,7 +237,7 @@ export const UGDPieChart: React.FC<UGDPieChartProps> = ({
     };
   }, [processedData]);
 
-  const handleUGDClick = (data: any) => {
+  const handleUGDClick = (data: { name?: string }) => {
     const ugdName = data.name;
     setSelectedUGD(selectedUGD === ugdName ? null : ugdName);
     if (onUGDSelect) {
@@ -245,7 +261,9 @@ export const UGDPieChart: React.FC<UGDPieChartProps> = ({
       <div className="flex flex-col items-center justify-center h-96 gap-4">
         <AlertTriangle className="h-12 w-12 text-red-500" />
         <div className="text-center">
-          <p className="text-lg font-semibold text-gray-800">Error al cargar datos</p>
+          <p className="text-lg font-semibold text-gray-800">
+            Error al cargar datos
+          </p>
           <p className="text-sm text-gray-600">{error}</p>
           <button
             onClick={refetch}
@@ -267,34 +285,33 @@ export const UGDPieChart: React.FC<UGDPieChartProps> = ({
           </div>
           <div className="flex gap-2">
             <Button
-              variant={chartType === 'pie' ? 'default' : 'outline'}
+              variant={chartType === "pie" ? "default" : "outline"}
               size="sm"
-              onClick={() => {/* toggle chart type */}}
+              onClick={() => {
+                /* toggle chart type */
+              }}
             >
               <PieChartIcon className="h-4 w-4" />
             </Button>
             <Button
-              variant={chartType === 'bar' ? 'default' : 'outline'}
+              variant={chartType === "bar" ? "default" : "outline"}
               size="sm"
-              onClick={() => {/* toggle chart type */}}
+              onClick={() => {
+                /* toggle chart type */
+              }}
             >
               <BarChart3 className="h-4 w-4" />
             </Button>
           </div>
         </div>
-        
-        {statistics && (
-          <UGDStats statistics={statistics} topUGDs={topUGDs} />
-        )}
+
+        {statistics && <UGDStats statistics={statistics} topUGDs={topUGDs} />}
       </div>
 
       <div>
-        <div 
-          className="w-full"
-          style={{ height: chartConfig.height || 400 }}
-        >
+        <div className="w-full" style={{ height: chartConfig.height || 400 }}>
           <ResponsiveContainer width="100%" height="100%">
-            {chartType === 'pie' ? (
+            {chartType === "pie" ? (
               <PieChart>
                 <Pie
                   data={chartData}
@@ -309,10 +326,10 @@ export const UGDPieChart: React.FC<UGDPieChartProps> = ({
                   cursor="pointer"
                 >
                   {chartData.map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
+                    <Cell
+                      key={`cell-${index}`}
                       fill={entry.color}
-                      stroke={selectedUGD === entry.name ? '#333' : 'none'}
+                      stroke={selectedUGD === entry.name ? "#333" : "none"}
                       strokeWidth={selectedUGD === entry.name ? 2 : 0}
                     />
                   ))}
@@ -322,8 +339,8 @@ export const UGDPieChart: React.FC<UGDPieChartProps> = ({
                   layout="vertical"
                   align="right"
                   verticalAlign="middle"
-                  wrapperStyle={{ paddingLeft: '20px' }}
-                  formatter={(value, entry: any) => (
+                  wrapperStyle={{ paddingLeft: "20px" }}
+                  formatter={(value, entry) => (
                     <span style={{ color: entry.color }}>
                       {value} ({entry.payload.percentage.toFixed(1)}%)
                     </span>
@@ -336,19 +353,24 @@ export const UGDPieChart: React.FC<UGDPieChartProps> = ({
                 margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
                 onClick={handleUGDClick}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(128, 128, 128, 0.2)" />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="rgba(128, 128, 128, 0.2)"
+                />
                 <XAxis
                   dataKey="name"
-                  tick={{ fontSize: 11, angle: -45 }}
-                  tickLine={{ stroke: '#666' }}
-                  axisLine={{ stroke: '#666' }}
+                  tick={{ fontSize: 11 }}
+                  angle={-45}
+                  textAnchor="end"
+                  tickLine={{ stroke: "#666" }}
+                  axisLine={{ stroke: "#666" }}
                   height={80}
                 />
                 <YAxis
                   tick={{ fontSize: 12 }}
-                  tickLine={{ stroke: '#666' }}
-                  axisLine={{ stroke: '#666' }}
-                  label={{ value: 'Casos', angle: -90, position: 'insideLeft' }}
+                  tickLine={{ stroke: "#666" }}
+                  axisLine={{ stroke: "#666" }}
+                  label={{ value: "Casos", angle: -90, position: "insideLeft" }}
                 />
                 <Bar
                   dataKey="value"
@@ -356,10 +378,7 @@ export const UGDPieChart: React.FC<UGDPieChartProps> = ({
                   strokeWidth={1}
                 >
                   {topUGDs.map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={entry.color}
-                    />
+                    <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Bar>
                 <Tooltip content={<CustomTooltip />} />
@@ -376,10 +395,12 @@ export const UGDPieChart: React.FC<UGDPieChartProps> = ({
             </h4>
             <div className="space-y-1 max-h-48 overflow-y-auto">
               {topUGDs.slice(0, 10).map((ugd, index) => (
-                <div 
-                  key={ugd.name} 
+                <div
+                  key={ugd.name}
                   className={`flex items-center justify-between p-2 rounded cursor-pointer transition-colors ${
-                    selectedUGD === ugd.name ? 'bg-blue-100 border border-blue-300' : 'hover:bg-gray-100'
+                    selectedUGD === ugd.name
+                      ? "bg-blue-100 border border-blue-300"
+                      : "hover:bg-gray-100"
                   }`}
                   onClick={() => handleUGDClick(ugd)}
                 >
@@ -387,8 +408,8 @@ export const UGDPieChart: React.FC<UGDPieChartProps> = ({
                     <Badge variant="outline" className="text-xs flex-shrink-0">
                       {index + 1}
                     </Badge>
-                    <div 
-                      className="w-3 h-3 rounded flex-shrink-0" 
+                    <div
+                      className="w-3 h-3 rounded flex-shrink-0"
                       style={{ backgroundColor: ugd.color }}
                     />
                     <span className="text-sm text-gray-700 truncate">
@@ -415,17 +436,17 @@ export const UGDPieChart: React.FC<UGDPieChartProps> = ({
               </h4>
               <div className="space-y-1 max-h-48 overflow-y-auto">
                 {topUGDs
-                  .filter(ugd => ugd.mortalityRate > 0)
-                  .sort((a, b) => b.mortalityRate - a.mortalityRate)
+                  .filter((ugd) => (ugd.mortalityRate ?? 0) > 0)
+                  .sort((a, b) => (b.mortalityRate ?? 0) - (a.mortalityRate ?? 0))
                   .slice(0, 8)
                   .map((ugd) => (
-                    <div 
-                      key={ugd.name} 
+                    <div
+                      key={ugd.name}
                       className="flex items-center justify-between p-2 rounded hover:bg-gray-100"
                     >
                       <div className="flex items-center gap-2 min-w-0">
-                        <div 
-                          className="w-3 h-3 rounded flex-shrink-0" 
+                        <div
+                          className="w-3 h-3 rounded flex-shrink-0"
                           style={{ backgroundColor: ugd.color }}
                         />
                         <span className="text-sm text-gray-700 truncate">
@@ -433,12 +454,12 @@ export const UGDPieChart: React.FC<UGDPieChartProps> = ({
                         </span>
                       </div>
                       <span className="text-sm font-medium text-red-600">
-                        {ugd.mortalityRate.toFixed(2)}%
+                        {(ugd.mortalityRate ?? 0).toFixed(2)}%
                       </span>
                     </div>
-                  ))
-                }
-                {topUGDs.filter(ugd => ugd.mortalityRate > 0).length === 0 && (
+                  ))}
+                {topUGDs.filter((ugd) => (ugd.mortalityRate ?? 0) > 0).length ===
+                  0 && (
                   <p className="text-sm text-gray-500 text-center py-4">
                     Sin datos de letalidad disponibles
                   </p>
@@ -455,7 +476,7 @@ export const UGDPieChart: React.FC<UGDPieChartProps> = ({
               UGD Seleccionada: {selectedUGD}
             </h4>
             {(() => {
-              const ugdData = topUGDs.find(ugd => ugd.name === selectedUGD);
+              const ugdData = topUGDs.find((ugd) => ugd.name === selectedUGD);
               return ugdData ? (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div>
@@ -473,13 +494,15 @@ export const UGDPieChart: React.FC<UGDPieChartProps> = ({
                   <div>
                     <span className="text-blue-700">Ranking:</span>
                     <div className="font-medium text-blue-900">
-                      #{topUGDs.findIndex(u => u.name === selectedUGD) + 1}
+                      #{topUGDs.findIndex((u) => u.name === selectedUGD) + 1}
                     </div>
                   </div>
                   <div>
                     <span className="text-blue-700">Tasa letalidad:</span>
                     <div className="font-medium text-blue-900">
-                      {ugdData.mortalityRate > 0 ? `${ugdData.mortalityRate.toFixed(2)}%` : 'N/A'}
+                      {(ugdData.mortalityRate ?? 0) > 0
+                        ? `${(ugdData.mortalityRate ?? 0).toFixed(2)}%`
+                        : "N/A"}
                     </div>
                   </div>
                 </div>

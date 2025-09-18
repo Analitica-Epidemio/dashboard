@@ -20,7 +20,7 @@ export interface EventoFilters {
   provincia?: string;
   tipo_sujeto?: string;
   requiere_revision?: boolean;
-  sort_by?: string;
+  sort_by?: 'fecha_desc' | 'fecha_asc' | 'id_desc' | 'id_asc' | 'tipo_eno';
 }
 
 /**
@@ -68,7 +68,7 @@ export function useEventos(params?: EventoFilters) {
     '/api/v1/eventos/',
     {
       params: {
-        query: params as any,
+        query: params,
       },
     }
   );

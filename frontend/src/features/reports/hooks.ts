@@ -34,7 +34,7 @@ export function useGenerateReport() {
  */
 export function useGenerateZipReport() {
   const { mutate, mutateAsync, ...rest } = useMutation({
-    mutationFn: async (request: any) => {
+    mutationFn: async (request) => {
       // Get session for auth token
       const session = await getSession();
 

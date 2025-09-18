@@ -3,7 +3,7 @@
  * Gráficos múltiples: temporal, demográfico y por factores de riesgo
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from "react";
 import {
   LineChart,
   Line,
@@ -20,44 +20,52 @@ import {
   ResponsiveContainer,
   Area,
   AreaChart,
-} from 'recharts';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertTriangle, TrendingUp, Users, Calendar, Heart, AlertCircle } from 'lucide-react';
+} from "recharts";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  EpidemiologicalFilters,
-  ChartConfig,
-} from '../../types';
-import { useSuicideAttemptData } from '../../hooks/useEpidemiologicalData';
+  AlertTriangle,
+  TrendingUp,
+  Users,
+  Calendar,
+  Heart,
+  AlertCircle,
+} from "lucide-react";
+import { EpidemiologicalFilters, ChartConfig } from "../../types";
+import { useSuicideAttemptData } from "../../hooks/useEpidemiologicalData";
 
 // Configuración de colores (replicando el original)
 const COLORS = {
-  attempts: 'rgb(255, 99, 132)',      // Rosa para intentos
-  deaths: 'rgb(214, 39, 40)',         // Rojo para fallecimientos
-  mortalityRate: 'rgb(255, 159, 64)', // Naranja para tasa
-  male: 'rgb(54, 162, 235)',          // Azul para masculino
-  female: 'rgb(255, 99, 132)',        // Rosa para femenino
+  attempts: "rgb(255, 99, 132)", // Rosa para intentos
+  deaths: "rgb(214, 39, 40)", // Rojo para fallecimientos
+  mortalityRate: "rgb(255, 159, 64)", // Naranja para tasa
+  male: "rgb(54, 162, 235)", // Azul para masculino
+  female: "rgb(255, 99, 132)", // Rosa para femenino
   ageGroups: [
-    'rgb(255, 99, 132)',
-    'rgb(54, 162, 235)', 
-    'rgb(255, 205, 86)',
-    'rgb(75, 192, 192)',
-    'rgb(153, 102, 255)',
-    'rgb(255, 159, 64)',
+    "rgb(255, 99, 132)",
+    "rgb(54, 162, 235)",
+    "rgb(255, 205, 86)",
+    "rgb(75, 192, 192)",
+    "rgb(153, 102, 255)",
+    "rgb(255, 159, 64)",
   ],
 } as const;
 
 interface SuicideAttemptChartProps {
   filters?: EpidemiologicalFilters;
   chartConfig?: ChartConfig;
-  onTimeRangeSelect?: (startWeek: number, endWeek: number, year: number) => void;
+  onTimeRangeSelect?: (
+    startWeek: number,
+    endWeek: number,
+    year: number
+  ) => void;
   showDemographics?: boolean;
-  defaultView?: 'temporal' | 'demographics' | 'risk-factors';
+  defaultView?: "temporal" | "demographics" | "risk-factors";
 }
 
 // Tooltip personalizado para serie temporal
-const TimeSeriesTooltip = ({ active, payload, label }: any) => {
+const TimeSeriesTooltip = ({ active, payload, label }) => {
   if (!active || !payload || !payload.length) return null;
 
   const week = label;
@@ -74,7 +82,10 @@ const TimeSeriesTooltip = ({ active, payload, label }: any) => {
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded" style={{ backgroundColor: COLORS.attempts }} />
+            <div
+              className="w-3 h-3 rounded"
+              style={{ backgroundColor: COLORS.attempts }}
+            />
             <span className="text-sm text-gray-700">Intentos:</span>
           </div>
           <span className="text-sm font-medium text-gray-900">
@@ -84,7 +95,10 @@ const TimeSeriesTooltip = ({ active, payload, label }: any) => {
 
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded" style={{ backgroundColor: COLORS.deaths }} />
+            <div
+              className="w-3 h-3 rounded"
+              style={{ backgroundColor: COLORS.deaths }}
+            />
             <span className="text-sm text-gray-700">Fallecimientos:</span>
           </div>
           <span className="text-sm font-medium text-red-700">
@@ -108,7 +122,7 @@ const TimeSeriesTooltip = ({ active, payload, label }: any) => {
 };
 
 // Tooltip para gráficos demográficos
-const DemographicTooltip = ({ active, payload, label }: any) => {
+const DemographicTooltip = ({ active, payload, label }) => {
   if (!active || !payload || !payload.length) return null;
 
   const data = payload[0]?.payload;
@@ -143,51 +157,53 @@ const SuicideStats: React.FC<{
         <div className="text-lg font-bold text-red-900">
           {totalAttempts.toLocaleString()}
         </div>
-        <div className="text-sm text-red-700">
-          Total registrados
-        </div>
+        <div className="text-sm text-red-700">Total registrados</div>
       </div>
 
       <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
         <div className="flex items-center gap-2 mb-1">
           <Heart className="h-4 w-4 text-gray-500" />
-          <span className="text-sm font-medium text-gray-800">Fallecimientos</span>
+          <span className="text-sm font-medium text-gray-800">
+            Fallecimientos
+          </span>
         </div>
         <div className="text-lg font-bold text-gray-900">
           {totalDeaths.toLocaleString()}
         </div>
-        <div className="text-sm text-gray-700">
-          Casos fatales
-        </div>
+        <div className="text-sm text-gray-700">Casos fatales</div>
       </div>
 
       <div className="p-3 bg-orange-50 rounded-lg border border-orange-200">
         <div className="flex items-center gap-2 mb-1">
           <TrendingUp className="h-4 w-4 text-orange-500" />
-          <span className="text-sm font-medium text-orange-800">Tasa Letalidad</span>
+          <span className="text-sm font-medium text-orange-800">
+            Tasa Letalidad
+          </span>
         </div>
         <div className="text-lg font-bold text-orange-900">
           {mortalityRate.toFixed(2)}%
         </div>
-        <div className="text-sm text-orange-700">
-          Porcentaje fatal
-        </div>
+        <div className="text-sm text-orange-700">Porcentaje fatal</div>
       </div>
 
       <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
         <div className="flex items-center gap-2 mb-1">
           <Users className="h-4 w-4 text-blue-500" />
-          <span className="text-sm font-medium text-blue-800">Grupo Principal</span>
+          <span className="text-sm font-medium text-blue-800">
+            Grupo Principal
+          </span>
         </div>
         <div className="text-lg font-bold text-blue-900 truncate">
           {Object.keys(demographics?.ageGroups || {}).reduce(
-            (a, b) => (demographics.ageGroups[a] || 0) > (demographics.ageGroups[b] || 0) ? a : b,
-            Object.keys(demographics?.ageGroups || {})[0] || 'N/A'
+            (a, b) =>
+              (demographics.ageGroups[a] || 0) >
+              (demographics.ageGroups[b] || 0)
+                ? a
+                : b,
+            Object.keys(demographics?.ageGroups || {})[0] || "N/A"
           )}
         </div>
-        <div className="text-sm text-blue-700">
-          Mayor incidencia
-        </div>
+        <div className="text-sm text-blue-700">Mayor incidencia</div>
       </div>
     </div>
   );
@@ -198,43 +214,47 @@ export const SuicideAttemptChart: React.FC<SuicideAttemptChartProps> = ({
   chartConfig = {},
   onTimeRangeSelect,
   showDemographics = true,
-  defaultView = 'temporal',
+  defaultView = "temporal",
 }) => {
   const [activeTab, setActiveTab] = useState(defaultView);
-  
-  const {
-    processedData,
-    loading,
-    error,
-    refetch,
-  } = useSuicideAttemptData(filters);
+
+  const { processedData, loading, error, refetch } =
+    useSuicideAttemptData(filters);
 
   // Procesar datos para visualización
-  const { 
-    timeSeriesData, 
-    ageGroupsData, 
-    genderData, 
-    demographics, 
-    statistics, 
-    title 
+  const {
+    timeSeriesData,
+    ageGroupsData,
+    genderData,
+    demographics,
+    statistics,
+    title,
   } = useMemo(() => {
     if (!processedData) {
-      return { 
-        timeSeriesData: [], 
-        ageGroupsData: [], 
-        genderData: [], 
-        demographics: null, 
+      return {
+        timeSeriesData: [],
+        ageGroupsData: [],
+        genderData: [],
+        demographics: null,
         statistics: null,
-        title: '' 
+        title: "",
       };
     }
 
-    const { timeSeriesData, ageGroupsData, genderData, demographics } = processedData;
+    const { timeSeriesData, ageGroupsData, genderData, demographics } =
+      processedData;
 
     // Calcular estadísticas totales
-    const totalAttempts = timeSeriesData.reduce((sum, point) => sum + point.attempts, 0);
-    const totalDeaths = timeSeriesData.reduce((sum, point) => sum + point.deaths, 0);
-    const overallMortalityRate = totalAttempts > 0 ? (totalDeaths / totalAttempts) * 100 : 0;
+    const totalAttempts = timeSeriesData.reduce(
+      (sum, point) => sum + point.attempts,
+      0
+    );
+    const totalDeaths = timeSeriesData.reduce(
+      (sum, point) => sum + point.deaths,
+      0
+    );
+    const overallMortalityRate =
+      totalAttempts > 0 ? (totalDeaths / totalAttempts) * 100 : 0;
 
     // Agregar colores a datos demográficos
     const coloredAgeData = ageGroupsData.map((item, index) => ({
@@ -244,7 +264,9 @@ export const SuicideAttemptChart: React.FC<SuicideAttemptChartProps> = ({
 
     const coloredGenderData = genderData.map((item) => ({
       ...item,
-      color: item.name.toLowerCase().includes('mascul') ? COLORS.male : COLORS.female,
+      color: item.name.toLowerCase().includes("mascul")
+        ? COLORS.male
+        : COLORS.female,
     }));
 
     const chartTitle = `Análisis de Intentos de Suicidio - ${totalAttempts} casos registrados`;
@@ -279,7 +301,9 @@ export const SuicideAttemptChart: React.FC<SuicideAttemptChartProps> = ({
       <div className="flex flex-col items-center justify-center h-96 gap-4">
         <AlertTriangle className="h-12 w-12 text-red-500" />
         <div className="text-center">
-          <p className="text-lg font-semibold text-gray-800">Error al cargar datos</p>
+          <p className="text-lg font-semibold text-gray-800">
+            Error al cargar datos
+          </p>
           <p className="text-sm text-gray-600">{error}</p>
           <button
             onClick={refetch}
@@ -295,7 +319,6 @@ export const SuicideAttemptChart: React.FC<SuicideAttemptChartProps> = ({
   return (
     <div className="w-full">
       <div className="mb-4">
-        
         {statistics && demographics && (
           <SuicideStats
             demographics={demographics}
@@ -324,7 +347,7 @@ export const SuicideAttemptChart: React.FC<SuicideAttemptChartProps> = ({
           </TabsList>
 
           <TabsContent value="temporal" className="mt-4">
-            <div 
+            <div
               className="w-full"
               style={{ height: chartConfig.height || 400 }}
             >
@@ -333,27 +356,45 @@ export const SuicideAttemptChart: React.FC<SuicideAttemptChartProps> = ({
                   data={timeSeriesData}
                   margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
                   onClick={(data) => {
-                    if (data?.activePayload?.[0]?.payload && onTimeRangeSelect) {
+                    if (
+                      data?.activePayload?.[0]?.payload &&
+                      onTimeRangeSelect
+                    ) {
                       const point = data.activePayload[0].payload;
-                      onTimeRangeSelect(point.week - 2, point.week + 2, point.year);
+                      onTimeRangeSelect(
+                        point.week - 2,
+                        point.week + 2,
+                        point.year
+                      );
                     }
                   }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(128, 128, 128, 0.2)" />
-                  
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="rgba(128, 128, 128, 0.2)"
+                  />
+
                   <XAxis
                     dataKey="week"
                     tick={{ fontSize: 12 }}
-                    tickLine={{ stroke: '#666' }}
-                    axisLine={{ stroke: '#666' }}
-                    label={{ value: 'Semana Epidemiológica', position: 'insideBottom', offset: -40 }}
+                    tickLine={{ stroke: "#666" }}
+                    axisLine={{ stroke: "#666" }}
+                    label={{
+                      value: "Semana Epidemiológica",
+                      position: "insideBottom",
+                      offset: -40,
+                    }}
                   />
-                  
+
                   <YAxis
                     tick={{ fontSize: 12 }}
-                    tickLine={{ stroke: '#666' }}
-                    axisLine={{ stroke: '#666' }}
-                    label={{ value: 'Casos', angle: -90, position: 'insideLeft' }}
+                    tickLine={{ stroke: "#666" }}
+                    axisLine={{ stroke: "#666" }}
+                    label={{
+                      value: "Casos",
+                      angle: -90,
+                      position: "insideLeft",
+                    }}
                   />
 
                   <Area
@@ -365,7 +406,7 @@ export const SuicideAttemptChart: React.FC<SuicideAttemptChartProps> = ({
                     fillOpacity={0.6}
                     name="Intentos"
                   />
-                  
+
                   <Area
                     type="monotone"
                     dataKey="deaths"
@@ -420,8 +461,14 @@ export const SuicideAttemptChart: React.FC<SuicideAttemptChartProps> = ({
                 </h4>
                 <div style={{ height: 300 }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={genderData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(128, 128, 128, 0.2)" />
+                    <BarChart
+                      data={genderData}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                    >
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="rgba(128, 128, 128, 0.2)"
+                      />
                       <XAxis dataKey="name" />
                       <YAxis />
                       <Tooltip content={<DemographicTooltip />} />
@@ -446,23 +493,27 @@ export const SuicideAttemptChart: React.FC<SuicideAttemptChartProps> = ({
                   {ageGroupsData
                     .sort((a, b) => b.value - a.value)
                     .map((group, index) => (
-                      <div key={group.name} className="flex items-center justify-between">
+                      <div
+                        key={group.name}
+                        className="flex items-center justify-between"
+                      >
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className="text-xs">
                             {index + 1}
                           </Badge>
-                          <div 
-                            className="w-3 h-3 rounded" 
+                          <div
+                            className="w-3 h-3 rounded"
                             style={{ backgroundColor: group.color }}
                           />
-                          <span className="text-sm text-gray-700">{group.name}</span>
+                          <span className="text-sm text-gray-700">
+                            {group.name}
+                          </span>
                         </div>
                         <span className="text-sm font-medium">
                           {group.value.toLocaleString()}
                         </span>
                       </div>
-                    ))
-                  }
+                    ))}
                 </div>
               </div>
 
@@ -472,18 +523,24 @@ export const SuicideAttemptChart: React.FC<SuicideAttemptChartProps> = ({
                 </h4>
                 <div className="space-y-2">
                   {genderData.map((gender) => {
-                    const percentage = statistics?.totalAttempts > 0 
-                      ? (gender.value / statistics.totalAttempts) * 100 
-                      : 0;
-                    
+                    const percentage =
+                      statistics?.totalAttempts > 0
+                        ? (gender.value / statistics.totalAttempts) * 100
+                        : 0;
+
                     return (
-                      <div key={gender.name} className="flex justify-between items-center">
+                      <div
+                        key={gender.name}
+                        className="flex justify-between items-center"
+                      >
                         <div className="flex items-center gap-2">
-                          <div 
-                            className="w-3 h-3 rounded" 
+                          <div
+                            className="w-3 h-3 rounded"
                             style={{ backgroundColor: gender.color }}
                           />
-                          <span className="text-sm text-gray-700">{gender.name}</span>
+                          <span className="text-sm text-gray-700">
+                            {gender.name}
+                          </span>
                         </div>
                         <div className="text-right">
                           <span className="text-sm font-medium">
@@ -511,29 +568,44 @@ export const SuicideAttemptChart: React.FC<SuicideAttemptChartProps> = ({
                 <div style={{ height: 300 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart
-                      data={timeSeriesData.filter(d => d.attempts > 0)}
+                      data={timeSeriesData.filter((d) => d.attempts > 0)}
                       margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
                     >
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(128, 128, 128, 0.2)" />
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="rgba(128, 128, 128, 0.2)"
+                      />
                       <XAxis
                         dataKey="week"
                         tick={{ fontSize: 12 }}
-                        tickLine={{ stroke: '#666' }}
-                        axisLine={{ stroke: '#666' }}
-                        label={{ value: 'Semana', position: 'insideBottom', offset: -40 }}
+                        tickLine={{ stroke: "#666" }}
+                        axisLine={{ stroke: "#666" }}
+                        label={{
+                          value: "Semana",
+                          position: "insideBottom",
+                          offset: -40,
+                        }}
                       />
                       <YAxis
                         tick={{ fontSize: 12 }}
-                        tickLine={{ stroke: '#666' }}
-                        axisLine={{ stroke: '#666' }}
-                        label={{ value: 'Tasa de Letalidad (%)', angle: -90, position: 'insideLeft' }}
+                        tickLine={{ stroke: "#666" }}
+                        axisLine={{ stroke: "#666" }}
+                        label={{
+                          value: "Tasa de Letalidad (%)",
+                          angle: -90,
+                          position: "insideLeft",
+                        }}
                       />
                       <Line
                         type="monotone"
                         dataKey="mortalityRate"
                         stroke={COLORS.mortalityRate}
                         strokeWidth={3}
-                        dot={{ fill: COLORS.mortalityRate, strokeWidth: 2, r: 4 }}
+                        dot={{
+                          fill: COLORS.mortalityRate,
+                          strokeWidth: 2,
+                          r: 4,
+                        }}
                         name="Tasa de Letalidad"
                       />
                       <Tooltip content={<TimeSeriesTooltip />} />
@@ -562,14 +634,13 @@ export const SuicideAttemptChart: React.FC<SuicideAttemptChartProps> = ({
                     Incidencia Semanal
                   </h5>
                   <div className="text-2xl font-bold text-blue-900 mb-1">
-                    {timeSeriesData.length > 0 
-                      ? (statistics?.totalAttempts / timeSeriesData.length).toFixed(1)
-                      : '0'
-                    }
+                    {timeSeriesData.length > 0
+                      ? (
+                          statistics?.totalAttempts / timeSeriesData.length
+                        ).toFixed(1)
+                      : "0"}
                   </div>
-                  <p className="text-sm text-blue-700">
-                    Promedio por semana
-                  </p>
+                  <p className="text-sm text-blue-700">Promedio por semana</p>
                 </div>
 
                 <div className="p-4 bg-green-50 rounded-lg border border-green-200">

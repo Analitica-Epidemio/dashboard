@@ -3,7 +3,7 @@
  * Análisis por especies, ubicaciones y temporalidad
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -20,37 +20,38 @@ import {
   Cell,
   ScatterChart,
   Scatter,
-} from 'recharts';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  AlertTriangle, 
-  MapPin, 
-  Calendar, 
-  BarChart3, 
+} from "recharts";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertTriangle,
+  MapPin,
+  Calendar,
+  BarChart3,
   Target,
-  Microscope
-} from 'lucide-react';
+  Microscope,
+} from "lucide-react";
 import {
   EpidemiologicalFilters,
   ChartConfig,
-} from '../../types/epidemiological';
-import { useAnimalRabiesData } from '../../hooks/useEpidemiologicalData';
+} from "../../types/epidemiological";
+import { useAnimalRabiesData } from "@/features/dashboard/hooks/useEpidemiologicalData";
+import { TooltipProps } from "@/features/dashboard/types/recharts";
 
 // Configuración de colores por especies
 const SPECIES_COLORS = {
-  'PERRO': 'rgb(31, 119, 180)',
-  'GATO': 'rgb(255, 127, 14)', 
-  'BOVINO': 'rgb(44, 160, 44)',
-  'MURCIELAGO': 'rgb(214, 39, 40)',
-  'OTROS': 'rgb(148, 103, 189)',
+  PERRO: "rgb(31, 119, 180)",
+  GATO: "rgb(255, 127, 14)",
+  BOVINO: "rgb(44, 160, 44)",
+  MURCIELAGO: "rgb(214, 39, 40)",
+  OTROS: "rgb(148, 103, 189)",
 } as const;
 
 const STATUS_COLORS = {
-  tested: 'rgb(54, 162, 235)',
-  positive: 'rgb(255, 99, 132)', 
-  negative: 'rgb(75, 192, 192)',
+  tested: "rgb(54, 162, 235)",
+  positive: "rgb(255, 99, 132)",
+  negative: "rgb(75, 192, 192)",
 } as const;
 
 interface AnimalRabiesChartProps {
@@ -61,18 +62,18 @@ interface AnimalRabiesChartProps {
 }
 
 // Tooltip para datos temporales
-const TemporalTooltip = ({ active, payload, label }: any) => {
+const TemporalTooltip = ({ active, payload, label }) => {
   if (!active || !payload || !payload.length) return null;
 
   const data = payload[0]?.payload;
-  
+
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-4">
       <p className="font-semibold text-gray-800 mb-2">{label}</p>
       <p className="text-sm text-gray-600 mb-2">
         <strong>{data?.species}</strong> - {data?.location}
       </p>
-      
+
       <div className="space-y-1">
         <div className="flex items-center justify-between gap-4">
           <span className="text-sm text-gray-700">Casos:</span>
@@ -80,21 +81,21 @@ const TemporalTooltip = ({ active, payload, label }: any) => {
             {data?.cases || 0}
           </span>
         </div>
-        
+
         <div className="flex items-center justify-between gap-4">
           <span className="text-sm text-gray-700">Testeos:</span>
           <span className="text-sm font-medium text-gray-600">
             {data?.tested || 0}
           </span>
         </div>
-        
+
         <div className="flex items-center justify-between gap-4">
           <span className="text-sm text-gray-700">Positivos:</span>
           <span className="text-sm font-medium text-red-600">
             {data?.positive || 0}
           </span>
         </div>
-        
+
         <div className="border-t border-gray-200 pt-1 mt-2">
           <div className="flex items-center justify-between gap-4">
             <span className="text-sm text-orange-600">% Positividad:</span>
@@ -109,11 +110,11 @@ const TemporalTooltip = ({ active, payload, label }: any) => {
 };
 
 // Tooltip para gráficos categóricos
-const CategoryTooltip = ({ active, payload }: any) => {
+const CategoryTooltip: React.FC<TooltipProps> = ({ active, payload }) => {
   if (!active || !payload || !payload.length) return null;
 
   const data = payload[0]?.payload;
-  
+
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3">
       <p className="font-semibold text-gray-800">{data?.name}</p>
@@ -129,9 +130,18 @@ const StatisticsPanel: React.FC<{
   statistics: any;
   timeSeriesData: any[];
 }> = ({ statistics, timeSeriesData }) => {
-  const totalCases = timeSeriesData.reduce((sum, point) => sum + point.cases, 0);
-  const totalTested = timeSeriesData.reduce((sum, point) => sum + point.tested, 0);
-  const totalPositive = timeSeriesData.reduce((sum, point) => sum + point.positive, 0);
+  const totalCases = timeSeriesData.reduce(
+    (sum, point) => sum + point.cases,
+    0
+  );
+  const totalTested = timeSeriesData.reduce(
+    (sum, point) => sum + point.tested,
+    0
+  );
+  const totalPositive = timeSeriesData.reduce(
+    (sum, point) => sum + point.positive,
+    0
+  );
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -141,21 +151,19 @@ const StatisticsPanel: React.FC<{
         </div>
         <div className="text-sm text-blue-800">Casos Totales</div>
       </div>
-      
+
       <div className="text-center p-3 bg-gray-50 rounded-lg">
         <div className="text-2xl font-bold text-gray-600">
           {totalTested.toLocaleString()}
         </div>
         <div className="text-sm text-gray-800">Testeos</div>
       </div>
-      
+
       <div className="text-center p-3 bg-red-50 rounded-lg">
-        <div className="text-2xl font-bold text-red-600">
-          {totalPositive}
-        </div>
+        <div className="text-2xl font-bold text-red-600">{totalPositive}</div>
         <div className="text-sm text-red-800">Positivos</div>
       </div>
-      
+
       <div className="text-center p-3 bg-orange-50 rounded-lg">
         <div className="text-2xl font-bold text-orange-600">
           {statistics.positivityRate.toFixed(1)}%
@@ -172,44 +180,49 @@ export const AnimalRabiesChart: React.FC<AnimalRabiesChartProps> = ({
   onLocationSelect,
   onSpeciesSelect,
 }) => {
-  const [activeTab, setActiveTab] = useState('temporal');
+  const [activeTab, setActiveTab] = useState("temporal");
 
-  const {
-    processedData,
-    loading,
-    error,
-    refetch,
-  } = useAnimalRabiesData(filters);
+  const { processedData, loading, error, refetch } =
+    useAnimalRabiesData(filters);
 
   // Preparar datos
-  const { 
-    timeSeriesData, 
-    speciesData, 
-    locationData, 
-    statistics, 
+  const {
+    timeSeriesData,
+    speciesData,
+    locationData,
+    statistics,
     title,
-    positiveCases 
+    positiveCases,
   } = useMemo(() => {
     if (!processedData) {
-      return { 
-        timeSeriesData: [], 
-        speciesData: [], 
+      return {
+        timeSeriesData: [],
+        speciesData: [],
         locationData: [],
         statistics: null,
-        title: '',
-        positiveCases: []
+        title: "",
+        positiveCases: [],
       };
     }
 
-    const { timeSeriesData, speciesData, locationData, statistics } = processedData;
+    const { timeSeriesData, speciesData, locationData, statistics } =
+      processedData;
 
     // Casos positivos para análisis de scatter
-    const positive = timeSeriesData.filter(point => point.positive > 0);
+    const positive = timeSeriesData.filter((point) => point.positive > 0);
 
-    const totalCases = timeSeriesData.reduce((sum, point) => sum + point.cases, 0);
-    const totalPositive = timeSeriesData.reduce((sum, point) => sum + point.positive, 0);
-    
-    const chartTitle = `Vigilancia de Rabia Animal - ${totalCases} casos analizados (${totalPositive} positivos - ${statistics.positivityRate.toFixed(1)}% positividad)`;
+    const totalCases = timeSeriesData.reduce(
+      (sum, point) => sum + point.cases,
+      0
+    );
+    const totalPositive = timeSeriesData.reduce(
+      (sum, point) => sum + point.positive,
+      0
+    );
+
+    const chartTitle = `Vigilancia de Rabia Animal - ${totalCases} casos analizados (${totalPositive} positivos - ${statistics.positivityRate.toFixed(
+      1
+    )}% positividad)`;
 
     return {
       timeSeriesData,
@@ -240,7 +253,9 @@ export const AnimalRabiesChart: React.FC<AnimalRabiesChartProps> = ({
         <CardContent className="flex flex-col items-center justify-center h-96 gap-4">
           <AlertTriangle className="h-12 w-12 text-red-500" />
           <div className="text-center">
-            <p className="text-lg font-semibold text-gray-800">Error al cargar datos</p>
+            <p className="text-lg font-semibold text-gray-800">
+              Error al cargar datos
+            </p>
             <p className="text-sm text-gray-600">{error}</p>
             <button
               onClick={refetch}
@@ -258,9 +273,9 @@ export const AnimalRabiesChart: React.FC<AnimalRabiesChartProps> = ({
     <Card className="w-full">
       <CardHeader>
         <h3 className="text-lg font-semibold">{title}</h3>
-        
+
         {statistics && (
-          <StatisticsPanel 
+          <StatisticsPanel
             statistics={statistics}
             timeSeriesData={timeSeriesData}
           />
@@ -296,21 +311,32 @@ export const AnimalRabiesChart: React.FC<AnimalRabiesChartProps> = ({
                   data={timeSeriesData}
                   margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(128, 128, 128, 0.2)" />
-                  
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="rgba(128, 128, 128, 0.2)"
+                  />
+
                   <XAxis
                     dataKey="date"
                     tick={{ fontSize: 12 }}
-                    tickLine={{ stroke: '#666' }}
-                    axisLine={{ stroke: '#666' }}
-                    label={{ value: 'Fecha', position: 'insideBottom', offset: -40 }}
+                    tickLine={{ stroke: "#666" }}
+                    axisLine={{ stroke: "#666" }}
+                    label={{
+                      value: "Fecha",
+                      position: "insideBottom",
+                      offset: -40,
+                    }}
                   />
-                  
+
                   <YAxis
                     tick={{ fontSize: 12 }}
-                    tickLine={{ stroke: '#666' }}
-                    axisLine={{ stroke: '#666' }}
-                    label={{ value: 'Casos', angle: -90, position: 'insideLeft' }}
+                    tickLine={{ stroke: "#666" }}
+                    axisLine={{ stroke: "#666" }}
+                    label={{
+                      value: "Casos",
+                      angle: -90,
+                      position: "insideLeft",
+                    }}
                   />
 
                   <Line
@@ -358,8 +384,8 @@ export const AnimalRabiesChart: React.FC<AnimalRabiesChartProps> = ({
                     margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="name" 
+                    <XAxis
+                      dataKey="name"
                       angle={-45}
                       textAnchor="end"
                       height={80}
@@ -367,16 +393,21 @@ export const AnimalRabiesChart: React.FC<AnimalRabiesChartProps> = ({
                     <YAxis />
                     <Bar
                       dataKey="value"
-                      fill={(entry: any, index: number) => 
-                        SPECIES_COLORS[entry?.name as keyof typeof SPECIES_COLORS] || 
-                        SPECIES_COLORS.OTROS
+                      fill={(entry: any, index: number) =>
+                        SPECIES_COLORS[
+                          entry?.name as keyof typeof SPECIES_COLORS
+                        ] || SPECIES_COLORS.OTROS
                       }
                       onClick={(data) => onSpeciesSelect?.(data.name)}
                     >
                       {speciesData.map((entry, index) => (
-                        <Cell 
-                          key={`cell-${index}`} 
-                          fill={SPECIES_COLORS[entry.name as keyof typeof SPECIES_COLORS] || SPECIES_COLORS.OTROS}
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={
+                            SPECIES_COLORS[
+                              entry.name as keyof typeof SPECIES_COLORS
+                            ] || SPECIES_COLORS.OTROS
+                          }
                         />
                       ))}
                     </Bar>
@@ -395,12 +426,18 @@ export const AnimalRabiesChart: React.FC<AnimalRabiesChartProps> = ({
                       cy="50%"
                       outerRadius={80}
                       dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      label={({ name, percent }) =>
+                        `${name} ${(percent * 100).toFixed(0)}%`
+                      }
                     >
                       {speciesData.map((entry, index) => (
-                        <Cell 
-                          key={`cell-${index}`} 
-                          fill={SPECIES_COLORS[entry.name as keyof typeof SPECIES_COLORS] || SPECIES_COLORS.OTROS}
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={
+                            SPECIES_COLORS[
+                              entry.name as keyof typeof SPECIES_COLORS
+                            ] || SPECIES_COLORS.OTROS
+                          }
                         />
                       ))}
                     </Pie>
@@ -422,8 +459,8 @@ export const AnimalRabiesChart: React.FC<AnimalRabiesChartProps> = ({
                 >
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis type="number" />
-                  <YAxis 
-                    type="category" 
+                  <YAxis
+                    type="category"
                     dataKey="name"
                     width={90}
                     tick={{ fontSize: 12 }}
@@ -455,20 +492,28 @@ export const AnimalRabiesChart: React.FC<AnimalRabiesChartProps> = ({
                     <ResponsiveContainer width="100%" height="100%">
                       <ScatterChart>
                         <CartesianGrid />
-                        <XAxis 
-                          type="number" 
-                          dataKey="tested" 
+                        <XAxis
+                          type="number"
+                          dataKey="tested"
                           name="Testeos"
-                          label={{ value: 'Testeos realizados', position: 'insideBottom', offset: -10 }}
+                          label={{
+                            value: "Testeos realizados",
+                            position: "insideBottom",
+                            offset: -10,
+                          }}
                         />
-                        <YAxis 
-                          type="number" 
-                          dataKey="positivityRate" 
+                        <YAxis
+                          type="number"
+                          dataKey="positivityRate"
                           name="Positividad"
-                          label={{ value: '% Positividad', angle: -90, position: 'insideLeft' }}
+                          label={{
+                            value: "% Positividad",
+                            angle: -90,
+                            position: "insideLeft",
+                          }}
                         />
-                        <Scatter 
-                          data={positiveCases} 
+                        <Scatter
+                          data={positiveCases}
                           fill={STATUS_COLORS.positive}
                         />
                         <Tooltip content={<TemporalTooltip />} />
@@ -488,8 +533,14 @@ export const AnimalRabiesChart: React.FC<AnimalRabiesChartProps> = ({
                     </h4>
                   </div>
                   <div className="text-sm text-red-700 space-y-1">
-                    <p>• Total de casos positivos: <strong>{positiveCases.length}</strong></p>
-                    <p>• Tasa de positividad general: <strong>{statistics.positivityRate.toFixed(2)}%</strong></p>
+                    <p>
+                      • Total de casos positivos:{" "}
+                      <strong>{positiveCases.length}</strong>
+                    </p>
+                    <p>
+                      • Tasa de positividad general:{" "}
+                      <strong>{statistics.positivityRate.toFixed(2)}%</strong>
+                    </p>
                     <p>• Requiere seguimiento epidemiológico inmediato</p>
                     <p>• Implementar medidas de control vectorial</p>
                   </div>

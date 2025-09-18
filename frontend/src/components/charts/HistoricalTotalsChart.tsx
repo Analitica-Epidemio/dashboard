@@ -3,7 +3,7 @@
  * Comparación multi-año por áreas programáticas con subplots
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from "react";
 import {
   LineChart,
   Line,
@@ -16,33 +16,33 @@ import {
   Legend,
   ResponsiveContainer,
   ComposedChart,
-} from 'recharts';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { 
-  AlertTriangle, 
-  BarChart3, 
+} from "recharts";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  AlertTriangle,
+  BarChart3,
   LineChart as LineChartIcon,
   TrendingUp,
-  MapPin
-} from 'lucide-react';
+  MapPin,
+} from "lucide-react";
 import {
   EpidemiologicalFilters,
   ChartConfig,
-} from '../../types/epidemiological';
-import { useHistoricalTotals } from '../../hooks/useEpidemiologicalData';
+} from "../../types/epidemiological";
+import { useHistoricalTotals } from "@/features/dashboard/hooks/useEpidemiologicalData";
 
 // Configuración de colores para áreas programáticas
 const AREA_COLORS = {
-  'SUR_AP_COMODORO': 'rgb(31, 119, 180)',      // Azul - Sur
-  'NORTE_AP_NORTE': 'rgb(255, 127, 14)',       // Naranja - Norte  
-  'NORESTE_AP_TRELEW': 'rgb(44, 160, 44)',     // Verde - Trelew
-  'NOROESTE_AP_ESQUEL': 'rgb(214, 39, 40)',    // Rojo - Esquel
-  'TOTAL': 'rgb(148, 103, 189)',               // Púrpura - Total provincial
+  SUR_AP_COMODORO: "rgb(31, 119, 180)", // Azul - Sur
+  NORTE_AP_NORTE: "rgb(255, 127, 14)", // Naranja - Norte
+  NORESTE_AP_TRELEW: "rgb(44, 160, 44)", // Verde - Trelew
+  NOROESTE_AP_ESQUEL: "rgb(214, 39, 40)", // Rojo - Esquel
+  TOTAL: "rgb(148, 103, 189)", // Púrpura - Total provincial
 } as const;
 
-type ChartType = 'line' | 'bar' | 'composed';
+type ChartType = "line" | "bar" | "composed";
 
 interface HistoricalTotalsChartProps {
   filters?: EpidemiologicalFilters;
@@ -53,7 +53,7 @@ interface HistoricalTotalsChartProps {
 }
 
 // Tooltip personalizado con información detallada
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload || !payload.length) return null;
 
   const year = label;
@@ -70,17 +70,20 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
       <div className="space-y-2">
         {payload.map((entry: any, index: number) => {
-          if (entry.dataKey === 'total' || entry.dataKey === 'mortalityRate') {
+          if (entry.dataKey === "total" || entry.dataKey === "mortalityRate") {
             return null; // Los mostramos por separado
           }
 
-          const areaName = entry.name?.replace(/_/g, ' ').replace('AP ', '- ');
+          const areaName = entry.name?.replace(/_/g, " ").replace("AP ", "- ");
 
           return (
-            <div key={index} className="flex items-center justify-between gap-4">
+            <div
+              key={index}
+              className="flex items-center justify-between gap-4"
+            >
               <div className="flex items-center gap-2 min-w-0">
-                <div 
-                  className="w-3 h-3 rounded flex-shrink-0" 
+                <div
+                  className="w-3 h-3 rounded flex-shrink-0"
                   style={{ backgroundColor: entry.color }}
                 />
                 <span className="text-sm text-gray-700 truncate">
@@ -115,32 +118,37 @@ const ChartControls: React.FC<{
   onChartTypeChange: (type: ChartType) => void;
   showMortalityData: boolean;
   onToggleMortality: (show: boolean) => void;
-}> = ({ chartType, onChartTypeChange, showMortalityData, onToggleMortality }) => {
+}> = ({
+  chartType,
+  onChartTypeChange,
+  showMortalityData,
+  onToggleMortality,
+}) => {
   return (
     <div className="flex flex-wrap gap-2 mb-4">
       <div className="flex gap-1">
         <Button
-          variant={chartType === 'line' ? 'default' : 'outline'}
+          variant={chartType === "line" ? "default" : "outline"}
           size="sm"
-          onClick={() => onChartTypeChange('line')}
+          onClick={() => onChartTypeChange("line")}
         >
           <LineChartIcon className="h-4 w-4" />
           Líneas
         </Button>
-        
+
         <Button
-          variant={chartType === 'bar' ? 'default' : 'outline'}
+          variant={chartType === "bar" ? "default" : "outline"}
           size="sm"
-          onClick={() => onChartTypeChange('bar')}
+          onClick={() => onChartTypeChange("bar")}
         >
           <BarChart3 className="h-4 w-4" />
           Barras
         </Button>
-        
+
         <Button
-          variant={chartType === 'composed' ? 'default' : 'outline'}
+          variant={chartType === "composed" ? "default" : "outline"}
           size="sm"
-          onClick={() => onChartTypeChange('composed')}
+          onClick={() => onChartTypeChange("composed")}
         >
           <TrendingUp className="h-4 w-4" />
           Mixto
@@ -148,7 +156,7 @@ const ChartControls: React.FC<{
       </div>
 
       <Badge
-        variant={showMortalityData ? 'default' : 'secondary'}
+        variant={showMortalityData ? "default" : "secondary"}
         className="cursor-pointer"
         onClick={() => onToggleMortality(!showMortalityData)}
       >
@@ -171,21 +179,19 @@ const StatisticsPanel: React.FC<{
         </div>
         <div className="text-sm text-blue-800">Casos Totales</div>
       </div>
-      
+
       <div className="text-center p-3 bg-green-50 rounded-lg">
-        <div className="text-2xl font-bold text-green-600">
-          {areas.length}
-        </div>
+        <div className="text-2xl font-bold text-green-600">{areas.length}</div>
         <div className="text-sm text-green-800">Áreas Programáticas</div>
       </div>
-      
+
       <div className="text-center p-3 bg-orange-50 rounded-lg">
         <div className="text-2xl font-bold text-orange-600">
           {statistics.yearsRange[1] - statistics.yearsRange[0] + 1}
         </div>
         <div className="text-sm text-orange-800">Años de Datos</div>
       </div>
-      
+
       {statistics.averageMortalityRate && (
         <div className="text-center p-3 bg-red-50 rounded-lg">
           <div className="text-2xl font-bold text-red-600">
@@ -203,31 +209,27 @@ export const HistoricalTotalsChart: React.FC<HistoricalTotalsChartProps> = ({
   chartConfig = {},
   onYearSelect,
   showMortalityData = true,
-  defaultChartType = 'line',
+  defaultChartType = "line",
 }) => {
   const [chartType, setChartType] = useState<ChartType>(defaultChartType);
   const [showMortality, setShowMortality] = useState(showMortalityData);
 
-  const {
-    processedData,
-    loading,
-    error,
-    refetch,
-  } = useHistoricalTotals(filters);
+  const { processedData, loading, error, refetch } =
+    useHistoricalTotals(filters);
 
   // Preparar datos para el gráfico
   const { chartData, areas, statistics, title } = useMemo(() => {
     if (!processedData) {
-      return { chartData: [], areas: [], statistics: null, title: '' };
+      return { chartData: [], areas: [], statistics: null, title: "" };
     }
 
     const { chartData, areas, statistics } = processedData;
 
     // Generar título
     const yearRange = `${statistics.yearsRange[0]}-${statistics.yearsRange[1]}`;
-    const mortalityText = statistics.averageMortalityRate 
+    const mortalityText = statistics.averageMortalityRate
       ? ` - Letalidad promedio: ${statistics.averageMortalityRate.toFixed(2)}%`
-      : '';
+      : "";
 
     const chartTitle = `Totales históricos por Área Programática ${yearRange}${mortalityText}`;
 
@@ -244,7 +246,7 @@ export const HistoricalTotalsChart: React.FC<HistoricalTotalsChartProps> = ({
     const commonProps = {
       data: chartData,
       margin: { top: 20, right: 30, left: 20, bottom: 60 },
-      onClick: (data: any) => {
+      onClick: (data) => {
         if (data?.activeLabel && onYearSelect) {
           onYearSelect(data.activeLabel as number);
         }
@@ -253,22 +255,25 @@ export const HistoricalTotalsChart: React.FC<HistoricalTotalsChartProps> = ({
 
     const commonElements = (
       <>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(128, 128, 128, 0.2)" />
-        
+        <CartesianGrid
+          strokeDasharray="3 3"
+          stroke="rgba(128, 128, 128, 0.2)"
+        />
+
         <XAxis
           dataKey="year"
           tick={{ fontSize: 12 }}
-          tickLine={{ stroke: '#666' }}
-          axisLine={{ stroke: '#666' }}
-          label={{ value: 'Año', position: 'insideBottom', offset: -40 }}
+          tickLine={{ stroke: "#666" }}
+          axisLine={{ stroke: "#666" }}
+          label={{ value: "Año", position: "insideBottom", offset: -40 }}
         />
-        
+
         <YAxis
           yAxisId="cases"
           tick={{ fontSize: 12 }}
-          tickLine={{ stroke: '#666' }}
-          axisLine={{ stroke: '#666' }}
-          label={{ value: 'Casos', angle: -90, position: 'insideLeft' }}
+          tickLine={{ stroke: "#666" }}
+          axisLine={{ stroke: "#666" }}
+          label={{ value: "Casos", angle: -90, position: "insideLeft" }}
         />
 
         {showMortality && (
@@ -276,9 +281,13 @@ export const HistoricalTotalsChart: React.FC<HistoricalTotalsChartProps> = ({
             yAxisId="mortality"
             orientation="right"
             tick={{ fontSize: 12 }}
-            tickLine={{ stroke: '#666' }}
-            axisLine={{ stroke: '#666' }}
-            label={{ value: 'Letalidad (%)', angle: 90, position: 'insideRight' }}
+            tickLine={{ stroke: "#666" }}
+            axisLine={{ stroke: "#666" }}
+            label={{
+              value: "Letalidad (%)",
+              angle: 90,
+              position: "insideRight",
+            }}
           />
         )}
 
@@ -288,7 +297,7 @@ export const HistoricalTotalsChart: React.FC<HistoricalTotalsChartProps> = ({
     );
 
     switch (chartType) {
-      case 'bar':
+      case "bar":
         return (
           <BarChart {...commonProps}>
             {commonElements}
@@ -297,14 +306,16 @@ export const HistoricalTotalsChart: React.FC<HistoricalTotalsChartProps> = ({
                 key={area.id}
                 yAxisId="cases"
                 dataKey={area.id}
-                fill={AREA_COLORS[area.id as keyof typeof AREA_COLORS] || '#8884d8'}
+                fill={
+                  AREA_COLORS[area.id as keyof typeof AREA_COLORS] || "#8884d8"
+                }
                 name={area.name}
               />
             ))}
           </BarChart>
         );
 
-      case 'composed':
+      case "composed":
         return (
           <ComposedChart {...commonProps}>
             {commonElements}
@@ -313,7 +324,9 @@ export const HistoricalTotalsChart: React.FC<HistoricalTotalsChartProps> = ({
                 key={area.id}
                 yAxisId="cases"
                 dataKey={area.id}
-                fill={AREA_COLORS[area.id as keyof typeof AREA_COLORS] || '#8884d8'}
+                fill={
+                  AREA_COLORS[area.id as keyof typeof AREA_COLORS] || "#8884d8"
+                }
                 name={area.name}
                 opacity={0.7}
               />
@@ -335,7 +348,7 @@ export const HistoricalTotalsChart: React.FC<HistoricalTotalsChartProps> = ({
                 stroke="#dc2626"
                 strokeWidth={2}
                 strokeDasharray="5 5"
-                dot={{ fill: '#dc2626', strokeWidth: 2, r: 3 }}
+                dot={{ fill: "#dc2626", strokeWidth: 2, r: 3 }}
                 name="Tasa Letalidad"
               />
             )}
@@ -352,9 +365,15 @@ export const HistoricalTotalsChart: React.FC<HistoricalTotalsChartProps> = ({
                 yAxisId="cases"
                 type="monotone"
                 dataKey={area.id}
-                stroke={AREA_COLORS[area.id as keyof typeof AREA_COLORS] || '#8884d8'}
+                stroke={
+                  AREA_COLORS[area.id as keyof typeof AREA_COLORS] || "#8884d8"
+                }
                 strokeWidth={2}
-                dot={{ fill: AREA_COLORS[area.id as keyof typeof AREA_COLORS], strokeWidth: 2, r: 4 }}
+                dot={{
+                  fill: AREA_COLORS[area.id as keyof typeof AREA_COLORS],
+                  strokeWidth: 2,
+                  r: 4,
+                }}
                 name={area.name}
               />
             ))}
@@ -376,7 +395,7 @@ export const HistoricalTotalsChart: React.FC<HistoricalTotalsChartProps> = ({
                 stroke="#dc2626"
                 strokeWidth={2}
                 strokeDasharray="5 5"
-                dot={{ fill: '#dc2626', strokeWidth: 2, r: 3 }}
+                dot={{ fill: "#dc2626", strokeWidth: 2, r: 3 }}
                 name="Tasa Letalidad"
               />
             )}
@@ -404,7 +423,9 @@ export const HistoricalTotalsChart: React.FC<HistoricalTotalsChartProps> = ({
         <CardContent className="flex flex-col items-center justify-center h-96 gap-4">
           <AlertTriangle className="h-12 w-12 text-red-500" />
           <div className="text-center">
-            <p className="text-lg font-semibold text-gray-800">Error al cargar datos</p>
+            <p className="text-lg font-semibold text-gray-800">
+              Error al cargar datos
+            </p>
             <p className="text-sm text-gray-600">{error}</p>
             <button
               onClick={refetch}
@@ -422,12 +443,9 @@ export const HistoricalTotalsChart: React.FC<HistoricalTotalsChartProps> = ({
     <Card className="w-full">
       <CardHeader>
         <h3 className="text-lg font-semibold">{title}</h3>
-        
+
         {statistics && (
-          <StatisticsPanel 
-            statistics={statistics} 
-            areas={areas}
-          />
+          <StatisticsPanel statistics={statistics} areas={areas} />
         )}
 
         <ChartControls
@@ -439,10 +457,7 @@ export const HistoricalTotalsChart: React.FC<HistoricalTotalsChartProps> = ({
       </CardHeader>
 
       <CardContent>
-        <div 
-          className="w-full"
-          style={{ height: chartConfig.height || 600 }}
-        >
+        <div className="w-full" style={{ height: chartConfig.height || 600 }}>
           <ResponsiveContainer width="100%" height="100%">
             {renderChart()}
           </ResponsiveContainer>
@@ -456,13 +471,16 @@ export const HistoricalTotalsChart: React.FC<HistoricalTotalsChartProps> = ({
               Áreas Programáticas
             </span>
           </div>
-          
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-gray-600">
             {areas.map((area) => (
               <div key={area.id} className="flex items-center gap-2">
-                <div 
+                <div
                   className="w-3 h-3 rounded"
-                  style={{ backgroundColor: AREA_COLORS[area.id as keyof typeof AREA_COLORS] }}
+                  style={{
+                    backgroundColor:
+                      AREA_COLORS[area.id as keyof typeof AREA_COLORS],
+                  }}
                 />
                 <span>{area.name}</span>
               </div>

@@ -69,7 +69,7 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
     const height = config.height || 300;
 
     // Convertir datos de Chart.js a formato Recharts
-    const convertChartJsToRecharts = (chartJsData: any) => {
+    const convertChartJsToRecharts = (chartJsData) => {
       if (!chartJsData.labels || !chartJsData.datasets) return [];
 
       // Para line, bar, area charts
@@ -78,7 +78,7 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
 
       return labels.map((label: any, index: number) => {
         const point: any = { name: label };
-        datasets.forEach((dataset: any) => {
+        datasets.forEach((dataset) => {
           point[dataset.label || "value"] = dataset.data[index];
         });
         return point;
@@ -86,7 +86,7 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
     };
 
     // Convertir datos para pie chart
-    const convertPieData = (chartJsData: any) => {
+    const convertPieData = (chartJsData) => {
       if (!chartJsData.labels || !chartJsData.datasets?.[0]) return [];
 
       return chartJsData.labels.map((label: any, index: number) => ({
@@ -98,9 +98,9 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
     switch (tipo) {
       case "line":
         const lineData = convertChartJsToRecharts(data.data);
-        const lineKeys = data.data.datasets?.map(
-          (d: any) => d.label || "value"
-        ) || ["value"];
+        const lineKeys = data.data.datasets?.map((d) => d.label || "value") || [
+          "value",
+        ];
 
         return (
           <ResponsiveContainer width="100%" height={height}>
@@ -125,9 +125,9 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
 
       case "bar":
         const barData = convertChartJsToRecharts(data.data);
-        const barKeys = data.data.datasets?.map(
-          (d: any) => d.label || "value"
-        ) || ["value"];
+        const barKeys = data.data.datasets?.map((d) => d.label || "value") || [
+          "value",
+        ];
 
         return (
           <ResponsiveContainer width="100%" height={height}>
@@ -175,7 +175,7 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
                 verticalAlign="middle"
                 align="right"
                 layout="vertical"
-                formatter={(value: string, entry: any) =>
+                formatter={(value: string, entry) =>
                   `${value} (${entry.payload.value})`
                 }
               />
@@ -185,9 +185,9 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
 
       case "area":
         const areaData = convertChartJsToRecharts(data.data);
-        const areaKeys = data.data.datasets?.map(
-          (d: any) => d.label || "value"
-        ) || ["value"];
+        const areaKeys = data.data.datasets?.map((d) => d.label || "value") || [
+          "value",
+        ];
 
         return (
           <ResponsiveContainer width="100%" height={height}>
@@ -224,8 +224,15 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
         }
 
         return (
-          <div className="w-full flex justify-center" style={{ height: pyramidHeight }}>
-            <AgePyramidChart data={data.data} width={600} height={pyramidHeight} />
+          <div
+            className="w-full flex justify-center"
+            style={{ height: pyramidHeight }}
+          >
+            <AgePyramidChart
+              data={data.data}
+              width={600}
+              height={pyramidHeight}
+            />
           </div>
         );
 
@@ -240,7 +247,9 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
         }
 
         // Import dinámico del componente de mapa
-        const ChubutMapChart = React.lazy(() => import("./charts/ChubutMapChart"));
+        const ChubutMapChart = React.lazy(
+          () => import("./charts/ChubutMapChart")
+        );
 
         return (
           <React.Suspense fallback={<div>Cargando mapa...</div>}>

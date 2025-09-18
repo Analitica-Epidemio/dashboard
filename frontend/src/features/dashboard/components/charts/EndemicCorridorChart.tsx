@@ -3,7 +3,7 @@
  * Replica funcionalidad del original con Recharts
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo } from "react";
 import {
   AreaChart,
   Area,
@@ -16,21 +16,22 @@ import {
   Legend,
   ResponsiveContainer,
   ReferenceLine,
-} from 'recharts';
-import { AlertTriangle, TrendingUp, CheckCircle } from 'lucide-react';
+} from "recharts";
+import { AlertTriangle, TrendingUp, CheckCircle } from "lucide-react";
 import {
   EndemicCorridorConfig,
   EpidemiologicalFilters,
   ChartConfig,
-} from '../../types';
-import { useEndemicCorridor } from '../../hooks/useEpidemiologicalData';
+} from "../../types";
+import { useEndemicCorridor } from "../../hooks/useEpidemiologicalData";
+import type { TooltipProps, EndemicCorridorPayload } from "../../types/recharts";
 
 // Configuración de colores (replicando el original)
 const ZONE_COLORS = {
-  success: 'rgb(195, 214, 155)', // Verde - Zona de éxito
-  security: 'rgb(255, 255, 153)', // Amarillo - Zona de seguridad
-  alert: 'rgb(247, 153, 75)', // Naranja - Zona de alerta
-  currentYear: 'rgb(0, 0, 0)', // Negro - Año actual
+  success: "rgb(195, 214, 155)", // Verde - Zona de éxito
+  security: "rgb(255, 255, 153)", // Amarillo - Zona de seguridad
+  alert: "rgb(247, 153, 75)", // Naranja - Zona de alerta
+  currentYear: "rgb(0, 0, 0)", // Negro - Año actual
 } as const;
 
 interface EndemicCorridorChartProps {
@@ -42,7 +43,7 @@ interface EndemicCorridorChartProps {
 }
 
 // Tooltip personalizado
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip: React.FC<TooltipProps<EndemicCorridorPayload>> = ({ active, payload, label }) => {
   if (!active || !payload || !payload.length) return null;
 
   const week = label;
@@ -51,36 +52,42 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3">
       <p className="font-semibold text-gray-800">Semana {week}</p>
-      
+
       <div className="space-y-1 mt-2">
         <div className="flex items-center gap-2">
-          <div 
-            className="w-3 h-3 rounded" 
+          <div
+            className="w-3 h-3 rounded"
             style={{ backgroundColor: ZONE_COLORS.success }}
           />
-          <span className="text-sm">Éxito: {data?.success?.toFixed(1)} casos</span>
+          <span className="text-sm">
+            Éxito: {data?.success?.toFixed(1)} casos
+          </span>
         </div>
-        
+
         <div className="flex items-center gap-2">
-          <div 
-            className="w-3 h-3 rounded" 
+          <div
+            className="w-3 h-3 rounded"
             style={{ backgroundColor: ZONE_COLORS.security }}
           />
-          <span className="text-sm">Seguridad: {data?.security?.toFixed(1)} casos</span>
+          <span className="text-sm">
+            Seguridad: {data?.security?.toFixed(1)} casos
+          </span>
         </div>
-        
+
         <div className="flex items-center gap-2">
-          <div 
-            className="w-3 h-3 rounded" 
+          <div
+            className="w-3 h-3 rounded"
             style={{ backgroundColor: ZONE_COLORS.alert }}
           />
-          <span className="text-sm">Alerta: {data?.alert?.toFixed(1)} casos</span>
+          <span className="text-sm">
+            Alerta: {data?.alert?.toFixed(1)} casos
+          </span>
         </div>
-        
+
         {data?.currentCases !== null && (
           <div className="flex items-center gap-2 mt-2 pt-2 border-t border-gray-200">
-            <div 
-              className="w-3 h-3 rounded" 
+            <div
+              className="w-3 h-3 rounded"
               style={{ backgroundColor: ZONE_COLORS.currentYear }}
             />
             <span className="text-sm font-semibold">
@@ -101,11 +108,26 @@ const ZoneIndicator: React.FC<{
 }> = ({ currentWeek, currentCases, zoneData }) => {
   const getCurrentZone = () => {
     if (currentCases <= zoneData.success) {
-      return { zone: 'success', label: 'Éxito', icon: CheckCircle, color: 'text-green-600' };
+      return {
+        zone: "success",
+        label: "Éxito",
+        icon: CheckCircle,
+        color: "text-green-600",
+      };
     } else if (currentCases <= zoneData.success + zoneData.security) {
-      return { zone: 'security', label: 'Seguridad', icon: TrendingUp, color: 'text-yellow-600' };
+      return {
+        zone: "security",
+        label: "Seguridad",
+        icon: TrendingUp,
+        color: "text-yellow-600",
+      };
     } else {
-      return { zone: 'alert', label: 'Alerta', icon: AlertTriangle, color: 'text-orange-600' };
+      return {
+        zone: "alert",
+        label: "Alerta",
+        icon: AlertTriangle,
+        color: "text-orange-600",
+      };
     }
   };
 
@@ -128,29 +150,31 @@ export const EndemicCorridorChart: React.FC<EndemicCorridorChartProps> = ({
   onWeekSelect,
   showCurrentWeekIndicator = true,
 }) => {
-  const {
-    processedData,
-    loading,
-    error,
-    refetch,
-  } = useEndemicCorridor(config, filters);
+  const { processedData, loading, error, refetch } = useEndemicCorridor(
+    config,
+    filters
+  );
 
   // Datos para el gráfico
   const { chartData, currentWeekData, title } = useMemo(() => {
-    if (!processedData) return { chartData: [], currentWeekData: null, title: '' };
+    if (!processedData)
+      return { chartData: [], currentWeekData: null, title: "" };
 
     const { chartData: data, metadata } = processedData;
-    
+
     // Encontrar la última semana con datos del año actual
     const lastCurrentWeek = data
-      .filter(d => d.currentCases !== null)
+      .filter((d) => d.currentCases !== null)
       .reduce((max, d) => Math.max(max, d.week), 0);
 
-    const currentData = lastCurrentWeek > 0 
-      ? data.find(d => d.week === lastCurrentWeek)
-      : null;
+    const currentData =
+      lastCurrentWeek > 0 ? data.find((d) => d.week === lastCurrentWeek) : null;
 
-    const chartTitle = `Corredor epidemiológico semanal - Año ${metadata.currentYear} (${metadata.historicalYears} años históricos) - valor t ${metadata.tValue.toFixed(2)}`;
+    const chartTitle = `Corredor epidemiológico semanal - Año ${
+      metadata.currentYear
+    } (${
+      metadata.historicalYears
+    } años históricos) - valor t ${metadata.tValue.toFixed(2)}`;
 
     return {
       chartData: data,
@@ -175,7 +199,9 @@ export const EndemicCorridorChart: React.FC<EndemicCorridorChartProps> = ({
       <div className="flex flex-col items-center justify-center h-96 gap-4">
         <AlertTriangle className="h-12 w-12 text-red-500" />
         <div className="text-center">
-          <p className="text-lg font-semibold text-gray-800">Error al cargar datos</p>
+          <p className="text-lg font-semibold text-gray-800">
+            Error al cargar datos
+          </p>
           <p className="text-sm text-gray-600">{error}</p>
           <button
             onClick={refetch}
@@ -197,7 +223,7 @@ export const EndemicCorridorChart: React.FC<EndemicCorridorChartProps> = ({
               <div className="mt-2">
                 <ZoneIndicator
                   currentWeek={currentWeekData.week}
-                  currentCases={currentWeekData.currentCases}
+                  currentCases={currentWeekData?.currentCases || 0}
                   zoneData={currentWeekData}
                 />
               </div>
@@ -207,11 +233,11 @@ export const EndemicCorridorChart: React.FC<EndemicCorridorChartProps> = ({
       </div>
 
       <div>
-        <div 
+        <div
           className="w-full"
-          style={{ 
+          style={{
             height: chartConfig.height || 400,
-            backgroundColor: 'rgb(238, 188, 172)' // Background original
+            backgroundColor: "rgb(238, 188, 172)", // Background original
           }}
         >
           <ResponsiveContainer width="100%" height="100%">
@@ -220,29 +246,37 @@ export const EndemicCorridorChart: React.FC<EndemicCorridorChartProps> = ({
               margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
               onClick={(data) => {
                 if (data?.activeLabel && onWeekSelect) {
-                  onWeekSelect(data.activeLabel as number);
+                  const weekNum = typeof data.activeLabel === 'string' ? parseInt(data.activeLabel) : data.activeLabel;
+                  onWeekSelect(weekNum);
                 }
               }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(128, 128, 128, 0.2)" />
-              
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="rgba(128, 128, 128, 0.2)"
+              />
+
               <XAxis
                 dataKey="week"
                 domain={[1, 52]}
                 type="number"
                 scale="linear"
                 tick={{ fontSize: 12 }}
-                tickLine={{ stroke: '#666' }}
-                axisLine={{ stroke: '#666' }}
-                label={{ value: 'Semana Epidemiológica', position: 'insideBottom', offset: -40 }}
+                tickLine={{ stroke: "#666" }}
+                axisLine={{ stroke: "#666" }}
+                label={{
+                  value: "Semana Epidemiológica",
+                  position: "insideBottom",
+                  offset: -40,
+                }}
               />
-              
+
               <YAxis
-                domain={[0, 'dataMax']}
+                domain={[0, "dataMax"]}
                 tick={{ fontSize: 12 }}
-                tickLine={{ stroke: '#666' }}
-                axisLine={{ stroke: '#666' }}
-                label={{ value: 'Casos', angle: -90, position: 'insideLeft' }}
+                tickLine={{ stroke: "#666" }}
+                axisLine={{ stroke: "#666" }}
+                label={{ value: "Casos", angle: -90, position: "insideLeft" }}
               />
 
               {/* Zonas apiladas */}
@@ -254,7 +288,7 @@ export const EndemicCorridorChart: React.FC<EndemicCorridorChartProps> = ({
                 fill={ZONE_COLORS.success}
                 strokeWidth={1}
               />
-              
+
               <Area
                 type="monotone"
                 dataKey="security"
@@ -263,7 +297,7 @@ export const EndemicCorridorChart: React.FC<EndemicCorridorChartProps> = ({
                 fill={ZONE_COLORS.security}
                 strokeWidth={1}
               />
-              
+
               <Area
                 type="monotone"
                 dataKey="alert"
@@ -285,8 +319,8 @@ export const EndemicCorridorChart: React.FC<EndemicCorridorChartProps> = ({
 
               {/* Línea vertical para semana actual */}
               {currentWeekData && config?.lastWeek && config.lastWeek < 52 && (
-                <ReferenceLine 
-                  x={config?.lastWeek} 
+                <ReferenceLine
+                  x={config?.lastWeek}
                   stroke="rgba(0, 0, 255, 0.5)"
                   strokeWidth={1.5}
                   strokeDasharray="5 5"
@@ -294,17 +328,25 @@ export const EndemicCorridorChart: React.FC<EndemicCorridorChartProps> = ({
               )}
 
               <Tooltip content={<CustomTooltip />} />
-              
+
               <Legend
                 layout="horizontal"
                 verticalAlign="top"
                 align="right"
-                wrapperStyle={{ paddingBottom: '20px' }}
+                wrapperStyle={{ paddingBottom: "20px" }}
                 payload={[
-                  { value: 'Éxito', type: 'rect', color: ZONE_COLORS.success },
-                  { value: 'Seguridad', type: 'rect', color: ZONE_COLORS.security },
-                  { value: 'Alerta', type: 'rect', color: ZONE_COLORS.alert },
-                  { value: 'Año actual', type: 'line', color: ZONE_COLORS.currentYear },
+                  { value: "Éxito", type: "rect", color: ZONE_COLORS.success },
+                  {
+                    value: "Seguridad",
+                    type: "rect",
+                    color: ZONE_COLORS.security,
+                  },
+                  { value: "Alerta", type: "rect", color: ZONE_COLORS.alert },
+                  {
+                    value: "Año actual",
+                    type: "line",
+                    color: ZONE_COLORS.currentYear,
+                  },
                 ]}
               />
             </AreaChart>
@@ -317,7 +359,8 @@ export const EndemicCorridorChart: React.FC<EndemicCorridorChartProps> = ({
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-blue-500 rounded-full" />
               <span className="text-sm font-medium text-blue-800">
-                Semana actual ({config?.lastWeek}) - Próximas semanas en proyección
+                Semana actual ({config?.lastWeek}) - Próximas semanas en
+                proyección
               </span>
             </div>
           </div>

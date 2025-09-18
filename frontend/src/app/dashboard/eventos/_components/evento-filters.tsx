@@ -1,47 +1,51 @@
-"use client"
+"use client";
 
-import React from 'react'
-import { X, Calendar, MapPin, Activity, Filter } from 'lucide-react'
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
+import React from "react";
+import { X, Calendar, MapPin, Activity, Filter } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
-import { Badge } from "@/components/ui/badge"
-import type { EventoFilters } from '@/lib/api/eventos'
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import type { EventoFilters } from "@/lib/api/eventos";
 
 interface EventoFiltersPanelProps {
-  filters: EventoFilters
-  onFilterChange: (key: string, value: any) => void
-  onClose: () => void
+  filters: EventoFilters;
+  onFilterChange: (key: string, value) => void;
+  onClose: () => void;
 }
 
-export function EventoFiltersPanel({ filters, onFilterChange, onClose }: EventoFiltersPanelProps) {
+export function EventoFiltersPanel({
+  filters,
+  onFilterChange,
+  onClose,
+}: EventoFiltersPanelProps) {
   // Contador de filtros activos
   const activeFiltersCount = Object.entries(filters).filter(
-    ([key, value]) => value && !['page', 'page_size', 'sort_by'].includes(key)
-  ).length
+    ([key, value]) => value && !["page", "page_size", "sort_by"].includes(key)
+  ).length;
 
   const handleClearFilters = () => {
     // Reset todos los filtros excepto paginación
     const clearedFilters: EventoFilters = {
       page: 1,
       page_size: filters.page_size || 50,
-      sort_by: filters.sort_by || 'fecha_desc'
-    }
-    
-    Object.keys(clearedFilters).forEach(key => {
-      if (key !== 'page' && key !== 'page_size' && key !== 'sort_by') {
-        onFilterChange(key, undefined)
+      sort_by: filters.sort_by || "fecha_desc",
+    };
+
+    Object.keys(clearedFilters).forEach((key) => {
+      if (key !== "page" && key !== "page_size" && key !== "sort_by") {
+        onFilterChange(key, undefined);
       }
-    })
-  }
+    });
+  };
 
   return (
     <div className="space-y-4">
@@ -56,19 +60,11 @@ export function EventoFiltersPanel({ filters, onFilterChange, onClose }: EventoF
         </div>
         <div className="flex items-center gap-2">
           {activeFiltersCount > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClearFilters}
-            >
+            <Button variant="ghost" size="sm" onClick={handleClearFilters}>
               Limpiar filtros
             </Button>
           )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-          >
+          <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
         </div>
@@ -85,8 +81,10 @@ export function EventoFiltersPanel({ filters, onFilterChange, onClose }: EventoF
             Tipo de Evento
           </Label>
           <Select
-            value={filters.tipo_eno_id?.toString() || ''}
-            onValueChange={(value) => onFilterChange('tipo_eno_id', value ? parseInt(value) : undefined)}
+            value={filters.tipo_eno_id?.toString() || ""}
+            onValueChange={(value) =>
+              onFilterChange("tipo_eno_id", value ? parseInt(value) : undefined)
+            }
           >
             <SelectTrigger id="tipo_eno">
               <SelectValue placeholder="Todos los eventos" />
@@ -106,8 +104,10 @@ export function EventoFiltersPanel({ filters, onFilterChange, onClose }: EventoF
         <div className="space-y-2">
           <Label htmlFor="clasificacion">Clasificación</Label>
           <Select
-            value={filters.clasificacion || ''}
-            onValueChange={(value) => onFilterChange('clasificacion', value || undefined)}
+            value={filters.clasificacion || ""}
+            onValueChange={(value) =>
+              onFilterChange("clasificacion", value || undefined)
+            }
           >
             <SelectTrigger id="clasificacion">
               <SelectValue placeholder="Todas las clasificaciones" />
@@ -120,7 +120,9 @@ export function EventoFiltersPanel({ filters, onFilterChange, onClose }: EventoF
               <SelectItem value="en_estudio">En Estudio</SelectItem>
               <SelectItem value="negativos">Negativos</SelectItem>
               <SelectItem value="descartados">Descartados</SelectItem>
-              <SelectItem value="requiere_revision">Requiere Revisión</SelectItem>
+              <SelectItem value="requiere_revision">
+                Requiere Revisión
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -129,8 +131,10 @@ export function EventoFiltersPanel({ filters, onFilterChange, onClose }: EventoF
         <div className="space-y-2">
           <Label htmlFor="tipo_sujeto">Tipo de Sujeto</Label>
           <Select
-            value={filters.tipo_sujeto || ''}
-            onValueChange={(value) => onFilterChange('tipo_sujeto', value || undefined)}
+            value={filters.tipo_sujeto || ""}
+            onValueChange={(value) =>
+              onFilterChange("tipo_sujeto", value || undefined)
+            }
           >
             <SelectTrigger id="tipo_sujeto">
               <SelectValue placeholder="Todos los sujetos" />
@@ -153,8 +157,10 @@ export function EventoFiltersPanel({ filters, onFilterChange, onClose }: EventoF
           <Input
             id="fecha_desde"
             type="date"
-            value={filters.fecha_desde || ''}
-            onChange={(e) => onFilterChange('fecha_desde', e.target.value || undefined)}
+            value={filters.fecha_desde || ""}
+            onChange={(e) =>
+              onFilterChange("fecha_desde", e.target.value || undefined)
+            }
           />
         </div>
 
@@ -167,8 +173,10 @@ export function EventoFiltersPanel({ filters, onFilterChange, onClose }: EventoF
           <Input
             id="fecha_hasta"
             type="date"
-            value={filters.fecha_hasta || ''}
-            onChange={(e) => onFilterChange('fecha_hasta', e.target.value || undefined)}
+            value={filters.fecha_hasta || ""}
+            onChange={(e) =>
+              onFilterChange("fecha_hasta", e.target.value || undefined)
+            }
           />
         </div>
 
@@ -179,8 +187,10 @@ export function EventoFiltersPanel({ filters, onFilterChange, onClose }: EventoF
             Provincia
           </Label>
           <Select
-            value={filters.provincia || ''}
-            onValueChange={(value) => onFilterChange('provincia', value || undefined)}
+            value={filters.provincia || ""}
+            onValueChange={(value) =>
+              onFilterChange("provincia", value || undefined)
+            }
           >
             <SelectTrigger id="provincia">
               <SelectValue placeholder="Todas las provincias" />
@@ -208,7 +218,9 @@ export function EventoFiltersPanel({ filters, onFilterChange, onClose }: EventoF
               <SelectItem value="San Luis">San Luis</SelectItem>
               <SelectItem value="Santa Cruz">Santa Cruz</SelectItem>
               <SelectItem value="Santa Fe">Santa Fe</SelectItem>
-              <SelectItem value="Santiago del Estero">Santiago del Estero</SelectItem>
+              <SelectItem value="Santiago del Estero">
+                Santiago del Estero
+              </SelectItem>
               <SelectItem value="Tierra del Fuego">Tierra del Fuego</SelectItem>
               <SelectItem value="Tucumán">Tucumán</SelectItem>
             </SelectContent>
@@ -219,8 +231,17 @@ export function EventoFiltersPanel({ filters, onFilterChange, onClose }: EventoF
         <div className="space-y-2">
           <Label htmlFor="es_positivo">Estado del Caso</Label>
           <Select
-            value={filters.es_positivo === undefined ? '' : filters.es_positivo.toString()}
-            onValueChange={(value) => onFilterChange('es_positivo', value === '' ? undefined : value === 'true')}
+            value={
+              filters.es_positivo === undefined
+                ? ""
+                : filters.es_positivo.toString()
+            }
+            onValueChange={(value) =>
+              onFilterChange(
+                "es_positivo",
+                value === "" ? undefined : value === "true"
+              )
+            }
           >
             <SelectTrigger id="es_positivo">
               <SelectValue placeholder="Todos los estados" />
@@ -237,8 +258,17 @@ export function EventoFiltersPanel({ filters, onFilterChange, onClose }: EventoF
         <div className="space-y-2">
           <Label htmlFor="requiere_revision">Revisión</Label>
           <Select
-            value={filters.requiere_revision === undefined ? '' : filters.requiere_revision.toString()}
-            onValueChange={(value) => onFilterChange('requiere_revision', value === '' ? undefined : value === 'true')}
+            value={
+              filters.requiere_revision === undefined
+                ? ""
+                : filters.requiere_revision.toString()
+            }
+            onValueChange={(value) =>
+              onFilterChange(
+                "requiere_revision",
+                value === "" ? undefined : value === "true"
+              )
+            }
           >
             <SelectTrigger id="requiere_revision">
               <SelectValue placeholder="Todos" />
@@ -255,8 +285,8 @@ export function EventoFiltersPanel({ filters, onFilterChange, onClose }: EventoF
         <div className="space-y-2">
           <Label htmlFor="sort_by">Ordenar por</Label>
           <Select
-            value={filters.sort_by || 'fecha_desc'}
-            onValueChange={(value) => onFilterChange('sort_by', value)}
+            value={filters.sort_by || "fecha_desc"}
+            onValueChange={(value) => onFilterChange("sort_by", value)}
           >
             <SelectTrigger id="sort_by">
               <SelectValue />
@@ -277,58 +307,60 @@ export function EventoFiltersPanel({ filters, onFilterChange, onClose }: EventoF
         <div className="space-y-2">
           <Separator />
           <div className="flex flex-wrap gap-2">
-            <span className="text-sm text-muted-foreground">Filtros activos:</span>
+            <span className="text-sm text-muted-foreground">
+              Filtros activos:
+            </span>
             {filters.tipo_eno_id && (
               <Badge variant="secondary">
                 Tipo evento: {filters.tipo_eno_id}
-                <X 
-                  className="ml-1 h-3 w-3 cursor-pointer" 
-                  onClick={() => onFilterChange('tipo_eno_id', undefined)}
+                <X
+                  className="ml-1 h-3 w-3 cursor-pointer"
+                  onClick={() => onFilterChange("tipo_eno_id", undefined)}
                 />
               </Badge>
             )}
             {filters.clasificacion && (
               <Badge variant="secondary">
                 {filters.clasificacion}
-                <X 
-                  className="ml-1 h-3 w-3 cursor-pointer" 
-                  onClick={() => onFilterChange('clasificacion', undefined)}
+                <X
+                  className="ml-1 h-3 w-3 cursor-pointer"
+                  onClick={() => onFilterChange("clasificacion", undefined)}
                 />
               </Badge>
             )}
             {filters.provincia && (
               <Badge variant="secondary">
                 {filters.provincia}
-                <X 
-                  className="ml-1 h-3 w-3 cursor-pointer" 
-                  onClick={() => onFilterChange('provincia', undefined)}
+                <X
+                  className="ml-1 h-3 w-3 cursor-pointer"
+                  onClick={() => onFilterChange("provincia", undefined)}
                 />
               </Badge>
             )}
             {filters.tipo_sujeto && (
               <Badge variant="secondary">
                 Sujeto: {filters.tipo_sujeto}
-                <X 
-                  className="ml-1 h-3 w-3 cursor-pointer" 
-                  onClick={() => onFilterChange('tipo_sujeto', undefined)}
+                <X
+                  className="ml-1 h-3 w-3 cursor-pointer"
+                  onClick={() => onFilterChange("tipo_sujeto", undefined)}
                 />
               </Badge>
             )}
             {filters.fecha_desde && (
               <Badge variant="secondary">
                 Desde: {filters.fecha_desde}
-                <X 
-                  className="ml-1 h-3 w-3 cursor-pointer" 
-                  onClick={() => onFilterChange('fecha_desde', undefined)}
+                <X
+                  className="ml-1 h-3 w-3 cursor-pointer"
+                  onClick={() => onFilterChange("fecha_desde", undefined)}
                 />
               </Badge>
             )}
             {filters.fecha_hasta && (
               <Badge variant="secondary">
                 Hasta: {filters.fecha_hasta}
-                <X 
-                  className="ml-1 h-3 w-3 cursor-pointer" 
-                  onClick={() => onFilterChange('fecha_hasta', undefined)}
+                <X
+                  className="ml-1 h-3 w-3 cursor-pointer"
+                  onClick={() => onFilterChange("fecha_hasta", undefined)}
                 />
               </Badge>
             )}
@@ -336,5 +368,5 @@ export function EventoFiltersPanel({ filters, onFilterChange, onClose }: EventoF
         </div>
       )}
     </div>
-  )
+  );
 }

@@ -1,21 +1,23 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { InfiniteCombobox, type ComboboxOption } from '@/components/ui/infinite-combobox'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { AlertCircle } from 'lucide-react'
-import { useInfiniteEvents } from '../services/paginatedQueries'
-import type { Event } from '../types'
+import { useState, useEffect } from "react";
+import {
+  InfiniteCombobox,
+  type ComboboxOption,
+} from "@/components/ui/infinite-combobox";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
+import { useInfiniteEvents } from "../../services/paginatedQueries";
 
 interface EventSelectorProps {
-  events: Event[]
-  selectedEventId: string | null
-  onEventChange: (eventId: string | null) => void
-  disabled?: boolean
-  loading?: boolean
-  error?: Error | null
-  groupId?: string | null
+  events: Event[];
+  selectedEventId: string | null;
+  onEventChange: (eventId: string | null) => void;
+  disabled?: boolean;
+  loading?: boolean;
+  error?: Error | null;
+  groupId?: string | null;
 }
 
 export function EventSelector({
@@ -25,9 +27,9 @@ export function EventSelector({
   disabled,
   loading: fallbackLoading,
   error: fallbackError,
-  groupId
+  groupId,
 }: EventSelectorProps) {
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState("");
 
   // Use infinite scroll hook for events
   const {
@@ -36,18 +38,18 @@ export function EventSelector({
     isLoading,
     loadMore,
     error: infiniteError,
-    isError
-  } = useInfiniteEvents(groupId || undefined, search)
+    isError,
+  } = useInfiniteEvents(groupId || undefined, search);
 
   // Reset search when group changes
   useEffect(() => {
-    setSearch('')
-  }, [groupId])
+    setSearch("");
+  }, [groupId]);
 
   // Use fallback events if infinite query hasn't loaded yet
-  const displayEvents = events.length > 0 ? events : fallbackEvents
-  const loading = isLoading && events.length === 0
-  const error = isError ? infiniteError : fallbackError
+  const displayEvents = events.length > 0 ? events : fallbackEvents;
+  const loading = isLoading && events.length === 0;
+  const error = isError ? infiniteError : fallbackError;
 
   if (loading) {
     return (
@@ -55,7 +57,7 @@ export function EventSelector({
         <label className="text-sm font-medium">Seleccionar Evento</label>
         <Skeleton className="w-[300px] h-9" />
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -65,18 +67,18 @@ export function EventSelector({
         <Alert variant="destructive" className="w-[300px]">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            {error?.message || 'Error al cargar eventos'}
+            {error?.message || "Error al cargar eventos"}
           </AlertDescription>
         </Alert>
       </div>
-    )
+    );
   }
 
   // Convert events to combobox options
-  const options: ComboboxOption[] = displayEvents.map(event => ({
+  const options: ComboboxOption[] = displayEvents.map((event) => ({
     value: event.id,
-    label: event.name
-  }))
+    label: event.name,
+  }));
 
   return (
     <div className="space-y-2">
@@ -100,5 +102,5 @@ export function EventSelector({
         className="w-full"
       />
     </div>
-  )
+  );
 }

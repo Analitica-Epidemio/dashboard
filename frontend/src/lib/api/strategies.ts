@@ -63,21 +63,6 @@ export const useActivateStrategy = () => {
   return $api.useMutation('post', '/api/v1/estrategias/{strategy_id}/activate')
 }
 
-export const useDeactivateStrategy = () => {
-  return $api.useMutation('post', '/api/v1/estrategias/{strategy_id}/deactivate')
-}
-
 export const useTestStrategy = () => {
   return $api.useMutation('post', '/api/v1/estrategias/{strategy_id}/test')
-}
-
-export const useStrategyAuditLog = (strategyId: number | null) => {
-  return $api.useQuery('get', '/api/v1/estrategias/{strategy_id}/audit-log', {
-    params: {
-      path: {
-        strategy_id: strategyId!
-      }
-    },
-    enabled: !!strategyId
-  })
 }

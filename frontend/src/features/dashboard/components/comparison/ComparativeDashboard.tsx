@@ -11,8 +11,8 @@ import { Activity, AlertTriangle, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 // Import dynamic chart components
-import { DynamicChart } from "./DynamicChart";
-import { useDashboardCharts } from "../hooks/useDashboardCharts";
+import { DynamicChart } from "../charts/DynamicChart";
+import { useDashboardCharts } from "../../hooks/useDashboardCharts";
 import { useIndicadores } from "@/features/charts/hooks";
 import { useGenerateZipReport, useGenerateSignedUrl } from "@/features/reports/hooks";
 

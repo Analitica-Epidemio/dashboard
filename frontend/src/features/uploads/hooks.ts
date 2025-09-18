@@ -54,7 +54,7 @@ export function useCancelJob() {
   return $api.useMutation('delete', '/api/v1/uploads/jobs/{job_id}', {
     onSuccess: (_, variables) => {
       // Invalidate job status
-      const jobId = (variables as any)?.params?.path?.job_id;
+      const jobId = (variables)?.params?.path?.job_id;
       if (jobId) {
         queryClient.invalidateQueries({
           queryKey: ['get', '/api/v1/uploads/jobs/{job_id}/status', { params: { path: { job_id: jobId } } }],
@@ -84,7 +84,7 @@ export function useUploadWorkflow() {
 
     try {
       uploadMutation.mutate(
-        { body: formData as any },
+        { body: formData },
         {
           onSuccess: (data) => {
             const jobId = data?.data?.data?.job_id;
@@ -109,7 +109,7 @@ export function useUploadWorkflow() {
         params: {
           path: { job_id: currentJobIdRef.current },
         },
-      } as any);
+      });
       currentJobIdRef.current = null;
     }
   }, [cancelMutation]);
