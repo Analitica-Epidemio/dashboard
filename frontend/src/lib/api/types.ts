@@ -4,7 +4,95 @@
  */
 
 export interface paths {
-    "/api/v1/hello": {
+    "/api/v1/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Login
+         * @description Authenticate user and return JWT tokens
+         *
+         *     - **email**: User's email address
+         *     - **password**: User's password
+         *     - **remember_me**: Keep session active for 7 days (default: false)
+         *
+         *     Returns access token (30 min) and refresh token (7 days)
+         */
+        post: operations["login_api_v1_auth_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refresh Access Token
+         * @description Refresh access token using refresh token
+         *
+         *     Returns new access token and optionally new refresh token
+         */
+        post: operations["refresh_access_token_api_v1_auth_refresh_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Logout
+         * @description Logout current session
+         */
+        post: operations["logout_api_v1_auth_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/logout-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Logout All Sessions
+         * @description Logout from all sessions
+         */
+        post: operations["logout_all_sessions_api_v1_auth_logout_all_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/me": {
         parameters: {
             query?: never;
             header?: never;
@@ -12,16 +100,62 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Hello
-         * @description Obtiene un saludo del servidor.
-         *
-         *     Implementación CORRECTA con mejores prácticas:
-         *     - JSONResponse directo para control total del status code
-         *     - 50% probabilidad de éxito para testing
-         *     - Errores estructurados con códigos significativos
-         *     - Sin excepciones, retorno directo
+         * Get Current User Info
+         * @description Get current user information
          */
-        get: operations["get_hello_api_v1_hello_get"];
+        get: operations["get_current_user_info_api_v1_auth_me_get"];
+        /**
+         * Update Current User
+         * @description Update current user information
+         *
+         *     Users can update their own profile information.
+         *     Role and status changes require superadmin privileges.
+         */
+        put: operations["update_current_user_api_v1_auth_me_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/change-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change Password
+         * @description Change current user's password
+         *
+         *     - **current_password**: Current password
+         *     - **new_password**: New strong password
+         *
+         *     This will logout all other sessions for security.
+         */
+        post: operations["change_password_api_v1_auth_change_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get User Sessions
+         * @description Get current user's active sessions
+         */
+        get: operations["get_user_sessions_api_v1_auth_sessions_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -30,7 +164,114 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/uploads/csv": {
+    "/api/v1/auth/sessions/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Logout Session
+         * @description Logout specific session
+         */
+        delete: operations["logout_session_api_v1_auth_sessions__session_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Users
+         * @description List all users (Superadmin only)
+         *
+         *     - **skip**: Number of users to skip
+         *     - **limit**: Maximum number of users to return
+         */
+        get: operations["list_users_api_v1_auth_users_get"];
+        put?: never;
+        /**
+         * Create User
+         * @description Create a new user (Superadmin only - for UI administration)
+         *
+         *     - **email**: Valid email address
+         *     - **nombre**: First name
+         *     - **apellido**: Last name
+         *     - **password**: Strong password (min 8 chars, must include uppercase, lowercase, digit, special char)
+         *     - **role**: User role (superadmin, epidemiologo)
+         */
+        post: operations["create_user_api_v1_auth_users_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/users/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get User
+         * @description Get user by ID (Superadmin only)
+         */
+        get: operations["get_user_api_v1_auth_users__user_id__get"];
+        /**
+         * Update User
+         * @description Update user by ID (Superadmin only)
+         *
+         *     Superadmins can update any user's information including role and status.
+         */
+        put: operations["update_user_api_v1_auth_users__user_id__put"];
+        post?: never;
+        /**
+         * Deactivate User
+         * @description Deactivate user (Superadmin only)
+         *
+         *     This sets the user status to inactive rather than deleting the record.
+         */
+        delete: operations["deactivate_user_api_v1_auth_users__user_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/users/{user_id}/unlock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unlock User
+         * @description Unlock user account (Superadmin only)
+         *
+         *     Clears login attempts and unlock time.
+         */
+        post: operations["unlock_user_api_v1_auth_users__user_id__unlock_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/uploads/csv-async": {
         parameters: {
             query?: never;
             header?: never;
@@ -57,7 +298,7 @@ export interface paths {
          *
          *     **Returns:** Job ID para seguimiento del progreso
          */
-        post: operations["upload_csv_async_api_v1_uploads_csv_post"];
+        post: operations["upload_csv_async_api_v1_uploads_csv_async_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -403,8 +644,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Tiposeno */
-        get: operations["list_tiposEno_api_v1_tiposEno__get"];
+        /** List Tipos Eno */
+        get: operations["list_tipos_eno_api_v1_tiposEno__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -420,8 +661,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Gruposeno */
-        get: operations["list_gruposEno_api_v1_gruposEno__get"];
+        /** List Grupos Eno */
+        get: operations["list_grupos_eno_api_v1_gruposEno__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -430,7 +671,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/charts/templates": {
+    "/api/v1/charts/dashboard": {
         parameters: {
             query?: never;
             header?: never;
@@ -438,15 +679,15 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get All Chart Templates
-         * @description Obtener todos los templates de charts disponibles.
+         * Get Dashboard Charts
+         * @description Obtiene los charts aplicables y sus datos según los filtros
          *
-         *     **Browse-First Architecture:** Mostrar inmediatamente todos los charts disponibles.
-         *     Los usuarios pueden aplicar filtros después si lo desean.
-         *
-         *     **Returns:** Lista completa de templates disponibles
+         *     Simple:
+         *     1. Busca qué charts aplican según las condiciones
+         *     2. Procesa los datos de cada chart
+         *     3. Devuelve todo listo para renderizar
          */
-        get: operations["get_all_chart_templates_api_v1_charts_templates_get"];
+        get: operations["get_dashboard_charts_api_v1_charts_dashboard_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -455,7 +696,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/charts/execute": {
+    "/api/v1/charts/indicadores": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Indicadores
+         * @description Obtiene los indicadores de resumen para el dashboard
+         *
+         *     Calcula:
+         *     - Total de casos
+         *     - Tasa de incidencia (por 100.000 habitantes)
+         *     - Áreas afectadas (localidades/establecimientos únicos)
+         *     - Letalidad (si hay datos de fallecidos)
+         */
+        get: operations["get_indicadores_api_v1_charts_indicadores_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/charts/disponibles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Charts Disponibles
+         * @description Lista todos los charts disponibles sin procesar datos
+         *     Útil para configuración y preview
+         */
+        get: operations["get_charts_disponibles_api_v1_charts_disponibles_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/generate": {
         parameters: {
             query?: never;
             header?: never;
@@ -465,64 +753,93 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Execute Chart
-         * @description Ejecutar un chart con filtros dinámicos.
-         *
-         *     **Dynamic Filtering:** No requiere configuración previa por ENO.
-         *     Los filtros se aplican dinámicamente en runtime.
-         *
-         *     **Returns:** Datos del chart procesados
+         * Generate Report
+         * @description Genera un reporte PDF usando Playwright para capturar la página del frontend.
+         *     Esto asegura fidelidad exacta de la UI en los PDFs generados.
          */
-        post: operations["execute_chart_api_v1_charts_execute_post"];
+        post: operations["generate_report_api_v1_reports_generate_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/charts/filters": {
+    "/api/v1/reports/generate-zip": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /**
-         * Get Available Filters
-         * @description Obtener todos los filtros disponibles globalmente.
-         *
-         *     **Global Filters:** Filtros dinámicos que funcionan con cualquier chart.
-         *     Los filtros específicos se determinan por el template del chart.
-         *
-         *     **Returns:** Lista de filtros disponibles con sus configuraciones
-         */
-        get: operations["get_available_filters_api_v1_charts_filters_get"];
+        get?: never;
         put?: never;
-        post?: never;
+        /**
+         * Generate Zip Report
+         * @description Generate ZIP report with multiple PDFs (one per combination) generated in parallel.
+         *     Each PDF contains all charts for that combination.
+         */
+        post: operations["generate_zip_report_api_v1_reports_generate_zip_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/charts/availability": {
+    "/api/v1/reports/preview": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /**
-         * Get Chart Availability
-         * @description Obtener disponibilidad completa de charts y filtros.
-         *
-         *     **Overview Endpoint:** Información completa para construir la UI inicial.
-         *
-         *     **Returns:** Charts disponibles, filtros globales y contexto
-         */
-        get: operations["get_chart_availability_api_v1_charts_availability_get"];
+        get?: never;
         put?: never;
-        post?: never;
+        /**
+         * Preview Report
+         * @description Obtiene los datos que se incluirían en el reporte sin generar el PDF
+         *     Útil para preview en el frontend
+         */
+        post: operations["preview_report_api_v1_reports_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/generate-signed-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate signed URL for SSR reports
+         * @description Creates a signed URL that allows access to SSR reports without authentication
+         */
+        post: operations["generate_report_signed_url_api_v1_reports_generate_signed_url_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/verify-signed-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify signed URL
+         * @description Verifies a signed URL and returns the filters data if valid
+         */
+        post: operations["verify_signed_url_endpoint_api_v1_reports_verify_signed_url_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -734,8 +1051,8 @@ export interface components {
              */
             user_agent?: string | null;
         };
-        /** Body_upload_csv_async_api_v1_uploads_csv_post */
-        Body_upload_csv_async_api_v1_uploads_csv_post: {
+        /** Body_upload_csv_async_api_v1_uploads_csv_async_post */
+        Body_upload_csv_async_api_v1_uploads_csv_async_post: {
             /**
              * File
              * Format: binary
@@ -754,123 +1071,97 @@ export interface components {
             sheet_name: string;
         };
         /**
-         * ChartAvailabilityResponse
-         * @description Disponibilidad de charts para un contexto específico
+         * ChartDataItem
+         * @description Modelo para un chart individual del dashboard
          */
-        ChartAvailabilityResponse: {
-            /** Total Charts */
-            total_charts: number;
-            /** Charts Disponibles */
-            charts_disponibles: components["schemas"]["ChartTemplateResponse"][];
-            /** Filtros Disponibles */
-            filtros_disponibles: components["schemas"]["FilterDefinitionResponse"][];
-        };
-        /**
-         * ChartDataResponse
-         * @description Datos de un chart ejecutado
-         */
-        ChartDataResponse: {
-            /** Chart Id */
-            chart_id: number;
-            /** Chart Codigo */
-            chart_codigo: string;
-            /** Titulo */
-            titulo: string;
-            /** Descripcion */
-            descripcion?: string | null;
-            tipo_visualizacion: components["schemas"]["ChartVisualizationType"];
-            /** Data */
-            data: {
-                [key: string]: unknown;
-            };
-            /** Configuracion Chart */
-            configuracion_chart?: {
-                [key: string]: unknown;
-            };
-            /** Filtros Aplicados */
-            filtros_aplicados?: {
-                [key: string]: unknown;
-            };
-            /** Parametros Aplicados */
-            parametros_aplicados?: {
-                [key: string]: unknown;
-            };
+        ChartDataItem: {
             /**
-             * Timestamp Generacion
-             * Format: date-time
+             * Codigo
+             * @description Código único del chart
              */
-            timestamp_generacion: string;
-            /** Tiempo Ejecucion Ms */
-            tiempo_ejecucion_ms?: number | null;
-            /** Total Registros */
-            total_registros?: number | null;
-            /** Registros Filtrados */
-            registros_filtrados?: number | null;
-            /** Mensaje */
-            mensaje?: string | null;
-        };
-        /**
-         * ChartTemplateResponse
-         * @description Template de chart para browse-first UI
-         */
-        ChartTemplateResponse: {
-            /** Id */
-            id: number;
-            /** Codigo */
             codigo: string;
-            /** Nombre */
+            /**
+             * Nombre
+             * @description Nombre del chart
+             */
             nombre: string;
-            /** Descripcion */
-            descripcion: string | null;
-            /** Categoria */
-            categoria: string;
-            tipo_visualizacion: components["schemas"]["ChartVisualizationType"];
-            /** Tipo Eno Compatible */
-            tipo_eno_compatible?: string[] | null;
-            /** Filtros Requeridos */
-            filtros_requeridos?: string[];
-            /** Filtros Opcionales */
-            filtros_opcionales?: string[];
-            /** Parametros Disponibles */
-            parametros_disponibles?: {
+            /**
+             * Descripcion
+             * @description Descripción del chart
+             */
+            descripcion?: string | null;
+            /**
+             * Tipo
+             * @description Tipo de visualización
+             */
+            tipo: string;
+            /**
+             * Data
+             * @description Datos del chart
+             */
+            data: unknown;
+            /**
+             * Config
+             * @description Configuración adicional del chart
+             */
+            config?: {
                 [key: string]: unknown;
             };
-            /** Parametros Default */
-            parametros_default?: {
-                [key: string]: unknown;
-            };
-            /**
-             * Orden Sugerido
-             * @default 0
-             */
-            orden_sugerido: number;
-            /**
-             * Es Publico
-             * @default true
-             */
-            es_publico: boolean;
-            /**
-             * Requiere Autenticacion
-             * @default false
-             */
-            requiere_autenticacion: boolean;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /**
-             * Updated At
-             * Format: date-time
-             */
-            updated_at: string;
         };
         /**
-         * ChartVisualizationType
-         * @description Tipos de visualización disponibles
-         * @enum {string}
+         * ChartDisponibleItem
+         * @description Modelo para un chart disponible en el catálogo
          */
-        ChartVisualizationType: "line" | "bar" | "pie" | "area" | "scatter" | "heatmap" | "map" | "table" | "metric";
+        ChartDisponibleItem: {
+            /**
+             * Id
+             * @description ID del chart
+             */
+            id: number;
+            /**
+             * Codigo
+             * @description Código único del chart
+             */
+            codigo: string;
+            /**
+             * Nombre
+             * @description Nombre del chart
+             */
+            nombre: string;
+            /**
+             * Descripcion
+             * @description Descripción del chart
+             */
+            descripcion?: string | null;
+            /**
+             * Tipo Visualizacion
+             * @description Tipo de visualización
+             */
+            tipo_visualizacion: string;
+            /**
+             * Condiciones
+             * @description Condiciones de aplicación
+             */
+            condiciones?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /**
+         * ChartsDisponiblesResponse
+         * @description Response model para charts disponibles
+         */
+        ChartsDisponiblesResponse: {
+            /**
+             * Charts
+             * @description Lista de charts disponibles
+             */
+            charts: components["schemas"]["ChartDisponibleItem"][];
+            /**
+             * Total
+             * @description Total de charts disponibles
+             */
+            total: number;
+        };
         /**
          * CiudadanoInfo
          * @description Información del ciudadano
@@ -1044,6 +1335,29 @@ export interface components {
              * @description Contactos embarazadas
              */
             contactos_embarazadas?: number | null;
+        };
+        /**
+         * DashboardChartsResponse
+         * @description Response model para charts del dashboard
+         */
+        DashboardChartsResponse: {
+            /**
+             * Charts
+             * @description Lista de charts con sus datos
+             */
+            charts: components["schemas"]["ChartDataItem"][];
+            /**
+             * Total
+             * @description Total de charts aplicables
+             */
+            total: number;
+            /**
+             * Filtros Aplicados
+             * @description Filtros que se aplicaron
+             */
+            filtros_aplicados: {
+                [key: string]: unknown;
+            };
         };
         /**
          * DiagnosticoInfo
@@ -1547,6 +1861,16 @@ export interface components {
              */
             vacunas?: components["schemas"]["VacunaInfo"][];
             /**
+             * Created At
+             * @description Fecha de creación
+             */
+            created_at?: unknown | null;
+            /**
+             * Updated At
+             * @description Fecha de actualización
+             */
+            updated_at?: unknown | null;
+            /**
              * Total Sintomas
              * @description Total de síntomas
              * @default 0
@@ -1582,16 +1906,6 @@ export interface components {
              * @default 0
              */
             total_investigaciones: number;
-            /**
-             * Created At
-             * @description Fecha de creación
-             */
-            created_at?: string | null;
-            /**
-             * Updated At
-             * @description Fecha de actualización
-             */
-            updated_at?: string | null;
         };
         /**
          * EventoListItem
@@ -1736,7 +2050,7 @@ export interface components {
         EventoSortBy: "fecha_desc" | "fecha_asc" | "id_desc" | "id_asc" | "tipo_eno";
         /**
          * EventoTimelineItem
-         * @description Item del timeline de eventos
+         * @description Item del timeline de un evento
          */
         EventoTimelineItem: {
             /**
@@ -1747,7 +2061,7 @@ export interface components {
             fecha: string;
             /**
              * Tipo
-             * @description Tipo de evento: sintoma/muestra/diagnostico/internacion/etc
+             * @description Tipo de evento
              */
             tipo: string;
             /**
@@ -1765,7 +2079,7 @@ export interface components {
         };
         /**
          * EventoTimelineResponse
-         * @description Respuesta del timeline
+         * @description Respuesta del timeline de un evento
          */
         EventoTimelineResponse: {
             /**
@@ -1780,30 +2094,28 @@ export interface components {
             total: number;
         };
         /**
-         * ExecuteChartRequest
-         * @description Request para ejecutar un chart
+         * FilterCombination
+         * @description Modelo para una combinación de filtros
          */
-        ExecuteChartRequest: {
-            /** Chart Codigo */
-            chart_codigo: string;
-            /** Filtros */
-            filtros?: {
-                [key: string]: unknown;
-            };
-            /** Parametros */
-            parametros?: {
-                [key: string]: unknown;
-            };
+        FilterCombination: {
+            /** Id */
+            id: string;
+            /** Group Id */
+            group_id?: number | null;
+            /** Group Name */
+            group_name?: string | null;
             /**
-             * Usar Cache
-             * @default true
+             * Event Ids
+             * @default []
              */
-            usar_cache: boolean;
+            event_ids: number[];
             /**
-             * Formato Respuesta
-             * @default json
+             * Event Names
+             * @default []
              */
-            formato_respuesta: string;
+            event_names: string[];
+            /** Clasificaciones */
+            clasificaciones?: string[] | null;
         };
         /**
          * FilterConditionRequest
@@ -1914,40 +2226,6 @@ export interface components {
              */
             updated_at?: string | null;
         };
-        /**
-         * FilterDefinitionResponse
-         * @description Definición de un filtro disponible
-         */
-        FilterDefinitionResponse: {
-            /** Codigo */
-            codigo: string;
-            /** Nombre */
-            nombre: string;
-            /** Descripcion */
-            descripcion: string | null;
-            tipo_filtro: components["schemas"]["FilterType"];
-            /** Configuracion */
-            configuracion?: {
-                [key: string]: unknown;
-            };
-            /** Valor Default */
-            valor_default?: unknown | null;
-            /**
-             * Es Requerido
-             * @default false
-             */
-            es_requerido: boolean;
-            /** Opciones */
-            opciones?: {
-                [key: string]: unknown;
-            }[] | null;
-        };
-        /**
-         * FilterType
-         * @description Tipos de filtros disponibles
-         * @enum {string}
-         */
-        FilterType: "date_range" | "single_select" | "multi_select" | "number_range" | "text_input" | "boolean" | "eno_selector" | "department_selector";
         /** GrupoEnoInfo */
         GrupoEnoInfo: {
             /**
@@ -1977,27 +2255,37 @@ export interface components {
             detail?: components["schemas"]["ValidationError"][];
         };
         /**
-         * HelloData
-         * @description Datos del saludo.
+         * IndicadoresResponse
+         * @description Response model para indicadores del dashboard
          */
-        HelloData: {
+        IndicadoresResponse: {
             /**
-             * Message
-             * @example Hello, World!
+             * Total Casos
+             * @description Total de casos registrados
              */
-            message: string;
+            total_casos: number;
             /**
-             * Timestamp
-             * Format: date-time
-             * @example 2024-01-15T10:30:00Z
+             * Tasa Incidencia
+             * @description Tasa de incidencia por 100.000 habitantes
              */
-            timestamp: string;
+            tasa_incidencia: number;
             /**
-             * Server
-             * @default epidemiologia-api
-             * @example epidemiologia-api
+             * Areas Afectadas
+             * @description Número de áreas/establecimientos afectados
              */
-            server: string;
+            areas_afectadas: number;
+            /**
+             * Letalidad
+             * @description Tasa de letalidad en porcentaje
+             */
+            letalidad: number;
+            /**
+             * Filtros Aplicados
+             * @description Filtros que se aplicaron a la consulta
+             */
+            filtros_aplicados: {
+                [key: string]: unknown;
+            };
         };
         /**
          * InternacionInfo
@@ -2257,6 +2545,103 @@ export interface components {
             has_prev: boolean;
         };
         /**
+         * RefreshToken
+         * @description Refresh token request
+         */
+        RefreshToken: {
+            /** Refresh Token */
+            refresh_token: string;
+        };
+        /**
+         * ReportFiltersRequest
+         * @description Request para generar URL firmada
+         */
+        ReportFiltersRequest: {
+            /**
+             * Filters
+             * @description Lista de combinaciones de filtros
+             */
+            filters: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Date From
+             * @description Fecha desde
+             */
+            date_from?: string | null;
+            /**
+             * Date To
+             * @description Fecha hasta
+             */
+            date_to?: string | null;
+            /**
+             * Expires In
+             * @description Tiempo de expiración en segundos
+             * @default 3600
+             */
+            expires_in: number;
+        };
+        /**
+         * ReportRequest
+         * @description Request para generar un reporte
+         */
+        ReportRequest: {
+            /** Date Range */
+            date_range: {
+                [key: string]: string;
+            };
+            /** Combinations */
+            combinations: components["schemas"]["FilterCombination"][];
+            /**
+             * Format
+             * @default pdf
+             */
+            format: string;
+        };
+        /**
+         * SessionInfo
+         * @description Session information response
+         */
+        SessionInfo: {
+            /** Id */
+            id: number;
+            /** Ip Address */
+            ip_address: string | null;
+            /** User Agent */
+            user_agent: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Last Activity
+             * Format: date-time
+             */
+            last_activity: string;
+            /**
+             * Is Current
+             * @default false
+             */
+            is_current: boolean;
+        };
+        /**
+         * SignedUrlResponse
+         * @description Response con la URL firmada
+         */
+        SignedUrlResponse: {
+            /**
+             * Signed Url
+             * @description URL firmada para acceder al reporte
+             */
+            signed_url: string;
+            /**
+             * Expires At
+             * @description Timestamp de expiración
+             */
+            expires_at: number;
+        };
+        /**
          * SintomaInfo
          * @description Información de síntoma
          */
@@ -2347,10 +2732,10 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
-        /** SuccessResponse[ChartAvailabilityResponse] */
-        SuccessResponse_ChartAvailabilityResponse_: {
+        /** SuccessResponse[ChartsDisponiblesResponse] */
+        SuccessResponse_ChartsDisponiblesResponse_: {
             /** @description Datos de la respuesta */
-            data: components["schemas"]["ChartAvailabilityResponse"];
+            data: components["schemas"]["ChartsDisponiblesResponse"];
             /**
              * Meta
              * @description Metadata opcional (paginación, etc)
@@ -2359,10 +2744,10 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
-        /** SuccessResponse[ChartDataResponse] */
-        SuccessResponse_ChartDataResponse_: {
+        /** SuccessResponse[DashboardChartsResponse] */
+        SuccessResponse_DashboardChartsResponse_: {
             /** @description Datos de la respuesta */
-            data: components["schemas"]["ChartDataResponse"];
+            data: components["schemas"]["DashboardChartsResponse"];
             /**
              * Meta
              * @description Metadata opcional (paginación, etc)
@@ -2419,10 +2804,10 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
-        /** SuccessResponse[HelloData] */
-        SuccessResponse_HelloData_: {
+        /** SuccessResponse[IndicadoresResponse] */
+        SuccessResponse_IndicadoresResponse_: {
             /** @description Datos de la respuesta */
-            data: components["schemas"]["HelloData"];
+            data: components["schemas"]["IndicadoresResponse"];
             /**
              * Meta
              * @description Metadata opcional (paginación, etc)
@@ -2458,21 +2843,6 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
-        /** SuccessResponse[List[ChartTemplateResponse]] */
-        SuccessResponse_List_ChartTemplateResponse__: {
-            /**
-             * Data
-             * @description Datos de la respuesta
-             */
-            data: components["schemas"]["ChartTemplateResponse"][];
-            /**
-             * Meta
-             * @description Metadata opcional (paginación, etc)
-             */
-            meta?: {
-                [key: string]: unknown;
-            } | null;
-        };
         /** SuccessResponse[List[EventStrategyResponse]] */
         SuccessResponse_List_EventStrategyResponse__: {
             /**
@@ -2488,13 +2858,10 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
-        /** SuccessResponse[List[FilterDefinitionResponse]] */
-        SuccessResponse_List_FilterDefinitionResponse__: {
-            /**
-             * Data
-             * @description Datos de la respuesta
-             */
-            data: components["schemas"]["FilterDefinitionResponse"][];
+        /** SuccessResponse[SignedUrlResponse] */
+        SuccessResponse_SignedUrlResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["SignedUrlResponse"];
             /**
              * Meta
              * @description Metadata opcional (paginación, etc)
@@ -2507,6 +2874,18 @@ export interface components {
         SuccessResponse_StrategyTestResponse_: {
             /** @description Datos de la respuesta */
             data: components["schemas"]["StrategyTestResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[VerifySignedUrlResponse] */
+        SuccessResponse_VerifySignedUrlResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["VerifySignedUrlResponse"];
             /**
              * Meta
              * @description Metadata opcional (paginación, etc)
@@ -2561,6 +2940,39 @@ export interface components {
          */
         TipoFiltro: "CAMPO_IGUAL" | "CAMPO_EN_LISTA" | "CAMPO_CONTIENE" | "REGEX_EXTRACCION" | "CAMPO_EXISTE" | "CAMPO_NO_NULO" | "CUSTOM_FUNCTION" | "DETECTOR_TIPO_SUJETO" | "EXTRACTOR_METADATA";
         /**
+         * Token
+         * @description JWT Token response with user info
+         */
+        Token: {
+            /** Access Token */
+            access_token: string;
+            /**
+             * Token Type
+             * @default bearer
+             */
+            token_type: string;
+            /** Expires In */
+            expires_in: number;
+            /** Refresh Token */
+            refresh_token?: string | null;
+            user?: components["schemas"]["TokenUser"] | null;
+        };
+        /**
+         * TokenUser
+         * @description User info in token response
+         */
+        TokenUser: {
+            /** Id */
+            id: number;
+            /** Email */
+            email: string;
+            /** Nombre */
+            nombre: string;
+            /** Apellido */
+            apellido: string;
+            role: components["schemas"]["UserRole"];
+        };
+        /**
          * TratamientoInfo
          * @description Información de tratamiento
          */
@@ -2590,6 +3002,107 @@ export interface components {
              * @description Si recibió tratamiento
              */
             recibio_tratamiento?: boolean | null;
+        };
+        /**
+         * UserChangePassword
+         * @description Schema for changing password
+         */
+        UserChangePassword: {
+            /** Current Password */
+            current_password: string;
+            /** New Password */
+            new_password: string;
+        };
+        /**
+         * UserCreate
+         * @description Schema for creating a new user
+         */
+        UserCreate: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Nombre */
+            nombre: string;
+            /** Apellido */
+            apellido: string;
+            /** Password */
+            password: string;
+            /** @default epidemiologo */
+            role: components["schemas"]["UserRole"];
+        };
+        /**
+         * UserLogin
+         * @description Schema for user login
+         */
+        UserLogin: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Password */
+            password: string;
+            /**
+             * Remember Me
+             * @default false
+             */
+            remember_me: boolean;
+        };
+        /**
+         * UserResponse
+         * @description Schema for user response (public info)
+         */
+        UserResponse: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Nombre */
+            nombre: string;
+            /** Apellido */
+            apellido: string;
+            /** Id */
+            id: number;
+            role: components["schemas"]["UserRole"];
+            status: components["schemas"]["UserStatus"];
+            /** Is Email Verified */
+            is_email_verified: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Last Login */
+            last_login?: string | null;
+        };
+        /**
+         * UserRole
+         * @description User roles for authorization
+         * @enum {string}
+         */
+        UserRole: "superadmin" | "epidemiologo";
+        /**
+         * UserStatus
+         * @description User account status
+         * @enum {string}
+         */
+        UserStatus: "active" | "inactive" | "suspended";
+        /**
+         * UserUpdate
+         * @description Schema for updating user information
+         */
+        UserUpdate: {
+            /** Email */
+            email?: string | null;
+            /** Nombre */
+            nombre?: string | null;
+            /** Apellido */
+            apellido?: string | null;
+            role?: components["schemas"]["UserRole"] | null;
+            status?: components["schemas"]["UserStatus"] | null;
         };
         /**
          * VacunaInfo
@@ -2626,6 +3139,55 @@ export interface components {
             /** Error Type */
             type: string;
         };
+        /**
+         * VerifySignedUrlRequest
+         * @description Request para verificar URL firmada
+         */
+        VerifySignedUrlRequest: {
+            /**
+             * Data
+             * @description Payload codificado en base64
+             */
+            data: string;
+            /**
+             * Signature
+             * @description Firma HMAC
+             */
+            signature: string;
+        };
+        /**
+         * VerifySignedUrlResponse
+         * @description Response con los datos verificados
+         */
+        VerifySignedUrlResponse: {
+            /**
+             * Filters
+             * @description Lista de filtros verificados
+             */
+            filters: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Date From
+             * @description Fecha desde
+             */
+            date_from?: string | null;
+            /**
+             * Date To
+             * @description Fecha hasta
+             */
+            date_to?: string | null;
+            /**
+             * Generated By
+             * @description ID del usuario que generó la URL
+             */
+            generated_by: number;
+            /**
+             * Generated At
+             * @description Timestamp de generación
+             */
+            generated_at: number;
+        };
     };
     responses: never;
     parameters: never;
@@ -2635,43 +3197,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    get_hello_api_v1_hello_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Saludo exitoso */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SuccessResponse_HelloData_"];
-                };
-            };
-            /** @description Servicio temporalmente no disponible */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /** @example {
-                     *       "error": {
-                     *         "code": "SERVICE_UNAVAILABLE",
-                     *         "message": "El servicio de saludo está temporalmente no disponible"
-                     *       },
-                     *       "request_id": "550e8400-e29b-41d4-a716"
-                     *     } */
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    upload_csv_async_api_v1_uploads_csv_post: {
+    login_api_v1_auth_login_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -2680,7 +3206,435 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "multipart/form-data": components["schemas"]["Body_upload_csv_async_api_v1_uploads_csv_post"];
+                "application/json": components["schemas"]["UserLogin"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Token"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    refresh_access_token_api_v1_auth_refresh_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefreshToken"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Token"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    logout_api_v1_auth_logout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    logout_all_sessions_api_v1_auth_logout_all_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_current_user_info_api_v1_auth_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+        };
+    };
+    update_current_user_api_v1_auth_me_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_password_api_v1_auth_change_password_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserChangePassword"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_user_sessions_api_v1_auth_sessions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionInfo"][];
+                };
+            };
+        };
+    };
+    logout_session_api_v1_auth_sessions__session_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_users_api_v1_auth_users_get: {
+        parameters: {
+            query?: {
+                skip?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_user_api_v1_auth_users_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_user_api_v1_auth_users__user_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_user_api_v1_auth_users__user_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deactivate_user_api_v1_auth_users__user_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unlock_user_api_v1_auth_users__user_id__unlock_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_csv_async_api_v1_uploads_csv_async_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_csv_async_api_v1_uploads_csv_async_post"];
             };
         };
         responses: {
@@ -3432,7 +4386,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Archivo CSV con los eventos */
+            /** @description Archivo CSV/Excel con los eventos */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -3461,7 +4415,7 @@ export interface operations {
             };
         };
     };
-    list_tiposEno_api_v1_tiposEno__get: {
+    list_tipos_eno_api_v1_tiposEno__get: {
         parameters: {
             query?: {
                 /** @description Número de página */
@@ -3510,7 +4464,7 @@ export interface operations {
             };
         };
     };
-    list_gruposEno_api_v1_gruposEno__get: {
+    list_grupos_eno_api_v1_gruposEno__get: {
         parameters: {
             query?: {
                 /** @description Número de página */
@@ -3555,13 +4509,19 @@ export interface operations {
             };
         };
     };
-    get_all_chart_templates_api_v1_charts_templates_get: {
+    get_dashboard_charts_api_v1_charts_dashboard_get: {
         parameters: {
             query?: {
-                /** @description Filtrar por categoría */
-                categoria?: string | null;
-                /** @description Filtrar por tipo de visualización */
-                tipo_visualizacion?: string | null;
+                /** @description ID del grupo seleccionado */
+                grupo_id?: number | null;
+                /** @description ID del evento seleccionado */
+                evento_id?: number | null;
+                /** @description Fecha desde (formato: YYYY-MM-DD) */
+                fecha_desde?: string | null;
+                /** @description Fecha hasta (formato: YYYY-MM-DD) */
+                fecha_hasta?: string | null;
+                /** @description Filtrar por clasificaciones estratégicas */
+                clasificaciones?: string[] | null;
             };
             header?: never;
             path?: never;
@@ -3575,7 +4535,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SuccessResponse_List_ChartTemplateResponse__"];
+                    "application/json": components["schemas"]["SuccessResponse_DashboardChartsResponse_"];
                 };
             };
             /** @description Validation Error */
@@ -3587,18 +4547,69 @@ export interface operations {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
-            /** @description Error interno del servidor */
-            500: {
+        };
+    };
+    get_indicadores_api_v1_charts_indicadores_get: {
+        parameters: {
+            query?: {
+                /** @description ID del grupo seleccionado */
+                grupo_id?: number | null;
+                /** @description ID del evento seleccionado */
+                evento_id?: number | null;
+                /** @description Fecha desde (formato: YYYY-MM-DD) */
+                fecha_desde?: string | null;
+                /** @description Fecha hasta (formato: YYYY-MM-DD) */
+                fecha_hasta?: string | null;
+                /** @description Filtrar por clasificaciones estratégicas */
+                clasificaciones?: string[] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/json": components["schemas"]["SuccessResponse_IndicadoresResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
     };
-    execute_chart_api_v1_charts_execute_post: {
+    get_charts_disponibles_api_v1_charts_disponibles_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_ChartsDisponiblesResponse_"];
+                };
+            };
+        };
+    };
+    generate_report_api_v1_reports_generate_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -3607,7 +4618,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ExecuteChartRequest"];
+                "application/json": components["schemas"]["ReportRequest"];
             };
         };
         responses: {
@@ -3617,25 +4628,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SuccessResponse_ChartDataResponse_"];
-                };
-            };
-            /** @description Parámetros inválidos */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Chart no encontrado */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -3647,25 +4640,20 @@ export interface operations {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
-            /** @description Error interno del servidor */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
         };
     };
-    get_available_filters_api_v1_charts_filters_get: {
+    generate_zip_report_api_v1_reports_generate_zip_post: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -3673,39 +4661,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SuccessResponse_List_FilterDefinitionResponse__"];
-                };
-            };
-            /** @description Error interno del servidor */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    get_chart_availability_api_v1_charts_availability_get: {
-        parameters: {
-            query?: {
-                /** @description Filtrar por código de ENO */
-                tipo_eno_codigo?: string | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SuccessResponse_ChartAvailabilityResponse_"];
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -3717,13 +4673,105 @@ export interface operations {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
-            /** @description Error interno del servidor */
-            500: {
+        };
+    };
+    preview_report_api_v1_reports_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generate_report_signed_url_api_v1_reports_generate_signed_url_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportFiltersRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_SignedUrlResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_signed_url_endpoint_api_v1_reports_verify_signed_url_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifySignedUrlRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_VerifySignedUrlResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

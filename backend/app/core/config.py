@@ -1,6 +1,5 @@
 """Configuración de la aplicación."""
 
-import os
 from typing import List
 
 from pydantic_settings import BaseSettings

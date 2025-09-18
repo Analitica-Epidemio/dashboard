@@ -31,6 +31,27 @@ FROM python:3.11-slim
 RUN apt-get update && apt-get install -y \
     libpq5 \
     libmagic1 \
+    # Dependencias para Playwright\
+    wget \
+    ca-certificates \
+    fonts-liberation \
+    libasound2 \
+    libatk-bridge2.0-0 \
+    libatk1.0-0 \
+    libatspi2.0-0 \
+    libcups2 \
+    libdbus-1-3 \
+    libdrm2 \
+    libgbm1 \
+    libgtk-3-0 \
+    libnspr4 \
+    libnss3 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxkbcommon0 \
+    libxrandr2 \
+    xdg-utils \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
@@ -49,6 +70,11 @@ ENV PATH="/app/.venv/bin:$PATH"
 # Copiar código de la aplicación
 COPY --chown=epidemiologia:epidemiologia . .
 
+# Instalar Playwright browsers (como root antes de cambiar de usuario)
+USER root
+RUN python -m playwright install chromium --with-deps
+RUN chown -R epidemiologia:epidemiologia /ms-playwright
+
 # Crear directorios necesarios
 RUN mkdir -p /app/uploads /app/logs \
     && chown -R epidemiologia:epidemiologia /app/uploads /app/logs
@@ -58,6 +84,8 @@ ENV PYTHONPATH=/app
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV ENVIRONMENT=production
+# Playwright configuration
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 # Exponer puerto
 EXPOSE 8000

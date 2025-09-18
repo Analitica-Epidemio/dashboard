@@ -4,7 +4,7 @@ Tests unitarios para detectores inteligentes de tipo de sujeto.
 
 import pytest
 
-from app.domains.estrategias.detectors import MetadataExtractor, TipoSujetoDetector
+from app.domains.eventos_epidemiologicos.clasificacion.detectors import MetadataExtractor, TipoSujetoDetector
 
 
 class TestTipoSujetoDetector:

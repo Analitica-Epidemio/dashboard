@@ -8,7 +8,7 @@ Cada módulo en esta carpeta contiene seeds específicos:
 - (futuro) establishments: Establecimientos de salud
 """
 
-from app.scripts.seeds.strategies import main as seed_strategies
 from app.scripts.seeds.charts import main as seed_charts
+from app.scripts.seeds.strategies import main as seed_strategies
 
 __all__ = ["seed_strategies", "seed_charts"]

@@ -82,6 +82,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
                   disabled={!filters.selectedGroupId}
                   loading={eventsLoading}
                   error={eventsError?.message || null}
+                  groupId={filters.selectedGroupId}
                 />
               </div>
 

@@ -11,14 +11,14 @@ import pandas as pd
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domains.estrategias.models import (
+from app.domains.eventos_epidemiologicos.clasificacion.models import (
     ClassificationRule,
     EventStrategy,
     FilterCondition,
     TipoClasificacion,
     TipoFiltro,
 )
-from app.domains.estrategias.services import EventClassificationService
+from app.domains.eventos_epidemiologicos.clasificacion.services import EventClassificationService
 from tests.domains.estrategias.fixtures.csv_samples import RABIA_SAMPLES
 
 
