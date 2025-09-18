@@ -197,6 +197,9 @@ export const FullscreenFilterBuilder: React.FC<FullscreenFilterBuilderProps> = (
     if (!dateRange.from || !dateRange.to) return 'Seleccionar rango';
     return `${format(dateRange.from, 'd MMM yyyy', { locale: es })} - ${format(dateRange.to, 'd MMM yyyy', { locale: es })}`;
   };
+  
+  console.log("epiStart:", epiStart);
+	console.log("epiEnd:", epiEnd);
 
   return (
     <div className="h-full bg-gray-50 overflow-auto">
@@ -246,17 +249,30 @@ export const FullscreenFilterBuilder: React.FC<FullscreenFilterBuilderProps> = (
 
 					{/* Date range summary */}
 					{epiStart && epiEnd && (
-					  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-						<div className="flex items-center justify-between">
-						  <div>
-							<p className="text-sm text-blue-700 mb-1">Período seleccionado</p>
-							<p className="text-lg font-semibold text-blue-900">
-							  De la semana {getEpiWeek(epiStart).week} de {getEpiWeek(epiStart).year} a la semana {getEpiWeek(epiEnd).week} de {getEpiWeek(epiEnd).year}
-							</p>
+						  <div
+							className={`p-4 rounded-lg border ${
+							  epiStart.startDate <= epiEnd.endDate
+								? "bg-blue-50 border-blue-200"
+								: "bg-red-50 border-red-200"
+							}`}
+						  >
+							{epiStart.getTime() <= epiEnd.getTime() ? (
+							  <div>
+								<p className="text-sm text-blue-700 mb-1">Período seleccionado</p>
+								<p className="text-lg font-semibold text-blue-900">
+								  De la semana {getEpiWeek(epiStart).week} de {getEpiWeek(epiStart).year} a la semana {getEpiWeek(epiEnd).week} de {getEpiWeek(epiEnd).year}
+								</p>
+							  </div>
+							) : (
+							  <div>
+								<p className="text-sm text-red-700 mb-1">Error</p>
+								<p className="text-lg font-semibold text-red-900">
+								  La semana final no puede ser anterior a la inicial
+								</p>
+							  </div>
+							)}
 						  </div>
-						</div>
-					  </div>
-					)}
+						)}
 				  </div>
 				</CardContent>
             </Card>

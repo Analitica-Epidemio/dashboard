@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { getEpiWeek } from './epiweek-utils'; // Asegurate de tener esta función
+import { getEpiWeek, epiWeekToDates } from './epiweek-utils'; // Asegurate de tener esta función
 import { ChevronRight, ChevronLeft, ChevronFirst, ChevronLast } from 'lucide-react';
 
-// 🧠 Utilidad: generar matriz de semanas (domingo a sábado)
 function getCalendarWeeks(year: number, month: number) {
   const startOfMonth = new Date(year, month, 1);
   const endOfMonth = new Date(year, month + 1, 0);
@@ -26,7 +25,6 @@ function getCalendarWeeks(year: number, month: number) {
   return weeks;
 }
 
-// 🗓️ Meses en español (puede traducirse según necesidad)
 const MONTH_NAMES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
@@ -37,18 +35,25 @@ interface EpiCalendarProps {
 }
 
 export default function EpiCalendar({ onWeekSelect }: EpiCalendarProps) {
-  const today = new Date();
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [currentYear, setCurrentYear] = useState(today.getFullYear());
-  const [currentMonth, setCurrentMonth] = useState(today.getMonth());
+	const today = new Date();
+	const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+	const [selectedWeek, setSelectedWeek] = useState<{ startDate: Date; endDate: Date } | null>(null);
+	const [currentYear, setCurrentYear] = useState(today.getFullYear());
+	const [currentMonth, setCurrentMonth] = useState(today.getMonth());
 
-  const weeks = getCalendarWeeks(currentYear, currentMonth);
+	const weeks = getCalendarWeeks(currentYear, currentMonth);
 
 
-  const handleSelect = (date: Date) => {
-    setSelectedDate(date);
-    onWeekSelect?.(date); // 👈 Avisamos al padre
-  };
+	const handleSelect = (date: Date) => {
+		console.log(date.toDateString());
+		setSelectedDate(date);
+		const epiWeek = getEpiWeek(date);
+		console.log(epiWeek);
+		const rango = epiWeekToDates(epiWeek.year, epiWeek.week);
+		console.log(rango)
+		setSelectedWeek({startDate: rango.start, endDate: rango.end});
+		onWeekSelect?.(date);
+	};
 		
   const goToPrevMonth = () => {
     if (currentMonth === 0) {
@@ -78,7 +83,6 @@ export default function EpiCalendar({ onWeekSelect }: EpiCalendarProps) {
 
   return (
     <div style={{ display: 'inline-block', fontFamily: 'sans-serif' }}>
-      {/* 📅 Barra de navegación */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
 		 <button onClick={goToPrevYear} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
 			<ChevronFirst size={20}/>
@@ -96,8 +100,6 @@ export default function EpiCalendar({ onWeekSelect }: EpiCalendarProps) {
 			<ChevronLast size={20}/>
         </button>
       </div>
-
-      {/* 📆 Tabla del calendario */}
       <table style={{ borderCollapse: 'collapse' }}>
         <thead>
           <tr>
@@ -113,12 +115,12 @@ export default function EpiCalendar({ onWeekSelect }: EpiCalendarProps) {
             return (
               <tr key={wIdx}>
                 <td style={{ padding: '4px', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#f0f0f0' }}>
-                  SE {epiWeek}
+                  {epiWeek}
                 </td>
                 {week.map((date, dIdx) => {
                   const isCurrentMonth = date.getMonth() === currentMonth;
                   const isSelected = selectedDate?.toDateString() === date.toDateString();
-
+                  const isInSelectedWeek = selectedWeek && date >= selectedWeek.startDate && date <= selectedWeek.endDate;
                   return (
                     <td
                       key={dIdx}
@@ -126,7 +128,7 @@ export default function EpiCalendar({ onWeekSelect }: EpiCalendarProps) {
                       style={{
                         padding: '8px',
                         textAlign: 'center',
-                        backgroundColor: isSelected ? '#d0eaff' : isCurrentMonth ? '#fff' : '#eee',
+                        backgroundColor: isInSelectedWeek ? "#d0eaff" : isCurrentMonth ? "#fff" : "#eee",
                         cursor: 'pointer',
                         border: '1px solid #ccc',
                         width: '40px',
