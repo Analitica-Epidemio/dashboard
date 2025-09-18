@@ -3,14 +3,14 @@
  * Full-screen interface for building filter combinations
  */
 
-import React, { useState } from 'react';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { DateRangePicker } from '@/components/DateRangePicker';
-import { 
+import React, { useState } from "react";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { DateRangePicker } from "@/components/DateRangePicker";
+import {
   Plus,
   Filter,
   X,
@@ -20,14 +20,12 @@ import {
   Trash2,
   Copy,
   Check,
-} from 'lucide-react';
-import { GroupSelector } from './GroupSelector';
-import { EventSelector } from './EventSelector';
+} from "lucide-react";
 import {
-  ClassificationSelector,
   ClassificationBadges,
-  TipoClasificacion
-} from './ClassificationSelector';
+  ClassificationSelector,
+  GroupSelector,
+} from "../selectors";
 
 interface FilterCombination {
   id: string;
@@ -48,7 +46,10 @@ interface DateRange {
 interface FullscreenFilterBuilderProps {
   groups: any[];
   availableEvents: any[];
-  onApplyFilters: (dateRange: DateRange, combinations: FilterCombination[]) => void;
+  onApplyFilters: (
+    dateRange: DateRange,
+    combinations: FilterCombination[]
+  ) => void;
   groupsLoading: boolean;
   eventsLoading: boolean;
   groupsError: Error | null;
@@ -59,15 +60,17 @@ interface FullscreenFilterBuilderProps {
 
 // Predefined colors for combinations
 const COMBINATION_COLORS = [
-  'bg-blue-100 border-blue-300',
-  'bg-green-100 border-green-300',
-  'bg-purple-100 border-purple-300',
-  'bg-yellow-100 border-yellow-300',
-  'bg-pink-100 border-pink-300',
-  'bg-indigo-100 border-indigo-300',
+  "bg-blue-100 border-blue-300",
+  "bg-green-100 border-green-300",
+  "bg-purple-100 border-purple-300",
+  "bg-yellow-100 border-yellow-300",
+  "bg-pink-100 border-pink-300",
+  "bg-indigo-100 border-indigo-300",
 ];
 
-export const FullscreenFilterBuilder: React.FC<FullscreenFilterBuilderProps> = ({
+export const FullscreenFilterBuilder: React.FC<
+  FullscreenFilterBuilderProps
+> = ({
   groups,
   availableEvents,
   onApplyFilters,
@@ -89,26 +92,28 @@ export const FullscreenFilterBuilder: React.FC<FullscreenFilterBuilderProps> = (
   );
 
   // Estado para las combinaciones de filtros (usa valores iniciales si existen)
-  const [filterCombinations, setFilterCombinations] = useState<FilterCombination[]>(
-    initialCombinations || []
-  );
-  
+  const [filterCombinations, setFilterCombinations] = useState<
+    FilterCombination[]
+  >(initialCombinations || []);
+
   // Estado para el filtro que se está construyendo
   const [currentFilter, setCurrentFilter] = useState<FilterCombination>({
-    id: '',
+    id: "",
     groupId: null,
     eventIds: [],
   });
 
   // Estado para controlar qué eventos están disponibles para el grupo seleccionado
-  const [currentAvailableEvents, setCurrentAvailableEvents] = useState<any[]>([]);
+  const [currentAvailableEvents, setCurrentAvailableEvents] = useState<any[]>(
+    []
+  );
 
   // Agregar una nueva combinación de filtros
   const addFilterCombination = () => {
     if (!currentFilter.groupId) return;
 
-    const group = groups.find(g => String(g.id) === currentFilter.groupId);
-    const selectedEvents = currentAvailableEvents.filter(e => 
+    const group = groups.find((g) => String(g.id) === currentFilter.groupId);
+    const selectedEvents = currentAvailableEvents.filter((e) =>
       currentFilter.eventIds.includes(e.id)
     );
 
@@ -116,20 +121,26 @@ export const FullscreenFilterBuilder: React.FC<FullscreenFilterBuilderProps> = (
       id: `filter-${Date.now()}`,
       groupId: currentFilter.groupId,
       groupName: group?.name,
-      eventIds: currentFilter.eventIds.length > 0 ? currentFilter.eventIds :
-                currentAvailableEvents.map(e => e.id),
-      eventNames: currentFilter.eventIds.length > 0 ?
-                  selectedEvents.map(e => e.name) :
-                  ['Todos los eventos'],
+      eventIds:
+        currentFilter.eventIds.length > 0
+          ? currentFilter.eventIds
+          : currentAvailableEvents.map((e) => e.id),
+      eventNames:
+        currentFilter.eventIds.length > 0
+          ? selectedEvents.map((e) => e.name)
+          : ["Todos los eventos"],
       clasificaciones: currentFilter.clasificaciones,
-      color: COMBINATION_COLORS[filterCombinations.length % COMBINATION_COLORS.length],
+      color:
+        COMBINATION_COLORS[
+          filterCombinations.length % COMBINATION_COLORS.length
+        ],
     };
 
     setFilterCombinations([...filterCombinations, newCombination]);
-    
+
     // Limpiar el filtro actual
     setCurrentFilter({
-      id: '',
+      id: "",
       groupId: null,
       eventIds: [],
     });
@@ -138,7 +149,7 @@ export const FullscreenFilterBuilder: React.FC<FullscreenFilterBuilderProps> = (
 
   // Eliminar una combinación de filtros
   const removeFilterCombination = (id: string) => {
-    setFilterCombinations(filterCombinations.filter(f => f.id !== id));
+    setFilterCombinations(filterCombinations.filter((f) => f.id !== id));
   };
 
   // Duplicar una combinación de filtros
@@ -147,7 +158,10 @@ export const FullscreenFilterBuilder: React.FC<FullscreenFilterBuilderProps> = (
       ...combination,
       id: `filter-${Date.now()}`,
       label: `${combination.label || combination.groupName} (copia)`,
-      color: COMBINATION_COLORS[filterCombinations.length % COMBINATION_COLORS.length],
+      color:
+        COMBINATION_COLORS[
+          filterCombinations.length % COMBINATION_COLORS.length
+        ],
     };
     setFilterCombinations([...filterCombinations, newCombination]);
   };
@@ -159,10 +173,10 @@ export const FullscreenFilterBuilder: React.FC<FullscreenFilterBuilderProps> = (
       groupId: groupId,
       eventIds: [],
     });
-    
+
     if (groupId) {
       // Filtrar eventos por groupId (ambos son strings)
-      const groupEvents = availableEvents.filter(e => e.groupId === groupId);
+      const groupEvents = availableEvents.filter((e) => e.groupId === groupId);
       setCurrentAvailableEvents(groupEvents);
     } else {
       setCurrentAvailableEvents([]);
@@ -171,10 +185,10 @@ export const FullscreenFilterBuilder: React.FC<FullscreenFilterBuilderProps> = (
 
   // Manejar selección de eventos
   const handleEventToggle = (eventId: number) => {
-    setCurrentFilter(prev => ({
+    setCurrentFilter((prev) => ({
       ...prev,
       eventIds: prev.eventIds.includes(eventId)
-        ? prev.eventIds.filter(id => id !== eventId)
+        ? prev.eventIds.filter((id) => id !== eventId)
         : [...prev.eventIds, eventId],
     }));
   };
@@ -182,11 +196,11 @@ export const FullscreenFilterBuilder: React.FC<FullscreenFilterBuilderProps> = (
   // Select/Deselect all events
   const toggleAllEvents = () => {
     if (currentFilter.eventIds.length === currentAvailableEvents.length) {
-      setCurrentFilter(prev => ({ ...prev, eventIds: [] }));
+      setCurrentFilter((prev) => ({ ...prev, eventIds: [] }));
     } else {
-      setCurrentFilter(prev => ({ 
-        ...prev, 
-        eventIds: currentAvailableEvents.map(e => e.id) 
+      setCurrentFilter((prev) => ({
+        ...prev,
+        eventIds: currentAvailableEvents.map((e) => e.id),
       }));
     }
   };
@@ -197,8 +211,12 @@ export const FullscreenFilterBuilder: React.FC<FullscreenFilterBuilderProps> = (
   };
 
   const formatDateRange = () => {
-    if (!dateRange.from || !dateRange.to) return 'Seleccionar rango';
-    return `${format(dateRange.from, 'd MMM yyyy', { locale: es })} - ${format(dateRange.to, 'd MMM yyyy', { locale: es })}`;
+    if (!dateRange.from || !dateRange.to) return "Seleccionar rango";
+    return `${format(dateRange.from, "d MMM yyyy", { locale: es })} - ${format(
+      dateRange.to,
+      "d MMM yyyy",
+      { locale: es }
+    )}`;
   };
 
   return (
@@ -210,7 +228,8 @@ export const FullscreenFilterBuilder: React.FC<FullscreenFilterBuilderProps> = (
             Configurar Análisis Comparativo
           </h1>
           <p className="text-gray-600">
-            Define el período de tiempo y las combinaciones de filtros para tu análisis
+            Define el período de tiempo y las combinaciones de filtros para tu
+            análisis
           </p>
         </div>
 
@@ -245,7 +264,9 @@ export const FullscreenFilterBuilder: React.FC<FullscreenFilterBuilderProps> = (
                     <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm text-blue-700 mb-1">Período seleccionado</p>
+                          <p className="text-sm text-blue-700 mb-1">
+                            Período seleccionado
+                          </p>
                           <p className="text-lg font-semibold text-blue-900">
                             {formatDateRange()}
                           </p>
@@ -253,7 +274,12 @@ export const FullscreenFilterBuilder: React.FC<FullscreenFilterBuilderProps> = (
                         <div className="text-right">
                           <p className="text-sm text-blue-700 mb-1">Duración</p>
                           <p className="text-lg font-semibold text-blue-900">
-                            {Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24)) + 1} días
+                            {Math.ceil(
+                              (dateRange.to.getTime() -
+                                dateRange.from.getTime()) /
+                                (1000 * 60 * 60 * 24)
+                            ) + 1}{" "}
+                            días
                           </p>
                         </div>
                       </div>
@@ -288,53 +314,60 @@ export const FullscreenFilterBuilder: React.FC<FullscreenFilterBuilderProps> = (
                   </div>
 
                   {/* Event selector */}
-                  {currentFilter.groupId && currentAvailableEvents.length > 0 && (
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <label className="text-sm font-medium text-gray-700">
-                          2. Selecciona Eventos Específicos (opcional)
-                        </label>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={toggleAllEvents}
-                        >
-                          {currentFilter.eventIds.length === currentAvailableEvents.length ? (
-                            <>
-                              <X className="h-3 w-3 mr-1" />
-                              Deseleccionar todos
-                            </>
-                          ) : (
-                            <>
-                              <Check className="h-3 w-3 mr-1" />
-                              Seleccionar todos
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                      <div className="border border-gray-200 rounded-lg p-3 max-h-48 overflow-y-auto bg-white">
-                        <div className="grid grid-cols-2 gap-2">
-                          {currentAvailableEvents.map((event) => (
-                            <label
-                              key={event.id}
-                              className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={currentFilter.eventIds.includes(event.id)}
-                                onChange={() => handleEventToggle(event.id)}
-                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                              />
-                              <span className="text-sm text-gray-700">{event.name}</span>
-                            </label>
-                          ))}
+                  {currentFilter.groupId &&
+                    currentAvailableEvents.length > 0 && (
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="text-sm font-medium text-gray-700">
+                            2. Selecciona Eventos Específicos (opcional)
+                          </label>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={toggleAllEvents}
+                          >
+                            {currentFilter.eventIds.length ===
+                            currentAvailableEvents.length ? (
+                              <>
+                                <X className="h-3 w-3 mr-1" />
+                                Deseleccionar todos
+                              </>
+                            ) : (
+                              <>
+                                <Check className="h-3 w-3 mr-1" />
+                                Seleccionar todos
+                              </>
+                            )}
+                          </Button>
                         </div>
+                        <div className="border border-gray-200 rounded-lg p-3 max-h-48 overflow-y-auto bg-white">
+                          <div className="grid grid-cols-2 gap-2">
+                            {currentAvailableEvents.map((event) => (
+                              <label
+                                key={event.id}
+                                className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={currentFilter.eventIds.includes(
+                                    event.id
+                                  )}
+                                  onChange={() => handleEventToggle(event.id)}
+                                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                />
+                                <span className="text-sm text-gray-700">
+                                  {event.name}
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Si no seleccionas ninguno, se incluirán todos los
+                          eventos del grupo
+                        </p>
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Si no seleccionas ninguno, se incluirán todos los eventos del grupo
-                      </p>
-                    </div>
-                  )}
+                    )}
 
                   {/* Classification selector */}
                   {currentFilter.groupId && (
@@ -343,7 +376,9 @@ export const FullscreenFilterBuilder: React.FC<FullscreenFilterBuilderProps> = (
                         3. Selecciona Clasificaciones (opcional)
                       </label>
                       <ClassificationSelector
-                        selectedClassifications={currentFilter.clasificaciones || []}
+                        selectedClassifications={
+                          currentFilter.clasificaciones || []
+                        }
                         onClassificationChange={(classifications) =>
                           setCurrentFilter({
                             ...currentFilter,
@@ -353,7 +388,8 @@ export const FullscreenFilterBuilder: React.FC<FullscreenFilterBuilderProps> = (
                         placeholder="Todas las clasificaciones"
                       />
                       <p className="text-xs text-gray-500 mt-1">
-                        Filtrar por estado epidemiológico (confirmados, sospechosos, etc.)
+                        Filtrar por estado epidemiológico (confirmados,
+                        sospechosos, etc.)
                       </p>
                     </div>
                   )}
@@ -411,13 +447,16 @@ export const FullscreenFilterBuilder: React.FC<FullscreenFilterBuilderProps> = (
                 ) : (
                   <div className="space-y-2">
                     {filterCombinations.map((combination, index) => (
-                      <div 
-                        key={combination.id} 
+                      <div
+                        key={combination.id}
                         className="border rounded-lg p-3 bg-white hover:shadow-sm transition-shadow"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2 flex-1">
-                            <Badge variant="outline" className="text-xs font-semibold">
+                            <Badge
+                              variant="outline"
+                              className="text-xs font-semibold"
+                            >
                               {index + 1}
                             </Badge>
                             <div className="flex-1">
@@ -425,13 +464,11 @@ export const FullscreenFilterBuilder: React.FC<FullscreenFilterBuilderProps> = (
                                 {combination.groupName}
                               </span>
                               <span className="text-xs text-gray-500 ml-2">
-                                {combination.eventIds.length === 0 ? (
-                                  'Todos los eventos'
-                                ) : combination.eventIds.length === 1 ? (
-                                  `1 evento`
-                                ) : (
-                                  `${combination.eventIds.length} eventos`
-                                )}
+                                {combination.eventIds.length === 0
+                                  ? "Todos los eventos"
+                                  : combination.eventIds.length === 1
+                                  ? `1 evento`
+                                  : `${combination.eventIds.length} eventos`}
                               </span>
                             </div>
                           </div>
@@ -440,7 +477,9 @@ export const FullscreenFilterBuilder: React.FC<FullscreenFilterBuilderProps> = (
                               size="icon"
                               variant="ghost"
                               className="h-6 w-6"
-                              onClick={() => duplicateFilterCombination(combination)}
+                              onClick={() =>
+                                duplicateFilterCombination(combination)
+                              }
                             >
                               <Copy className="h-3 w-3" />
                             </Button>
@@ -448,33 +487,48 @@ export const FullscreenFilterBuilder: React.FC<FullscreenFilterBuilderProps> = (
                               size="icon"
                               variant="ghost"
                               className="h-6 w-6 hover:text-red-600"
-                              onClick={() => removeFilterCombination(combination.id)}
+                              onClick={() =>
+                                removeFilterCombination(combination.id)
+                              }
                             >
                               <X className="h-3 w-3" />
                             </Button>
                           </div>
                         </div>
-                        {combination.eventNames && combination.eventNames.length > 0 && combination.eventNames[0] !== 'Todos los eventos' && (
-                          <div className="mt-2 flex flex-wrap gap-1">
-                            {combination.eventNames.slice(0, 3).map((name, i) => (
-                              <span key={i} className="text-xs text-gray-600">
-                                {name}{i < Math.min(2, combination.eventNames!.length - 1) && ','}
-                              </span>
-                            ))}
-                            {combination.eventNames.length > 3 && (
-                              <span className="text-xs text-gray-500">
-                                +{combination.eventNames.length - 3} más
-                              </span>
-                            )}
-                          </div>
-                        )}
-                        {combination.clasificaciones && combination.clasificaciones.length > 0 && (
-                          <div className="mt-2">
-                            <ClassificationBadges
-                              classifications={combination.clasificaciones}
-                            />
-                          </div>
-                        )}
+                        {combination.eventNames &&
+                          combination.eventNames.length > 0 &&
+                          combination.eventNames[0] !== "Todos los eventos" && (
+                            <div className="mt-2 flex flex-wrap gap-1">
+                              {combination.eventNames
+                                .slice(0, 3)
+                                .map((name, i) => (
+                                  <span
+                                    key={i}
+                                    className="text-xs text-gray-600"
+                                  >
+                                    {name}
+                                    {i <
+                                      Math.min(
+                                        2,
+                                        combination.eventNames!.length - 1
+                                      ) && ","}
+                                  </span>
+                                ))}
+                              {combination.eventNames.length > 3 && (
+                                <span className="text-xs text-gray-500">
+                                  +{combination.eventNames.length - 3} más
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        {combination.clasificaciones &&
+                          combination.clasificaciones.length > 0 && (
+                            <div className="mt-2">
+                              <ClassificationBadges
+                                classifications={combination.clasificaciones}
+                              />
+                            </div>
+                          )}
                       </div>
                     ))}
                   </div>
@@ -483,13 +537,17 @@ export const FullscreenFilterBuilder: React.FC<FullscreenFilterBuilderProps> = (
                 {/* Apply button */}
                 {filterCombinations.length > 0 && (
                   <div className="mt-6">
-                    <Button 
-                      className="w-full bg-green-600 hover:bg-green-700" 
+                    <Button
+                      className="w-full bg-green-600 hover:bg-green-700"
                       size="lg"
                       onClick={handleApplyFilters}
                     >
                       <Play className="h-4 w-4 mr-2" />
-                      Aplicar y Analizar ({filterCombinations.length} {filterCombinations.length === 1 ? 'combinación' : 'combinaciones'})
+                      Aplicar y Analizar ({filterCombinations.length}{" "}
+                      {filterCombinations.length === 1
+                        ? "combinación"
+                        : "combinaciones"}
+                      )
                     </Button>
                   </div>
                 )}

@@ -13,7 +13,7 @@ import { env } from '@/env';
  */
 export function useGenerateReport() {
   return $api.useMutation('post', '/api/v1/reports/generate', {
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       // Auto-download the PDF if it's a blob
       if (data?.data instanceof Blob) {
         const url = URL.createObjectURL(data.data);

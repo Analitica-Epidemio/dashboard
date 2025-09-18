@@ -3,22 +3,22 @@
  * Allows selecting multiple epidemiological classifications for filtering
  */
 
-import React from 'react';
-import { Check, ChevronDown } from 'lucide-react';
+import React from "react";
+import { Check, ChevronDown } from "lucide-react";
 import {
   Command,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
-} from '@/components/ui/command';
+} from "@/components/ui/command";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@/components/ui/popover';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+} from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 // Tipos de clasificación epidemiológica
 export enum TipoClasificacion {
@@ -37,15 +37,20 @@ export enum TipoClasificacion {
 // Colores para cada clasificación
 const CLASSIFICATION_COLORS: Record<TipoClasificacion, string> = {
   [TipoClasificacion.CONFIRMADOS]: "bg-red-100 text-red-800 border-red-300",
-  [TipoClasificacion.SOSPECHOSOS]: "bg-yellow-100 text-yellow-800 border-yellow-300",
-  [TipoClasificacion.PROBABLES]: "bg-orange-100 text-orange-800 border-orange-300",
+  [TipoClasificacion.SOSPECHOSOS]:
+    "bg-yellow-100 text-yellow-800 border-yellow-300",
+  [TipoClasificacion.PROBABLES]:
+    "bg-orange-100 text-orange-800 border-orange-300",
   [TipoClasificacion.EN_ESTUDIO]: "bg-blue-100 text-blue-800 border-blue-300",
   [TipoClasificacion.NEGATIVOS]: "bg-green-100 text-green-800 border-green-300",
   [TipoClasificacion.DESCARTADOS]: "bg-gray-100 text-gray-800 border-gray-300",
-  [TipoClasificacion.NOTIFICADOS]: "bg-purple-100 text-purple-800 border-purple-300",
+  [TipoClasificacion.NOTIFICADOS]:
+    "bg-purple-100 text-purple-800 border-purple-300",
   [TipoClasificacion.CON_RESULTADO_MORTAL]: "bg-black text-white border-black",
-  [TipoClasificacion.SIN_RESULTADO_MORTAL]: "bg-gray-200 text-gray-700 border-gray-400",
-  [TipoClasificacion.REQUIERE_REVISION]: "bg-pink-100 text-pink-800 border-pink-300",
+  [TipoClasificacion.SIN_RESULTADO_MORTAL]:
+    "bg-gray-200 text-gray-700 border-gray-400",
+  [TipoClasificacion.REQUIERE_REVISION]:
+    "bg-pink-100 text-pink-800 border-pink-300",
 };
 
 // Labels amigables
@@ -67,7 +72,6 @@ interface ClassificationSelectorProps {
   onClassificationChange: (classifications: TipoClasificacion[]) => void;
   placeholder?: string;
   disabled?: boolean;
-  maxSelections?: number;
 }
 
 export const ClassificationSelector: React.FC<ClassificationSelectorProps> = ({
@@ -75,7 +79,6 @@ export const ClassificationSelector: React.FC<ClassificationSelectorProps> = ({
   onClassificationChange,
   placeholder = "Seleccionar clasificaciones...",
   disabled = false,
-  maxSelections,
 }) => {
   const [open, setOpen] = React.useState(false);
 
@@ -85,13 +88,10 @@ export const ClassificationSelector: React.FC<ClassificationSelectorProps> = ({
     if (isSelected) {
       // Deseleccionar
       onClassificationChange(
-        selectedClassifications.filter(c => c !== classification)
+        selectedClassifications.filter((c) => c !== classification)
       );
     } else {
-      // Seleccionar (si no hay límite o no se ha alcanzado)
-      if (!maxSelections || selectedClassifications.length < maxSelections) {
-        onClassificationChange([...selectedClassifications, classification]);
-      }
+      onClassificationChange([...selectedClassifications, classification]);
     }
   };
 
@@ -137,9 +137,9 @@ export const ClassificationSelector: React.FC<ClassificationSelectorProps> = ({
               </CommandItem>
             )}
             {Object.values(TipoClasificacion).map((classification) => {
-              const isSelected = selectedClassifications.includes(classification);
-              const isDisabled = !isSelected && maxSelections &&
-                selectedClassifications.length >= maxSelections;
+              const isSelected =
+                selectedClassifications.includes(classification);
+              const isDisabled = !isSelected;
 
               return (
                 <CommandItem
@@ -152,7 +152,7 @@ export const ClassificationSelector: React.FC<ClassificationSelectorProps> = ({
                   <div className="flex items-center gap-2">
                     <Check
                       className={`h-4 w-4 ${
-                        isSelected ? 'opacity-100' : 'opacity-0'
+                        isSelected ? "opacity-100" : "opacity-0"
                       }`}
                     />
                     <Badge
@@ -179,9 +179,7 @@ export const ClassificationBadges: React.FC<{
 }> = ({ classifications, onRemove }) => {
   if (classifications.length === 0) {
     return (
-      <span className="text-sm text-gray-500">
-        Todas las clasificaciones
-      </span>
+      <span className="text-sm text-gray-500">Todas las clasificaciones</span>
     );
   }
 

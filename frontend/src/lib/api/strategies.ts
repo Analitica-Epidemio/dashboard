@@ -1,29 +1,8 @@
 import { $api } from './client'
+import { paths } from './types';
 
 // Types
-export interface EventStrategy {
-  id: number
-  tipo_evento_id: number
-  tipo_evento_nombre?: string
-  strategy_config: {
-    condition: string
-    value: any
-  }
-  is_active: boolean
-  created_at: string
-  updated_at: string
-  created_by?: string
-  updated_by?: string
-}
-
-export interface AuditLogEntry {
-  id: number
-  strategy_id: number
-  action: string
-  timestamp: string
-  user?: string
-  details?: any
-}
+export type EventStrategy = paths['/api/v1/estrategias/{strategy_id}']['get']['responses']['200']['content']['application/json']['data'];
 
 // Helper function to extract data from API responses
 export const extractSuccessData = <T>(response: { data?: T; success?: boolean } | undefined): T | null => {
