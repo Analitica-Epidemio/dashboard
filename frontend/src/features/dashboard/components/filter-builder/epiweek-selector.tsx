@@ -32,6 +32,9 @@ const MONTH_NAMES = [
 
 interface EpiCalendarProps {
   onWeekSelect?: (date: Date) => void;
+  selectedStart?: { year: number; week: number; startDate: Date; endDate: Date } | null;
+  selectedEnd?: { year: number; week: number; startDate: Date; endDate: Date } | null;
+  selectingEnd?: boolean;
 }
 
 export default function EpiCalendar({ onWeekSelect }: EpiCalendarProps) {

@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { DateRangeSelector } from './DateRangeSelector'
+import { EpiWeekRangeSelector } from './EpiWeekRangeSelector'
 import { FilterCombinationBuilder } from './FilterCombinationBuilder'
 import { FilterCombinationsList } from './FilterCombinationsList'
 
@@ -23,7 +23,7 @@ export function FilterBuilderView() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Date Range & Filter Builder */}
           <div className="lg:col-span-2 space-y-6">
-            <DateRangeSelector />
+            <EpiWeekRangeSelector />
             <FilterCombinationBuilder />
           </div>
 

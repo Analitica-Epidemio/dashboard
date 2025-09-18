@@ -52,7 +52,9 @@ export function getEpiWeek(date: Date): { year: number; week: number } {
     weekStart.setDate(weekStart.getDate() + 7);
     week++;
   }
-  
+
+  // Fallback (should not reach here)
+  return { year, week: 1 };
 }
 
 
