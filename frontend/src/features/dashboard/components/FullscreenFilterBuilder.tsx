@@ -3,7 +3,7 @@
  * Full-screen interface for building filter combinations
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 import { GroupSelector } from './GroupSelector';
 import { EventSelector } from './EventSelector';
+import EpiCalendar from '@/features/dashboard/components/epiweek-selector'
+import { getEpiWeek } from '@/features/dashboard/components/epiweek-utils'
 import {
   ClassificationSelector,
   ClassificationBadges,
@@ -79,14 +81,17 @@ export const FullscreenFilterBuilder: React.FC<FullscreenFilterBuilderProps> = (
   initialCombinations,
 }) => {
   // Estado para el rango de fechas global (usa valores iniciales si existen)
-  const [dateRange, setDateRange] = useState<DateRange>(
-    initialDateRange && initialDateRange.from && initialDateRange.to
-      ? initialDateRange
-      : {
-          from: new Date(new Date().setMonth(new Date().getMonth() - 3)), // Últimos 3 meses por defecto
-          to: new Date(),
-        }
-  );
+	const [epiStart, setEpiStart] = useState<EpiWeekRange | null>(null);
+	const [epiEnd, setEpiEnd] = useState<EpiWeekRange | null>(null);
+
+	const [dateRange, setDateRange] = useState<{ from: Date; to: Date } | null>(null);
+
+	useEffect(() => {
+	  if (epiStart && epiEnd) {
+		setDateRange({ from: epiStart.startDate, to: epiEnd.endDate });
+	  }
+	}, [epiStart, epiEnd]);
+
 
   // Estado para las combinaciones de filtros (usa valores iniciales si existen)
   const [filterCombinations, setFilterCombinations] = useState<FilterCombination[]>(
@@ -200,6 +205,9 @@ export const FullscreenFilterBuilder: React.FC<FullscreenFilterBuilderProps> = (
     if (!dateRange.from || !dateRange.to) return 'Seleccionar rango';
     return `${format(dateRange.from, 'd MMM yyyy', { locale: es })} - ${format(dateRange.to, 'd MMM yyyy', { locale: es })}`;
   };
+  
+  console.log("epiStart:", epiStart);
+	console.log("epiEnd:", epiEnd);
 
   return (
     <div className="h-full bg-gray-50 overflow-auto">
@@ -226,41 +234,55 @@ export const FullscreenFilterBuilder: React.FC<FullscreenFilterBuilderProps> = (
                   Período de Análisis
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {/* Enhanced Date Range Picker */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Selecciona el período de análisis
-                    </label>
-                    <DateRangePicker
-                      value={dateRange}
-                      onChange={setDateRange}
-                      className="w-full"
-                    />
-                  </div>
+				<CardContent>
+				  <div className="space-y-4">
+					{/* Enhanced Date Range Picker */}
+					<div className="flex gap-6">
+					  {/* Selector de inicio */}
+					  <div className="flex-1">
+						<label className="block text-sm font-medium text-gray-700 mb-2">
+						  Primera semana epidemiológica
+						</label>
+						<EpiCalendar onWeekSelect={setEpiStart} />
+					  </div>
 
-                  {/* Date range summary */}
-                  {dateRange.from && dateRange.to && (
-                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-blue-700 mb-1">Período seleccionado</p>
-                          <p className="text-lg font-semibold text-blue-900">
-                            {formatDateRange()}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm text-blue-700 mb-1">Duración</p>
-                          <p className="text-lg font-semibold text-blue-900">
-                            {Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24)) + 1} días
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
+					  {/* Selector de fin */}
+					  <div className="flex-1">
+						<label className="block text-sm font-medium text-gray-700 mb-2">
+						  Última semana epidemiológica
+						</label>
+						<EpiCalendar onWeekSelect={setEpiEnd} />
+					  </div>
+					</div>
+
+					{/* Date range summary */}
+					{epiStart && epiEnd && (
+						  <div
+							className={`p-4 rounded-lg border ${
+							  epiStart.startDate <= epiEnd.endDate
+								? "bg-blue-50 border-blue-200"
+								: "bg-red-50 border-red-200"
+							}`}
+						  >
+							{epiStart.getTime() <= epiEnd.getTime() ? (
+							  <div>
+								<p className="text-sm text-blue-700 mb-1">Período seleccionado</p>
+								<p className="text-lg font-semibold text-blue-900">
+								  De la semana {getEpiWeek(epiStart).week} de {getEpiWeek(epiStart).year} a la semana {getEpiWeek(epiEnd).week} de {getEpiWeek(epiEnd).year}
+								</p>
+							  </div>
+							) : (
+							  <div>
+								<p className="text-sm text-red-700 mb-1">Error</p>
+								<p className="text-lg font-semibold text-red-900">
+								  La semana final no puede ser anterior a la inicial
+								</p>
+							  </div>
+							)}
+						  </div>
+						)}
+				  </div>
+				</CardContent>
             </Card>
 
             {/* Filter Builder Card */}
