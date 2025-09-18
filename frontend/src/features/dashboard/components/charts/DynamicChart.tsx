@@ -54,7 +54,13 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
   data,
   config = {},
 }) => {
-  console.log({ data, tipo, nombre, descripcion });
+  console.log("DynamicChart - Rendering:", {
+    codigo,
+    tipo,
+    nombre,
+    data,
+    config
+  });
   // Renderizar el tipo de chart apropiado
   const renderChart = () => {
     if (!data || !data.data) {
@@ -245,7 +251,7 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
 
       case "mapa":
         // Renderizar mapa geográfico de Chubut
-        if (!data.data || !data.data.departamentos) {
+        if (!data?.data || !data.data.departamentos) {
           return (
             <div className="flex items-center justify-center h-48 text-gray-500">
               No hay datos geográficos disponibles

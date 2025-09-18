@@ -79,7 +79,11 @@ const DynamicChartsColumn: React.FC<{
     );
   }
 
-  console.log({ data });
+  console.log("ComparativeDashboard - API Response:", {
+    data,
+    charts: data?.data?.charts,
+    combination
+  });
 
   return (
     <div className="flex-1 overflow-y-auto p-4">

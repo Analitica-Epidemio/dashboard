@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import type { DashboardFilters, Group, Event, ChartData } from '../types'
-import { useGroups, useAllEvents, useEventsByGroup, useChartData } from '../services/queries'
+import type { DashboardFilters, Group, Event } from '../types'
+import { useGroups, useAllEvents, useEventsByGroup } from '../services/queries'
 
 // Tipo más flexible para errores de query - compatible con react-query
 type QueryError = unknown;
@@ -22,10 +22,6 @@ interface UseDashboardFiltersResult {
   availableEvents: Event[];
   eventsLoading: boolean;
   eventsError: QueryError;
-  // Chart data and state
-  chartData: ChartData[];
-  chartDataLoading: boolean;
-  chartDataError: QueryError;
   // Selected items
   selectedGroup: Group | null;
   selectedEvent: Event | null;
@@ -44,7 +40,6 @@ export const useDashboardFilters = (): UseDashboardFiltersResult => {
   const groupsQuery = useGroups()
   const allEventsQuery = useAllEvents()
   const eventsQuery = useEventsByGroup(filters.selectedGroupId)
-  const chartDataQuery = useChartData(filters.selectedEventId)
 
   const selectedGroup = useMemo((): Group | null =>
     groupsQuery.data?.find((group: Group) => group.id === filters.selectedGroupId) ?? null,
@@ -89,11 +84,6 @@ export const useDashboardFilters = (): UseDashboardFiltersResult => {
     availableEvents: eventsQuery.data ?? [],
     eventsLoading: eventsQuery.isLoading,
     eventsError: eventsQuery.error,
-
-    // Chart data and state
-    chartData: chartDataQuery.data ?? [],
-    chartDataLoading: chartDataQuery.isLoading,
-    chartDataError: chartDataQuery.error,
 
     selectedGroup,
     selectedEvent,

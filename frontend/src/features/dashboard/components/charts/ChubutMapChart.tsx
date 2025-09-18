@@ -2,10 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { ChubutSvg } from "@/components/chubut.svg";
-import {
-  DEPARTAMENTO_INDEC_TO_SVG,
-  getSvgIdFromIndec,
-} from "../../constants/chubut-mapping";
+import { getSvgIdFromIndec } from "../../constants/chubut-mapping";
 
 interface DepartmentData {
   codigo_indec: number;
@@ -42,23 +39,22 @@ export const ChubutMapChart: React.FC<ChubutMapChartProps> = ({ data }) => {
     return map;
   }, [data.departamentos]);
 
-  // Calcular el color basado en la tasa de incidencia
-  const getColorForDepartment = (svgId: string): string => {
-    const dept = dataByDeptId.get(svgId);
-    if (!dept) return "#e0e0e0";
-
-    const tasa = dept.tasa_incidencia;
-    if (tasa === 0) return "#f0f0f0";
-    if (tasa < 1) return "#fee0d2";
-    if (tasa < 5) return "#fcbba1";
-    if (tasa < 10) return "#fc9272";
-    if (tasa < 20) return "#fb6a4a";
-    if (tasa < 50) return "#ef3b2c";
-    return "#cb181d";
-  };
-
   // Add colors and hover handlers to SVG paths
   useEffect(() => {
+    // Calcular el color basado en la tasa de incidencia
+    const getColorForDepartment = (svgId: string): string => {
+      const dept = dataByDeptId.get(svgId);
+      if (!dept) return "#e0e0e0";
+
+      const tasa = dept.tasa_incidencia;
+      if (tasa === 0) return "#f0f0f0";
+      if (tasa < 1) return "#fee0d2";
+      if (tasa < 5) return "#fcbba1";
+      if (tasa < 10) return "#fc9272";
+      if (tasa < 20) return "#fb6a4a";
+      if (tasa < 50) return "#ef3b2c";
+      return "#cb181d";
+    };
     if (!svgRef.current) return;
 
     const svgElement = svgRef.current.querySelector("svg");
