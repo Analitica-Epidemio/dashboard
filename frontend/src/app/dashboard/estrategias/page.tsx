@@ -597,10 +597,12 @@ export default function ConfiguracionPage() {
         <Sheet open={viewSheetOpen} onOpenChange={setViewSheetOpen}>
           <SheetContent className="w-full overflow-y-auto sm:max-w-3xl lg:max-w-4xl p-0">
             <div className="p-6">
-              <StrategyPreview
-                strategy={selectedStrategy}
-                onClose={() => setViewSheetOpen(false)}
-              />
+              {selectedStrategy && (
+                <StrategyPreview
+                  strategy={selectedStrategy}
+                  onClose={() => setViewSheetOpen(false)}
+                />
+              )}
             </div>
           </SheetContent>
         </Sheet>

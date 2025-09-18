@@ -71,8 +71,12 @@ export function useDashboardCharts(params: DashboardChartsParams) {
       const { getSession } = await import('next-auth/react');
       const session = await getSession();
 
-      const response = await fetch(`${env.NEXT_PUBLIC_API_HOST}/api/v1/charts/dashboard?${queryParams.toString()}`, {
+      const url = `${env.NEXT_PUBLIC_API_HOST}/api/v1/charts/dashboard?${queryParams.toString()}`;
+      console.log('Fetching dashboard charts from:', url);
+
+      const response = await fetch(url, {
         headers: {
+          'Content-Type': 'application/json',
           ...(session?.accessToken && {
             'Authorization': `Bearer ${session.accessToken}`
           })
@@ -80,10 +84,14 @@ export function useDashboardCharts(params: DashboardChartsParams) {
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
         throw new Error(`Error fetching charts: ${response.statusText}`);
       }
 
-      return response.json();
+      const jsonData = await response.json();
+      console.log('Dashboard charts response:', jsonData);
+      return jsonData;
     },
     enabled: !!params.grupoId, // Solo ejecutar si hay grupo seleccionado
   });

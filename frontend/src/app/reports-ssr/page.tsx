@@ -6,9 +6,9 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { DynamicChart } from "@/features/dashboard/components/DynamicChart";
 import { env } from "@/env";
 import { createHmac } from "crypto";
+import { DynamicChart } from "@/features/dashboard/components/charts/DynamicChart";
 
 interface PageProps {
   searchParams: Promise<{
@@ -92,18 +92,24 @@ async function fetchReportData(
   // Pass signed URL parameters in headers if available
   const headers: HeadersInit = signedUrlParams
     ? {
-        'X-Signed-Data': signedUrlParams.data,
-        'X-Signed-Signature': signedUrlParams.signature,
+        "X-Signed-Data": signedUrlParams.data,
+        "X-Signed-Signature": signedUrlParams.signature,
       }
     : {};
 
   // Debug logging
   if (signedUrlParams) {
-    console.log('📝 Using signed URL authentication');
-    console.log('  X-Signed-Data:', signedUrlParams.data?.substring(0, 50) + '...');
-    console.log('  X-Signed-Signature:', signedUrlParams.signature?.substring(0, 20) + '...');
+    console.log("📝 Using signed URL authentication");
+    console.log(
+      "  X-Signed-Data:",
+      signedUrlParams.data?.substring(0, 50) + "..."
+    );
+    console.log(
+      "  X-Signed-Signature:",
+      signedUrlParams.signature?.substring(0, 20) + "..."
+    );
   } else {
-    console.log('🔐 No signed URL params, will use regular auth if available');
+    console.log("🔐 No signed URL params, will use regular auth if available");
   }
 
   const processedCombinations = [];
@@ -206,7 +212,11 @@ export default async function ReportsSSRPage({ searchParams }: PageProps) {
   }
 
   // Fetch data server-side - pass signed URL params if available
-  const reportData = await fetchReportData(filterCombinations, dateRange, signedUrlParams);
+  const reportData = await fetchReportData(
+    filterCombinations,
+    dateRange,
+    signedUrlParams
+  );
   console.log(reportData);
 
   const formatDate = (dateStr: string | null) => {
@@ -338,7 +348,7 @@ export default async function ReportsSSRPage({ searchParams }: PageProps) {
             {/* Charts Grid */}
             {combination.charts && combination.charts.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {combination.charts.map((chart: any) => (
+                {combination.charts.map((chart: { codigo: string; nombre: string; descripcion?: string; tipo: string; data: unknown; config?: unknown }) => (
                   <DynamicChart
                     key={chart.codigo}
                     codigo={chart.codigo}

@@ -20,7 +20,7 @@ export interface EventoFilters {
   provincia?: string;
   tipo_sujeto?: string;
   requiere_revision?: boolean;
-  sort_by?: string;
+  sort_by?: 'fecha_desc' | 'fecha_asc' | 'id_desc' | 'id_asc' | 'tipo_eno';
 }
 
 /**
@@ -68,7 +68,7 @@ export function useEventos(params?: EventoFilters) {
     '/api/v1/eventos/',
     {
       params: {
-        query: params as any,
+        query: params,
       },
     }
   );
@@ -98,13 +98,13 @@ export function getClasificacionLabel(clasificacion: string | null | undefined):
   return labels[clasificacion] || clasificacion;
 }
 
-export function getClasificacionVariant(clasificacion: string | null | undefined): "default" | "destructive" | "success" | "warning" | "secondary" {
+export function getClasificacionVariant(clasificacion: string | null | undefined): "default" | "destructive" | "secondary" | "outline" {
   if (!clasificacion) return "default";
 
-  const variants: Record<string, "default" | "destructive" | "success" | "warning" | "secondary"> = {
-    'sospechoso': 'warning',
+  const variants: Record<string, "default" | "destructive" | "secondary" | "outline"> = {
+    'sospechoso': 'outline', // Era 'warning', cambiado a 'outline'
     'confirmado': 'destructive',
-    'descartado': 'success',
+    'descartado': 'secondary', // Era 'success', cambiado a 'secondary'
     'probable': 'secondary',
     'no_conclusivo': 'default',
   };

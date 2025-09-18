@@ -1,6 +1,0 @@
-export { DashboardContent } from './components/DashboardContent'
-export { GroupSelector } from './components/GroupSelector'
-export { EventSelector } from './components/EventSelector'
-export { ChartCard } from './components/ChartComponents'
-export { useDashboardFilters } from './hooks/useDashboardFilters'
-export * from './types'

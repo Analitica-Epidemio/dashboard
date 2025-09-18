@@ -21,28 +21,16 @@ import {
   Eye,
   History,
 } from "lucide-react";
-import {
-  type EventStrategy,
-  type AuditLogEntry,
-  useStrategyAuditLog,
-  extractSuccessData,
-} from "@/lib/api/strategies";
+import { type EventStrategy, extractSuccessData } from "@/lib/api/strategies";
 
 type Strategy = EventStrategy;
 
 interface StrategyPreviewProps {
-  strategy: Strategy | null;
+  strategy: Strategy;
   onClose: () => void;
 }
 
 export function StrategyPreview({ strategy, onClose }: StrategyPreviewProps) {
-  // Fetch audit log - hooks must be called before any conditional returns
-  const auditLogQuery = useStrategyAuditLog(strategy?.id || 0);
-  const auditLogData = extractSuccessData<AuditLogEntry[]>(auditLogQuery.data);
-  const auditLog = Array.isArray(auditLogData) ? auditLogData : [];
-
-  if (!strategy) return null;
-
   const getFilterDescription = (filter: {
     filter_type: string;
     field_name?: string | null;
@@ -370,93 +358,6 @@ export function StrategyPreview({ strategy, onClose }: StrategyPreviewProps) {
       </div>
 
       <Separator />
-
-      {/* Recent Activity Section */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Historial de Cambios</h3>
-          {auditLogQuery.isLoading && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <History className="h-3 w-3 animate-spin" />
-              <span>Cargando...</span>
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-3">
-          {auditLogQuery.isLoading ? (
-            <>
-              <Skeleton className="h-16 w-full" />
-              <Skeleton className="h-16 w-full" />
-              <Skeleton className="h-16 w-full" />
-            </>
-          ) : auditLog.length === 0 ? (
-            <div className="text-center py-8 text-sm text-muted-foreground">
-              <History className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p>No hay historial de cambios disponible</p>
-            </div>
-          ) : (
-            auditLog.map((log) => {
-              const getActionIcon = () => {
-                switch (log.action) {
-                  case "CREATE":
-                    return <CheckCircle className="h-4 w-4 text-green-500" />;
-                  case "UPDATE":
-                    return <AlertCircle className="h-4 w-4 text-blue-500" />;
-                  case "DELETE":
-                    return <XCircle className="h-4 w-4 text-red-500" />;
-                  case "ACTIVATE":
-                    return <Zap className="h-4 w-4 text-green-500" />;
-                  case "DEACTIVATE":
-                    return <Eye className="h-4 w-4 text-gray-500" />;
-                  default:
-                    return <Info className="h-4 w-4 text-muted-foreground" />;
-                }
-              };
-
-              const getActionDescription = () => {
-                const actionDescriptions: Record<string, string> = {
-                  CREATE: "Estrategia creada",
-                  UPDATE: "Estrategia actualizada",
-                  DELETE: "Estrategia eliminada",
-                  ACTIVATE: "Estrategia activada",
-                  DEACTIVATE: "Estrategia desactivada",
-                };
-
-                let description = actionDescriptions[log.action] || log.action;
-
-                if (log.field_changed) {
-                  description += ` - ${log.field_changed}`;
-                  if (log.old_value && log.new_value) {
-                    description += `: "${log.old_value}" → "${log.new_value}"`;
-                  }
-                }
-
-                return description;
-              };
-
-              return (
-                <div
-                  key={log.id}
-                  className="flex items-start gap-3 py-3 border-b last:border-b-0"
-                >
-                  <div className="mt-0.5">{getActionIcon()}</div>
-                  <div className="flex-1 space-y-1">
-                    <p className="text-sm">{getActionDescription()}</p>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>{log.changed_by}</span>
-                      <span>•</span>
-                      <span>
-                        {new Date(log.changed_at).toLocaleString("es-ES")}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      </div>
 
       <div className="flex justify-end pt-4">
         <Button onClick={onClose}>Cerrar</Button>

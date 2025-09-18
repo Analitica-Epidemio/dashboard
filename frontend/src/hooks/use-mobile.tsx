@@ -19,17 +19,17 @@ export function useIsMobile() {
 }
 
 export function useMediaQuery(query: string) {
-  const [matches, setMatches] = React.useState<boolean>(false)
+  const [matches, setMatches] = React.useState<boolean>(() => {
+    if (typeof window === "undefined") return false
+    return window.matchMedia(query).matches
+  })
 
   React.useEffect(() => {
     const media = window.matchMedia(query)
-    if (media.matches !== matches) {
-      setMatches(media.matches)
-    }
     const listener = (event: MediaQueryListEvent) => setMatches(event.matches)
-    window.addEventListener("resize", listener)
-    return () => window.removeEventListener("resize", listener)
-  }, [matches, query])
+    media.addEventListener("change", listener)
+    return () => media.removeEventListener("change", listener)
+  }, [query])
 
   return matches
 }

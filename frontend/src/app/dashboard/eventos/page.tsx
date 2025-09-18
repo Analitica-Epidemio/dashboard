@@ -123,7 +123,7 @@ export default function EventosPage() {
     setFilters((prev) => ({ ...prev, page: newPage }));
   };
 
-  const handleFilterChange = (key: string, value: any) => {
+  const handleFilterChange = (key: string, value: unknown) => {
     setFilters((prev) => ({
       ...prev,
       [key]: value,
@@ -139,18 +139,18 @@ export default function EventosPage() {
   // Calcular estadísticas rápidas
   const stats = {
     total: pagination?.total || 0,
-    confirmados: eventos.filter((e) => 
-      e.clasificacion_estrategia === TipoClasificacion.CONFIRMADOS || 
-      e.clasificacion === "confirmados"
+    confirmados: eventos.filter(
+      (e) => e.clasificacion_estrategia === TipoClasificacion.CONFIRMADOS
     ).length,
-    sospechosos: eventos.filter((e) => 
-      e.clasificacion_estrategia === TipoClasificacion.SOSPECHOSOS || 
-      e.clasificacion === "sospechosos"
+    sospechosos: eventos.filter(
+      (e) => e.clasificacion_estrategia === TipoClasificacion.SOSPECHOSOS
     ).length,
-    requiereRevision: eventos.filter((e) => 
-      e.clasificacion_estrategia === TipoClasificacion.REQUIERE_REVISION
+    requiereRevision: eventos.filter(
+      (e) => e.clasificacion_estrategia === TipoClasificacion.REQUIERE_REVISION
     ).length,
-    sinClasificar: eventos.filter((e) => !e.clasificacion_estrategia && !e.clasificacion).length,
+    sinClasificar: eventos.filter(
+      (e) => !e.clasificacion_estrategia
+    ).length,
   };
 
   // Skeleton para carga
@@ -351,7 +351,7 @@ export default function EventosPage() {
                   </Card>
                 ) : (
                   // Lista de eventos
-                  eventos.map((evento: any) => (
+                  eventos.map((evento) => (
                     <Card
                       key={evento.id}
                       className="p-4 hover:bg-muted/30 transition-colors cursor-pointer"
@@ -373,16 +373,20 @@ export default function EventosPage() {
                                       evento.clasificacion_estrategia
                                     )}`}
                                   >
-                                    {getClasificacionLabel(evento.clasificacion_estrategia)}
+                                    {getClasificacionLabel(
+                                      evento.clasificacion_estrategia
+                                    )}
                                   </span>
                                 )}
-                                {evento.clasificacion && (
+                                {evento.clasificacion_estrategia && (
                                   <Badge
                                     variant={getClasificacionVariant(
-                                      evento.clasificacion
+                                      evento.clasificacion_estrategia
                                     )}
                                   >
-                                    {getClasificacionLabel(evento.clasificacion)}
+                                    {getClasificacionLabel(
+                                      evento.clasificacion_estrategia
+                                    )}
                                   </Badge>
                                 )}
                               </div>
