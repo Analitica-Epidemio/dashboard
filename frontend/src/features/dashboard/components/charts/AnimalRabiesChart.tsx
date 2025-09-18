@@ -5,8 +5,6 @@
 
 import React, { useMemo, useState } from "react";
 import {
-  LineChart,
-  Line,
   BarChart,
   Bar,
   PieChart,
@@ -19,11 +17,8 @@ import {
   Legend,
   ResponsiveContainer,
   ComposedChart,
-  Area,
-  AreaChart,
+  Line,
 } from "recharts";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertTriangle,
@@ -35,7 +30,7 @@ import {
 } from "lucide-react";
 import { EpidemiologicalFilters, ChartConfig } from "../../types";
 import { useAnimalRabiesData } from "../../hooks/useEpidemiologicalData";
-import type { TooltipProps } from "../../types/recharts";
+import type { TooltipProps, AnimalRabiesPayload } from "../../types/recharts";
 
 // Configuración de colores (replicando el original)
 const COLORS = {
@@ -73,7 +68,7 @@ interface AnimalRabiesChartProps {
 }
 
 // Tooltip personalizado para serie temporal
-const TimeSeriesTooltip: React.FC<TooltipProps> = ({ active, payload, label }) => {
+const TimeSeriesTooltip: React.FC<TooltipProps<AnimalRabiesPayload>> = ({ active, payload, label }) => {
   if (!active || !payload || !payload.length) return null;
 
   const date = label;
@@ -150,7 +145,7 @@ const TimeSeriesTooltip: React.FC<TooltipProps> = ({ active, payload, label }) =
 };
 
 // Tooltip para gráficos demográficos
-const DemographicTooltip: React.FC<TooltipProps> = ({ active, payload, label }) => {
+const DemographicTooltip: React.FC<TooltipProps<AnimalRabiesPayload>> = ({ active, payload, label }) => {
   if (!active || !payload || !payload.length) return null;
 
   const data = payload[0]?.payload;
@@ -524,7 +519,11 @@ export const AnimalRabiesChart: React.FC<AnimalRabiesChartProps> = ({
                         outerRadius={120}
                         paddingAngle={5}
                         dataKey="value"
-                        onClick={handleSpeciesClick}
+                        onClick={(data: any) => {
+                        if (data?.activePayload?.[0]?.payload) {
+                          handleSpeciesClick({ name: data.activePayload[0].payload.name });
+                        }
+                      }}
                       >
                         {speciesData.map((entry, index) => (
                           <Cell
@@ -554,7 +553,11 @@ export const AnimalRabiesChart: React.FC<AnimalRabiesChartProps> = ({
                     <BarChart
                       data={speciesData}
                       margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
-                      onClick={handleSpeciesClick}
+                      onClick={(data: any) => {
+                        if (data?.activePayload?.[0]?.payload) {
+                          handleSpeciesClick({ name: data.activePayload[0].payload.name });
+                        }
+                      }}
                     >
                       <CartesianGrid
                         strokeDasharray="3 3"
@@ -672,7 +675,7 @@ export const AnimalRabiesChart: React.FC<AnimalRabiesChartProps> = ({
                     .sort((a, b) => b.value - a.value)
                     .map((location, index) => {
                       const intensity =
-                        aggregatedData?.totalCases > 0
+                        aggregatedData?.totalCases && aggregatedData.totalCases > 0
                           ? location.value /
                             Math.max(...locationData.map((l) => l.value))
                           : 0;
@@ -717,7 +720,7 @@ export const AnimalRabiesChart: React.FC<AnimalRabiesChartProps> = ({
                       data={speciesData.map((s) => ({
                         ...s,
                         positivityRate:
-                          statistics?.speciesDistribution[s.name] > 0
+                          statistics?.speciesDistribution?.[s.name] && statistics.speciesDistribution[s.name] > 0
                             ? (s.value /
                                 statistics.speciesDistribution[s.name]) *
                               100
@@ -786,8 +789,8 @@ export const AnimalRabiesChart: React.FC<AnimalRabiesChartProps> = ({
                     Cobertura de Muestreo
                   </h5>
                   <div className="text-2xl font-bold text-green-900 mb-1">
-                    {aggregatedData?.totalTested > 0 &&
-                    aggregatedData.totalCases > 0
+                    {aggregatedData?.totalTested && aggregatedData.totalTested > 0 &&
+                    aggregatedData?.totalCases && aggregatedData.totalCases > 0
                       ? (
                           (aggregatedData.totalTested /
                             aggregatedData.totalCases) *
