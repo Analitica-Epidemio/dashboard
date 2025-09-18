@@ -207,3 +207,5 @@ export const ChubutMapChart: React.FC<ChubutMapChartProps> = ({ data }) => {
     </div>
   );
 };
+
+export default ChubutMapChart;

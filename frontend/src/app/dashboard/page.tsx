@@ -1,13 +1,21 @@
 "use client";
 
 import React from "react";
-import { FilterProvider, useFilterContext } from "@/features/dashboard/contexts/FilterContext";
-import { FilterBuilderView } from "@/features/dashboard/components/filter-builder";
+import {
+  FilterProvider,
+  useFilterContext,
+} from "@/features/dashboard/contexts/FilterContext";
 import { ComparativeDashboard } from "@/features/dashboard/components/comparison/ComparativeDashboard";
 import { CollapsibleSidebar } from "@/features/layout/components";
+import { FilterBuilderView } from "@/features/dashboard/components/filter-builder/FilterBuilderView";
 
 function DashboardContent() {
-  const { isComparisonView, dateRange, filterCombinations, setIsComparisonView } = useFilterContext();
+  const {
+    isComparisonView,
+    dateRange,
+    filterCombinations,
+    setIsComparisonView,
+  } = useFilterContext();
 
   const handleBackToFilters = () => {
     setIsComparisonView(false);

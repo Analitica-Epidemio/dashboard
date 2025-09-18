@@ -18,7 +18,7 @@ import type { EventoFilters } from "@/lib/api/eventos";
 
 interface EventoFiltersPanelProps {
   filters: EventoFilters;
-  onFilterChange: (key: string, value) => void;
+  onFilterChange: (key: string, value: unknown) => void;
   onClose: () => void;
 }
 

@@ -24,8 +24,9 @@ import {
 import {
   ClassificationBadges,
   ClassificationSelector,
-  GroupSelector,
-} from "../selectors";
+} from "../selectors/ClassificationSelector";
+import { TipoClasificacion } from "@/lib/types/clasificacion";
+import { GroupSelector } from "../selectors/GroupSelector";
 
 interface FilterCombination {
   id: string;
@@ -379,7 +380,7 @@ export const FullscreenFilterBuilder: React.FC<
                         selectedClassifications={
                           currentFilter.clasificaciones || []
                         }
-                        onClassificationChange={(classifications) =>
+                        onClassificationChange={(classifications: TipoClasificacion[]) =>
                           setCurrentFilter({
                             ...currentFilter,
                             clasificaciones: classifications,

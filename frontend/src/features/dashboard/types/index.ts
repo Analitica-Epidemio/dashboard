@@ -9,8 +9,8 @@ export interface Event {
   id: string
   name: string
   groupId: string
-  description?: string | null
-  groupName?: string | null
+  description?: string | null | undefined
+  groupName?: string | null | undefined
 }
 
 export interface ChartDataPoint {

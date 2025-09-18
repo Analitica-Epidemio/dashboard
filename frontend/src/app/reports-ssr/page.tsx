@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { env } from "@/env";
 import { createHmac } from "crypto";
-import { DynamicChart } from "@/features/dashboard";
+import { DynamicChart } from "@/features/dashboard/components/charts/DynamicChart";
 
 interface PageProps {
   searchParams: Promise<{
@@ -348,7 +348,7 @@ export default async function ReportsSSRPage({ searchParams }: PageProps) {
             {/* Charts Grid */}
             {combination.charts && combination.charts.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {combination.charts.map((chart) => (
+                {combination.charts.map((chart: { codigo: string; nombre: string; descripcion?: string; tipo: string; data: unknown; config?: unknown }) => (
                   <DynamicChart
                     key={chart.codigo}
                     codigo={chart.codigo}

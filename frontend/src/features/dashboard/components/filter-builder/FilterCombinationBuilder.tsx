@@ -7,6 +7,7 @@ import { Plus, Layers, Check, X } from 'lucide-react'
 import { GroupSelector } from '../selectors/GroupSelector'
 import { ClassificationSelector, TipoClasificacion } from '../selectors/ClassificationSelector'
 import { useFilterContext } from '../../contexts/FilterContext'
+import type { Event } from '../../types'
 
 interface CurrentFilter {
   groupId: string | null
@@ -28,12 +29,7 @@ export function FilterCombinationBuilder() {
     eventIds: [],
   })
 
-  const [availableEvents, setAvailableEvents] = useState<Array<{
-    id: string | number
-    groupId: string
-    name: string
-    [key: string]: unknown
-  }>>([])
+  const [availableEvents, setAvailableEvents] = useState<Event[]>([])
 
   useEffect(() => {
     if (currentFilter.groupId) {

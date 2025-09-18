@@ -91,7 +91,7 @@ const CustomTooltip: React.FC<TooltipProps<EndemicCorridorPayload>> = ({ active,
               style={{ backgroundColor: ZONE_COLORS.currentYear }}
             />
             <span className="text-sm font-semibold">
-              Año actual: {data.currentCases} casos
+              Año actual: {data?.currentCases || 0} casos
             </span>
           </div>
         )}

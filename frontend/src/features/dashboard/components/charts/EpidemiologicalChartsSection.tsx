@@ -8,31 +8,27 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  TrendingUp,
-  BarChart3,
-  PieChart,
-  Users,
-  AlertTriangle,
   Activity,
+  AlertTriangle,
+  BarChart3,
   Calendar,
   MapPin,
+  PieChart,
+  TrendingUp,
+  Users,
 } from "lucide-react";
-
-import {
-  EpidemiologicalCurveChart,
-  EndemicCorridorChart,
-  HistoricalTotalsChart,
-  AgePyramidChart,
-  UGDPieChart,
-  SuicideAttemptChart,
-  AnimalRabiesChart,
-  type EpidemiologicalFilters,
-  type EndemicCorridorConfig,
-} from "../charts";
+import { EndemicCorridorConfig, EpidemiologicalFilters } from "../../types";
+import SuicideAttemptChart from "./SuicideAttemptChart";
+import UGDPieChart from "./UGDPieChart";
+import AgePyramidChart from "./AgePyramidChart";
+import EndemicCorridorChart from "./EndemicCorridorChart";
+import EpidemiologicalCurveChart from "./EpidemiologicalCurveChart";
+import HistoricalTotalsChart from "./HistoricalTotalsChart";
+import AnimalRabiesChart from "./AnimalRabiesChart";
 
 interface EpidemiologicalChartsSectionProps {
   selectedGroup: { id: string; name: string } | null;
-  selectedEvent: { id: string; name: string; description?: string } | null;
+  selectedEvent: { id: string; name: string; description?: string | null | undefined } | null;
   filters: {
     selectedGroupId: string | null;
     selectedEventId: string | null;
@@ -159,7 +155,7 @@ export const EpidemiologicalChartsSection: React.FC<
           <EpidemiologicalCurveChart
             {...commonProps}
             showMortalityData={true}
-            onWeekSelect={(week, year) => {
+            onWeekSelect={(week: number, year: number) => {
               console.log(`Semana seleccionada: ${week}, Año: ${year}`);
             }}
           />
@@ -171,7 +167,7 @@ export const EpidemiologicalChartsSection: React.FC<
             {...commonProps}
             config={DEFAULT_ENDEMIC_CONFIG}
             showCurrentWeekIndicator={true}
-            onWeekSelect={(week) => {
+            onWeekSelect={(week: number) => {
               console.log(`Semana del corredor seleccionada: ${week}`);
             }}
           />
@@ -183,14 +179,33 @@ export const EpidemiologicalChartsSection: React.FC<
             {...commonProps}
             chartType="line"
             showTrendIndicators={true}
-            onYearSelect={(year) => {
+            onYearSelect={(year: number) => {
               console.log(`Año seleccionado: ${year}`);
             }}
           />
         );
 
       case "age-pyramid":
-        return <AgePyramidChart {...commonProps} />;
+        // Datos de ejemplo para la pirámide de edad
+        const pyramidData = [
+          { age: "0-4", sex: "M" as const, value: 150 },
+          { age: "0-4", sex: "F" as const, value: 140 },
+          { age: "5-9", sex: "M" as const, value: 130 },
+          { age: "5-9", sex: "F" as const, value: 125 },
+          { age: "10-14", sex: "M" as const, value: 120 },
+          { age: "10-14", sex: "F" as const, value: 115 },
+          { age: "15-19", sex: "M" as const, value: 110 },
+          { age: "15-19", sex: "F" as const, value: 105 },
+          { age: "20-24", sex: "M" as const, value: 95 },
+          { age: "20-24", sex: "F" as const, value: 90 },
+        ];
+        return (
+          <AgePyramidChart
+            data={pyramidData}
+            width={600}
+            height={400}
+          />
+        );
 
       case "ugd-distribution":
         return (
@@ -198,7 +213,7 @@ export const EpidemiologicalChartsSection: React.FC<
             {...commonProps}
             chartType="pie"
             showMortalityData={true}
-            onUGDSelect={(ugdName) => {
+            onUGDSelect={(ugdName: string) => {
               console.log(`UGD seleccionada: ${ugdName}`);
             }}
           />
@@ -210,7 +225,11 @@ export const EpidemiologicalChartsSection: React.FC<
             {...commonProps}
             showDemographics={true}
             defaultView="temporal"
-            onTimeRangeSelect={(startWeek, endWeek, year) => {
+            onTimeRangeSelect={(
+              startWeek: number,
+              endWeek: number,
+              year: number
+            ) => {
               console.log(
                 `Rango seleccionado: ${startWeek}-${endWeek}, Año: ${year}`
               );
@@ -224,10 +243,10 @@ export const EpidemiologicalChartsSection: React.FC<
             {...commonProps}
             defaultView="temporal"
             showPositivityRate={true}
-            onSpeciesSelect={(species) => {
+            onSpeciesSelect={(species: string) => {
               console.log(`Especie seleccionada: ${species}`);
             }}
-            onDateRangeSelect={(startDate, endDate) => {
+            onDateRangeSelect={(startDate: string, endDate: string) => {
               console.log(`Rango de fechas: ${startDate} - ${endDate}`);
             }}
           />

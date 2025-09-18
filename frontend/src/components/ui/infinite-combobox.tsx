@@ -60,7 +60,7 @@ export function InfiniteCombobox({
   const [preventAutoClose, setPreventAutoClose] = React.useState(false);
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const loadMoreRef = React.useRef<HTMLDivElement>(null);
-  const searchTimeoutRef = React.useRef<NodeJS.Timeout>();
+  const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   // Handle search changes with proper debouncing
   React.useEffect(() => {

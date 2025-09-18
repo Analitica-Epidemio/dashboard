@@ -18,17 +18,7 @@ import {
   Loader2,
   ExternalLink,
 } from 'lucide-react';
-
-interface FilterCombination {
-  id: string;
-  groupId: string | null;
-  groupName?: string;
-  eventIds: number[];
-  eventNames?: string[];
-  clasificaciones?: string[];
-  label?: string;
-  color?: string;
-}
+import type { FilterCombination } from "../../contexts/FilterContext";
 
 interface DateRange {
   from: Date | null;

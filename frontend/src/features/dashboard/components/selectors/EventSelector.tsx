@@ -9,6 +9,24 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { useInfiniteEvents } from "../../services/paginatedQueries";
+import type { Event } from "../../types";
+
+// Tipo más flexible para errores de query
+type QueryError = unknown;
+
+// Helper para extraer mensaje de error
+function getErrorMessage(error: QueryError): string {
+  if (!error) return 'Error desconocido';
+  if (typeof error === 'object' && error !== null) {
+    if ('message' in error && typeof error.message === 'string') {
+      return error.message;
+    }
+    if ('error' in error && typeof error.error === 'object' && error.error !== null && 'message' in error.error) {
+      return String(error.error.message);
+    }
+  }
+  return 'Error desconocido';
+}
 
 interface EventSelectorProps {
   events: Event[];
@@ -16,7 +34,7 @@ interface EventSelectorProps {
   onEventChange: (eventId: string | null) => void;
   disabled?: boolean;
   loading?: boolean;
-  error?: Error | null;
+  error?: QueryError;
   groupId?: string | null;
 }
 
@@ -25,7 +43,7 @@ export function EventSelector({
   selectedEventId,
   onEventChange,
   disabled,
-  loading: fallbackLoading,
+  loading: _fallbackLoading,
   error: fallbackError,
   groupId,
 }: EventSelectorProps) {
@@ -67,7 +85,7 @@ export function EventSelector({
         <Alert variant="destructive" className="w-[300px]">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            {error?.message || "Error al cargar eventos"}
+            {getErrorMessage(error)}
           </AlertDescription>
         </Alert>
       </div>
@@ -86,8 +104,8 @@ export function EventSelector({
       <InfiniteCombobox
         options={options}
         value={selectedEventId || undefined}
-        onValueChange={(value) => onEventChange(value || null)}
-        onSearch={setSearch}
+        onValueChange={(value: string | undefined) => onEventChange(value ?? null)}
+        onSearch={(searchTerm: string) => setSearch(searchTerm)}
         onLoadMore={loadMore}
         hasMore={hasMore}
         isLoading={isLoading}

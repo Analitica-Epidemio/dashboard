@@ -238,9 +238,9 @@ export const UGDPieChart: React.FC<UGDPieChartProps> = ({
   }, [processedData]);
 
   const handleUGDClick = (data: { name?: string }) => {
-    const ugdName = data.name;
+    const ugdName = data.name || null;
     setSelectedUGD(selectedUGD === ugdName ? null : ugdName);
-    if (onUGDSelect) {
+    if (onUGDSelect && ugdName) {
       onUGDSelect(ugdName);
     }
   };
@@ -322,7 +322,11 @@ export const UGDPieChart: React.FC<UGDPieChartProps> = ({
                   outerRadius="80%"
                   fill="#8884d8"
                   dataKey="value"
-                  onClick={handleUGDClick}
+                  onClick={(data: { payload?: UGDChartPayload }) => {
+                    if (data?.payload) {
+                      handleUGDClick({ name: data.payload.name });
+                    }
+                  }}
                   cursor="pointer"
                 >
                   {chartData.map((entry, index) => (
@@ -340,18 +344,26 @@ export const UGDPieChart: React.FC<UGDPieChartProps> = ({
                   align="right"
                   verticalAlign="middle"
                   wrapperStyle={{ paddingLeft: "20px" }}
-                  formatter={(value, entry) => (
-                    <span style={{ color: entry.color }}>
-                      {value} ({entry.payload.percentage.toFixed(1)}%)
-                    </span>
-                  )}
+                  formatter={(value, entry) => {
+                    const payload = entry.payload as unknown;
+                    const ugdPayload = payload as UGDChartPayload;
+                    return (
+                      <span style={{ color: entry.color }}>
+                        {value} ({ugdPayload?.percentage?.toFixed(1) || '0'}%)
+                      </span>
+                    );
+                  }}
                 />
               </PieChart>
             ) : (
               <BarChart
                 data={topUGDs}
                 margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                onClick={handleUGDClick}
+                onClick={(data: { activePayload?: Array<{ payload: UGDChartPayload }> }) => {
+                  if (data?.activePayload?.[0]?.payload) {
+                    handleUGDClick({ name: data.activePayload[0].payload.name });
+                  }
+                }}
               >
                 <CartesianGrid
                   strokeDasharray="3 3"

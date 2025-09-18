@@ -519,7 +519,7 @@ export const AnimalRabiesChart: React.FC<AnimalRabiesChartProps> = ({
                         outerRadius={120}
                         paddingAngle={5}
                         dataKey="value"
-                        onClick={(data: any) => {
+                        onClick={(data: { activePayload?: Array<{ payload: { name?: string } }> }) => {
                         if (data?.activePayload?.[0]?.payload) {
                           handleSpeciesClick({ name: data.activePayload[0].payload.name });
                         }
@@ -553,7 +553,7 @@ export const AnimalRabiesChart: React.FC<AnimalRabiesChartProps> = ({
                     <BarChart
                       data={speciesData}
                       margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
-                      onClick={(data: any) => {
+                      onClick={(data: { activePayload?: Array<{ payload: { name?: string } }> }) => {
                         if (data?.activePayload?.[0]?.payload) {
                           handleSpeciesClick({ name: data.activePayload[0].payload.name });
                         }

@@ -17,24 +17,6 @@ export interface ChartFilters {
 }
 
 /**
- * Hook for dashboard charts
- */
-export function useDashboardCharts(filters?: ChartFilters) {
-  return $api.useQuery(
-    'get',
-    '/api/v1/charts/dashboard',
-    {
-      params: {
-        query: filters,
-      },
-    },
-    {
-      staleTime: 2 * 60 * 1000,
-    }
-  );
-}
-
-/**
  * Hook for dashboard indicators
  */
 export function useIndicadores(filters?: ChartFilters) {
@@ -48,20 +30,6 @@ export function useIndicadores(filters?: ChartFilters) {
     },
     {
       staleTime: 2 * 60 * 1000,
-    }
-  );
-}
-
-/**
- * Hook for available charts
- */
-export function useChartsDisponibles() {
-  return $api.useQuery(
-    'get',
-    '/api/v1/charts/disponibles',
-    undefined,
-    {
-      staleTime: 10 * 60 * 1000,
     }
   );
 }

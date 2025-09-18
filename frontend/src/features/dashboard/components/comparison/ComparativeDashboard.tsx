@@ -7,25 +7,17 @@ import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CompactFilterBar } from "./CompactFilterBar";
-import { Activity, AlertTriangle, FileText } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Activity, AlertTriangle } from "lucide-react";
 
 // Import dynamic chart components
 import { DynamicChart } from "../charts/DynamicChart";
 import { useDashboardCharts } from "../../hooks/useDashboardCharts";
-import { useIndicadores } from "@/features/charts/hooks";
-import { useGenerateZipReport, useGenerateSignedUrl } from "@/features/reports/hooks";
-
-interface FilterCombination {
-  id: string;
-  groupId: string | null;
-  groupName?: string;
-  eventIds: number[];
-  eventNames?: string[];
-  clasificaciones?: string[];
-  label?: string;
-  color?: string;
-}
+import {
+  useGenerateZipReport,
+  useGenerateSignedUrl,
+} from "@/features/reports/hooks";
+import { useIndicadores } from "../../hooks/useIndicadores";
+import type { FilterCombination } from "../../contexts/FilterContext";
 
 interface DateRange {
   from: Date | null;
@@ -227,7 +219,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
     };
 
     generateZipReportMutation.mutate({
-      body: reportRequest
+      body: reportRequest,
     });
   };
 
@@ -253,12 +245,14 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
           // Open the signed URL in a new tab
           const baseUrl = window.location.origin;
           const fullUrl = `${baseUrl}${data.data.signed_url}`;
-          window.open(fullUrl, '_blank');
-          console.log('✅ Generated signed URL for SSR report');
+          window.open(fullUrl, "_blank");
+          console.log("✅ Generated signed URL for SSR report");
         },
         onError: (error) => {
-          console.error('Error generating signed URL:', error);
-          alert('Error al generar la URL del reporte. Por favor intente nuevamente.');
+          console.error("Error generating signed URL:", error);
+          alert(
+            "Error al generar la URL del reporte. Por favor intente nuevamente."
+          );
         },
       }
     );

@@ -74,12 +74,12 @@ export function MultiSelect({
     onChange(newSelected);
   };
 
-  const handleRemove = (value: string | number, e: React.MouseEvent) => {
+  const handleRemove = (value: string | number, e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
     onChange(selected.filter((v) => v !== value));
   };
 
-  const handleClearAll = (e: React.MouseEvent) => {
+  const handleClearAll = (e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
     onChange([]);
   };

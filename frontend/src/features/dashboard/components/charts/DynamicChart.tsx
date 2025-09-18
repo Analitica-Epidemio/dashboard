@@ -5,7 +5,6 @@
  */
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import AgePyramidChart from "./charts/AgePyramidChart";
 import {
   LineChart,
   Line,
@@ -69,7 +68,7 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
     const height = config.height || 300;
 
     // Convertir datos de Chart.js a formato Recharts
-    const convertChartJsToRecharts = (chartJsData) => {
+    const convertChartJsToRecharts = (chartJsData: { labels: string[]; datasets: Array<{ label?: string; data: number[] }> }) => {
       if (!chartJsData.labels || !chartJsData.datasets) return [];
 
       // Para line, bar, area charts
@@ -78,7 +77,7 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
 
       return labels.map((label: any, index: number) => {
         const point: any = { name: label };
-        datasets.forEach((dataset) => {
+        datasets.forEach((dataset: { label?: string; data: number[] }) => {
           point[dataset.label || "value"] = dataset.data[index];
         });
         return point;
@@ -86,7 +85,7 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
     };
 
     // Convertir datos para pie chart
-    const convertPieData = (chartJsData) => {
+    const convertPieData = (chartJsData: { labels: string[]; datasets: Array<{ data: number[] }> }) => {
       if (!chartJsData.labels || !chartJsData.datasets?.[0]) return [];
 
       return chartJsData.labels.map((label: any, index: number) => ({
@@ -98,7 +97,7 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
     switch (tipo) {
       case "line":
         const lineData = convertChartJsToRecharts(data.data);
-        const lineKeys = data.data.datasets?.map((d) => d.label || "value") || [
+        const lineKeys = data.data.datasets?.map((d: { label?: string }) => d.label || "value") || [
           "value",
         ];
 
@@ -125,7 +124,7 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
 
       case "bar":
         const barData = convertChartJsToRecharts(data.data);
-        const barKeys = data.data.datasets?.map((d) => d.label || "value") || [
+        const barKeys = data.data.datasets?.map((d: { label?: string }) => d.label || "value") || [
           "value",
         ];
 
@@ -176,7 +175,7 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
                 align="right"
                 layout="vertical"
                 formatter={(value: string, entry) =>
-                  `${value} (${entry.payload.value})`
+                  `${value} (${entry.payload?.value || 0})`
                 }
               />
             </PieChart>
@@ -185,7 +184,7 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
 
       case "area":
         const areaData = convertChartJsToRecharts(data.data);
-        const areaKeys = data.data.datasets?.map((d) => d.label || "value") || [
+        const areaKeys = data.data.datasets?.map((d: { label?: string }) => d.label || "value") || [
           "value",
         ];
 
@@ -223,16 +222,24 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
           );
         }
 
+        // Para pirámides de edad, usar un gráfico de barras horizontal
+        const pyramidData = convertChartJsToRecharts(data.data);
         return (
-          <div
-            className="w-full flex justify-center"
-            style={{ height: pyramidHeight }}
-          >
-            <AgePyramidChart
-              data={data.data}
-              width={600}
-              height={pyramidHeight}
-            />
+          <div style={{ width: "100%", height: "400px" }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={pyramidData}
+                layout="horizontal"
+                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" />
+                <YAxis dataKey="name" type="category" />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="value" fill="#8884d8" />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         );
 
@@ -247,9 +254,7 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
         }
 
         // Import dinámico del componente de mapa
-        const ChubutMapChart = React.lazy(
-          () => import("./charts/ChubutMapChart")
-        );
+        const ChubutMapChart = React.lazy(() => import("./ChubutMapChart"));
 
         return (
           <React.Suspense fallback={<div>Cargando mapa...</div>}>

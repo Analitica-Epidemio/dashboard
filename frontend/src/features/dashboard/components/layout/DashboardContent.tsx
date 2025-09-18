@@ -7,9 +7,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertCircle, Loader2, BarChart3, Activity } from "lucide-react";
 import { ChartCard } from "../charts/ChartComponents";
-import { EpidemiologicalChartsSection } from "../charts";
-import { EventSelector, GroupSelector } from "../selectors";
 import { useDashboardFilters } from "../../hooks/useDashboardFilters";
+import { EpidemiologicalChartsSection } from "../charts/EpidemiologicalChartsSection";
+import { GroupSelector } from "../selectors/GroupSelector";
+import { EventSelector } from "../selectors/EventSelector";
 
 export function DashboardContent() {
   const {
@@ -113,12 +114,15 @@ export function DashboardContent() {
               {chartDataLoading && <Loader2 className="h-5 w-5 animate-spin" />}
             </div>
 
-            {chartDataError && (
+            {!!chartDataError && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  {chartDataError.message ||
-                    "Error al cargar datos de gráficos"}
+                  {typeof chartDataError === "object" &&
+                  chartDataError !== null &&
+                  "message" in chartDataError
+                    ? String(chartDataError.message)
+                    : "Error al cargar datos de gráficos"}
                 </AlertDescription>
               </Alert>
             )}

@@ -123,7 +123,7 @@ export default function EventosPage() {
     setFilters((prev) => ({ ...prev, page: newPage }));
   };
 
-  const handleFilterChange = (key: string, value) => {
+  const handleFilterChange = (key: string, value: unknown) => {
     setFilters((prev) => ({
       ...prev,
       [key]: value,
@@ -140,20 +140,16 @@ export default function EventosPage() {
   const stats = {
     total: pagination?.total || 0,
     confirmados: eventos.filter(
-      (e) =>
-        e.clasificacion_estrategia === TipoClasificacion.CONFIRMADOS ||
-        e.clasificacion === "confirmados"
+      (e) => e.clasificacion_estrategia === TipoClasificacion.CONFIRMADOS
     ).length,
     sospechosos: eventos.filter(
-      (e) =>
-        e.clasificacion_estrategia === TipoClasificacion.SOSPECHOSOS ||
-        e.clasificacion === "sospechosos"
+      (e) => e.clasificacion_estrategia === TipoClasificacion.SOSPECHOSOS
     ).length,
     requiereRevision: eventos.filter(
       (e) => e.clasificacion_estrategia === TipoClasificacion.REQUIERE_REVISION
     ).length,
     sinClasificar: eventos.filter(
-      (e) => !e.clasificacion_estrategia && !e.clasificacion
+      (e) => !e.clasificacion_estrategia
     ).length,
   };
 
@@ -382,14 +378,14 @@ export default function EventosPage() {
                                     )}
                                   </span>
                                 )}
-                                {evento.clasificacion && (
+                                {evento.clasificacion_estrategia && (
                                   <Badge
                                     variant={getClasificacionVariant(
-                                      evento.clasificacion
+                                      evento.clasificacion_estrategia
                                     )}
                                   >
                                     {getClasificacionLabel(
-                                      evento.clasificacion
+                                      evento.clasificacion_estrategia
                                     )}
                                   </Badge>
                                 )}

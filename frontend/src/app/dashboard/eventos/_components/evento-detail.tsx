@@ -633,10 +633,10 @@ export function EventoDetail({ eventoId, onClose }: EventoDetailProps) {
                               UCI
                             </Badge>
                           )}
-                          {internacion.condicion_egreso && (
+                          {(internacion as { condicion_egreso?: string }).condicion_egreso && (
                             <Badge
                               variant={
-                                internacion.condicion_egreso
+                                ((internacion as { condicion_egreso?: string }).condicion_egreso || '')
                                   .toLowerCase()
                                   .includes("muerte")
                                   ? "destructive"
@@ -644,7 +644,7 @@ export function EventoDetail({ eventoId, onClose }: EventoDetailProps) {
                               }
                               className="text-xs"
                             >
-                              {internacion.condicion_egreso}
+                              {(internacion as { condicion_egreso?: string }).condicion_egreso}
                             </Badge>
                           )}
                         </div>
@@ -773,7 +773,7 @@ export function EventoDetail({ eventoId, onClose }: EventoDetailProps) {
                             </span>
                           </div>
                         )}
-                        {contacto.contactos_menores_un_ano > 0 && (
+                        {(contacto.contactos_menores_un_ano ?? 0) > 0 && (
                           <div>
                             <span className="font-medium">Menores 1 año:</span>
                             <span className="ml-2">
@@ -781,7 +781,7 @@ export function EventoDetail({ eventoId, onClose }: EventoDetailProps) {
                             </span>
                           </div>
                         )}
-                        {contacto.contactos_vacunados > 0 && (
+                        {(contacto.contactos_vacunados ?? 0) > 0 && (
                           <div>
                             <span className="font-medium">Vacunados:</span>
                             <span className="ml-2">
@@ -789,7 +789,7 @@ export function EventoDetail({ eventoId, onClose }: EventoDetailProps) {
                             </span>
                           </div>
                         )}
-                        {contacto.contactos_embarazadas > 0 && (
+                        {(contacto.contactos_embarazadas ?? 0) > 0 && (
                           <div>
                             <span className="font-medium">Embarazadas:</span>
                             <span className="ml-2">
