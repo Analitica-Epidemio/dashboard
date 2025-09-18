@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { EpidemiologicalFilters, ChartConfig } from "../../types";
 import { useSuicideAttemptData } from "../../hooks/useEpidemiologicalData";
+import type { TooltipProps, SuicideAttemptPayload } from "../../types/recharts";
 
 // Configuración de colores (replicando el original)
 const COLORS = {
@@ -65,7 +66,7 @@ interface SuicideAttemptChartProps {
 }
 
 // Tooltip personalizado para serie temporal
-const TimeSeriesTooltip = ({ active, payload, label }) => {
+const TimeSeriesTooltip: React.FC<TooltipProps<SuicideAttemptPayload>> = ({ active, payload, label }) => {
   if (!active || !payload || !payload.length) return null;
 
   const week = label;
@@ -106,12 +107,12 @@ const TimeSeriesTooltip = ({ active, payload, label }) => {
           </span>
         </div>
 
-        {data?.mortalityRate > 0 && (
+        {data?.mortalityRate && data.mortalityRate > 0 && (
           <div className="border-t border-gray-200 pt-2">
             <div className="flex items-center justify-between gap-4">
               <span className="text-sm text-red-600">Tasa letalidad:</span>
               <span className="text-sm font-medium text-red-700">
-                {data.mortalityRate.toFixed(2)}%
+                {(data?.mortalityRate ?? 0).toFixed(2)}%
               </span>
             </div>
           </div>
@@ -122,18 +123,18 @@ const TimeSeriesTooltip = ({ active, payload, label }) => {
 };
 
 // Tooltip para gráficos demográficos
-const DemographicTooltip = ({ active, payload, label }) => {
+const DemographicTooltip: React.FC<TooltipProps<{ name: string; value: number; percentage?: number }>> = ({ active, payload, label }) => {
   if (!active || !payload || !payload.length) return null;
 
   const data = payload[0]?.payload;
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3">
-      <p className="font-semibold text-gray-800 mb-2">{label || data.name}</p>
+      <p className="font-semibold text-gray-800 mb-2">{label || data?.name}</p>
       <div className="flex items-center justify-between gap-4">
         <span className="text-sm text-gray-700">Casos:</span>
         <span className="text-sm font-medium text-gray-900">
-          {data.value || payload[0].value}
+          {data?.value || payload?.[0]?.value || 0}
         </span>
       </div>
     </div>
@@ -330,7 +331,7 @@ export const SuicideAttemptChart: React.FC<SuicideAttemptChartProps> = ({
       </div>
 
       <div>
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "temporal" | "demographics" | "risk-factors")} className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="temporal">
               <Calendar className="h-4 w-4 mr-2" />
@@ -524,7 +525,7 @@ export const SuicideAttemptChart: React.FC<SuicideAttemptChartProps> = ({
                 <div className="space-y-2">
                   {genderData.map((gender) => {
                     const percentage =
-                      statistics?.totalAttempts > 0
+                      statistics?.totalAttempts && statistics.totalAttempts > 0
                         ? (gender.value / statistics.totalAttempts) * 100
                         : 0;
 
@@ -636,7 +637,7 @@ export const SuicideAttemptChart: React.FC<SuicideAttemptChartProps> = ({
                   <div className="text-2xl font-bold text-blue-900 mb-1">
                     {timeSeriesData.length > 0
                       ? (
-                          statistics?.totalAttempts / timeSeriesData.length
+                          (statistics?.totalAttempts ?? 0) / timeSeriesData.length
                         ).toFixed(1)
                       : "0"}
                   </div>

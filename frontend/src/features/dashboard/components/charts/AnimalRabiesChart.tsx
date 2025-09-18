@@ -83,11 +83,11 @@ const TimeSeriesTooltip: React.FC<TooltipProps> = ({ active, payload, label }) =
     <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-w-sm">
       <div className="border-b border-gray-200 pb-2 mb-2">
         <p className="font-semibold text-gray-800">
-          {new Date(date).toLocaleDateString("es-ES", {
+          {date ? new Date(date).toLocaleDateString("es-ES", {
             year: "numeric",
             month: "long",
             day: "numeric",
-          })}
+          }) : 'Fecha no disponible'}
         </p>
         <p className="text-sm text-gray-600">
           {data?.species} - {data?.location}
@@ -157,11 +157,11 @@ const DemographicTooltip: React.FC<TooltipProps> = ({ active, payload, label }) 
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3">
-      <p className="font-semibold text-gray-800 mb-2">{label || data.name}</p>
+      <p className="font-semibold text-gray-800 mb-2">{label || data?.name}</p>
       <div className="flex items-center justify-between gap-4">
         <span className="text-sm text-gray-700">Casos:</span>
         <span className="text-sm font-medium text-gray-900">
-          {data.value || payload[0].value}
+          {data?.value || payload?.[0]?.value || 0}
         </span>
       </div>
     </div>
@@ -321,9 +321,9 @@ export const AnimalRabiesChart: React.FC<AnimalRabiesChartProps> = ({
 
   const handleSpeciesClick = (data: { name?: string }) => {
     const species = data.name;
-    setSelectedSpecies(selectedSpecies === species ? null : species);
+    setSelectedSpecies(selectedSpecies === species ? null : species || null);
     if (onSpeciesSelect) {
-      onSpeciesSelect(species);
+      onSpeciesSelect(species || '');
     }
   };
 
@@ -589,7 +589,7 @@ export const AnimalRabiesChart: React.FC<AnimalRabiesChartProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {speciesData.map((species) => {
                   const percentage =
-                    aggregatedData?.totalCases > 0
+                    aggregatedData?.totalCases && aggregatedData.totalCases > 0
                       ? (species.value / aggregatedData.totalCases) * 100
                       : 0;
 
