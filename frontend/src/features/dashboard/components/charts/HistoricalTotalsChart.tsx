@@ -253,18 +253,18 @@ export const HistoricalTotalsChart: React.FC<HistoricalTotalsChartProps> = ({
               </span>
             </div>
 
-            {statistics.totalDeaths > 0 && (
+            {(statistics.averageMortalityRate || 0) > 0 && (
               <>
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4 text-red-500" />
                   <span className="text-sm font-medium">
-                    Fallecimientos: {statistics.totalDeaths.toLocaleString()}
+                    Tasa de mortalidad promedio: {(statistics.averageMortalityRate || 0).toFixed(2)}%
                   </span>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">
-                    Tasa letalidad: {statistics.overallMortalityRate.toFixed(2)}
+                    Tasa de mortalidad: {(statistics.averageMortalityRate || 0).toFixed(2)}
                     %
                   </span>
                 </div>
@@ -280,7 +280,7 @@ export const HistoricalTotalsChart: React.FC<HistoricalTotalsChartProps> = ({
               Tendencia reciente:
             </p>
             <div className="flex items-center gap-4">
-              {trends.slice(-2).map((trend) => (
+              {trends.slice(-2).map((trend) => trend ? (
                 <div key={trend.year} className="flex items-center gap-2">
                   <span className="text-sm text-gray-600">{trend.year}:</span>
                   <TrendIndicator
@@ -293,7 +293,7 @@ export const HistoricalTotalsChart: React.FC<HistoricalTotalsChartProps> = ({
                     }
                   />
                 </div>
-              ))}
+              ) : null)}
             </div>
           </div>
         )}
@@ -380,14 +380,14 @@ export const HistoricalTotalsChart: React.FC<HistoricalTotalsChartProps> = ({
                 payload={[
                   ...areas.map((area, index) => ({
                     value: area.name,
-                    type: chartType === "bar" ? "rect" : "line",
+                    type: (chartType === "bar" ? "rect" : "line") as const,
                     color: AREA_COLORS[index % AREA_COLORS.length],
                   })),
                   ...(chartType === "line"
                     ? [
                         {
                           value: "Total General",
-                          type: "line",
+                          type: "line" as const,
                           color: "rgb(0, 0, 0)",
                         },
                       ]
@@ -410,7 +410,7 @@ export const HistoricalTotalsChart: React.FC<HistoricalTotalsChartProps> = ({
                   .map((area) => ({
                     ...area,
                     totalCases: chartData.reduce(
-                      (sum, point) => sum + (point[area.id] || 0),
+                      (sum, point) => sum + ((point as any)[area.id] || 0),
                       0
                     ),
                   }))
@@ -443,7 +443,7 @@ export const HistoricalTotalsChart: React.FC<HistoricalTotalsChartProps> = ({
                   Tendencias recientes
                 </h4>
                 <div className="space-y-2">
-                  {trends.slice(-3).map((trend) => (
+                  {trends.slice(-3).map((trend) => trend ? (
                     <div
                       key={trend.year}
                       className="flex items-center justify-between"
@@ -468,7 +468,7 @@ export const HistoricalTotalsChart: React.FC<HistoricalTotalsChartProps> = ({
                         />
                       </div>
                     </div>
-                  ))}
+                  ) : null)}
                 </div>
               </div>
             )}

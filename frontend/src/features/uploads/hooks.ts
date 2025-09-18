@@ -11,7 +11,7 @@ import { $api } from '@/lib/api/client';
  * Hook for CSV upload
  */
 export function useUploadCsv() {
-  return $api.useMutation('post', '/api/v1/uploads/csv');
+  return $api.useMutation('post', '/api/v1/uploads/csv-async');
 }
 
 /**
@@ -26,11 +26,13 @@ export function useJobStatus(jobId: string | null, options?: {
   return $api.useQuery(
     'get',
     '/api/v1/uploads/jobs/{job_id}/status',
-    jobId ? {
+    {
       params: {
-        path: { job_id: jobId },
+        path: {
+          job_id: jobId as string
+        },
       },
-    } : undefined,
+    },
     {
       enabled: enabled && !!jobId,
       refetchInterval: (query) => {
@@ -84,9 +86,9 @@ export function useUploadWorkflow() {
 
     try {
       uploadMutation.mutate(
-        { body: formData },
+        { body: formData as any },
         {
-          onSuccess: (data) => {
+          onSuccess: (data: any) => {
             const jobId = data?.data?.data?.job_id;
             if (jobId) {
               currentJobIdRef.current = jobId;
@@ -120,7 +122,7 @@ export function useUploadWorkflow() {
     cancelMutation.reset();
   }, [uploadMutation, cancelMutation]);
 
-  const jobData = jobStatusQuery.data?.data?.data;
+  const jobData = jobStatusQuery.data?.data;
   const isProcessing = jobData && ['pending', 'in_progress'].includes(jobData.status);
 
   return {

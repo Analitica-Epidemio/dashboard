@@ -23,7 +23,7 @@ interface ChubutMapChartProps {
   };
 }
 
-const ChubutMapChart: React.FC<ChubutMapChartProps> = ({ data }) => {
+export const ChubutMapChart: React.FC<ChubutMapChartProps> = ({ data }) => {
   const [hoveredDept, setHoveredDept] = useState<DepartmentData | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const svgRef = useRef<HTMLDivElement>(null);
@@ -118,7 +118,7 @@ const ChubutMapChart: React.FC<ChubutMapChartProps> = ({ data }) => {
   return (
     <div className="relative w-full h-full flex justify-center">
       <div ref={svgRef} className="relative">
-        <ChubutSvg className="w-full h-auto max-w-2xl" />
+        <ChubutSvg />
       </div>
 
       {/* Tooltip */}
@@ -207,5 +207,3 @@ const ChubutMapChart: React.FC<ChubutMapChartProps> = ({ data }) => {
     </div>
   );
 };
-
-export default ChubutMapChart;
