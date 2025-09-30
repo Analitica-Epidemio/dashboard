@@ -11,7 +11,7 @@ function getCalendarWeeks(year: number, month: number) {
   startDate.setDate(startOfMonth.getDate() - startOfMonth.getDay());
 
   const weeks: Date[][] = [];
-  let current = new Date(startDate);
+  const current = new Date(startDate);
 
   while (current <= endOfMonth || weeks.length < 6) {
     const week: Date[] = [];

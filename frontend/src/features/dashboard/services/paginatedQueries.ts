@@ -64,8 +64,6 @@ interface UseInfiniteEventsResult {
 
 // Hook for paginated groups with search
 export const useInfiniteGroups = (search?: string): UseInfiniteGroupsResult => {
-  console.log('[useInfiniteGroups] Search term:', search);
-
   const query = useInfiniteQuery<ApiPageResult<ApiGroupResponse>, QueryError, InfiniteData<ApiPageResult<ApiGroupResponse>>, string[], number>({
     queryKey: ['groups', 'infinite', search || ''],
     queryFn: async ({ pageParam = 1 }): Promise<ApiPageResult<ApiGroupResponse>> => {
@@ -74,7 +72,6 @@ export const useInfiniteGroups = (search?: string): UseInfiniteGroupsResult => {
         per_page: 20,
         ...(search && search.trim() && { nombre: search.trim() }),
       };
-      console.log('[useInfiniteGroups] Building query with params:', queryParams);
 
       // Get auth token
       const { getSession } = await import('next-auth/react');
@@ -100,7 +97,6 @@ export const useInfiniteGroups = (search?: string): UseInfiniteGroupsResult => {
 
       const result: ApiPaginatedResponse<ApiGroupResponse> = await response.json();
 
-      console.log('[useInfiniteGroups] API result:', result);
       return { data: result };
     },
     getNextPageParam: (lastPage: ApiPageResult<ApiGroupResponse>, allPages: ApiPageResult<ApiGroupResponse>[]): number | undefined => {
@@ -108,8 +104,6 @@ export const useInfiniteGroups = (search?: string): UseInfiniteGroupsResult => {
       const currentPage = allPages.length;
       const totalItems = lastPage?.data?.meta?.total ?? 0;
       const itemsLoaded = allPages.reduce((acc, page) => acc + (page?.data?.data?.length ?? 0), 0);
-
-      console.log('[useInfiniteGroups] Pagination check - Current page:', currentPage, 'Total items:', totalItems, 'Items loaded:', itemsLoaded);
 
       if (itemsLoaded < totalItems) {
         return currentPage + 1;
@@ -128,11 +122,11 @@ export const useInfiniteGroups = (search?: string): UseInfiniteGroupsResult => {
     })) ?? []
   ) ?? [];
 
-  console.log('[useInfiniteGroups] Total groups loaded:', allGroups.length);
-  console.log('[useInfiniteGroups] Has more pages:', query.hasNextPage);
-
   const hasMore: boolean = query.hasNextPage ?? false;
-  const isLoading: boolean = query.isLoading || query.isFetchingNextPage;
+  // CRITICAL: Use isFetching instead of isLoading
+  // isLoading is only true on FIRST load
+  // isFetching is true on ALL fetches (including searches)
+  const isLoading: boolean = query.isFetching;
 
   return {
     groups: allGroups,
@@ -148,8 +142,6 @@ export const useInfiniteGroups = (search?: string): UseInfiniteGroupsResult => {
 
 // Hook for paginated events with search
 export const useInfiniteEvents = (groupId?: string, search?: string): UseInfiniteEventsResult => {
-  console.log('[useInfiniteEvents] Group ID:', groupId, 'Search term:', search);
-
   const query = useInfiniteQuery<ApiPageResult<ApiEventResponse>, QueryError, InfiniteData<ApiPageResult<ApiEventResponse>>, string[], number>({
     queryKey: ['events', 'infinite', groupId || '', search || ''],
     queryFn: async ({ pageParam = 1 }): Promise<ApiPageResult<ApiEventResponse>> => {
@@ -159,7 +151,6 @@ export const useInfiniteEvents = (groupId?: string, search?: string): UseInfinit
         ...(search && search.trim() && { nombre: search.trim() }),
         ...(groupId && { grupo_id: parseInt(groupId, 10) }),
       };
-      console.log('[useInfiniteEvents] Building query with params:', queryParams);
 
       // Get auth token
       const { getSession } = await import('next-auth/react');
@@ -185,7 +176,6 @@ export const useInfiniteEvents = (groupId?: string, search?: string): UseInfinit
 
       const result: ApiPaginatedResponse<ApiEventResponse> = await response.json();
 
-      console.log('[useInfiniteEvents] API result:', result);
       return { data: result };
     },
     getNextPageParam: (lastPage: ApiPageResult<ApiEventResponse>, allPages: ApiPageResult<ApiEventResponse>[]): number | undefined => {
@@ -193,8 +183,6 @@ export const useInfiniteEvents = (groupId?: string, search?: string): UseInfinit
       const currentPage = allPages.length;
       const totalItems = lastPage?.data?.meta?.total ?? 0;
       const itemsLoaded = allPages.reduce((acc, page) => acc + (page?.data?.data?.length ?? 0), 0);
-
-      console.log('[useInfiniteEvents] Pagination check - Current page:', currentPage, 'Total items:', totalItems, 'Items loaded:', itemsLoaded);
 
       if (itemsLoaded < totalItems) {
         return currentPage + 1;
@@ -216,11 +204,11 @@ export const useInfiniteEvents = (groupId?: string, search?: string): UseInfinit
     })) ?? []
   ) ?? [];
 
-  console.log('[useInfiniteEvents] Total events loaded:', allEvents.length);
-  console.log('[useInfiniteEvents] Has more pages:', query.hasNextPage);
-
   const hasMore: boolean = query.hasNextPage ?? false;
-  const isLoading: boolean = query.isLoading || query.isFetchingNextPage;
+  // CRITICAL: Use isFetching instead of isLoading
+  // isLoading is only true on FIRST load
+  // isFetching is true on ALL fetches (including searches)
+  const isLoading: boolean = query.isFetching;
 
   return {
     events: allEvents,
