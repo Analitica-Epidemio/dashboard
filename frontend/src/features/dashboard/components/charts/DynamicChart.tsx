@@ -21,14 +21,35 @@ import {
   Legend,
   ResponsiveContainer,
   Cell,
+  TooltipProps,
 } from "recharts";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+
+interface WeekMetadata {
+  year: number;
+  week: number;
+  start_date: string;
+  end_date: string;
+}
+
+interface ChartData {
+  labels: string[];
+  datasets: Array<{
+    label?: string;
+    data: number[];
+  }>;
+  metadata?: WeekMetadata[];
+}
 
 interface DynamicChartProps {
   codigo: string;
   nombre: string;
   descripcion?: string;
   tipo: string;
-  data: any;
+  data: {
+    data: ChartData;
+  };
   config?: any;
 }
 
@@ -46,6 +67,58 @@ const COLORS = [
   "#FFD93D",
 ];
 
+/**
+ * Custom Tooltip Component
+ * Shows week metadata (date range) when available
+ */
+const CustomTooltip: React.FC<TooltipProps<any, any> & { metadata?: WeekMetadata[] }> = ({
+  active,
+  payload,
+  label,
+  metadata,
+}) => {
+  if (!active || !payload || !payload.length) {
+    return null;
+  }
+
+  // Try to find metadata for this label
+  let weekInfo: WeekMetadata | undefined;
+  if (metadata && metadata.length > 0) {
+    // Try exact match first
+    weekInfo = metadata.find((m) => `SE ${m.week}/${m.year}` === label);
+
+    // If not found, try to extract week number from label
+    if (!weekInfo) {
+      const weekMatch = label.match(/(\d+)/);
+      if (weekMatch) {
+        const weekNum = parseInt(weekMatch[1]);
+        weekInfo = metadata.find((m) => m.week === weekNum);
+      }
+    }
+  }
+
+  return (
+    <div className="bg-white p-3 border rounded-lg shadow-lg">
+      <p className="font-semibold text-sm mb-1">{label}</p>
+
+      {/* Show date range if metadata available */}
+      {weekInfo && (
+        <p className="text-xs text-gray-600 mb-2">
+          {format(new Date(weekInfo.start_date), 'dd/MM/yyyy', { locale: es })} -{' '}
+          {format(new Date(weekInfo.end_date), 'dd/MM/yyyy', { locale: es })}
+        </p>
+      )}
+
+      {/* Show data values */}
+      {payload.map((entry: any, index: number) => (
+        <p key={index} className="text-sm" style={{ color: entry.color }}>
+          <span className="font-medium">{entry.name}:</span> {entry.value?.toLocaleString('es-AR')}
+        </p>
+      ))}
+    </div>
+  );
+};
+
 export const DynamicChart: React.FC<DynamicChartProps> = ({
   codigo,
   nombre,
@@ -54,19 +127,26 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
   data,
   config = {},
 }) => {
-  console.log("DynamicChart - Rendering:", {
-    codigo,
-    tipo,
-    nombre,
-    data,
-    config
-  });
   // Renderizar el tipo de chart apropiado
   const renderChart = () => {
     if (!data || !data.data) {
       return (
         <div className="flex items-center justify-center h-48 text-gray-500">
           Sin datos disponibles
+        </div>
+      );
+    }
+
+    // Manejar errores del procesador
+    if (data.error) {
+      return (
+        <div className="flex flex-col items-center justify-center h-48 p-6 text-center">
+          <div className="text-yellow-600 font-medium mb-2">
+            ⚠️ Advertencia
+          </div>
+          <div className="text-sm text-gray-600">
+            {data.error}
+          </div>
         </div>
       );
     }
@@ -106,14 +186,22 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
         const lineKeys = data.data.datasets?.map((d: { label?: string }) => d.label || "value") || [
           "value",
         ];
+        const lineMetadata = data.data.metadata;
 
         return (
           <ResponsiveContainer width="100%" height={height}>
             <LineChart data={lineData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
+              <XAxis
+                dataKey="name"
+                angle={-45}
+                textAnchor="end"
+                height={80}
+                interval="preserveStartEnd"
+                tick={{ fontSize: 11 }}
+              />
               <YAxis />
-              <Tooltip />
+              <Tooltip content={<CustomTooltip metadata={lineMetadata} />} />
               <Legend />
               {lineKeys.map((key: string, index: number) => (
                 <Line
@@ -122,6 +210,8 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
                   dataKey={key}
                   stroke={COLORS[index % COLORS.length]}
                   strokeWidth={2}
+                  dot={{ r: 3 }}
+                  activeDot={{ r: 5 }}
                 />
               ))}
             </LineChart>
@@ -133,14 +223,22 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
         const barKeys = data.data.datasets?.map((d: { label?: string }) => d.label || "value") || [
           "value",
         ];
+        const barMetadata = data.data.metadata;
 
         return (
           <ResponsiveContainer width="100%" height={height}>
             <BarChart data={barData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
+              <XAxis
+                dataKey="name"
+                angle={-45}
+                textAnchor="end"
+                height={80}
+                interval="preserveStartEnd"
+                tick={{ fontSize: 11 }}
+              />
               <YAxis />
-              <Tooltip />
+              <Tooltip content={<CustomTooltip metadata={barMetadata} />} />
               <Legend />
               {barKeys.map((key: string, index: number) => (
                 <Bar
@@ -193,14 +291,22 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
         const areaKeys = data.data.datasets?.map((d: { label?: string }) => d.label || "value") || [
           "value",
         ];
+        const areaMetadata = data.data.metadata;
 
         return (
           <ResponsiveContainer width="100%" height={height}>
             <AreaChart data={areaData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
+              <XAxis
+                dataKey="name"
+                angle={-45}
+                textAnchor="end"
+                height={80}
+                interval="preserveStartEnd"
+                tick={{ fontSize: 11 }}
+              />
               <YAxis />
-              <Tooltip />
+              <Tooltip content={<CustomTooltip metadata={areaMetadata} />} />
               <Legend />
               {areaKeys.map((key: string, index: number) => (
                 <Area

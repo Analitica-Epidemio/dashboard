@@ -79,12 +79,6 @@ const DynamicChartsColumn: React.FC<{
     );
   }
 
-  console.log("ComparativeDashboard - API Response:", {
-    data,
-    charts: data?.data?.charts,
-    combination
-  });
-
   return (
     <div className="flex-1 overflow-y-auto p-4">
       <div className="space-y-4">
@@ -165,8 +159,6 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
   filterCombinations,
   onBack,
 }) => {
-  const [expandedFilters, setExpandedFilters] = useState(false);
-
   // Calculate column width based on number of combinations
   const calculateColumnStyle = () => {
     const count = filterCombinations.length;
@@ -290,8 +282,6 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
         onEditFilters={onBack || (() => {})}
         onGenerateZipReport={handleGenerateZipReport}
         onGenerateSignedUrl={handleGenerateSignedUrl}
-        expanded={expandedFilters}
-        onToggleExpand={() => setExpandedFilters(!expandedFilters)}
         isGeneratingReport={generateZipReportMutation.isPending}
         isGeneratingSignedUrl={generateSignedUrlMutation.isPending}
       />
