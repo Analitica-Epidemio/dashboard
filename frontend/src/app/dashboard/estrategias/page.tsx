@@ -315,7 +315,7 @@ export default function ConfiguracionPage() {
           </header>
 
           {/* Main Content */}
-          <main className="flex-1 p-6 space-y-6">
+          <main className="flex-1 p-6 space-y-6 overflow-y-scroll">
             {/* Info Banner */}
             <Alert className="border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/20">
               <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
