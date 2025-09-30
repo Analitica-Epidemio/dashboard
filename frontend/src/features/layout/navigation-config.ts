@@ -41,12 +41,6 @@ export const navigationConfig = {
       url: "/dashboard/archivos/subir",
     },
     {
-      id: "charts",
-      title: "Charts",
-      icon: IconChartLine,
-      url: "/dashboard/charts",
-    },
-    {
       id: "estrategias",
       title: "Estrategias",
       icon: IconSettings,
