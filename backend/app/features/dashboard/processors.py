@@ -143,12 +143,13 @@ class ChartDataProcessor:
             "corredor_endemico": self.process_corredor_endemico,
             "piramide_poblacional": self.process_piramide_poblacional,
             "mapa_geografico": self.process_mapa_geografico,
-            "totales_historicos": self.process_totales_historicos,
+            "estacionalidad": self.process_estacionalidad,
             "torta_sexo": self.process_torta_sexo,
             "casos_edad": self.process_casos_edad,
             "intento_suicidio": self.process_intento_suicidio,
             "rabia_animal": self.process_rabia_animal,
             "proporcion_ira": self.process_proporcion_ira,
+            "distribucion_clasificacion": self.process_distribucion_clasificacion,
         }
         
         processor_func = processor_map.get(chart_config.funcion_procesamiento)
@@ -545,6 +546,15 @@ class ChartDataProcessor:
         # Filtro por clasificación estrategia
         query = self._add_classification_filter(query, filtros, params, "e")
 
+        # CRÍTICO: Agregar filtros de fecha
+        if filtros.get("fecha_desde"):
+            query += " AND e.fecha_minima_evento >= :fecha_desde"
+            params["fecha_desde"] = self._parse_date(filtros["fecha_desde"])
+
+        if filtros.get("fecha_hasta"):
+            query += " AND e.fecha_minima_evento <= :fecha_hasta"
+            params["fecha_hasta"] = self._parse_date(filtros["fecha_hasta"])
+
         query += " GROUP BY grupo_edad, sexo ORDER BY grupo_edad"
         
         result = await self.db.execute(text(query), params)
@@ -690,69 +700,96 @@ class ChartDataProcessor:
             }
         }
 
-    async def process_totales_historicos(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
+    async def process_estacionalidad(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Procesa datos para totales históricos por año - Solo Chubut
+        Procesa datos para estacionalidad mensual - Solo Chubut
+        Muestra la distribución de casos por mes del año
         """
         query = """
         SELECT
-            e.anio_epidemiologico_apertura as año,
+            EXTRACT(MONTH FROM e.fecha_minima_evento) as mes,
             COUNT(*) as casos
         FROM evento e
         LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
         LEFT JOIN localidad l ON est.id_localidad_establecimiento = l.id_localidad_indec
         LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
-        WHERE e.anio_epidemiologico_apertura IS NOT NULL
+        WHERE e.fecha_minima_evento IS NOT NULL
             AND d.id_provincia_indec = 26
         """
-        
+
         params = {}
-        
+
         if filtros.get("grupo_id"):
             query += """
-                AND id_tipo_eno IN (
+                AND e.id_tipo_eno IN (
                     SELECT id FROM tipo_eno WHERE id_grupo_eno = :grupo_id
                 )
             """
             params["grupo_id"] = filtros["grupo_id"]
-            
+
         if filtros.get("evento_id"):
-            query += " AND id_tipo_eno = :evento_id"
+            query += " AND e.id_tipo_eno = :evento_id"
             params["evento_id"] = filtros["evento_id"]
 
         # Filtro por clasificación estrategia
-        query = self._add_classification_filter(query, filtros, params)
+        query = self._add_classification_filter(query, filtros, params, "e")
 
-        query += " GROUP BY año ORDER BY año"
-        
+        # Filtros de fecha
+        if filtros.get("fecha_desde"):
+            query += " AND e.fecha_minima_evento >= :fecha_desde"
+            params["fecha_desde"] = self._parse_date(filtros["fecha_desde"])
+
+        if filtros.get("fecha_hasta"):
+            query += " AND e.fecha_minima_evento <= :fecha_hasta"
+            params["fecha_hasta"] = self._parse_date(filtros["fecha_hasta"])
+
+        query += " GROUP BY mes ORDER BY mes"
+
         result = await self.db.execute(text(query), params)
         rows = result.fetchall()
-        
+
+        logger.info(f"Estacionalidad - Filas encontradas: {len(rows)}")
+
+        # Nombres de meses en español
+        meses_nombres = [
+            "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+        ]
+
+        # Crear diccionario con todos los meses (inicializar en 0)
+        casos_por_mes = {i: 0 for i in range(1, 13)}
+
+        # Llenar con los datos obtenidos
+        for row in rows:
+            mes = int(row[0]) if row[0] else 0
+            if 1 <= mes <= 12:
+                casos_por_mes[mes] = row[1]
+
         if not rows:
             return {
                 "type": "bar",
                 "data": {
-                    "labels": [],
+                    "labels": meses_nombres,
                     "datasets": [{
-                        "label": "Casos totales",
-                        "data": [],
-                        "backgroundColor": "rgba(75, 192, 192, 0.5)"
+                        "label": "Casos por mes",
+                        "data": [0] * 12,
+                        "backgroundColor": "rgba(54, 162, 235, 0.5)"
                     }]
                 }
             }
-        
+
         return {
             "type": "bar",
             "data": {
-                "labels": [int(row[0]) for row in rows],
+                "labels": meses_nombres,
                 "datasets": [{
-                    "label": "Casos totales",
-                    "data": [row[1] for row in rows],
-                    "backgroundColor": "rgba(75, 192, 192, 0.5)"
+                    "label": "Casos por mes",
+                    "data": [casos_por_mes[i] for i in range(1, 13)],
+                    "backgroundColor": "rgba(54, 162, 235, 0.5)"
                 }]
             }
         }
-    
+
     async def process_torta_sexo(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
         """
         Procesa datos para distribución por sexo - Solo Chubut
@@ -942,11 +979,20 @@ class ChartDataProcessor:
         """
         
         params = {}
-        
+
         if filtros.get("evento_id"):
             query += " AND e.id_tipo_eno = :evento_id"
             params["evento_id"] = filtros["evento_id"]
-            
+
+        # CRÍTICO: Agregar filtros de fecha
+        if filtros.get("fecha_desde"):
+            query += " AND e.fecha_minima_evento >= :fecha_desde"
+            params["fecha_desde"] = self._parse_date(filtros["fecha_desde"])
+
+        if filtros.get("fecha_hasta"):
+            query += " AND e.fecha_minima_evento <= :fecha_hasta"
+            params["fecha_hasta"] = self._parse_date(filtros["fecha_hasta"])
+
         query += " GROUP BY categoria"
         
         result = await self.db.execute(text(query), params)
@@ -995,11 +1041,20 @@ class ChartDataProcessor:
         """
         
         params = {}
-        
+
         if filtros.get("evento_id"):
             query += " AND e.id_tipo_eno = :evento_id"
             params["evento_id"] = filtros["evento_id"]
-            
+
+        # CRÍTICO: Agregar filtros de fecha
+        if filtros.get("fecha_desde"):
+            query += " AND e.fecha_minima_evento >= :fecha_desde"
+            params["fecha_desde"] = self._parse_date(filtros["fecha_desde"])
+
+        if filtros.get("fecha_hasta"):
+            query += " AND e.fecha_minima_evento <= :fecha_hasta"
+            params["fecha_hasta"] = self._parse_date(filtros["fecha_hasta"])
+
         query += " GROUP BY especie"
         
         result = await self.db.execute(text(query), params)
@@ -1124,6 +1179,120 @@ class ChartDataProcessor:
                         "porcentaje": round((row[1] / total_casos) * 100, 2) if total_casos > 0 else 0
                     }
                     for row in rows
+                ]
+            }
+        }
+
+    async def process_distribucion_clasificacion(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Procesa datos para distribución por clasificación estratégica - Solo Chubut
+        Muestra casos por tipo de clasificación (CONFIRMADOS, PROBABLES, SOSPECHOSOS, etc.)
+        """
+        query = """
+        SELECT
+            COALESCE(e.clasificacion_estrategia, 'SIN_CLASIFICAR') as clasificacion,
+            COUNT(*) as casos
+        FROM evento e
+        LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
+        LEFT JOIN localidad l ON est.id_localidad_establecimiento = l.id_localidad_indec
+        LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
+        WHERE d.id_provincia_indec = 26
+        """
+
+        params = {}
+
+        if filtros.get("grupo_id"):
+            query += """
+                AND e.id_tipo_eno IN (
+                    SELECT id FROM tipo_eno WHERE id_grupo_eno = :grupo_id
+                )
+            """
+            params["grupo_id"] = filtros["grupo_id"]
+
+        if filtros.get("evento_id"):
+            query += " AND e.id_tipo_eno = :evento_id"
+            params["evento_id"] = filtros["evento_id"]
+
+        # Filtros de fecha
+        if filtros.get("fecha_desde"):
+            query += " AND e.fecha_minima_evento >= :fecha_desde"
+            params["fecha_desde"] = self._parse_date(filtros["fecha_desde"])
+
+        if filtros.get("fecha_hasta"):
+            query += " AND e.fecha_minima_evento <= :fecha_hasta"
+            params["fecha_hasta"] = self._parse_date(filtros["fecha_hasta"])
+
+        query += " GROUP BY clasificacion ORDER BY casos DESC"
+
+        result = await self.db.execute(text(query), params)
+        rows = result.fetchall()
+
+        logger.info(f"Distribución clasificación - Filas encontradas: {len(rows)}")
+        if rows and len(rows) > 0:
+            logger.info(f"Distribución clasificación - Datos: {rows}")
+
+        if not rows:
+            return {
+                "type": "pie",
+                "data": {
+                    "labels": ["Sin datos"],
+                    "datasets": [{
+                        "data": [1],
+                        "backgroundColor": ["rgba(200, 200, 200, 0.5)"]
+                    }]
+                }
+            }
+
+        # Mapeo de colores por clasificación
+        color_map = {
+            "CONFIRMADOS": "rgba(76, 175, 80, 0.7)",      # Verde
+            "PROBABLES": "rgba(255, 193, 7, 0.7)",        # Amarillo
+            "SOSPECHOSOS": "rgba(255, 152, 0, 0.7)",      # Naranja
+            "EN_ESTUDIO": "rgba(33, 150, 243, 0.7)",      # Azul
+            "NEGATIVOS": "rgba(158, 158, 158, 0.7)",      # Gris
+            "DESCARTADOS": "rgba(189, 189, 189, 0.7)",    # Gris claro
+            "NOTIFICADOS": "rgba(3, 169, 244, 0.7)",      # Celeste
+            "CON_RESULTADO_MORTAL": "rgba(244, 67, 54, 0.7)",   # Rojo oscuro
+            "SIN_RESULTADO_MORTAL": "rgba(139, 195, 74, 0.7)",  # Verde claro
+            "REQUIERE_REVISION": "rgba(156, 39, 176, 0.7)",     # Púrpura
+            "SIN_CLASIFICAR": "rgba(224, 224, 224, 0.7)",       # Gris muy claro
+        }
+
+        # Preparar datos con colores apropiados
+        labels = []
+        data = []
+        colors = []
+
+        for row in rows:
+            clasificacion = row[0]
+            casos = row[1]
+
+            # Formatear label para mostrar
+            label_formateado = clasificacion.replace("_", " ").title()
+            labels.append(label_formateado)
+            data.append(casos)
+            colors.append(color_map.get(clasificacion, "rgba(158, 158, 158, 0.7)"))
+
+        total_casos = sum(data)
+
+        return {
+            "type": "pie",
+            "data": {
+                "labels": labels,
+                "datasets": [{
+                    "data": data,
+                    "backgroundColor": colors
+                }]
+            },
+            "metadata": {
+                "total_casos": total_casos,
+                "proporciones": [
+                    {
+                        "clasificacion": labels[i],
+                        "casos": data[i],
+                        "porcentaje": round((data[i] / total_casos) * 100, 2) if total_casos > 0 else 0
+                    }
+                    for i in range(len(labels))
                 ]
             }
         }

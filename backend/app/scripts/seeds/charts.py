@@ -63,10 +63,10 @@ DASHBOARD_CHARTS = [
         "activo": True
     },
     {
-        "codigo": "totales-historicos",
-        "nombre": "Totales Históricos",
-        "descripcion": "Evolución anual de casos",
-        "funcion_procesamiento": "totales_historicos",
+        "codigo": "estacionalidad-mensual",
+        "nombre": "Estacionalidad",
+        "descripcion": "Distribución mensual de casos",
+        "funcion_procesamiento": "estacionalidad",
         "condiciones_display": None,
         "tipo_visualizacion": "bar",
         "configuracion_chart": {"height": 300},
@@ -126,6 +126,17 @@ DASHBOARD_CHARTS = [
         "tipo_visualizacion": "pie",
         "configuracion_chart": {"height": 400},
         "orden": 10,
+        "activo": True
+    },
+    {
+        "codigo": "distribucion-clasificacion",
+        "nombre": "Distribución por Clasificación",
+        "descripcion": "Casos por tipo de clasificación estratégica",
+        "funcion_procesamiento": "distribucion_clasificacion",
+        "condiciones_display": None,
+        "tipo_visualizacion": "pie",
+        "configuracion_chart": {"height": 300},
+        "orden": 11,
         "activo": True
     }
 ]
