@@ -362,7 +362,6 @@ export default function EventosPage() {
                             <div>
                               <div className="flex items-center gap-2">
                                 <span className="text-lg font-medium">
-                                  {getTipoSujetoIcon(evento.tipo_sujeto)}{" "}
                                   {evento.nombre_sujeto || "Sin identificar"}
                                 </span>
                                 {evento.clasificacion_estrategia && (

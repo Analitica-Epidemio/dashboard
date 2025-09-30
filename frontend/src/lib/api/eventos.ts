@@ -128,18 +128,3 @@ export function getClasificacionEstrategiaColor(clasificacion: string | null | u
 
   return colors[clasificacion] || 'text-gray-500';
 }
-
-/**
- * Utility function for tipo sujeto icon
- */
-export function getTipoSujetoIcon(tipoSujeto: string | undefined) {
-  // This returns icon names for lucide-react
-  switch (tipoSujeto) {
-    case 'humano':
-      return 'User';
-    case 'animal':
-      return 'Heart';
-    default:
-      return 'AlertCircle';
-  }
-}
