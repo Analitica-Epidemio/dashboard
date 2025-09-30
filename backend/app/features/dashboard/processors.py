@@ -144,7 +144,6 @@ class ChartDataProcessor:
             "piramide_poblacional": self.process_piramide_poblacional,
             "mapa_geografico": self.process_mapa_geografico,
             "estacionalidad": self.process_estacionalidad,
-            "torta_sexo": self.process_torta_sexo,
             "casos_edad": self.process_casos_edad,
             "intento_suicidio": self.process_intento_suicidio,
             "rabia_animal": self.process_rabia_animal,
@@ -790,89 +789,6 @@ class ChartDataProcessor:
             }
         }
 
-    async def process_torta_sexo(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Procesa datos para distribución por sexo - Solo Chubut
-        """
-        query = """
-        SELECT
-            CASE
-                WHEN c.sexo_biologico = 'MASCULINO' THEN 'Masculino'
-                WHEN c.sexo_biologico = 'FEMENINO' THEN 'Femenino'
-                WHEN c.sexo_biologico = 'NO_ESPECIFICADO' THEN 'No especificado'
-                ELSE 'Sin datos'
-            END as sexo,
-            COUNT(*) as casos
-        FROM evento e
-        LEFT JOIN ciudadano c ON e.codigo_ciudadano = c.codigo_ciudadano
-        LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
-        LEFT JOIN localidad l ON est.id_localidad_establecimiento = l.id_localidad_indec
-        LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
-        WHERE d.id_provincia_indec = 26
-        """
-
-        params = {}
-
-        if filtros.get("grupo_id"):
-            query += """
-                AND e.id_tipo_eno IN (
-                    SELECT id FROM tipo_eno WHERE id_grupo_eno = :grupo_id
-                )
-            """
-            params["grupo_id"] = filtros["grupo_id"]
-
-        if filtros.get("evento_id"):
-            query += " AND e.id_tipo_eno = :evento_id"
-            params["evento_id"] = filtros["evento_id"]
-
-        # Filtro por clasificación estrategia
-        query = self._add_classification_filter(query, filtros, params, "e")
-
-        # CRÍTICO: Agregar filtros de fecha
-        if filtros.get("fecha_desde"):
-            query += " AND e.fecha_minima_evento >= :fecha_desde"
-            params["fecha_desde"] = self._parse_date(filtros["fecha_desde"])
-
-        if filtros.get("fecha_hasta"):
-            query += " AND e.fecha_minima_evento <= :fecha_hasta"
-            params["fecha_hasta"] = self._parse_date(filtros["fecha_hasta"])
-
-        query += " GROUP BY sexo"
-        
-        result = await self.db.execute(text(query), params)
-        rows = result.fetchall()
-        
-        logger.info(f"Torta sexo - Filas encontradas: {len(rows)}")
-        if rows and len(rows) > 0:
-            logger.info(f"Torta sexo - Datos: {rows}")
-        
-        if not rows:
-            return {
-                "type": "pie",
-                "data": {
-                    "labels": ["Sin datos"],
-                    "datasets": [{
-                        "data": [1],
-                        "backgroundColor": ["rgba(200, 200, 200, 0.5)"]
-                    }]
-                }
-            }
-        
-        return {
-            "type": "pie",
-            "data": {
-                "labels": [row[0] for row in rows],
-                "datasets": [{
-                    "data": [row[1] for row in rows],
-                    "backgroundColor": [
-                        "rgba(54, 162, 235, 0.5)",
-                        "rgba(255, 99, 132, 0.5)",
-                        "rgba(75, 192, 192, 0.5)"
-                    ]
-                }]
-            }
-        }
-    
     async def process_casos_edad(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
         """
         Procesa datos para casos por grupos de edad - Solo Chubut

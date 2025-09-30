@@ -74,17 +74,6 @@ DASHBOARD_CHARTS = [
         "activo": True
     },
     {
-        "codigo": "torta-sexo",
-        "nombre": "Distribución por Sexo",
-        "descripcion": "Proporción de casos por sexo",
-        "funcion_procesamiento": "torta_sexo",
-        "condiciones_display": None,
-        "tipo_visualizacion": "pie",
-        "configuracion_chart": {"height": 300},
-        "orden": 6,
-        "activo": True
-    },
-    {
         "codigo": "casos-edad",
         "nombre": "Casos por Edad",
         "descripcion": "Distribución por grupos etarios",
@@ -92,7 +81,7 @@ DASHBOARD_CHARTS = [
         "condiciones_display": None,
         "tipo_visualizacion": "bar",
         "configuracion_chart": {"height": 300},
-        "orden": 7,
+        "orden": 6,
         "activo": True
     },
     {
@@ -103,7 +92,7 @@ DASHBOARD_CHARTS = [
         "condiciones_display": {"grupo_codigos": ["lesiones-intencionales"]},
         "tipo_visualizacion": "bar",
         "configuracion_chart": {"height": 300},
-        "orden": 8,
+        "orden": 7,
         "activo": True
     },
     {
@@ -114,7 +103,7 @@ DASHBOARD_CHARTS = [
         "condiciones_display": {"grupo_codigos": ["rabia"]},
         "tipo_visualizacion": "bar",
         "configuracion_chart": {"height": 300},
-        "orden": 9,
+        "orden": 8,
         "activo": True
     },
     {
@@ -125,7 +114,7 @@ DASHBOARD_CHARTS = [
         "condiciones_display": {"grupo_codigos": ["infecciones-respiratorias-agudas"]},
         "tipo_visualizacion": "pie",
         "configuracion_chart": {"height": 400},
-        "orden": 10,
+        "orden": 9,
         "activo": True
     },
     {
@@ -136,7 +125,7 @@ DASHBOARD_CHARTS = [
         "condiciones_display": None,
         "tipo_visualizacion": "pie",
         "configuracion_chart": {"height": 300},
-        "orden": 11,
+        "orden": 10,
         "activo": True
     }
 ]

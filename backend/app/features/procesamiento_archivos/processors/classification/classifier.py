@@ -123,49 +123,59 @@ class EventClassifier:
         self, full_df: pd.DataFrame, group_df: pd.DataFrame, evento_name: str
     ):
         """Clasifica un grupo de eventos del mismo tipo."""
-        # Log específico para evento de interés
-        has_target_event = False
-        if hasattr(group_df, 'index'):
-            for idx in group_df.index:
-                if full_df.loc[idx].get('IDEVENTOCASO') == '36244886':
-                    has_target_event = True
-                    logger.error(f"🎯 EVENTO TARGET 36244886 encontrado en grupo '{evento_name}' - iniciando logging detallado")
-                    break
-        
+        # Detectar si es dengue y seleccionar 5 casos random para logging
+        is_dengue = 'dengue' in evento_name.lower()
+        sample_ids = []
+
+        if is_dengue and 'IDEVENTOCASO' in group_df.columns:
+            # Seleccionar hasta 5 casos random
+            sample_size = min(5, len(group_df))
+            sample_indices = group_df.sample(n=sample_size).index
+            sample_ids = group_df.loc[sample_indices, 'IDEVENTOCASO'].tolist()
+            logger.error(f"🦟 DENGUE: Procesando {len(group_df)} casos de '{evento_name}' - Logeando muestra de {len(sample_ids)}: {sample_ids}")
+
         # 1. Obtener tipo ENO
         tipo_eno = self._get_tipo_eno(evento_name)
 
         if not tipo_eno:
             # El evento no está en nuestro seed - marcarlo como requiere revisión
-            if has_target_event:
-                logger.error(f"🎯 EVENTO 36244886: Evento '{evento_name}' no está en el seed - marcando como REQUIERE_REVISION")
+            if is_dengue and sample_ids:
+                logger.error(f"🦟 DENGUE: Evento '{evento_name}' no está en el seed - marcando muestra {sample_ids} como REQUIERE_REVISION")
             logger.warning(f"Evento '{evento_name}' no está en el seed - marcando como REQUIERE_REVISION")
             full_df.loc[group_df.index, "clasificacion_estrategia"] = TipoClasificacion.REQUIERE_REVISION
             return
 
-        if has_target_event:
-            logger.error(f"🎯 EVENTO 36244886: Encontrado tipo ENO: {tipo_eno}")
+        if is_dengue and sample_ids:
+            logger.error(f"🦟 DENGUE: Tipo ENO encontrado: ID={tipo_eno['id']}, Nombre={tipo_eno['nombre']}, Código={tipo_eno['codigo']}")
 
         full_df.loc[group_df.index, "tipo_eno_detectado"] = tipo_eno["nombre"]
 
         # 2. Aplicar clasificación de BD
         if self.classification_service:
             try:
-                if has_target_event:
-                    logger.error(f"🎯 EVENTO 36244886: Aplicando clasificación con estrategia para tipo_eno_id={tipo_eno['id']}")
-                    # Log los datos específicos del evento antes de la clasificación
-                    for idx in group_df.index:
-                        if full_df.loc[idx].get('IDEVENTOCASO') == '36244886':
-                            logger.error(f"🎯 EVENTO 36244886: Datos antes de clasificación: {group_df.loc[idx].to_dict()}")
-                            break
-                
+                if is_dengue and sample_ids:
+                    logger.error(f"🦟 DENGUE: Aplicando estrategia de clasificación para tipo_eno_id={tipo_eno['id']}")
+                    # Log datos de muestra antes de clasificación
+                    for sample_id in sample_ids[:2]:  # Solo primeros 2 para no saturar logs
+                        sample_row = group_df[group_df['IDEVENTOCASO'] == sample_id]
+                        if not sample_row.empty:
+                            # Mostrar solo campos relevantes
+                            relevant_fields = ['IDEVENTOCASO', 'CLASIFICACIONMANUAL', 'SEMANAEPI', 'PROVINCIADERESIDENCIA']
+                            sample_data = {k: v for k, v in sample_row.iloc[0].to_dict().items() if k in relevant_fields}
+                            logger.error(f"🦟 DENGUE: Caso {sample_id} antes de clasificar: {sample_data}")
+
                 classified_group = self.classification_service.classify_events(
-                    group_df.copy(), tipo_eno["id"]
+                    group_df.copy(), tipo_eno["id"], sample_ids if is_dengue else []
                 )
 
-                if has_target_event:
-                    logger.error(f"🎯 EVENTO 36244886: Resultado de clasificación: {classified_group['clasificacion'].tolist()}")
-                    logger.error(f"🎯 EVENTO 36244886: Es positivo: {classified_group['es_positivo'].tolist()}")
+                if is_dengue and sample_ids:
+                    # Mostrar resultados de muestra
+                    for sample_id in sample_ids[:3]:
+                        if sample_id in classified_group.index or (group_df['IDEVENTOCASO'] == sample_id).any():
+                            idx = group_df[group_df['IDEVENTOCASO'] == sample_id].index[0]
+                            clasificacion = classified_group.loc[idx, 'clasificacion'] if idx in classified_group.index else 'ERROR'
+                            es_positivo = classified_group.loc[idx, 'es_positivo'] if idx in classified_group.index else False
+                            logger.error(f"🦟 DENGUE: Caso {sample_id} → Clasificación: {clasificacion}, Es positivo: {es_positivo}")
 
                 full_df.loc[group_df.index, "clasificacion_estrategia"] = (
                     classified_group["clasificacion"]
@@ -175,8 +185,8 @@ class EventClassifier:
                 ]
 
             except Exception as e:
-                if has_target_event:
-                    logger.error(f"🎯 EVENTO 36244886: ERROR en clasificación de BD: {e}")
+                if is_dengue and sample_ids:
+                    logger.error(f"🦟 DENGUE: ERROR en clasificación de muestra {sample_ids}: {e}")
                 logger.error(f"Error en clasificación de BD: {e}")
                 full_df.loc[group_df.index, "clasificacion_estrategia"] = TipoClasificacion.REQUIERE_REVISION
         else:
@@ -205,8 +215,15 @@ class EventClassifier:
         # Convertir nombre del evento a código kebab-case estable
         evento_codigo = CodigoGenerator.generar_codigo_kebab(evento_name)
 
+        # Log detallado para dengue
+        is_dengue = 'dengue' in evento_name.lower()
+        if is_dengue:
+            logger.error(f"🔍 LOOKUP: Buscando tipo ENO - Nombre original: '{evento_name}' → Código generado: '{evento_codigo}'")
+
         # Buscar en cache (usando código como clave)
         if evento_codigo in self._tipo_eno_cache:
+            if is_dengue:
+                logger.error(f"🔍 LOOKUP: Encontrado en cache: {self._tipo_eno_cache[evento_codigo]}")
             return self._tipo_eno_cache[evento_codigo]
 
         # Buscar en BD por código (más robusto que buscar por nombre)
@@ -218,6 +235,9 @@ class EventClassifier:
             )
             tipo_eno = result.scalar_one_or_none()
 
+            if is_dengue:
+                logger.error(f"🔍 LOOKUP: Query ejecutada - Resultado: {tipo_eno}")
+
             if tipo_eno:
                 tipo_eno_dict = {
                     "id": tipo_eno.id,
@@ -226,12 +246,18 @@ class EventClassifier:
                 }
 
                 self._tipo_eno_cache[evento_codigo] = tipo_eno_dict
+                if is_dengue:
+                    logger.error(f"🔍 LOOKUP: ✅ Tipo ENO encontrado y cacheado: {tipo_eno_dict}")
                 return tipo_eno_dict
 
         except Exception as e:
+            if is_dengue:
+                logger.error(f"🔍 LOOKUP: ❌ ERROR en query: {e}")
             logger.debug(f"Tipo ENO con código '{evento_codigo}' (evento: '{evento_name}') no encontrado en BD: {e}")
 
         # No encontrado - evento no está en el seed
+        if is_dengue:
+            logger.error(f"🔍 LOOKUP: ❌ No encontrado en BD - Código buscado: '{evento_codigo}'")
         self._tipo_eno_cache[evento_codigo] = None
         return None
 

@@ -324,8 +324,6 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
 
       case "d3_pyramid":
         // Renderizar pirámide poblacional con D3
-        const pyramidHeight = config.height || 300;
-
         if (!data.data || !Array.isArray(data.data)) {
           return (
             <div className="flex items-center justify-center h-48 text-gray-500">
@@ -334,25 +332,20 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
           );
         }
 
-        // Para pirámides de edad, usar un gráfico de barras horizontal
-        const pyramidData = convertChartJsToRecharts(data.data);
+        // Import dinámico del componente de pirámide
+        const PopulationPyramid = React.lazy(() =>
+          import("./PopulationPyramid").then(module => ({
+            default: module.PopulationPyramid
+          }))
+        );
+
         return (
-          <div style={{ width: "100%", height: "400px" }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={pyramidData}
-                layout="horizontal"
-                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis dataKey="name" type="category" />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="value" fill="#8884d8" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <React.Suspense fallback={<div>Cargando pirámide...</div>}>
+            <PopulationPyramid
+              data={data.data}
+              height={config.height || 400}
+            />
+          </React.Suspense>
         );
 
       case "mapa":

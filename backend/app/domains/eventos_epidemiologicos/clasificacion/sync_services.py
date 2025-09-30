@@ -62,7 +62,7 @@ class SyncEventClassificationService:
         return text
 
     def classify_events(
-        self, df: pd.DataFrame, tipo_eno_id: int, use_cache: bool = True
+        self, df: pd.DataFrame, tipo_eno_id: int, sample_ids: list = None, use_cache: bool = True
     ) -> pd.DataFrame:
         """
         Clasifica eventos según la estrategia definida para un tipo de ENO.
@@ -70,25 +70,25 @@ class SyncEventClassificationService:
         Args:
             df: DataFrame con los eventos a clasificar
             tipo_eno_id: ID del tipo de ENO
+            sample_ids: Lista de IDs de eventos a loggear en detalle (opcional)
             use_cache: Si usar cache de estrategias
 
         Returns:
             DataFrame con columnas 'clasificacion' y 'es_positivo' agregadas
         """
-        # Detectar si tenemos eventos de interés
+        # Usar sample_ids si se provee, sino lista vacía
+        target_cases = sample_ids if sample_ids else []
         has_target_event = False
-        dengue_cases = ['35927100', '35977165', '36059653', '36824004', '36650949', '36646677', '36577216']
-        target_cases = ['36244886'] + dengue_cases
-        
-        if 'IDEVENTOCASO' in df.columns:
+
+        if target_cases and 'IDEVENTOCASO' in df.columns:
             has_target_event = df['IDEVENTOCASO'].isin(target_cases).any()
-            
+
         if has_target_event:
             import logging
             logger = logging.getLogger(__name__)
             # Encontrar cuáles casos específicos están en este DataFrame
             current_targets = df[df['IDEVENTOCASO'].isin(target_cases)]['IDEVENTOCASO'].tolist()
-            logger.error(f"🎯 SYNC SERVICE: Clasificando eventos {current_targets} con tipo_eno_id={tipo_eno_id}")
+            logger.error(f"🦟 SYNC SERVICE: Clasificando muestra {current_targets} con tipo_eno_id={tipo_eno_id}")
         
         # Obtener estrategia
         strategy = self._get_strategy(tipo_eno_id, use_cache)
@@ -96,15 +96,15 @@ class SyncEventClassificationService:
         if not strategy:
             # Sin estrategia definida, marcar como sin clasificar
             if has_target_event:
-                logger.error(f"🎯 SYNC SERVICE: No se encontró estrategia para tipo_eno_id={tipo_eno_id} - eventos afectados: {current_targets}")
+                logger.error(f"🦟 SYNC SERVICE: No se encontró estrategia para tipo_eno_id={tipo_eno_id} - muestra afectada: {current_targets}")
             df["clasificacion"] = TipoClasificacion.REQUIERE_REVISION.value
             df["es_positivo"] = False
             return df
 
         if has_target_event:
-            logger.error(f"🎯 SYNC SERVICE: Estrategia encontrada: {strategy.name} (ID: {strategy.id})")
-            logger.error(f"🎯 SYNC SERVICE: Número de reglas: {len(strategy.classification_rules) if strategy.classification_rules else 0}")
-            logger.error(f"🎯 SYNC SERVICE: Eventos de interés en este grupo: {current_targets}")
+            logger.error(f"🦟 SYNC SERVICE: Estrategia encontrada: {strategy.name} (ID: {strategy.id})")
+            logger.error(f"🦟 SYNC SERVICE: Número de reglas: {len(strategy.classification_rules) if strategy.classification_rules else 0}")
+            logger.error(f"🦟 SYNC SERVICE: Muestra a trackear: {current_targets}")
 
         # Aplicar configuración específica de la estrategia
         df = self._apply_strategy_config(df, strategy)
@@ -120,9 +120,9 @@ class SyncEventClassificationService:
         )
 
         if has_target_event:
-            logger.error("🎯 SYNC SERVICE: Reglas activas ordenadas por prioridad:")
+            logger.error("🦟 SYNC SERVICE: Reglas activas ordenadas por prioridad:")
             for i, rule in enumerate(rules):
-                logger.error(f"🎯 SYNC SERVICE:   {i+1}. {rule.name} (prioridad={rule.priority}, clasificación={rule.classification})")
+                logger.error(f"🦟 SYNC SERVICE:   {i+1}. {rule.name} (prioridad={rule.priority}, clasificación={rule.classification})")
 
         # Aplicar cada regla
         for rule_idx, rule in enumerate(rules):
@@ -130,28 +130,28 @@ class SyncEventClassificationService:
             unclassified_mask = df["clasificacion"].isna()
             if not unclassified_mask.any():
                 if has_target_event:
-                    logger.error("🎯 SYNC SERVICE: Todas las filas ya están clasificadas, terminando evaluación")
+                    logger.error("🦟 SYNC SERVICE: Todas las filas ya están clasificadas, terminando evaluación")
                 break
 
             if has_target_event:
                 unclassified_targets = df.loc[df['IDEVENTOCASO'].isin(target_cases) & df['clasificacion'].isna(), 'IDEVENTOCASO'].tolist()
-                logger.error(f"🎯 SYNC SERVICE: Evaluando regla {rule_idx+1}: '{rule.name}' - Eventos sin clasificar: {unclassified_targets}")
+                logger.error(f"🦟 SYNC SERVICE: Evaluando regla {rule_idx+1}: '{rule.name}' - Muestra sin clasificar: {unclassified_targets}")
 
             # Evaluar condiciones de la regla
-            rule_mask = self._apply_rule(df[unclassified_mask].copy(), rule)
+            rule_mask = self._apply_rule(df[unclassified_mask].copy(), rule, target_cases)
 
             # Aplicar clasificación donde se cumple la regla
             indices = df[unclassified_mask][rule_mask].index
-            
+
             if has_target_event:
                 matched_targets = []
                 if not indices.empty:
                     # Usar isin en los índices para encontrar los eventos de interés
                     matched_targets = df.loc[indices, 'IDEVENTOCASO'][df.loc[indices, 'IDEVENTOCASO'].isin(target_cases)].tolist()
-                logger.error(f"🎯 SYNC SERVICE: Regla '{rule.name}' - {len(indices)} eventos cumplen la regla, eventos de interés incluidos: {matched_targets}")
-                
+                logger.error(f"🦟 SYNC SERVICE: Regla '{rule.name}' - {len(indices)} eventos cumplen, muestra incluida: {matched_targets}")
+
                 if matched_targets:
-                    logger.error(f"🎯 SYNC SERVICE: ¡APLICANDO clasificación '{rule.classification}' a eventos: {matched_targets}!")
+                    logger.error(f"🦟 SYNC SERVICE: ✅ APLICANDO clasificación '{rule.classification}' a muestra: {matched_targets}")
             
             df.loc[indices, "clasificacion"] = rule.classification
 
@@ -211,46 +211,44 @@ class SyncEventClassificationService:
 
         return df
 
-    def _apply_rule(self, df: pd.DataFrame, rule: ClassificationRule) -> pd.Series:
+    def _apply_rule(self, df: pd.DataFrame, rule: ClassificationRule, target_cases: list = None) -> pd.Series:
         """
         Evalúa una regla sobre un DataFrame.
 
         Args:
             df: DataFrame a evaluar
             rule: Regla a aplicar
+            target_cases: Lista de IDs para logging (opcional)
 
         Returns:
             Serie booleana indicando qué filas cumplen la regla
         """
         # Detectar si tenemos eventos de interés
         has_target_event = False
-        dengue_cases = ['35927100', '35977165', '36059653', '36824004', '36650949', '36646677', '36577216']
-        target_cases = ['36244886'] + dengue_cases
-        
-        if 'IDEVENTOCASO' in df.columns:
+        if target_cases and 'IDEVENTOCASO' in df.columns:
             has_target_event = df['IDEVENTOCASO'].isin(target_cases).any()
-            
+
         # Si no hay condiciones, la regla aplica a todas las filas
         if not rule.filters:
             if has_target_event:
                 import logging
                 logger = logging.getLogger(__name__)
                 current_targets = df[df['IDEVENTOCASO'].isin(target_cases)]['IDEVENTOCASO'].tolist()
-                logger.error(f"🎯 RULE EVAL: Regla '{rule.name}' sin condiciones - aplica a todas las filas (incluye: {current_targets})")
+                logger.error(f"🦟 RULE EVAL: Regla '{rule.name}' sin condiciones - aplica a todas las filas (incluye: {current_targets})")
             return pd.Series([True] * len(df), index=df.index)
 
         if has_target_event:
             import logging
             logger = logging.getLogger(__name__)
             current_targets = df[df['IDEVENTOCASO'].isin(target_cases)]['IDEVENTOCASO'].tolist()
-            logger.error(f"🎯 RULE EVAL: Evaluando regla '{rule.name}' con {len(rule.filters)} condiciones para eventos: {current_targets}")
+            logger.error(f"🦟 RULE EVAL: Evaluando regla '{rule.name}' con {len(rule.filters)} condiciones para muestra: {current_targets}")
 
         # Iniciar con máscara verdadera
         mask = pd.Series([True] * len(df), index=df.index)
 
         # Aplicar cada condición
         for cond_idx, condition in enumerate(rule.filters):
-            condition_mask = self._evaluate_condition(df, condition)
+            condition_mask = self._evaluate_condition(df, condition, target_cases)
 
             if has_target_event:
                 matched_targets = []
@@ -258,7 +256,7 @@ class SyncEventClassificationService:
                     # Filtrar por eventos de interés usando el condition_mask
                     matched_targets = df.loc[condition_mask, 'IDEVENTOCASO'][df.loc[condition_mask, 'IDEVENTOCASO'].isin(target_cases)].tolist()
                 config_value = condition.config.get('value') if condition.config else condition.config.get('values', 'No config') if condition.config else 'No config'
-                logger.error(f"🎯 RULE EVAL:   Condición {cond_idx+1}: campo='{condition.field_name}', tipo='{condition.filter_type}', valor='{config_value}' - Eventos que cumplen: {matched_targets}")
+                logger.error(f"🦟 RULE EVAL:   Condición {cond_idx+1}: campo='{condition.field_name}', tipo='{condition.filter_type}', valor='{config_value}' - Muestra que cumple: {matched_targets}")
 
             # Combinar según operador lógico de la condición
             if condition.logical_operator == "AND":
@@ -271,12 +269,12 @@ class SyncEventClassificationService:
 
         if has_target_event:
             matched_targets = df.loc[mask, 'IDEVENTOCASO'][df.loc[mask, 'IDEVENTOCASO'].isin(target_cases)].tolist()
-            logger.error(f"🎯 RULE EVAL: Resultado final de regla '{rule.name}': Eventos que cumplen regla completa: {matched_targets}")
+            logger.error(f"🦟 RULE EVAL: ✅ Resultado final regla '{rule.name}': Muestra que cumple: {matched_targets}")
 
         return mask
 
     def _evaluate_condition(
-        self, df: pd.DataFrame, condition: FilterCondition
+        self, df: pd.DataFrame, condition: FilterCondition, target_cases: list = None
     ) -> pd.Series:
         """
         Evalúa una condición individual sobre un DataFrame.
@@ -284,32 +282,30 @@ class SyncEventClassificationService:
         Args:
             df: DataFrame a evaluar
             condition: Condición a evaluar
+            target_cases: Lista de IDs para logging (opcional)
 
         Returns:
             Serie booleana indicando qué filas cumplen la condición
         """
         # Detectar si tenemos eventos de interés
         has_target_event = False
-        dengue_cases = ['35927100', '35977165', '36059653', '36824004', '36650949', '36646677', '36577216']
-        target_cases = ['36244886'] + dengue_cases
-        
-        if 'IDEVENTOCASO' in df.columns:
+        if target_cases and 'IDEVENTOCASO' in df.columns:
             has_target_event = df['IDEVENTOCASO'].isin(target_cases).any()
-            
+
         # Verificar que la columna existe
         if condition.field_name not in df.columns:
             if has_target_event:
                 import logging
                 logger = logging.getLogger(__name__)
                 current_targets = df[df['IDEVENTOCASO'].isin(target_cases)]['IDEVENTOCASO'].tolist()
-                logger.error(f"🎯 CONDITION: Campo '{condition.field_name}' no existe en DataFrame para eventos {current_targets} - retornando False para todos")
+                logger.error(f"🦟 CONDITION: Campo '{condition.field_name}' no existe para muestra {current_targets} - retornando False")
             return pd.Series([False] * len(df), index=df.index)
 
         column = df[condition.field_name]
-        
+
         # Obtener configuración del filtro
         config = condition.config if condition.config else {}
-        
+
         if has_target_event:
             import logging
             logger = logging.getLogger(__name__)
@@ -319,7 +315,7 @@ class SyncEventClassificationService:
                 if (df['IDEVENTOCASO'] == event_id).any():
                     target_values[event_id] = df.loc[df['IDEVENTOCASO'] == event_id, condition.field_name].iloc[0]
             config_value = config.get('value') or config.get('values', 'No config')
-            logger.error(f"🎯 CONDITION: Campo='{condition.field_name}', Valores en eventos={target_values}, Buscando='{config_value}', Tipo filtro='{condition.filter_type}'")
+            logger.error(f"🦟 CONDITION: Campo='{condition.field_name}', Valores muestra={target_values}, Buscando='{config_value}', Tipo='{condition.filter_type}'")
 
         # Evaluar según tipo de filtro
         if condition.filter_type == TipoFiltro.CAMPO_IGUAL:
