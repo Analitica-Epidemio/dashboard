@@ -148,9 +148,7 @@ export default function EventosPage() {
     requiereRevision: eventos.filter(
       (e) => e.clasificacion_estrategia === TipoClasificacion.REQUIERE_REVISION
     ).length,
-    sinClasificar: eventos.filter(
-      (e) => !e.clasificacion_estrategia
-    ).length,
+    sinClasificar: eventos.filter((e) => !e.clasificacion_estrategia).length,
   };
 
   // Skeleton para carga
@@ -209,7 +207,7 @@ export default function EventosPage() {
           </header>
 
           {/* Main Content */}
-          <main className="flex-1 p-6">
+          <main className="flex-1 p-6 overflow-y-scroll">
             {/* Info Banner */}
             <Alert className="mb-6 border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/20">
               <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />

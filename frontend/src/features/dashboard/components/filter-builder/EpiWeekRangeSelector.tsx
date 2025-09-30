@@ -23,7 +23,6 @@ export function EpiWeekRangeSelector() {
 
   const [epiStart, setEpiStart] = useState<EpiWeekRange | null>(null)
   const [epiEnd, setEpiEnd] = useState<EpiWeekRange | null>(null)
-  const [selectingEnd, setSelectingEnd] = useState(false)
 
   // Initialize with current values if they exist
   useEffect(() => {
@@ -59,7 +58,7 @@ export function EpiWeekRangeSelector() {
     }
   }, [epiStart, epiEnd, setDateRange])
 
-  const handleWeekSelect = (date: Date) => {
+  const handleStartWeekSelect = (date: Date) => {
     const weekInfo = getEpiWeek(date)
     const weekDates = epiWeekToDates(weekInfo.year, weekInfo.week)
     const newWeek: EpiWeekRange = {
@@ -69,28 +68,36 @@ export function EpiWeekRangeSelector() {
       endDate: weekDates.end
     }
 
-    if (!selectingEnd) {
-      // Selecting start week
-      setEpiStart(newWeek)
+    setEpiStart(newWeek)
+
+    // If end week is before the new start week, clear it
+    if (epiEnd && newWeek.startDate > epiEnd.startDate) {
       setEpiEnd(null)
-      setSelectingEnd(true)
-    } else {
-      // Selecting end week
-      if (epiStart && newWeek.startDate < epiStart.startDate) {
-        // If end is before start, swap them
-        setEpiEnd(epiStart)
-        setEpiStart(newWeek)
-      } else {
-        setEpiEnd(newWeek)
-      }
-      setSelectingEnd(false)
+    }
+  }
+
+  const handleEndWeekSelect = (date: Date) => {
+    const weekInfo = getEpiWeek(date)
+    const weekDates = epiWeekToDates(weekInfo.year, weekInfo.week)
+    const newWeek: EpiWeekRange = {
+      year: weekInfo.year,
+      week: weekInfo.week,
+      startDate: weekDates.start,
+      endDate: weekDates.end
+    }
+
+    // Only set if there's a start week selected and the new week is after or equal to it
+    if (epiStart && newWeek.startDate >= epiStart.startDate) {
+      setEpiEnd(newWeek)
+    } else if (!epiStart) {
+      // If no start week is selected yet, just set it
+      setEpiEnd(newWeek)
     }
   }
 
   const clearSelection = () => {
     setEpiStart(null)
     setEpiEnd(null)
-    setSelectingEnd(false)
     setDateRange({ from: null, to: null })
   }
 
@@ -138,9 +145,6 @@ export function EpiWeekRangeSelector() {
                     Desde: {formatEpiWeek(epiStart)}
                   </Badge>
                 )}
-                {epiStart && !epiEnd && selectingEnd && (
-                  <span className="text-gray-500 text-sm">→ Selecciona semana final</span>
-                )}
                 {epiEnd && (
                   <Badge variant="secondary" className="px-3 py-1">
                     <CalendarRange className="h-3 w-3 mr-1" />
@@ -162,21 +166,30 @@ export function EpiWeekRangeSelector() {
         <div className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
           <p className="font-medium mb-1">Instrucciones:</p>
           <ul className="list-disc list-inside space-y-1 text-xs">
-            <li>Haz clic en cualquier día para seleccionar su semana epidemiológica</li>
-            <li>Primero selecciona la semana inicial, luego la semana final</li>
+            <li>Selecciona la semana epidemiológica inicial en el calendario izquierdo</li>
+            <li>Selecciona la semana epidemiológica final en el calendario derecho</li>
             <li>Las semanas epidemiológicas van de domingo a sábado</li>
             <li>El calendario mostrará la semana completa resaltada</li>
           </ul>
         </div>
 
-        {/* Calendar Component */}
-        <div className="border rounded-lg p-4">
-          <EpiCalendar
-            onWeekSelect={handleWeekSelect}
-            selectedStart={epiStart}
-            selectedEnd={epiEnd}
-            selectingEnd={selectingEnd}
-          />
+        {/* Calendar Components - Side by Side */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Start Week Selector */}
+          <div className="border rounded-lg p-4">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3 text-center">Semana Inicial</h3>
+            <EpiCalendar
+              onWeekSelect={handleStartWeekSelect}
+            />
+          </div>
+
+          {/* End Week Selector */}
+          <div className="border rounded-lg p-4">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3 text-center">Semana Final</h3>
+            <EpiCalendar
+              onWeekSelect={handleEndWeekSelect}
+            />
+          </div>
         </div>
       </CardContent>
     </Card>
