@@ -31,7 +31,6 @@ import {
   useEventoTimeline,
   getClasificacionLabel,
   getClasificacionVariant,
-  getTipoSujetoIcon,
 } from "@/lib/api/eventos";
 
 interface EventoDetailProps {
@@ -115,9 +114,6 @@ export function EventoDetail({ eventoId, onClose }: EventoDetailProps) {
         <div className="flex items-start justify-between">
           <div className="space-y-2">
             <h2 className="text-xl font-semibold flex items-center gap-2">
-              <span className="text-2xl">
-                {getTipoSujetoIcon(evento.tipo_sujeto)}
-              </span>
               {evento.ciudadano
                 ? `${evento.ciudadano.nombre} ${evento.ciudadano.apellido}`
                 : evento.animal
@@ -633,10 +629,14 @@ export function EventoDetail({ eventoId, onClose }: EventoDetailProps) {
                               UCI
                             </Badge>
                           )}
-                          {(internacion as { condicion_egreso?: string }).condicion_egreso && (
+                          {(internacion as { condicion_egreso?: string })
+                            .condicion_egreso && (
                             <Badge
                               variant={
-                                ((internacion as { condicion_egreso?: string }).condicion_egreso || '')
+                                (
+                                  (internacion as { condicion_egreso?: string })
+                                    .condicion_egreso || ""
+                                )
                                   .toLowerCase()
                                   .includes("muerte")
                                   ? "destructive"
@@ -644,7 +644,10 @@ export function EventoDetail({ eventoId, onClose }: EventoDetailProps) {
                               }
                               className="text-xs"
                             >
-                              {(internacion as { condicion_egreso?: string }).condicion_egreso}
+                              {
+                                (internacion as { condicion_egreso?: string })
+                                  .condicion_egreso
+                              }
                             </Badge>
                           )}
                         </div>

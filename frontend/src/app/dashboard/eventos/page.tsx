@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useDebounce } from "use-debounce";
 import {
@@ -11,8 +11,6 @@ import {
   ChevronRight,
   Info,
   AlertTriangle,
-  Eye,
-  Clock,
   MapPin,
   Hash,
   User,
@@ -27,13 +25,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Sheet,
   SheetContent,
@@ -59,14 +50,11 @@ import {
 // API y tipos
 import {
   useEventos,
-  extractEventosData,
   getClasificacionLabel,
   getClasificacionVariant,
   getClasificacionEstrategiaColor,
-  getTipoSujetoIcon,
   type EventoFilters,
 } from "@/lib/api/eventos";
-import type { components } from "@/lib/api/types";
 import { TipoClasificacion } from "@/lib/types/clasificacion";
 
 // Componentes
