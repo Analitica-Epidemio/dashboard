@@ -11,6 +11,7 @@ import pandas as pd
 from sqlalchemy import select
 from sqlmodel import Session
 
+from app.core.utils.codigo_generator import CodigoGenerator
 from app.domains.eventos_epidemiologicos.clasificacion.models import TipoClasificacion
 
 from ..core.columns import Columns
@@ -197,22 +198,23 @@ class EventClassifier:
             self._extract_metadata(full_df, group_df, tipo_eno["nombre"])
 
     def _get_tipo_eno(self, evento_name: str) -> Optional[Dict[str, Any]]:
-        """Obtiene tipo ENO desde cache o BD."""
+        """Obtiene tipo ENO desde cache o BD usando código kebab-case."""
         if not evento_name or not evento_name.strip():
             return None
-            
-        evento_normalized = evento_name.strip().upper()  # Normalizar a mayúsculas
 
-        # Buscar en cache
-        if evento_normalized in self._tipo_eno_cache:
-            return self._tipo_eno_cache[evento_normalized]
+        # Convertir nombre del evento a código kebab-case estable
+        evento_codigo = CodigoGenerator.generar_codigo_kebab(evento_name)
 
-        # Los tipos ENO ahora están en mayúsculas en la BD
+        # Buscar en cache (usando código como clave)
+        if evento_codigo in self._tipo_eno_cache:
+            return self._tipo_eno_cache[evento_codigo]
+
+        # Buscar en BD por código (más robusto que buscar por nombre)
         try:
             from app.domains.eventos_epidemiologicos.eventos.models import TipoEno
 
             result = self.session.execute(
-                select(TipoEno).where(TipoEno.nombre == evento_normalized)
+                select(TipoEno).where(TipoEno.codigo == evento_codigo)
             )
             tipo_eno = result.scalar_one_or_none()
 
@@ -220,17 +222,17 @@ class EventClassifier:
                 tipo_eno_dict = {
                     "id": tipo_eno.id,
                     "nombre": tipo_eno.nombre,
-                    "codigo": getattr(tipo_eno, "codigo", None),
+                    "codigo": tipo_eno.codigo,
                 }
 
-                self._tipo_eno_cache[evento_normalized] = tipo_eno_dict
+                self._tipo_eno_cache[evento_codigo] = tipo_eno_dict
                 return tipo_eno_dict
 
         except Exception as e:
-            logger.debug(f"Tipo ENO '{evento_normalized}' no encontrado en BD: {e}")
+            logger.debug(f"Tipo ENO con código '{evento_codigo}' (evento: '{evento_name}') no encontrado en BD: {e}")
 
         # No encontrado - evento no está en el seed
-        self._tipo_eno_cache[evento_normalized] = None
+        self._tipo_eno_cache[evento_codigo] = None
         return None
 
     def _extract_metadata(
