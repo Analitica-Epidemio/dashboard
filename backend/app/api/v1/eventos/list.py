@@ -46,8 +46,9 @@ class EventoListItem(BaseModel):
     fecha_inicio_sintomas: Optional[date] = Field(
         None, description="Fecha de inicio de síntomas"
     )
-    clasificacion_estrategia: Optional[TipoClasificacion] = Field(None, description="Clasificación estratégica del evento")
-    es_positivo: Optional[bool] = Field(None, description="Si es positivo")
+    clasificacion_estrategia: Optional[TipoClasificacion] = Field(
+        None, description="Clasificación estratégica del evento"
+    )
     confidence_score: Optional[float] = Field(None, description="Score de confianza")
 
     # Datos del sujeto
@@ -100,6 +101,7 @@ class EventoListResponse(BaseModel):
     pagination: PaginationInfo = Field(..., description="Información de paginación")
     filters_applied: Dict[str, Any] = Field(..., description="Filtros aplicados")
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -116,7 +118,6 @@ async def list_eventos(
     fecha_desde: Optional[date] = None,
     fecha_hasta: Optional[date] = None,
     clasificacion: Optional[str] = None,
-    es_positivo: Optional[bool] = None,
     provincia: Optional[str] = None,
     tipo_sujeto: Optional[str] = None,
     requiere_revision: Optional[bool] = None,
@@ -211,9 +212,6 @@ async def list_eventos(
         if clasificacion:
             conditions.append(Evento.clasificacion_estrategia == clasificacion)
 
-        if es_positivo is not None:
-            conditions.append(Evento.es_positivo == es_positivo)
-
         if provincia:
             conditions.append(Ciudadano.provincia_residencia == provincia)
 
@@ -301,7 +299,10 @@ async def list_eventos(
                     provincia_res = None
             elif evento.animal:
                 tipo_sujeto = "animal"
-                nombre_sujeto = evento.animal.identificacion or f"{evento.animal.especie} #{evento.animal.id}"
+                nombre_sujeto = (
+                    evento.animal.identificacion
+                    or f"{evento.animal.especie} #{evento.animal.id}"
+                )
 
                 # Get location from animal's localidad
                 if evento.animal.localidad:
@@ -328,7 +329,6 @@ async def list_eventos(
                     fecha_minima_evento=evento.fecha_minima_evento,
                     fecha_inicio_sintomas=evento.fecha_inicio_sintomas,
                     clasificacion_estrategia=evento.clasificacion_estrategia,
-                    es_positivo=evento.es_positivo,
                     confidence_score=evento.confidence_score,
                     tipo_sujeto=tipo_sujeto,
                     nombre_sujeto=nombre_sujeto,
@@ -340,10 +340,7 @@ async def list_eventos(
                     es_caso_sintomatico=evento.es_caso_sintomatico,
                     requiere_revision_especie=evento.requiere_revision_especie,
                     con_resultado_mortal=bool(
-                        any(
-                            d.es_fallecido
-                            for d in (evento.internaciones or [])
-                        )
+                        any(d.es_fallecido for d in (evento.internaciones or []))
                     ),
                     cantidad_sintomas=len(evento.sintomas or []),
                     cantidad_muestras=len(evento.muestras or []),
