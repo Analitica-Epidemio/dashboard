@@ -163,11 +163,11 @@ export function EpiWeekRangeSelector() {
         {/* Calendar Components - Side by Side */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Start Week Selector */}
-          <div className="border rounded-lg p-5 bg-card">
-            <h3 className="text-sm font-semibold text-foreground mb-4 text-center">
+          <div className="border rounded-lg overflow-hidden bg-card">
+            <h3 className="text-sm font-semibold text-foreground p-4 text-center border-b bg-muted/30">
               Semana Inicial
             </h3>
-            <div className="flex justify-center">
+            <div className="p-4">
               <EpiCalendar
                 onWeekSelect={handleStartWeekSelect}
                 selectedStart={epiStart}
@@ -178,11 +178,11 @@ export function EpiWeekRangeSelector() {
           </div>
 
           {/* End Week Selector */}
-          <div className="border rounded-lg p-5 bg-card">
-            <h3 className="text-sm font-semibold text-foreground mb-4 text-center">
+          <div className="border rounded-lg overflow-hidden bg-card">
+            <h3 className="text-sm font-semibold text-foreground p-4 text-center border-b bg-muted/30">
               Semana Final
             </h3>
-            <div className="flex justify-center">
+            <div className="p-4">
               <EpiCalendar
                 onWeekSelect={handleEndWeekSelect}
                 selectedStart={epiStart}

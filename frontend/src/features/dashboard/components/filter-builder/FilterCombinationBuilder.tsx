@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -38,6 +38,7 @@ export function FilterCombinationBuilder() {
   })
 
   const [availableEvents, setAvailableEvents] = useState<Event[]>([])
+  const prevDraftRef = useRef<string | null>(null)
 
   // Cargar datos cuando entramos en modo de edición
   useEffect(() => {
@@ -58,8 +59,12 @@ export function FilterCombinationBuilder() {
         clasificaciones: editingCombination.clasificaciones,
         label: editingCombination.label,
       })
+    } else {
+      // Si no estamos editando, limpiar el draft
+      setDraftFilter(null)
     }
-  }, [editingCombinationId, getEditingCombination, setDraftFilter])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingCombinationId])
 
   useEffect(() => {
     if (currentFilter.groupId) {
@@ -70,66 +75,68 @@ export function FilterCombinationBuilder() {
     }
   }, [currentFilter.groupId, allEvents])
 
-  // Helper para actualizar draft filter
-  const updateDraft = (filter: CurrentFilter) => {
-    const group = filter.groupId
-      ? groups.find(g => String(g.id) === filter.groupId)
-      : null
+  // Calcular draft filter con useMemo (no causa re-renders)
+  const computedDraftFilter = useMemo(() => {
+    if (!currentFilter.groupId) return null
 
+    const group = groups.find(g => String(g.id) === currentFilter.groupId)
     const selectedEvents = availableEvents.filter(e => {
       const eventId = typeof e.id === 'string' ? parseInt(e.id) : e.id
-      return filter.eventIds.includes(eventId)
+      return currentFilter.eventIds.includes(eventId)
     })
 
-    setDraftFilter(
-      filter.groupId
-        ? {
-            groupId: filter.groupId,
-            groupName: group?.name,
-            eventIds: filter.eventIds,
-            eventNames:
-              filter.eventIds.length > 0
-                ? selectedEvents.map(e => e.name)
-                : undefined,
-            clasificaciones: filter.clasificaciones,
-            label: filter.label,
-          }
-        : null
-    )
-  }
+    return {
+      groupId: currentFilter.groupId,
+      groupName: group?.name,
+      eventIds: currentFilter.eventIds,
+      eventNames:
+        currentFilter.eventIds.length > 0
+          ? selectedEvents.map(e => e.name)
+          : undefined,
+      clasificaciones: currentFilter.clasificaciones,
+      label: currentFilter.label,
+    }
+  }, [currentFilter, groups, availableEvents])
+
+  // Sincronizar el draft computado con el estado (solo cuando realmente cambia)
+  useEffect(() => {
+    const draftString = JSON.stringify(computedDraftFilter)
+
+    // Solo actualizar si realmente cambió
+    if (prevDraftRef.current !== draftString) {
+      prevDraftRef.current = draftString
+      setDraftFilter(computedDraftFilter)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [computedDraftFilter])
 
   const handleGroupChange = (groupId: string | null) => {
-    const newFilter = {
+    setCurrentFilter({
       groupId,
       eventIds: [],
       clasificaciones: undefined,
       label: '',
-    }
-    setCurrentFilter(newFilter)
-    updateDraft(newFilter)
+    })
   }
 
   const handleEventToggle = (eventId: string | number) => {
     const numericId = typeof eventId === 'string' ? parseInt(eventId) : eventId
-    const newFilter = {
+    setCurrentFilter({
       ...currentFilter,
       eventIds: currentFilter.eventIds.includes(numericId)
         ? currentFilter.eventIds.filter(id => id !== numericId)
         : [...currentFilter.eventIds, numericId],
-    }
-    setCurrentFilter(newFilter)
-    updateDraft(newFilter)
+    })
   }
 
   const toggleAllEvents = () => {
-    const newFilter = currentFilter.eventIds.length === availableEvents.length
+    setCurrentFilter(currentFilter.eventIds.length === availableEvents.length
       ? { ...currentFilter, eventIds: [] }
       : {
           ...currentFilter,
           eventIds: availableEvents.map(e => typeof e.id === 'string' ? parseInt(e.id) : e.id)
         }
-    setCurrentFilter(newFilter)
-    updateDraft(newFilter)
+    )
   }
 
   const handleSaveCombination = () => {
@@ -270,12 +277,10 @@ export function FilterCombinationBuilder() {
               <ClassificationSelector
                 selectedClassifications={currentFilter.clasificaciones || []}
                 onClassificationChange={(classifications) => {
-                  const newFilter = {
+                  setCurrentFilter({
                     ...currentFilter,
                     clasificaciones: classifications,
-                  }
-                  setCurrentFilter(newFilter)
-                  updateDraft(newFilter)
+                  })
                 }}
                 placeholder="Todas las clasificaciones"
               />
@@ -296,12 +301,10 @@ export function FilterCombinationBuilder() {
                 placeholder="Ej: Casos Graves, Seguimiento Especial, etc."
                 value={currentFilter.label || ''}
                 onChange={(e) => {
-                  const newFilter = {
+                  setCurrentFilter({
                     ...currentFilter,
                     label: e.target.value,
-                  }
-                  setCurrentFilter(newFilter)
-                  updateDraft(newFilter)
+                  })
                 }}
                 className="w-full"
               />
