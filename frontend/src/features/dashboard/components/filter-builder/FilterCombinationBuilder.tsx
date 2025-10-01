@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Plus, Layers, Check, X } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Plus, Layers, Check, X, Save, XCircle } from 'lucide-react'
 import { GroupSelector } from '../selectors/GroupSelector'
 import { ClassificationSelector, TipoClasificacion } from '../selectors/ClassificationSelector'
 import { useFilterContext } from '../../contexts/FilterContext'
@@ -13,6 +14,7 @@ interface CurrentFilter {
   groupId: string | null
   eventIds: number[]
   clasificaciones?: TipoClasificacion[]
+  label?: string
 }
 
 export function FilterCombinationBuilder() {
@@ -22,14 +24,42 @@ export function FilterCombinationBuilder() {
     groupsError,
     allEvents,
     addFilterCombination,
+    editingCombinationId,
+    getEditingCombination,
+    updateFilterCombination,
+    cancelEditing,
+    setDraftFilter,
   } = useFilterContext()
 
   const [currentFilter, setCurrentFilter] = useState<CurrentFilter>({
     groupId: null,
     eventIds: [],
+    label: '',
   })
 
   const [availableEvents, setAvailableEvents] = useState<Event[]>([])
+
+  // Cargar datos cuando entramos en modo de edición
+  useEffect(() => {
+    const editingCombination = getEditingCombination()
+    if (editingCombination) {
+      const filterToEdit = {
+        groupId: editingCombination.groupId,
+        eventIds: editingCombination.eventIds,
+        clasificaciones: editingCombination.clasificaciones,
+        label: editingCombination.label || '',
+      }
+      setCurrentFilter(filterToEdit)
+      setDraftFilter({
+        groupId: editingCombination.groupId,
+        groupName: editingCombination.groupName,
+        eventIds: editingCombination.eventIds,
+        eventNames: editingCombination.eventNames,
+        clasificaciones: editingCombination.clasificaciones,
+        label: editingCombination.label,
+      })
+    }
+  }, [editingCombinationId, getEditingCombination, setDraftFilter])
 
   useEffect(() => {
     if (currentFilter.groupId) {
@@ -40,36 +70,69 @@ export function FilterCombinationBuilder() {
     }
   }, [currentFilter.groupId, allEvents])
 
+  // Helper para actualizar draft filter
+  const updateDraft = (filter: CurrentFilter) => {
+    const group = filter.groupId
+      ? groups.find(g => String(g.id) === filter.groupId)
+      : null
+
+    const selectedEvents = availableEvents.filter(e => {
+      const eventId = typeof e.id === 'string' ? parseInt(e.id) : e.id
+      return filter.eventIds.includes(eventId)
+    })
+
+    setDraftFilter(
+      filter.groupId
+        ? {
+            groupId: filter.groupId,
+            groupName: group?.name,
+            eventIds: filter.eventIds,
+            eventNames:
+              filter.eventIds.length > 0
+                ? selectedEvents.map(e => e.name)
+                : undefined,
+            clasificaciones: filter.clasificaciones,
+            label: filter.label,
+          }
+        : null
+    )
+  }
+
   const handleGroupChange = (groupId: string | null) => {
-    setCurrentFilter({
+    const newFilter = {
       groupId,
       eventIds: [],
       clasificaciones: undefined,
-    })
+      label: '',
+    }
+    setCurrentFilter(newFilter)
+    updateDraft(newFilter)
   }
 
   const handleEventToggle = (eventId: string | number) => {
     const numericId = typeof eventId === 'string' ? parseInt(eventId) : eventId
-    setCurrentFilter(prev => ({
-      ...prev,
-      eventIds: prev.eventIds.includes(numericId)
-        ? prev.eventIds.filter(id => id !== numericId)
-        : [...prev.eventIds, numericId],
-    }))
+    const newFilter = {
+      ...currentFilter,
+      eventIds: currentFilter.eventIds.includes(numericId)
+        ? currentFilter.eventIds.filter(id => id !== numericId)
+        : [...currentFilter.eventIds, numericId],
+    }
+    setCurrentFilter(newFilter)
+    updateDraft(newFilter)
   }
 
   const toggleAllEvents = () => {
-    if (currentFilter.eventIds.length === availableEvents.length) {
-      setCurrentFilter(prev => ({ ...prev, eventIds: [] }))
-    } else {
-      setCurrentFilter(prev => ({
-        ...prev,
-        eventIds: availableEvents.map(e => typeof e.id === 'string' ? parseInt(e.id) : e.id)
-      }))
-    }
+    const newFilter = currentFilter.eventIds.length === availableEvents.length
+      ? { ...currentFilter, eventIds: [] }
+      : {
+          ...currentFilter,
+          eventIds: availableEvents.map(e => typeof e.id === 'string' ? parseInt(e.id) : e.id)
+        }
+    setCurrentFilter(newFilter)
+    updateDraft(newFilter)
   }
 
-  const handleAddCombination = () => {
+  const handleSaveCombination = () => {
     if (!currentFilter.groupId) return
 
     const group = groups.find(g => String(g.id) === currentFilter.groupId)
@@ -78,7 +141,7 @@ export function FilterCombinationBuilder() {
       return currentFilter.eventIds.includes(eventId)
     })
 
-    addFilterCombination({
+    const combinationData = {
       groupId: currentFilter.groupId,
       groupName: group?.name,
       eventIds: currentFilter.eventIds.length > 0
@@ -88,26 +151,53 @@ export function FilterCombinationBuilder() {
         ? selectedEvents.map(e => e.name)
         : ['Todos los eventos'],
       clasificaciones: currentFilter.clasificaciones,
-    })
+      label: currentFilter.label,
+    }
+
+    // Modo edición o creación
+    if (editingCombinationId) {
+      updateFilterCombination(editingCombinationId, combinationData)
+    } else {
+      addFilterCombination(combinationData)
+    }
 
     // Reset form
-    setCurrentFilter({
+    resetForm()
+  }
+
+  const handleCancel = () => {
+    cancelEditing()
+    resetForm()
+  }
+
+  const resetForm = () => {
+    const emptyFilter = {
       groupId: null,
       eventIds: [],
       clasificaciones: undefined,
-    })
+      label: '',
+    }
+    setCurrentFilter(emptyFilter)
+    setDraftFilter(null)
   }
 
+  const isEditing = !!editingCombinationId
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Layers className="h-5 w-5" />
-          Constructor de Combinaciones
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Layers className="h-5 w-5" />
+              {isEditing ? 'Editar Combinación' : 'Agregar Combinación'}
+            </CardTitle>
+            <p className="text-sm text-gray-500 mt-1">
+              {isEditing ? 'Modifica los filtros de la combinación seleccionada' : 'Define grupos, eventos y clasificaciones para comparar'}
+            </p>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
           {/* Group selector */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -179,12 +269,14 @@ export function FilterCombinationBuilder() {
               </label>
               <ClassificationSelector
                 selectedClassifications={currentFilter.clasificaciones || []}
-                onClassificationChange={(classifications) =>
-                  setCurrentFilter({
+                onClassificationChange={(classifications) => {
+                  const newFilter = {
                     ...currentFilter,
                     clasificaciones: classifications,
-                  })
-                }
+                  }
+                  setCurrentFilter(newFilter)
+                  updateDraft(newFilter)
+                }}
                 placeholder="Todas las clasificaciones"
               />
               <p className="text-xs text-gray-500 mt-1">
@@ -193,15 +285,60 @@ export function FilterCombinationBuilder() {
             </div>
           )}
 
-          {/* Add button */}
+          {/* Label personalizable */}
           {currentFilter.groupId && (
-            <div className="flex justify-end">
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-2">
+                4. Etiqueta Personalizada (opcional)
+              </label>
+              <Input
+                type="text"
+                placeholder="Ej: Casos Graves, Seguimiento Especial, etc."
+                value={currentFilter.label || ''}
+                onChange={(e) => {
+                  const newFilter = {
+                    ...currentFilter,
+                    label: e.target.value,
+                  }
+                  setCurrentFilter(newFilter)
+                  updateDraft(newFilter)
+                }}
+                className="w-full"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Dale un nombre descriptivo a esta combinación
+              </p>
+            </div>
+          )}
+
+          {/* Buttons */}
+          {currentFilter.groupId && (
+            <div className="flex gap-2 justify-end">
+              {isEditing && (
+                <Button
+                  onClick={handleCancel}
+                  variant="outline"
+                  className="border-gray-300"
+                >
+                  <XCircle className="h-4 w-4 mr-2" />
+                  Cancelar
+                </Button>
+              )}
               <Button
-                onClick={handleAddCombination}
-                className="bg-blue-600 hover:bg-blue-700"
+                onClick={handleSaveCombination}
+                className={isEditing ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'}
               >
-                <Plus className="h-4 w-4 mr-2" />
-                Agregar Combinación
+                {isEditing ? (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Actualizar
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Agregar
+                  </>
+                )}
               </Button>
             </div>
           )}

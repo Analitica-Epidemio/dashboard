@@ -3,34 +3,34 @@
 import React from 'react'
 import { EpiWeekRangeSelector } from './EpiWeekRangeSelector'
 import { FilterCombinationBuilder } from './FilterCombinationBuilder'
-import { FilterCombinationsList } from './FilterCombinationsList'
+import { SplitPanelRight } from './SplitPanelRight'
 
 export function FilterBuilderView() {
   return (
-    <div className="h-full bg-gray-50 overflow-auto">
-      <div className="max-w-7xl mx-auto p-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Configurar Análisis Comparativo
-          </h1>
-          <p className="text-gray-600">
-            Define el período de tiempo y las combinaciones de filtros para tu análisis
-          </p>
-        </div>
+    <div className="h-screen flex flex-col bg-gray-50">
+      {/* Header */}
+      <div className="border-b bg-white px-8 py-5 flex-shrink-0">
+        <h1 className="text-2xl font-bold text-gray-900">
+          Análisis Comparativo
+        </h1>
+        <p className="text-sm text-gray-500 mt-1">
+          Configura período y combinaciones de filtros
+        </p>
+      </div>
 
-        {/* Main Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Date Range & Filter Builder */}
-          <div className="lg:col-span-2 space-y-6">
+      {/* Split Panel Layout */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left Panel - Constructor (scroll independiente) */}
+        <div className="flex-1 overflow-y-auto px-8 py-6 flex justify-center">
+          <div className="w-full max-w-4xl space-y-6">
             <EpiWeekRangeSelector />
             <FilterCombinationBuilder />
           </div>
+        </div>
 
-          {/* Right Column - Added Combinations */}
-          <div className="lg:col-span-1">
-            <FilterCombinationsList />
-          </div>
+        {/* Right Panel - Preview & Combinations (sticky, scroll independiente) */}
+        <div className="w-[420px] border-l bg-white overflow-y-auto flex-shrink-0">
+          <SplitPanelRight />
         </div>
       </div>
     </div>
