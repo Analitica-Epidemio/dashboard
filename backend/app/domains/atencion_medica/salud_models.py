@@ -3,7 +3,7 @@
 from datetime import date
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import BigInteger
+from sqlalchemy import BigInteger, UniqueConstraint
 from sqlmodel import Field, Relationship
 
 from app.core.models import BaseModel
@@ -269,6 +269,10 @@ class VacunasCiudadano(BaseModel, table=True):
     """
 
     __tablename__ = "vacunas_ciudadano"
+    __table_args__ = (
+        UniqueConstraint('codigo_ciudadano', 'id_vacuna', 'fecha_aplicacion', 'dosis',
+                        name='uq_vacuna_ciudadano'),
+    )
 
     # Campos propios
     dosis: Optional[str] = Field(

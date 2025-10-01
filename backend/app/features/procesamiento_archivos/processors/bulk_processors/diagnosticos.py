@@ -61,7 +61,9 @@ class DiagnosticosBulkProcessor(BulkProcessorBase):
 
         if diagnosticos_data:
             stmt = pg_insert(DiagnosticoEvento.__table__).values(diagnosticos_data)
-            upsert_stmt = stmt.on_conflict_do_nothing()
+            upsert_stmt = stmt.on_conflict_do_nothing(
+                index_elements=['id_evento']
+            )
             self.context.session.execute(upsert_stmt)
 
         duration = (self._get_current_timestamp() - start_time).total_seconds()
@@ -167,7 +169,9 @@ class DiagnosticosBulkProcessor(BulkProcessorBase):
 
         if tratamientos_data:
             stmt = pg_insert(TratamientoEvento.__table__).values(tratamientos_data)
-            upsert_stmt = stmt.on_conflict_do_nothing()
+            upsert_stmt = stmt.on_conflict_do_nothing(
+                index_elements=['id_evento', 'descripcion_tratamiento', 'fecha_inicio_tratamiento']
+            )
             self.context.session.execute(upsert_stmt)
 
         duration = (self._get_current_timestamp() - start_time).total_seconds()
@@ -222,7 +226,9 @@ class DiagnosticosBulkProcessor(BulkProcessorBase):
 
         if internaciones_data:
             stmt = pg_insert(InternacionEvento.__table__).values(internaciones_data)
-            upsert_stmt = stmt.on_conflict_do_nothing()
+            upsert_stmt = stmt.on_conflict_do_nothing(
+                index_elements=['id_evento']
+            )
             self.context.session.execute(upsert_stmt)
 
         duration = (self._get_current_timestamp() - start_time).total_seconds()

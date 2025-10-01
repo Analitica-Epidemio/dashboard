@@ -389,7 +389,9 @@ class EventosBulkProcessor(BulkProcessorBase):
 
         if ambitos_data:
             stmt = pg_insert(AmbitosConcurrenciaEvento.__table__).values(ambitos_data)
-            upsert_stmt = stmt.on_conflict_do_nothing()
+            upsert_stmt = stmt.on_conflict_do_nothing(
+                index_elements=['id_evento']
+            )
             self.context.session.execute(upsert_stmt)
 
         duration = (self._get_current_timestamp() - start_time).total_seconds()
@@ -477,7 +479,9 @@ class EventosBulkProcessor(BulkProcessorBase):
             stmt = pg_insert(DetalleEventoSintomas.__table__).values(
                 sintomas_eventos_data
             )
-            upsert_stmt = stmt.on_conflict_do_nothing()
+            upsert_stmt = stmt.on_conflict_do_nothing(
+                index_elements=['id_evento', 'id_sintoma']
+            )
             self.logger.error("Ejecutando INSERT...")
             self.context.session.execute(upsert_stmt)
             self.logger.error("INSERT completado sin error aparente")
@@ -530,7 +534,9 @@ class EventosBulkProcessor(BulkProcessorBase):
             stmt = pg_insert(AntecedentesEpidemiologicosEvento.__table__).values(
                 antecedentes_eventos_data
             )
-            upsert_stmt = stmt.on_conflict_do_nothing()
+            upsert_stmt = stmt.on_conflict_do_nothing(
+                index_elements=['id_evento', 'id_antecedente_epidemiologico']
+            )
             self.context.session.execute(upsert_stmt)
 
         duration = (self._get_current_timestamp() - start_time).total_seconds()

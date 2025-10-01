@@ -1,7 +1,7 @@
 from datetime import date
 from typing import TYPE_CHECKING, Dict, List, Optional
 
-from sqlalchemy import JSON, BigInteger, Column, Text
+from sqlalchemy import JSON, BigInteger, Column, Text, UniqueConstraint
 from sqlmodel import Field, Relationship
 
 from app.core.models import BaseModel
@@ -262,6 +262,9 @@ class DetalleEventoSintomas(BaseModel, table=True):
     """
 
     __tablename__ = "detalle_evento_sintomas"
+    __table_args__ = (
+        UniqueConstraint('id_evento', 'id_sintoma', name='uq_evento_sintoma'),
+    )
 
     # Campos propios
     semana_epidemiologica_aparicion_sintoma: Optional[int] = Field(
@@ -292,6 +295,9 @@ class AntecedentesEpidemiologicosEvento(BaseModel, table=True):
     """
 
     __tablename__ = "antecedentes_epidemiologicos_evento"
+    __table_args__ = (
+        UniqueConstraint('id_evento', 'id_antecedente_epidemiologico', name='uq_evento_antecedente'),
+    )
 
     # Campos propios
     fecha_antecedente_epidemiologico: Optional[date] = Field(

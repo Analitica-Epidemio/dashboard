@@ -3,7 +3,7 @@
 from datetime import date
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Text
+from sqlalchemy import Text, UniqueConstraint
 from sqlmodel import Field, Relationship
 
 from app.core.models import BaseModel
@@ -22,6 +22,9 @@ class InvestigacionEvento(BaseModel, table=True):
     """
 
     __tablename__ = "investigacion_evento"
+    __table_args__ = (
+        UniqueConstraint('id_evento', name='uq_investigacion_evento'),
+    )
 
     # Campos propios
     # TODO: id_usuario_centinela_participante esos deberían ser fk???? Consultar con luciano
@@ -70,6 +73,9 @@ class ContactosNotificacion(BaseModel, table=True):
     """
 
     __tablename__ = "contactos_notificacion"
+    __table_args__ = (
+        UniqueConstraint('id_evento', name='uq_contactos_evento'),
+    )
 
     # Campos propios
     hubo_contacto_con_caso_confirmado: Optional[bool] = Field(

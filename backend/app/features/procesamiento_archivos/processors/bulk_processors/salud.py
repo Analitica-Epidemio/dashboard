@@ -62,6 +62,10 @@ class SaludBulkProcessor(BulkProcessorBase):
                 errors.append(f"Error preparando muestra evento: {e}")
 
         if muestras_eventos_data:
+            # DEDUPLICACIÓN: Las muestras se identifican de forma única por id_snvs_muestra.
+            # Si se sube el mismo archivo dos veces, el UPSERT actualizará la fecha de toma
+            # en lugar de duplicar. Esto maneja correctamente el CSV desnormalizado donde un
+            # IDEVENTOCASO puede aparecer en múltiples filas con diferentes muestras.
             stmt = pg_insert(MuestraEvento.__table__).values(muestras_eventos_data)
             upsert_stmt = stmt.on_conflict_do_update(
                 index_elements=["id_snvs_muestra"],
@@ -124,7 +128,9 @@ class SaludBulkProcessor(BulkProcessorBase):
 
         if vacunas_ciudadanos_data:
             stmt = pg_insert(VacunasCiudadano.__table__).values(vacunas_ciudadanos_data)
-            upsert_stmt = stmt.on_conflict_do_nothing()
+            upsert_stmt = stmt.on_conflict_do_nothing(
+                index_elements=['codigo_ciudadano', 'id_vacuna', 'fecha_aplicacion', 'dosis']
+            )
             self.context.session.execute(upsert_stmt)
 
         duration = (self._get_current_timestamp() - start_time).total_seconds()
