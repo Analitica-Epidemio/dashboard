@@ -139,14 +139,12 @@ export const ClassificationSelector: React.FC<ClassificationSelectorProps> = ({
             {Object.values(TipoClasificacion).map((classification) => {
               const isSelected =
                 selectedClassifications.includes(classification);
-              const isDisabled = !isSelected;
 
               return (
                 <CommandItem
                   key={classification}
                   value={CLASSIFICATION_LABELS[classification]}
                   onSelect={() => handleToggleClassification(classification)}
-                  disabled={isDisabled}
                   className="flex items-center justify-between"
                 >
                   <div className="flex items-center gap-2">

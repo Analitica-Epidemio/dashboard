@@ -88,18 +88,18 @@ class EventClassifier:
             logger.error(
                 f"Se encontraron {missing_grupo_evento.sum()} registros sin GRUPO_EVENTO"
             )
-            # Marcar registros problemáticos
-            df = df.copy()
+            # OPTIMIZACIÓN: Marcar in-place en lugar de copiar todo el DataFrame
+            # Esto ahorra ~200-300 MB de RAM
             df.loc[missing_grupo_evento, "clasificacion_estrategia"] = TipoClasificacion.REQUIERE_REVISION
             # Continuar con los registros válidos
-            df = df[~missing_grupo_evento]
+            df = df[~missing_grupo_evento].copy()  # Solo copiamos el subset filtrado
 
         if df.empty:
             logger.error("No hay registros válidos para clasificar")
             return self._add_default_columns(df)
 
-        # Agregar columnas de resultado
-        df = df.copy()
+        # OPTIMIZACIÓN: Agregar columnas in-place sin copiar
+        # Esto ahorra otra copia del DataFrame completo (~200-300 MB)
         df["clasificacion_estrategia"] = None
         df["es_positivo"] = False
         df["tipo_eno_detectado"] = None

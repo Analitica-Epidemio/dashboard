@@ -100,18 +100,48 @@ class SimpleEpidemiologicalProcessor:
             }
 
     def _load_file(self, file_path: Path, sheet_name: Optional[str]) -> pd.DataFrame:
-        """Carga CSV o Excel."""
+        """
+        Carga CSV o Excel con inferencia de tipos automática.
+
+        MEJOR PRÁCTICA para datos reales (con valores sucios):
+        - Dejar que pandas infiera tipos (robusto ante strings vacíos, valores nulos)
+        - Solo forzar parse_dates con dayfirst=True para formato argentino
+        - Pandas inferirá int64/float64 automáticamente donde sea posible
+        """
+        # Columnas de fecha del CSV real (formato argentino DD/MM/YYYY)
+        date_columns = [
+            'FECHA_NACIMIENTO', 'FECHA_APERTURA', 'FECHA_CONSULTA',
+            'FECHA_INTERNACION', 'FECHA_CUI_INTENSIVOS', 'FECHA_ALTA_MEDICA',
+            'FECHA_FALLECIMIENTO', 'FECHA_ESTUDIO', 'FECHA_RECEPCION',
+            'FECHA_INICIO_VIAJE', 'FECHA_FIN_VIAJE', 'FECHA_APLICACION',
+            'FECHA_INICIO_SINTOMA', 'FECHA_INICIO_TRAT', 'FECHA_FIN_TRAT',
+            'FECHA_AMBITO_OCURRENCIA', 'FECHA_ANTECEDENTE_EPI',
+            'FECHA_INVESTIGACION', 'FECHA_DIAG_REFERIDO', 'FECHA_PAPEL'
+        ]
+
         if file_path.suffix.lower() == ".csv":
             for encoding in ["utf-8", "latin-1", "cp1252"]:
                 try:
+                    # MEJOR PRÁCTICA: Inferencia automática + parse_dates con dayfirst=True
+                    # dayfirst=True es crítico para formato argentino (DD/MM/YYYY)
+                    # low_memory=False permite inferir tipos consistentes en todo el CSV
                     return pd.read_csv(
-                        file_path, encoding=encoding, dtype=str, low_memory=False
+                        file_path,
+                        encoding=encoding,
+                        parse_dates=date_columns,
+                        dayfirst=True,
+                        low_memory=False,  # Infiere tipos en todo el archivo, no por chunks
                     )
                 except UnicodeDecodeError:
                     continue
             raise ValueError(f"No se pudo leer CSV: {file_path}")
         elif file_path.suffix.lower() in [".xlsx", ".xls"]:
-            return pd.read_excel(file_path, sheet_name=sheet_name or 0, dtype=str)
+            # Para Excel, parsear fechas con inferencia automática
+            return pd.read_excel(
+                file_path,
+                sheet_name=sheet_name or 0,
+                parse_dates=date_columns
+            )
         else:
             raise ValueError(f"Formato no soportado: {file_path.suffix}")
 

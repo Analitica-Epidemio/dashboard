@@ -1129,6 +1129,9 @@ class ChartDataProcessor:
             query += " AND e.id_tipo_eno = :evento_id"
             params["evento_id"] = filtros["evento_id"]
 
+        # Filtro por clasificaciones (usar helper consistente)
+        query = self._add_classification_filter(query, filtros, params, table_alias="e")
+
         # Filtros de fecha
         if filtros.get("fecha_desde"):
             query += " AND e.fecha_minima_evento >= :fecha_desde"
