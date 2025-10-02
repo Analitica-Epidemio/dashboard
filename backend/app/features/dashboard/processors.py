@@ -316,6 +316,8 @@ class ChartDataProcessor:
             "fecha_historica_inicio": date(fecha_desde.year - 5, 1, 1)  # 5 años atrás
         }
 
+        logger.info(f"Corredor endémico - DEBUG: fecha_desde={fecha_desde}, fecha_historica_inicio={params['fecha_historica_inicio']}")
+
         if filtros.get("grupo_id"):
             query += """
                 AND id_tipo_eno IN (
@@ -336,6 +338,10 @@ class ChartDataProcessor:
         result = await self.db.execute(text(query), params)
         rows = result.fetchall()
 
+        logger.info(f"Corredor endémico - DEBUG: Registros históricos encontrados: {len(rows)}")
+        if rows:
+            logger.info(f"Corredor endémico - DEBUG: Primeros 5 registros: {rows[:5]}")
+
         # Validar que hay suficientes datos históricos
         if not rows or len(rows) < 10:  # Mínimo 10 registros históricos
             return {
@@ -351,9 +357,14 @@ class ChartDataProcessor:
         # Procesar datos para calcular percentiles
         df = pd.DataFrame(rows, columns=['semana', 'año', 'casos'])
 
+        logger.info(f"Corredor endémico - DEBUG: DataFrame shape: {df.shape}")
+        logger.info(f"Corredor endémico - DEBUG: DataFrame head:\n{df.head(10)}")
+
         # Validar que tenemos al menos 3 años diferentes de datos
         años_unicos = df['año'].nunique()
+        años_lista = sorted(df['año'].unique().tolist())
         logger.info(f"Corredor endémico - Años únicos en histórico: {años_unicos}")
+        logger.info(f"Corredor endémico - DEBUG: Lista de años: {años_lista}")
 
         if años_unicos < 3:
             año_texto = "año" if años_unicos == 1 else "años"
