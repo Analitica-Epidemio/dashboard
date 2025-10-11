@@ -114,8 +114,8 @@ class CiudadanosBulkProcessor(BulkProcessorBase):
         """Bulk upsert de domicilios de ciudadanos."""
         start_time = self._get_current_timestamp()
 
-        # Filtrar registros con datos de domicilio Y localidad válida (requerida)
-        domicilios_df = df.dropna(subset=[Columns.CODIGO_CIUDADANO, Columns.ID_LOC_INDEC_RESIDENCIA])
+        # Filtrar registros con datos de domicilio (localidad es opcional, la crearemos si no existe)
+        domicilios_df = df.dropna(subset=[Columns.CODIGO_CIUDADANO])
         domicilios_df = domicilios_df[
             (domicilios_df[Columns.CALLE_DOMICILIO].notna()
             | domicilios_df[Columns.NUMERO_DOMICILIO].notna()
@@ -127,6 +127,10 @@ class CiudadanosBulkProcessor(BulkProcessorBase):
 
         self.logger.info(f"Bulk upserting {len(domicilios_df)} domicilios")
 
+        # Crear localidades placeholder para las que no existen
+        localidad_ids_needed = domicilios_df[Columns.ID_LOC_INDEC_RESIDENCIA].dropna().unique().tolist()
+        localidad_mapping = self._ensure_localidades_exist(localidad_ids_needed)
+
         # OPTIMIZACIÓN: Procesamiento vectorizado de domicilios (80% más rápido)
         domicilios_data = []
         errors = []
@@ -134,12 +138,17 @@ class CiudadanosBulkProcessor(BulkProcessorBase):
         if not domicilios_df.empty:
             domicilios_df = domicilios_df.copy()
 
-            # Crear dicts vectorialmente - solo registros con localidad e info de domicilio
+            # Mapear localidades (usar placeholder si no existe)
+            domicilios_df['id_localidad_mapped'] = domicilios_df[Columns.ID_LOC_INDEC_RESIDENCIA].apply(
+                lambda x: localidad_mapping.get(self._safe_int(x)) if pd.notna(x) else None
+            )
+
+            # Crear dicts vectorialmente
             timestamp = self._get_current_timestamp()
-            domicilios_data = domicilios_df.apply(
+            domicilios_data = domicilios_df[domicilios_df['id_localidad_mapped'].notna()].apply(
                 lambda row: {
                     "codigo_ciudadano": self._safe_int(row.get(Columns.CODIGO_CIUDADANO)),
-                    "id_localidad_indec": self._safe_int(row.get(Columns.ID_LOC_INDEC_RESIDENCIA)),
+                    "id_localidad_indec": int(row['id_localidad_mapped']),
                     "calle_domicilio": self._clean_string(row.get(Columns.CALLE_DOMICILIO)),
                     "numero_domicilio": self._clean_string(row.get(Columns.NUMERO_DOMICILIO)),
                     "barrio_popular": self._clean_string(row.get(Columns.BARRIO_POPULAR)),
@@ -558,3 +567,58 @@ class CiudadanosBulkProcessor(BulkProcessorBase):
             "created_at": self._get_current_timestamp(),
             "updated_at": self._get_current_timestamp(),
         }
+
+    def _ensure_localidades_exist(self, localidad_ids: list) -> Dict[int, int]:
+        """
+        Ensure that all needed localidades exist in the database.
+        Creates placeholder localities for missing ones to avoid losing data.
+
+        Returns mapping from original id_localidad_indec -> actual id_localidad_indec in DB
+        """
+        from app.domains.territorio.geografia_models import Localidad
+
+        if not localidad_ids:
+            return {}
+
+        # Obtener localidades existentes
+        stmt = select(Localidad.id_localidad_indec).where(
+            Localidad.id_localidad_indec.in_(localidad_ids)
+        )
+        existentes = set(id_loc for (id_loc,) in self.context.session.execute(stmt).all())
+
+        # Mapping: todas las existentes mapean a sí mismas
+        localidad_mapping = {loc_id: loc_id for loc_id in existentes}
+
+        # Crear placeholders para las que no existen
+        faltantes = [loc_id for loc_id in localidad_ids if loc_id not in existentes]
+
+        if faltantes:
+            self.logger.warning(f"Creando {len(faltantes)} localidades placeholder para IDs faltantes")
+
+            timestamp = self._get_current_timestamp()
+            placeholders = []
+            for loc_id in faltantes:
+                placeholders.append({
+                    "id_localidad_indec": loc_id,
+                    "nombre": f"Localidad INDEC {loc_id}",
+                    "categoria": "Placeholder",
+                    "centroide_lat": None,
+                    "centroide_lon": None,
+                    "id_departamento_indec": 99999,  # Departamento placeholder
+                    "created_at": timestamp,
+                    "updated_at": timestamp,
+                })
+
+            # Insert placeholders
+            if placeholders:
+                stmt = pg_insert(Localidad.__table__).values(placeholders)
+                upsert_stmt = stmt.on_conflict_do_nothing(
+                    index_elements=["id_localidad_indec"]
+                )
+                self.context.session.execute(upsert_stmt)
+
+                # Todas mapean a sí mismas
+                for loc_id in faltantes:
+                    localidad_mapping[loc_id] = loc_id
+
+        return localidad_mapping

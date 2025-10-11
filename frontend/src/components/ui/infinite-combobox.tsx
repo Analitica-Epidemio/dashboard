@@ -125,7 +125,7 @@ export function InfiniteCombobox({
           handleClose();
         }
       }}
-      modal={false}
+      modal={true}
     >
       <PopoverTrigger asChild>
         <Button
@@ -145,7 +145,7 @@ export function InfiniteCombobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-full p-0"
+        className="w-full p-0 z-[100]"
         align="start"
         onInteractOutside={(e) => {
           // CRITICAL: Prevent closing if loading

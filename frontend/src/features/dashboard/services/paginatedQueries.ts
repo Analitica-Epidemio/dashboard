@@ -5,10 +5,16 @@ import { env } from '@/env'
 import type { Group, Event } from '../types'
 
 // Tipos para las respuestas de la API
+interface ApiEventSimple {
+  id: number;
+  nombre: string;
+}
+
 interface ApiGroupResponse {
   id: number;
   nombre: string;
   descripcion?: string | null;
+  eventos?: ApiEventSimple[]; // Eventos incluidos en el grupo
 }
 
 interface ApiEventResponse {
@@ -119,6 +125,11 @@ export const useInfiniteGroups = (search?: string): UseInfiniteGroupsResult => {
       id: String(grupo.id),
       name: grupo.nombre,
       description: grupo.descripcion ?? undefined,
+      eventos: grupo.eventos?.map((evento): Event => ({
+        id: String(evento.id),
+        name: evento.nombre,
+        groupId: String(grupo.id),
+      })) ?? [],
     })) ?? []
   ) ?? [];
 

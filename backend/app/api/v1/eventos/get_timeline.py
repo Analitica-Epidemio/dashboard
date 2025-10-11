@@ -17,6 +17,7 @@ from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User
 from app.domains.eventos_epidemiologicos.eventos.models import Evento
+from app.domains.atencion_medica.salud_models import MuestraEvento
 
 
 class EventoTimelineItem(BaseModel):
@@ -66,7 +67,7 @@ async def get_evento_timeline(
             .where(Evento.id == evento_id)
             .options(
                 selectinload(Evento.sintomas),
-                selectinload(Evento.muestras),
+                selectinload(Evento.muestras).selectinload(MuestraEvento.muestra),
                 selectinload(Evento.diagnosticos),
                 selectinload(Evento.internaciones),
                 selectinload(Evento.vacunas),
@@ -120,25 +121,25 @@ async def get_evento_timeline(
 
         # Agregar síntomas detallados
         for sintoma in evento.sintomas or []:
-            if sintoma.fecha_inicio_sintoma:
+            if sintoma.fecha_inicio_sintoma and sintoma.sintoma and sintoma.sintoma.signo_sintoma:
                 timeline_items.append(
                     EventoTimelineItem(
                         fecha=sintoma.fecha_inicio_sintoma,
                         tipo="sintoma",
-                        descripcion=f"Síntoma: {sintoma.sintoma.signo_sintoma if sintoma.sintoma else 'No especificado'}",
+                        descripcion=f"Síntoma: {sintoma.sintoma.signo_sintoma}",
                         detalles=None,
                     )
                 )
 
         # Agregar muestras
         for muestra in evento.muestras or []:
-            if muestra.fecha_muestra:
+            if muestra.fecha_toma_muestra and muestra.muestra and muestra.muestra.descripcion:
                 timeline_items.append(
                     EventoTimelineItem(
-                        fecha=muestra.fecha_muestra,
+                        fecha=muestra.fecha_toma_muestra,
                         tipo="muestra",
-                        descripcion=f"Muestra: {muestra.tipo_muestra}",
-                        detalles={"resultado": muestra.resultado},
+                        descripcion=f"Muestra: {muestra.muestra.descripcion}",
+                        detalles={"resultado": muestra.valor},
                     )
                 )
 
@@ -149,16 +150,16 @@ async def get_evento_timeline(
                     diagnostico.clasificacion_manual
                     or diagnostico.clasificacion_automatica
                     or diagnostico.diagnostico_referido
-                    or "Sin especificar"
                 )
-                timeline_items.append(
-                    EventoTimelineItem(
-                        fecha=diagnostico.fecha_diagnostico_referido,
-                        tipo="diagnostico",
-                        descripcion=f"Diagnóstico: {diagnostico_text}",
-                        detalles={"clasificacion": diagnostico.clasificacion_manual},
+                if diagnostico_text:
+                    timeline_items.append(
+                        EventoTimelineItem(
+                            fecha=diagnostico.fecha_diagnostico_referido,
+                            tipo="diagnostico",
+                            descripcion=f"Diagnóstico: {diagnostico_text}",
+                            detalles={"clasificacion": diagnostico.clasificacion_manual},
+                        )
                     )
-                )
 
         # Ordenar cronológicamente
         timeline_items.sort(key=lambda x: x.fecha)

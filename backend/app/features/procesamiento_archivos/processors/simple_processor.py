@@ -119,31 +119,36 @@ class SimpleEpidemiologicalProcessor:
             'FECHA_INVESTIGACION', 'FECHA_DIAG_REFERIDO', 'FECHA_PAPEL'
         ]
 
+        df = None
         if file_path.suffix.lower() == ".csv":
             for encoding in ["utf-8", "latin-1", "cp1252"]:
                 try:
                     # MEJOR PRÁCTICA: Inferencia automática + parse_dates con dayfirst=True
                     # dayfirst=True es crítico para formato argentino (DD/MM/YYYY)
                     # low_memory=False permite inferir tipos consistentes en todo el CSV
-                    return pd.read_csv(
+                    df = pd.read_csv(
                         file_path,
                         encoding=encoding,
                         parse_dates=date_columns,
                         dayfirst=True,
                         low_memory=False,  # Infiere tipos en todo el archivo, no por chunks
                     )
+                    break
                 except UnicodeDecodeError:
                     continue
-            raise ValueError(f"No se pudo leer CSV: {file_path}")
+            if df is None:
+                raise ValueError(f"No se pudo leer CSV: {file_path}")
         elif file_path.suffix.lower() in [".xlsx", ".xls"]:
             # Para Excel, parsear fechas con inferencia automática
-            return pd.read_excel(
+            df = pd.read_excel(
                 file_path,
                 sheet_name=sheet_name or 0,
                 parse_dates=date_columns
             )
         else:
             raise ValueError(f"Formato no soportado: {file_path.suffix}")
+
+        return df
 
     def _validate_structure(self, df: pd.DataFrame) -> None:
         """Valida estructura mínima usando nuevo sistema de columnas."""
@@ -173,12 +178,16 @@ class SimpleEpidemiologicalProcessor:
         )
 
         validator = OptimizedDataValidator(context)
-        return validator.process_batch(df)
+        df_clean = validator.process_batch(df)
+
+        return df_clean
 
     def _classify_events(self, df: pd.DataFrame) -> pd.DataFrame:
         """Clasifica usando clasificador simple."""
         classifier = EventClassifier(self.session)
-        return classifier.classify(df)
+        df_classified = classifier.classify(df)
+
+        return df_classified
 
     def _save_to_database(self, df: pd.DataFrame) -> None:
         """Guarda en BD usando bulk processor modular."""
@@ -194,10 +203,14 @@ class SimpleEpidemiologicalProcessor:
         # Calcular total de entidades creadas
         total_entities = sum(result.inserted_count for result in results.values())
         self.stats["entities_created"] = total_entities
-        
+
         # Agregar errores si los hay
         for result in results.values():
             self.stats["errors"].extend(result.errors)
+
+        # Commit de la sesión para persistir cambios
+        self.session.commit()
+        logger.info(f"✅ Commit exitoso: {total_entities} entidades creadas")
 
     def _update_progress(self, percentage: int, message: str) -> None:
         """Actualiza progreso."""

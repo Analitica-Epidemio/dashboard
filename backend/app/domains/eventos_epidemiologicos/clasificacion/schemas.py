@@ -127,18 +127,32 @@ class EventStrategyBase(BaseModel):
     )
     tipo_eno_id: int = Field(..., description="ID del tipo de evento epidemiológico")
     active: bool = Field(True, description="Si la estrategia está activa")
-    usa_provincia_carga: bool = Field(
-        False, description="Si filtra por provincia de carga"
-    )
-    provincia_field: str = Field(
-        "PROVINCIA_RESIDENCIA", description="Campo de provincia a usar"
-    )
     confidence_threshold: float = Field(
-        0.5, ge=0.0, le=1.0, description="Umbral de confianza general"
+        0.7, ge=0.0, le=1.0, description="Umbral de confianza general"
     )
     description: Optional[str] = Field(
-        None, max_length=1000, description="Descripción de la estrategia"
+        None, description="Descripción completa de la estrategia"
     )
+    config: Optional[Dict[str, Any]] = Field(
+        None, description="Configuración adicional (filtros geográficos, etc.)"
+    )
+    valid_from: datetime = Field(
+        default_factory=datetime.utcnow,
+        description="Fecha desde cuando la estrategia es válida"
+    )
+    valid_until: Optional[datetime] = Field(
+        None, description="Fecha hasta cuando la estrategia es válida (None = sin fin)"
+    )
+
+    @field_validator("valid_until")
+    @classmethod
+    def validate_valid_until(cls, v, info):
+        """Valida que valid_until sea posterior a valid_from."""
+        values = info.data
+        valid_from = values.get("valid_from")
+        if v is not None and valid_from is not None and v <= valid_from:
+            raise ValueError("valid_until debe ser posterior a valid_from")
+        return v
 
 
 class EventStrategyCreate(EventStrategyBase):
@@ -172,17 +186,20 @@ class EventStrategyUpdate(BaseModel):
         None, min_length=1, max_length=255, description="Nombre de la estrategia"
     )
     active: Optional[bool] = Field(None, description="Si la estrategia está activa")
-    usa_provincia_carga: Optional[bool] = Field(
-        None, description="Si filtra por provincia de carga"
-    )
-    provincia_field: Optional[str] = Field(
-        None, description="Campo de provincia a usar"
-    )
     confidence_threshold: Optional[float] = Field(
         None, ge=0.0, le=1.0, description="Umbral de confianza general"
     )
     description: Optional[str] = Field(
-        None, max_length=1000, description="Descripción de la estrategia"
+        None, description="Descripción de la estrategia"
+    )
+    config: Optional[Dict[str, Any]] = Field(
+        None, description="Configuración adicional"
+    )
+    valid_from: Optional[datetime] = Field(
+        None, description="Fecha desde cuando la estrategia es válida"
+    )
+    valid_until: Optional[datetime] = Field(
+        None, description="Fecha hasta cuando la estrategia es válida (None = sin fin)"
     )
     classification_rules: Optional[List[ClassificationRuleRequest]] = Field(
         None, description="Reglas de clasificación"
@@ -218,6 +235,8 @@ class EventStrategyResponse(EventStrategyBase):
     metadata_extractors: List[FilterConditionResponse] = Field(
         [], description="Extractores de metadata"
     )
+    valid_from: datetime = Field(..., description="Fecha desde cuando la estrategia es válida")
+    valid_until: Optional[datetime] = Field(None, description="Fecha hasta cuando la estrategia es válida")
     created_at: datetime = Field(..., description="Fecha de creación")
     updated_at: datetime = Field(..., description="Fecha de última actualización")
     created_by: Optional[str] = Field(

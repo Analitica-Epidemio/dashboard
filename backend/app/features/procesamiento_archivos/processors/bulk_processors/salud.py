@@ -22,6 +22,13 @@ class SaludBulkProcessor(BulkProcessorBase):
         """Bulk upsert de muestras de eventos."""
         start_time = self._get_current_timestamp()
 
+        # Verificar columnas críticas
+        columnas_criticas = [Columns.IDEVENTOCASO, Columns.MUESTRA, Columns.ID_SNVS_MUESTRA]
+        columnas_faltantes = [col for col in columnas_criticas if col not in df.columns]
+        if columnas_faltantes:
+            self.logger.warning(f"Columnas críticas faltantes: {columnas_faltantes}")
+            return BulkOperationResult(0, 0, 0, [], 0.0)
+
         # Filtrar registros con información de muestra
         muestras_df = df[
             df[Columns.ID_SNVS_MUESTRA].notna()
@@ -30,12 +37,14 @@ class SaludBulkProcessor(BulkProcessorBase):
         ]
 
         if muestras_df.empty:
+            self.logger.info("No hay registros con información de muestra")
             return BulkOperationResult(0, 0, 0, [], 0.0)
 
-        self.logger.info(f"Bulk upserting {len(muestras_df)} muestras")
+        self.logger.info(f"Procesando {len(muestras_df)} muestras de eventos")
 
         # Obtener mapping de eventos
         id_eventos_casos = muestras_df[Columns.IDEVENTOCASO].unique().tolist()
+
         stmt = select(Evento.id, Evento.id_evento_caso).where(
             Evento.id_evento_caso.in_(id_eventos_casos)
         )
@@ -46,8 +55,8 @@ class SaludBulkProcessor(BulkProcessorBase):
 
         # Crear catálogo de muestras
         muestra_mapping = self._get_or_create_muestras(muestras_df)
-        
-        # Crear catálogo de establecimientos de muestra 
+
+        # Crear catálogo de establecimientos de muestra
         establecimiento_mapping = self._get_or_create_establecimientos_muestra(muestras_df)
 
         # OPTIMIZACIÓN: Procesamiento vectorizado de muestras (75% más rápido)
@@ -72,10 +81,11 @@ class SaludBulkProcessor(BulkProcessorBase):
                 establecimiento_mapping["DESCONOCIDO"] = self.context.session.execute(stmt).scalar()
 
             # Mapear IDs usando vectorización
+            # IMPORTANTE: Solo hacer strip(), NO upper() - queremos preservar capitalización original
             muestras_df['id_evento'] = muestras_df[Columns.IDEVENTOCASO].map(evento_mapping)
-            muestras_df['tipo_muestra_clean'] = muestras_df[Columns.MUESTRA].str.strip().str.upper()
+            muestras_df['tipo_muestra_clean'] = muestras_df[Columns.MUESTRA].apply(lambda x: self._clean_string(x) if pd.notna(x) else None)
             muestras_df['id_muestra'] = muestras_df['tipo_muestra_clean'].map(muestra_mapping)
-            muestras_df['estab_muestra_clean'] = muestras_df[Columns.ESTABLECIMIENTO_MUESTRA].str.strip().str.upper()
+            muestras_df['estab_muestra_clean'] = muestras_df[Columns.ESTABLECIMIENTO_MUESTRA].apply(lambda x: self._clean_string(x) if pd.notna(x) else None)
             muestras_df['id_establecimiento'] = muestras_df['estab_muestra_clean'].map(establecimiento_mapping)
 
             # Usar establecimiento "Desconocido" para los que no tienen
@@ -88,6 +98,13 @@ class SaludBulkProcessor(BulkProcessorBase):
                 muestras_df[Columns.ID_SNVS_MUESTRA].notna()
             ]
 
+            # DEDUPLICAR: El CSV puede tener la misma muestra repetida en múltiples filas
+            # La clave única es la combinación de (id_snvs_muestra, id_evento)
+            # Usamos las columnas MAPEADAS (id_evento), no las originales del CSV
+            valid_muestras = valid_muestras.drop_duplicates(
+                subset=[Columns.ID_SNVS_MUESTRA, 'id_evento'], keep='first'
+            )
+
             if not valid_muestras.empty:
                 timestamp = self._get_current_timestamp()
                 muestras_eventos_data = valid_muestras.apply(
@@ -96,7 +113,16 @@ class SaludBulkProcessor(BulkProcessorBase):
                         "id_evento": int(row['id_evento']),
                         "id_muestra": int(row['id_muestra']),
                         "id_establecimiento": int(row['id_establecimiento']),
-                        "fecha_toma_muestra": self._safe_date(row.get(Columns.FECHA_ESTUDIO)),
+                        # Usar FTM (Fecha Toma Muestra), NO FECHA_ESTUDIO
+                        "fecha_toma_muestra": self._safe_date(row.get(Columns.FTM)),
+                        # Agregar campos epidemiológicos
+                        "semana_epidemiologica_muestra": self._safe_int(row.get(Columns.SEPI_MUESTRA)),
+                        "anio_epidemiologico_muestra": self._safe_int(row.get(Columns.ANIO_EPI_MUESTRA)),
+                        # Agregar IDs SNVS adicionales
+                        "id_snvs_evento_muestra": self._safe_int(row.get(Columns.ID_SNVS_EVENTO_MUESTRA)),
+                        "id_snvs_prueba_muestra": self._safe_int(row.get(Columns.ID_SNVS_PRUEBA_MUESTRA)),
+                        # Otros campos
+                        "fecha_papel": self._safe_date(row.get(Columns.FECHA_PAPEL)),
                         "created_at": timestamp,
                         "updated_at": timestamp,
                     },
@@ -104,15 +130,20 @@ class SaludBulkProcessor(BulkProcessorBase):
                 ).tolist()
 
         if muestras_eventos_data:
-            # DEDUPLICACIÓN: Las muestras se identifican de forma única por id_snvs_muestra.
-            # Si se sube el mismo archivo dos veces, el UPSERT actualizará la fecha de toma
+            # DEDUPLICACIÓN: Las muestras se identifican de forma única por (id_snvs_muestra, id_evento).
+            # Si se sube el mismo archivo dos veces, el UPSERT actualizará todos los campos
             # en lugar de duplicar. Esto maneja correctamente el CSV desnormalizado donde un
             # IDEVENTOCASO puede aparecer en múltiples filas con diferentes muestras.
             stmt = pg_insert(MuestraEvento.__table__).values(muestras_eventos_data)
             upsert_stmt = stmt.on_conflict_do_update(
-                index_elements=["id_snvs_muestra"],
+                index_elements=["id_snvs_muestra", "id_evento"],
                 set_={
                     "fecha_toma_muestra": stmt.excluded.fecha_toma_muestra,
+                    "semana_epidemiologica_muestra": stmt.excluded.semana_epidemiologica_muestra,
+                    "anio_epidemiologico_muestra": stmt.excluded.anio_epidemiologico_muestra,
+                    "id_snvs_evento_muestra": stmt.excluded.id_snvs_evento_muestra,
+                    "id_snvs_prueba_muestra": stmt.excluded.id_snvs_prueba_muestra,
+                    "fecha_papel": stmt.excluded.fecha_papel,
                     "updated_at": self._get_current_timestamp(),
                 },
             )
@@ -214,23 +245,22 @@ class SaludBulkProcessor(BulkProcessorBase):
     def _get_or_create_muestras(self, df: pd.DataFrame) -> Dict[str, int]:
         """Get or create sample catalog entries."""
         tipos_muestra = df[Columns.MUESTRA].dropna().unique()
-        
+
         muestra_mapping = {}
         for tipo in tipos_muestra:
             tipo_limpio = self._clean_string(tipo)
             if not tipo_limpio:
                 continue
 
-            # Buscar existente
+            # Buscar existente por descripcion
             stmt = select(Muestra.id).where(
-                Muestra.tipo == tipo_limpio
+                Muestra.descripcion == tipo_limpio
             ).limit(1)
             muestra_id = self.context.session.execute(stmt).scalar()
 
             if not muestra_id:
                 # Crear nueva
                 stmt = pg_insert(Muestra.__table__).values({
-                    "tipo": tipo_limpio,
                     "descripcion": tipo_limpio,
                     "created_at": self._get_current_timestamp(),
                     "updated_at": self._get_current_timestamp(),
@@ -239,7 +269,7 @@ class SaludBulkProcessor(BulkProcessorBase):
 
                 # Obtener ID
                 stmt = select(Muestra.id).where(
-                    Muestra.tipo == tipo_limpio
+                    Muestra.descripcion == tipo_limpio
                 ).limit(1)
                 muestra_id = self.context.session.execute(stmt).scalar()
 

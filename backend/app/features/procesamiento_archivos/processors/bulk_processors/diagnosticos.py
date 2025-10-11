@@ -12,6 +12,7 @@ from app.domains.atencion_medica.diagnosticos_models import (
     InternacionEvento,
     TratamientoEvento,
 )
+from app.domains.atencion_medica.salud_models import MuestraEvento
 from app.domains.eventos_epidemiologicos.eventos.models import Evento
 
 from ..core.columns import Columns
@@ -134,12 +135,23 @@ class DiagnosticosBulkProcessor(BulkProcessorBase):
             for evento_id, id_evento_caso in self.context.session.execute(stmt).all()
         }
 
+        # Obtener mapping de muestras_evento (necesario para EstudioEvento)
+        # Clave: (id_snvs_muestra, id_evento) → id_muestra_evento
+        stmt = select(
+            MuestraEvento.id,
+            MuestraEvento.id_snvs_muestra,
+            MuestraEvento.id_evento
+        )
+        muestra_mapping = {}
+        for muestra_id, id_snvs_muestra, id_evento in self.context.session.execute(stmt).all():
+            muestra_mapping[(id_snvs_muestra, id_evento)] = muestra_id
+
         estudios_data = []
         errors = []
 
         for _, row in estudios_df.iterrows():
             try:
-                estudio_dict = self._row_to_estudio_dict(row, evento_mapping)
+                estudio_dict = self._row_to_estudio_dict(row, evento_mapping, muestra_mapping)
                 if estudio_dict:
                     estudios_data.append(estudio_dict)
             except Exception as e:
@@ -216,6 +228,20 @@ class DiagnosticosBulkProcessor(BulkProcessorBase):
                     (tratamientos_df['resultado_clean'].notna() & (tratamientos_df['resultado_clean'] != 'nan'))
                 )
             ]
+
+            # DEDUPLICAR: El CSV tiene duplicados (un tratamiento por cada síntoma)
+            # Deduplicar por (id_evento, tratamiento, fecha_inicio)
+            if not valid_tratamientos.empty:
+                # Crear columna de fecha para deduplicación
+                valid_tratamientos['fecha_inicio_str'] = valid_tratamientos[Columns.FECHA_INICIO_TRAT].astype(str)
+
+                # Deduplicar manteniendo el primer registro de cada combinación única
+                valid_tratamientos = valid_tratamientos.drop_duplicates(
+                    subset=['id_evento', 'tratamiento_clean', 'fecha_inicio_str'],
+                    keep='first'
+                )
+
+                self.logger.info(f"Tratamientos después de deduplicación: {len(valid_tratamientos)}")
 
             if not valid_tratamientos.empty:
                 timestamp = self._get_current_timestamp()
@@ -379,7 +405,7 @@ class DiagnosticosBulkProcessor(BulkProcessorBase):
         }
 
     def _row_to_estudio_dict(
-        self, row: pd.Series, evento_mapping: Dict[int, int]
+        self, row: pd.Series, evento_mapping: Dict[int, int], muestra_mapping: Dict[tuple, int]
     ) -> Optional[Dict]:
         """Convert row to estudio evento dict."""
         id_evento_caso = self._safe_int(row.get(Columns.IDEVENTOCASO))
@@ -395,10 +421,27 @@ class DiagnosticosBulkProcessor(BulkProcessorBase):
         if not any([determinacion, tecnica, fecha, resultado]):
             return None
 
-        # EstudioEvento requiere id_muestra, no id_evento
-        # Necesitaríamos el mapping de muestras para esto
-        # Por ahora skip este método hasta tener el mapping correcto
-        return None
+        # EstudioEvento requiere id_muestra (de muestra_evento)
+        id_snvs_muestra = self._safe_int(row.get(Columns.ID_SNVS_MUESTRA))
+        id_evento = evento_mapping[id_evento_caso]
+
+        # Buscar el ID de muestra_evento usando la clave compuesta
+        id_muestra_evento = muestra_mapping.get((id_snvs_muestra, id_evento))
+
+        if not id_muestra_evento:
+            # No hay muestra asociada, skip este estudio
+            return None
+
+        return {
+            "id_muestra": id_muestra_evento,
+            "fecha_estudio": fecha,
+            "determinacion": determinacion,
+            "tecnica": tecnica,
+            "resultado": resultado,
+            "fecha_recepcion": self._safe_date(row.get(Columns.FECHA_RECEPCION)),
+            "created_at": self._get_current_timestamp(),
+            "updated_at": self._get_current_timestamp(),
+        }
 
     def _row_to_tratamiento_dict(
         self, row: pd.Series, evento_mapping: Dict[int, int]

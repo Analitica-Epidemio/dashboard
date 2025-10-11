@@ -48,14 +48,16 @@ class ChartDataProcessor:
         if filtros.get("grupo_id"):
             query += """
                 AND id_tipo_eno IN (
-                    SELECT id FROM tipo_eno WHERE id_grupo_eno = :grupo_id
+                    SELECT id_tipo_eno FROM tipo_eno_grupo_eno WHERE id_grupo_eno = :grupo_id
                 )
             """
             params["grupo_id"] = filtros["grupo_id"]
 
-        if filtros.get("evento_id"):
-            query += " AND id_tipo_eno = :evento_id"
-            params["evento_id"] = filtros["evento_id"]
+        if filtros.get("tipo_eno_ids"):
+            tipo_eno_ids = filtros["tipo_eno_ids"]
+            if tipo_eno_ids and len(tipo_eno_ids) > 0:
+                query += " AND id_tipo_eno = ANY(:tipo_eno_ids)"
+                params["tipo_eno_ids"] = tipo_eno_ids
 
         # Filtro por clasificación estrategia
         if filtros.get("clasificaciones"):
@@ -89,6 +91,19 @@ class ChartDataProcessor:
             params["clasificaciones"] = clasificaciones
 
         return query
+
+    def _add_provincia_filter(self, query: str, filtros: Dict[str, Any], params: Dict[str, Any], table_alias: str = "d") -> tuple[str, Dict[str, Any]]:
+        """Helper para agregar filtro de provincia por código INDEC"""
+        provincia_id = filtros.get("provincia_id")
+
+        if provincia_id:
+            query += f" AND {table_alias}.id_provincia_indec = :provincia_id"
+            params["provincia_id"] = provincia_id
+            logger.debug(f"🔍 Filtro provincia aplicado: {provincia_id}")
+        else:
+            logger.debug(f"🌍 Sin filtro de provincia - datos de TODAS las provincias")
+
+        return query, params
 
     def _generate_week_metadata_from_rows(self, rows: list) -> list:
         """
@@ -190,37 +205,41 @@ class ChartDataProcessor:
             COUNT(*) as casos
         FROM evento e
         LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
-        LEFT JOIN localidad l ON est.id_localidad_establecimiento = l.id_localidad_indec
+        LEFT JOIN localidad l ON est.id_localidad_indec = l.id_localidad_indec
         LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
         WHERE e.semana_epidemiologica_apertura IS NOT NULL
             AND e.anio_epidemiologico_apertura IS NOT NULL
-            AND d.id_provincia_indec = 26
         """
 
         params = {}
 
+        # Filtro de provincia
+        query, params = self._add_provincia_filter(query, filtros, params, "d")
+
         # Aplicar filtros
         if filtros.get("grupo_id"):
             query += """
-                AND id_tipo_eno IN (
-                    SELECT id FROM tipo_eno WHERE id_grupo_eno = :grupo_id
+                AND e.id_tipo_eno IN (
+                    SELECT id_tipo_eno FROM tipo_eno_grupo_eno WHERE id_grupo_eno = :grupo_id
                 )
             """
             params["grupo_id"] = filtros["grupo_id"]
 
-        if filtros.get("evento_id"):
-            query += " AND id_tipo_eno = :evento_id"
-            params["evento_id"] = filtros["evento_id"]
+        if filtros.get("tipo_eno_ids"):
+            tipo_eno_ids = filtros["tipo_eno_ids"]
+            if tipo_eno_ids and len(tipo_eno_ids) > 0:
+                query += " AND e.id_tipo_eno = ANY(:tipo_eno_ids)"
+                params["tipo_eno_ids"] = tipo_eno_ids
 
         # Filtro por clasificación estrategia
-        query = self._add_classification_filter(query, filtros, params)
+        query = self._add_classification_filter(query, filtros, params, "e")
 
         if filtros.get("fecha_desde"):
-            query += " AND fecha_minima_evento >= :fecha_desde"
+            query += " AND e.fecha_minima_evento >= :fecha_desde"
             params["fecha_desde"] = self._parse_date(filtros["fecha_desde"])
 
         if filtros.get("fecha_hasta"):
-            query += " AND fecha_minima_evento <= :fecha_hasta"
+            query += " AND e.fecha_minima_evento <= :fecha_hasta"
             params["fecha_hasta"] = self._parse_date(filtros["fecha_hasta"])
 
         query += " GROUP BY semana, año ORDER BY año, semana"
@@ -289,7 +308,12 @@ class ChartDataProcessor:
                     "datasets": [],
                     "metadata": []
                 },
-                "error": "Se requiere un rango de fechas para el corredor endémico"
+                "error": {
+                    "code": "NO_DATE_RANGE",
+                    "title": "Rango de fechas requerido",
+                    "message": "Seleccione un período de tiempo para visualizar el corredor endémico.",
+                    "suggestion": "Configure las fechas desde y hasta en los filtros."
+                }
             }
 
         # Calcular semanas epidemiológicas del rango
@@ -304,7 +328,7 @@ class ChartDataProcessor:
             semana_epidemiologica_apertura as semana,
             anio_epidemiologico_apertura as año,
             COUNT(*) as casos
-        FROM evento
+        FROM evento e
         WHERE fecha_minima_evento >= :fecha_historica_inicio
             AND fecha_minima_evento < :fecha_desde
             AND semana_epidemiologica_apertura IS NOT NULL
@@ -320,18 +344,20 @@ class ChartDataProcessor:
 
         if filtros.get("grupo_id"):
             query += """
-                AND id_tipo_eno IN (
-                    SELECT id FROM tipo_eno WHERE id_grupo_eno = :grupo_id
+                AND e.id_tipo_eno IN (
+                    SELECT id_tipo_eno FROM tipo_eno_grupo_eno WHERE id_grupo_eno = :grupo_id
                 )
             """
             params["grupo_id"] = filtros["grupo_id"]
 
-        if filtros.get("evento_id"):
-            query += " AND id_tipo_eno = :evento_id"
-            params["evento_id"] = filtros["evento_id"]
+        if filtros.get("tipo_eno_ids"):
+            tipo_eno_ids = filtros["tipo_eno_ids"]
+            if tipo_eno_ids and len(tipo_eno_ids) > 0:
+                query += " AND e.id_tipo_eno = ANY(:tipo_eno_ids)"
+                params["tipo_eno_ids"] = tipo_eno_ids
 
         # Filtro por clasificación estrategia
-        query = self._add_classification_filter(query, filtros, params)
+        query = self._add_classification_filter(query, filtros, params, "e")
 
         query += " GROUP BY semana, año ORDER BY semana, año"
 
@@ -351,7 +377,18 @@ class ChartDataProcessor:
                     "datasets": [],
                     "metadata": []
                 },
-                "error": "Datos históricos insuficientes. Se requieren al menos 3 años de datos históricos para calcular el corredor endémico."
+                "error": {
+                    "code": "INSUFFICIENT_HISTORICAL_DATA",
+                    "title": "Sin datos históricos",
+                    "message": f"Se requieren al menos 3 años de datos previos a {año_inicio} para calcular las referencias estadísticas del corredor endémico.",
+                    "details": {
+                        "selected_period": f"{año_inicio}-{año_fin}",
+                        "historical_search_range": f"{params['fecha_historica_inicio'].strftime('%Y')} - {fecha_desde.year - 1}",
+                        "records_found": len(rows) if rows else 0,
+                        "records_required": 10
+                    },
+                    "suggestion": f"Importe datos de al menos 3 años anteriores a {año_inicio} para habilitar este gráfico."
+                }
             }
         
         # Procesar datos para calcular percentiles
@@ -375,7 +412,19 @@ class ChartDataProcessor:
                     "datasets": [],
                     "metadata": []
                 },
-                "error": f"Datos históricos insuficientes. Se encontró {años_unicos} {año_texto}, se requieren al menos 3 años de datos históricos."
+                "error": {
+                    "code": "INSUFFICIENT_HISTORICAL_YEARS",
+                    "title": "Datos históricos insuficientes",
+                    "message": f"Se necesitan al menos 3 años de datos previos a {año_inicio}. Solo hay {años_unicos} {año_texto} disponible{'s' if años_unicos > 1 else ''}: {', '.join(map(str, años_lista))}.",
+                    "details": {
+                        "selected_period": f"{año_inicio}-{año_fin}",
+                        "historical_search_range": f"{params['fecha_historica_inicio'].strftime('%Y')} - {fecha_desde.year - 1}",
+                        "years_found": años_lista,
+                        "years_count": años_unicos,
+                        "years_required": 3
+                    },
+                    "suggestion": f"Importe datos de al menos {3 - años_unicos} año{'s' if (3 - años_unicos) > 1 else ''} adicional{'es' if (3 - años_unicos) > 1 else ''} anterior{'es' if (3 - años_unicos) > 1 else ''} a {años_lista[0]}."
+                }
             }
 
         # Generar lista de semanas del rango seleccionado
@@ -420,14 +469,16 @@ class ChartDataProcessor:
         if filtros.get("grupo_id"):
             current_query += """
                 AND id_tipo_eno IN (
-                    SELECT id FROM tipo_eno WHERE id_grupo_eno = :grupo_id
+                    SELECT id_tipo_eno FROM tipo_eno_grupo_eno WHERE id_grupo_eno = :grupo_id
                 )
             """
             current_params["grupo_id"] = filtros["grupo_id"]
 
-        if filtros.get("evento_id"):
-            current_query += " AND id_tipo_eno = :evento_id"
-            current_params["evento_id"] = filtros["evento_id"]
+        if filtros.get("tipo_eno_ids"):
+            tipo_eno_ids = filtros["tipo_eno_ids"]
+            if tipo_eno_ids and len(tipo_eno_ids) > 0:
+                current_query += " AND id_tipo_eno = ANY(:tipo_eno_ids)"
+                current_params["tipo_eno_ids"] = tipo_eno_ids
 
         # Filtro por clasificación estrategia
         current_query = self._add_classification_filter(current_query, filtros, current_params)
@@ -533,25 +584,29 @@ class ChartDataProcessor:
         FROM evento e
         LEFT JOIN ciudadano c ON e.codigo_ciudadano = c.codigo_ciudadano
         LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
-        LEFT JOIN localidad l ON est.id_localidad_establecimiento = l.id_localidad_indec
+        LEFT JOIN localidad l ON est.id_localidad_indec = l.id_localidad_indec
         LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
         WHERE e.edad_anos_al_momento_apertura IS NOT NULL
-            AND d.id_provincia_indec = 26
         """
-        
+
         params = {}
-        
+
+        # Filtro de provincia
+        query, params = self._add_provincia_filter(query, filtros, params, "d")
+
         if filtros.get("grupo_id"):
             query += """
                 AND e.id_tipo_eno IN (
-                    SELECT id FROM tipo_eno WHERE id_grupo_eno = :grupo_id
+                    SELECT id_tipo_eno FROM tipo_eno_grupo_eno WHERE id_grupo_eno = :grupo_id
                 )
             """
             params["grupo_id"] = filtros["grupo_id"]
-            
-        if filtros.get("evento_id"):
-            query += " AND e.id_tipo_eno = :evento_id"
-            params["evento_id"] = filtros["evento_id"]
+
+        if filtros.get("tipo_eno_ids"):
+            tipo_eno_ids = filtros["tipo_eno_ids"]
+            if tipo_eno_ids and len(tipo_eno_ids) > 0:
+                query += " AND e.id_tipo_eno = ANY(:tipo_eno_ids)"
+                params["tipo_eno_ids"] = tipo_eno_ids
 
         # Filtro por clasificación estrategia
         query = self._add_classification_filter(query, filtros, params, "e")
@@ -635,27 +690,32 @@ class ChartDataProcessor:
         query = """
         SELECT
             COALESCE(d.id_departamento_indec, 0) as codigo_indec,
-            COUNT(*) as casos
+            COUNT(DISTINCT e.id) as casos
         FROM evento e
         LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
-        LEFT JOIN localidad l ON est.id_localidad_establecimiento = l.id_localidad_indec
+        LEFT JOIN localidad l ON est.id_localidad_indec = l.id_localidad_indec
         LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
-        WHERE d.id_provincia_indec = 26
+        WHERE 1=1
         """
 
-        params = {"provincia_id": 26}
+        params = {}
+
+        # Filtro de provincia
+        query, params = self._add_provincia_filter(query, filtros, params, "d")
 
         if filtros.get("grupo_id"):
             query += """
                 AND e.id_tipo_eno IN (
-                    SELECT id FROM tipo_eno WHERE id_grupo_eno = :grupo_id
+                    SELECT id_tipo_eno FROM tipo_eno_grupo_eno WHERE id_grupo_eno = :grupo_id
                 )
             """
             params["grupo_id"] = filtros["grupo_id"]
 
-        if filtros.get("evento_id"):
-            query += " AND e.id_tipo_eno = :evento_id"
-            params["evento_id"] = filtros["evento_id"]
+        if filtros.get("tipo_eno_ids"):
+            tipo_eno_ids = filtros["tipo_eno_ids"]
+            if tipo_eno_ids and len(tipo_eno_ids) > 0:
+                query += " AND e.id_tipo_eno = ANY(:tipo_eno_ids)"
+                params["tipo_eno_ids"] = tipo_eno_ids
 
         # Filtro por clasificación estrategia
         query = self._add_classification_filter(query, filtros, params, "e")
@@ -700,13 +760,15 @@ class ChartDataProcessor:
                 "tasa_incidencia": tasa_incidencia
             })
 
+        total_casos = sum(casos_por_departamento.values())
         logger.info(f"Mapa geográfico - Departamentos con casos: {len(casos_por_departamento)}")
+        logger.info(f"📊 Mapa geográfico - TOTAL CASOS: {total_casos}")
 
         return {
             "type": "mapa",
             "data": {
                 "departamentos": departamentos_data,
-                "total_casos": sum(casos_por_departamento.values())
+                "total_casos": total_casos
             }
         }
 
@@ -721,25 +783,29 @@ class ChartDataProcessor:
             COUNT(*) as casos
         FROM evento e
         LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
-        LEFT JOIN localidad l ON est.id_localidad_establecimiento = l.id_localidad_indec
+        LEFT JOIN localidad l ON est.id_localidad_indec = l.id_localidad_indec
         LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
         WHERE e.fecha_minima_evento IS NOT NULL
-            AND d.id_provincia_indec = 26
         """
 
         params = {}
 
+        # Filtro de provincia (Chubut si está activado)
+        query, params = self._add_provincia_filter(query, filtros, params, "d")
+
         if filtros.get("grupo_id"):
             query += """
                 AND e.id_tipo_eno IN (
-                    SELECT id FROM tipo_eno WHERE id_grupo_eno = :grupo_id
+                    SELECT id_tipo_eno FROM tipo_eno_grupo_eno WHERE id_grupo_eno = :grupo_id
                 )
             """
             params["grupo_id"] = filtros["grupo_id"]
 
-        if filtros.get("evento_id"):
-            query += " AND e.id_tipo_eno = :evento_id"
-            params["evento_id"] = filtros["evento_id"]
+        if filtros.get("tipo_eno_ids"):
+            tipo_eno_ids = filtros["tipo_eno_ids"]
+            if tipo_eno_ids and len(tipo_eno_ids) > 0:
+                query += " AND e.id_tipo_eno = ANY(:tipo_eno_ids)"
+                params["tipo_eno_ids"] = tipo_eno_ids
 
         # Filtro por clasificación estrategia
         query = self._add_classification_filter(query, filtros, params, "e")
@@ -823,24 +889,29 @@ class ChartDataProcessor:
         FROM evento e
         LEFT JOIN ciudadano c ON e.codigo_ciudadano = c.codigo_ciudadano
         LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
-        LEFT JOIN localidad l ON est.id_localidad_establecimiento = l.id_localidad_indec
+        LEFT JOIN localidad l ON est.id_localidad_indec = l.id_localidad_indec
         LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
-        WHERE d.id_provincia_indec = 26
+        WHERE 1=1
         """
 
         params = {}
 
+        # Filtro de provincia (Chubut si está activado)
+        query, params = self._add_provincia_filter(query, filtros, params, "d")
+
         if filtros.get("grupo_id"):
             query += """
                 AND e.id_tipo_eno IN (
-                    SELECT id FROM tipo_eno WHERE id_grupo_eno = :grupo_id
+                    SELECT id_tipo_eno FROM tipo_eno_grupo_eno WHERE id_grupo_eno = :grupo_id
                 )
             """
             params["grupo_id"] = filtros["grupo_id"]
 
-        if filtros.get("evento_id"):
-            query += " AND e.id_tipo_eno = :evento_id"
-            params["evento_id"] = filtros["evento_id"]
+        if filtros.get("tipo_eno_ids"):
+            tipo_eno_ids = filtros["tipo_eno_ids"]
+            if tipo_eno_ids and len(tipo_eno_ids) > 0:
+                query += " AND e.id_tipo_eno = ANY(:tipo_eno_ids)"
+                params["tipo_eno_ids"] = tipo_eno_ids
 
         # Filtro por clasificación estrategia
         query = self._add_classification_filter(query, filtros, params, "e")
@@ -907,9 +978,11 @@ class ChartDataProcessor:
         
         params = {}
 
-        if filtros.get("evento_id"):
-            query += " AND e.id_tipo_eno = :evento_id"
-            params["evento_id"] = filtros["evento_id"]
+        if filtros.get("tipo_eno_ids"):
+            tipo_eno_ids = filtros["tipo_eno_ids"]
+            if tipo_eno_ids and len(tipo_eno_ids) > 0:
+                query += " AND e.id_tipo_eno = ANY(:tipo_eno_ids)"
+                params["tipo_eno_ids"] = tipo_eno_ids
 
         # CRÍTICO: Agregar filtros de fecha
         if filtros.get("fecha_desde"):
@@ -969,9 +1042,11 @@ class ChartDataProcessor:
         
         params = {}
 
-        if filtros.get("evento_id"):
-            query += " AND e.id_tipo_eno = :evento_id"
-            params["evento_id"] = filtros["evento_id"]
+        if filtros.get("tipo_eno_ids"):
+            tipo_eno_ids = filtros["tipo_eno_ids"]
+            if tipo_eno_ids and len(tipo_eno_ids) > 0:
+                query += " AND e.id_tipo_eno = ANY(:tipo_eno_ids)"
+                params["tipo_eno_ids"] = tipo_eno_ids
 
         # CRÍTICO: Agregar filtros de fecha
         if filtros.get("fecha_desde"):
@@ -1023,8 +1098,8 @@ class ChartDataProcessor:
         Basado en unidades centinela
         """
         query = """
-        SELECT 
-            CASE 
+        SELECT
+            CASE
                 WHEN LOWER(t.nombre) LIKE '%ira%' OR LOWER(t.nombre) LIKE '%respiratoria%' THEN 'IRA'
                 WHEN LOWER(t.nombre) LIKE '%irag%' OR LOWER(t.nombre) LIKE '%grave%' THEN 'IRAG'
                 WHEN LOWER(t.nombre) LIKE '%neumonia%' THEN 'Neumonía'
@@ -1034,21 +1109,24 @@ class ChartDataProcessor:
             COUNT(*) as casos
         FROM evento e
         JOIN tipo_eno t ON e.id_tipo_eno = t.id
-        JOIN grupo_eno g ON t.id_grupo_eno = g.id
-        WHERE LOWER(g.nombre) LIKE '%respiratoria%' 
-           OR LOWER(t.nombre) LIKE '%ira%' 
+        JOIN tipo_eno_grupo_eno tge ON t.id = tge.id_tipo_eno
+        JOIN grupo_eno g ON tge.id_grupo_eno = g.id
+        WHERE LOWER(g.nombre) LIKE '%respiratoria%'
+           OR LOWER(t.nombre) LIKE '%ira%'
            OR LOWER(t.nombre) LIKE '%respiratoria%'
         """
-        
+
         params = {}
-        
+
         if filtros.get("grupo_id"):
-            query += " AND t.id_grupo_eno = :grupo_id"
+            query += " AND tge.id_grupo_eno = :grupo_id"
             params["grupo_id"] = filtros["grupo_id"]
             
-        if filtros.get("evento_id"):
-            query += " AND e.id_tipo_eno = :evento_id"
-            params["evento_id"] = filtros["evento_id"]
+        if filtros.get("tipo_eno_ids"):
+            tipo_eno_ids = filtros["tipo_eno_ids"]
+            if tipo_eno_ids and len(tipo_eno_ids) > 0:
+                query += " AND e.id_tipo_eno = ANY(:tipo_eno_ids)"
+                params["tipo_eno_ids"] = tipo_eno_ids
             
         if filtros.get("fecha_desde"):
             query += " AND e.fecha_minima_evento >= :fecha_desde"
@@ -1118,27 +1196,32 @@ class ChartDataProcessor:
         query = """
         SELECT
             COALESCE(e.clasificacion_estrategia, 'SIN_CLASIFICAR') as clasificacion,
-            COUNT(*) as casos
+            COUNT(DISTINCT e.id) as casos
         FROM evento e
         LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
-        LEFT JOIN localidad l ON est.id_localidad_establecimiento = l.id_localidad_indec
+        LEFT JOIN localidad l ON est.id_localidad_indec = l.id_localidad_indec
         LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
-        WHERE d.id_provincia_indec = 26
+        WHERE 1=1
         """
 
         params = {}
 
+        # Filtro de provincia (Chubut si está activado)
+        query, params = self._add_provincia_filter(query, filtros, params, "d")
+
         if filtros.get("grupo_id"):
             query += """
                 AND e.id_tipo_eno IN (
-                    SELECT id FROM tipo_eno WHERE id_grupo_eno = :grupo_id
+                    SELECT id_tipo_eno FROM tipo_eno_grupo_eno WHERE id_grupo_eno = :grupo_id
                 )
             """
             params["grupo_id"] = filtros["grupo_id"]
 
-        if filtros.get("evento_id"):
-            query += " AND e.id_tipo_eno = :evento_id"
-            params["evento_id"] = filtros["evento_id"]
+        if filtros.get("tipo_eno_ids"):
+            tipo_eno_ids = filtros["tipo_eno_ids"]
+            if tipo_eno_ids and len(tipo_eno_ids) > 0:
+                query += " AND e.id_tipo_eno = ANY(:tipo_eno_ids)"
+                params["tipo_eno_ids"] = tipo_eno_ids
 
         # Filtro por clasificaciones (usar helper consistente)
         query = self._add_classification_filter(query, filtros, params, table_alias="e")

@@ -4,6 +4,9 @@ import {
   IconFileUpload,
   IconSettings,
   IconChartLine,
+  IconUsers,
+  IconMap,
+  IconFileText,
 } from "@tabler/icons-react";
 
 export interface NavItem {
@@ -35,6 +38,18 @@ export const navigationConfig = {
       url: "/dashboard/eventos",
     },
     {
+      id: "personas",
+      title: "Personas",
+      icon: IconUsers,
+      url: "/dashboard/personas",
+    },
+    {
+      id: "mapa",
+      title: "Mapa",
+      icon: IconMap,
+      url: "/dashboard/mapa",
+    },
+    {
       id: "archivos",
       title: "Subir Archivo",
       icon: IconFileUpload,
@@ -43,8 +58,20 @@ export const navigationConfig = {
     {
       id: "estrategias",
       title: "Estrategias",
-      icon: IconSettings,
+      icon: IconChartLine,
       url: "/dashboard/estrategias",
+    },
+    {
+      id: "reportes",
+      title: "Reportes",
+      icon: IconFileText,
+      url: "/dashboard/reportes",
+    },
+    {
+      id: "settings",
+      title: "Configuración",
+      icon: IconSettings,
+      url: "/dashboard/settings/reportes",
     },
   ] as NavItem[],
 

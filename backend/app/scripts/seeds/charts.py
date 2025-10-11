@@ -131,71 +131,79 @@ DASHBOARD_CHARTS = [
 ]
 
 
-def main():
+def seed_charts(session: Session):
     """
     Crea los charts del dashboard en la base de datos.
+    Recibe una sesión existente para usar en el seed maestro.
     """
     print("\n📊 Seeding Dashboard Charts...")
-    
+
+    created_count = 0
+    updated_count = 0
+
+    for chart_data in DASHBOARD_CHARTS:
+        # Check if chart already exists
+        stmt = select(DashboardChart).where(DashboardChart.codigo == chart_data["codigo"])
+        existing = session.execute(stmt).scalar_one_or_none()
+
+        if existing:
+            # Update existing chart
+            existing.nombre = chart_data["nombre"]
+            existing.descripcion = chart_data["descripcion"]
+            existing.funcion_procesamiento = chart_data["funcion_procesamiento"]
+            existing.condiciones_display = chart_data["condiciones_display"]
+            existing.tipo_visualizacion = chart_data["tipo_visualizacion"]
+            existing.configuracion_chart = chart_data["configuracion_chart"]
+            existing.orden = chart_data["orden"]
+            existing.activo = chart_data["activo"]
+            existing.updated_at = datetime.now()
+            updated_count += 1
+            print(f"  ↻  Chart {chart_data['codigo']} actualizado")
+        else:
+            # Create new chart
+            chart = DashboardChart(
+                codigo=chart_data["codigo"],
+                nombre=chart_data["nombre"],
+                descripcion=chart_data["descripcion"],
+                funcion_procesamiento=chart_data["funcion_procesamiento"],
+                condiciones_display=chart_data["condiciones_display"],
+                tipo_visualizacion=chart_data["tipo_visualizacion"],
+                configuracion_chart=chart_data["configuracion_chart"],
+                orden=chart_data["orden"],
+                activo=chart_data["activo"],
+                created_at=datetime.now(),
+                updated_at=datetime.now()
+            )
+
+            session.add(chart)
+            created_count += 1
+            print(f"  ✅ Chart {chart.codigo} creado")
+
+    session.commit()
+    print(f"\n✅ {created_count} Dashboard Charts creados, {updated_count} actualizados")
+
+
+def main():
+    """
+    Crea los charts del dashboard en la base de datos (ejecución standalone).
+    """
     # Obtener la URL de la base de datos
     DATABASE_URL = os.getenv(
         "DATABASE_URL",
         "postgresql://epidemiologia_user:epidemiologia_password@db:5432/epidemiologia_db"
     )
-    
+
     # Cambiar postgresql+asyncpg:// por postgresql:// para usar psycopg2 síncrono
     if "postgresql+asyncpg" in DATABASE_URL:
         DATABASE_URL = DATABASE_URL.replace(
             "postgresql+asyncpg://", "postgresql://"
         )
-    
+
     # Crear engine y sesión
     engine = create_engine(DATABASE_URL)
-    
+
     with Session(engine) as session:
-        created_count = 0
-        updated_count = 0
-        
-        for chart_data in DASHBOARD_CHARTS:
-            # Check if chart already exists
-            stmt = select(DashboardChart).where(DashboardChart.codigo == chart_data["codigo"])
-            existing = session.execute(stmt).scalar_one_or_none()
-            
-            if existing:
-                # Update existing chart
-                existing.nombre = chart_data["nombre"]
-                existing.descripcion = chart_data["descripcion"]
-                existing.funcion_procesamiento = chart_data["funcion_procesamiento"]
-                existing.condiciones_display = chart_data["condiciones_display"]
-                existing.tipo_visualizacion = chart_data["tipo_visualizacion"]
-                existing.configuracion_chart = chart_data["configuracion_chart"]
-                existing.orden = chart_data["orden"]
-                existing.activo = chart_data["activo"]
-                existing.updated_at = datetime.now()
-                updated_count += 1
-                print(f"  ↻  Chart {chart_data['codigo']} actualizado")
-            else:
-                # Create new chart
-                chart = DashboardChart(
-                    codigo=chart_data["codigo"],
-                    nombre=chart_data["nombre"],
-                    descripcion=chart_data["descripcion"],
-                    funcion_procesamiento=chart_data["funcion_procesamiento"],
-                    condiciones_display=chart_data["condiciones_display"],
-                    tipo_visualizacion=chart_data["tipo_visualizacion"],
-                    configuracion_chart=chart_data["configuracion_chart"],
-                    orden=chart_data["orden"],
-                    activo=chart_data["activo"],
-                    created_at=datetime.now(),
-                    updated_at=datetime.now()
-                )
-                
-                session.add(chart)
-                created_count += 1
-                print(f"  ✅ Chart {chart.codigo} creado")
-        
-        session.commit()
-        print(f"\n✅ {created_count} Dashboard Charts creados, {updated_count} actualizados")
+        seed_charts(session)
 
 
 if __name__ == "__main__":

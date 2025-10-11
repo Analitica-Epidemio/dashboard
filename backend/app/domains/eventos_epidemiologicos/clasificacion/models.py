@@ -59,6 +59,7 @@ class EventStrategy(BaseModel, table=True):
     __table_args__ = (
         Index("idx_event_strategy_tipo_eno", "tipo_eno_id"),
         Index("idx_event_strategy_active", "is_active"),
+        Index("idx_event_strategy_validity", "tipo_eno_id", "valid_from", "valid_until"),
         {"extend_existing": True},
     )
 
@@ -67,57 +68,36 @@ class EventStrategy(BaseModel, table=True):
     # Identificación
     tipo_eno_id: int = Field(
         foreign_key="tipo_eno.id",
-        unique=True,
         description="ID del tipo de ENO asociado",
     )
     name: str = Field(
         max_length=100,
         index=True,
-        description="Nombre de la estrategia (ej: DengueEstrategia)",
+        description="Nombre de la estrategia (ej: Dengue 2024)",
     )
     description: Optional[str] = Field(
-        default=None, max_length=500, description="Descripción de la estrategia"
-    )
-    notas_admin: Optional[str] = Field(
         default=None,
         sa_column=Column(Text),
-        description="Notas técnicas para administradores sobre decisiones de clasificación",
-    )
-    casos_especiales: Optional[str] = Field(
-        default=None,
-        sa_column=Column(Text),
-        description="Documentación de casos especiales o ambiguos y cómo manejarlos",
+        description="Descripción completa de la estrategia, notas y casos especiales",
     )
 
-    # Configuración específica
-    grupo_evento: Optional[str] = Field(
-        default=None,
-        max_length=100,
-        description="Grupo al que pertenece el evento (ej: IRA, Sífilis)",
-    )
-    usa_provincia_carga: bool = Field(
-        default=False,
-        description="Si usa PROVINCIA_CARGA en lugar de PROVINCIA_RESIDENCIA",
-    )
-    eventos_relacionados: List[str] = Field(
-        default=[],
-        sa_column=Column(JSON),
-        description="Lista de eventos relacionados que comparten estrategia",
-    )
-
-    # Visualizaciones disponibles
-    graficos_disponibles: List[str] = Field(
-        default=[],
-        sa_column=Column(JSON),
-        description="Tipos de gráficos disponibles para este evento",
-    )
-
-    # Configuración adicional
+    # Configuración flexible
     config: Optional[Dict] = Field(
         default=None,
         sa_column=Column(JSON),
-        description="Configuración adicional específica del evento",
+        description="Configuración adicional específica (filtros geográficos, eventos relacionados, etc.)",
     )
+    """
+    Ejemplos de configuración:
+    {
+        "filtros_geograficos": {
+            "campo": "PROVINCIA_RESIDENCIA",  # o "PROVINCIA_CARGA"
+            "valores": ["Chubut", "Santa Cruz"]
+        },
+        "eventos_relacionados": ["Dengue", "Zika", "Chikungunya"],
+        "grupo_evento": "Arbovirosis"
+    }
+    """
 
     confidence_threshold: float = Field(
         default=0.7,
@@ -130,6 +110,16 @@ class EventStrategy(BaseModel, table=True):
     version: int = Field(default=1, description="Versión de la estrategia")
     is_active: bool = Field(
         default=True, index=True, description="Si la estrategia está activa"
+    )
+
+    # Validez temporal
+    valid_from: datetime = Field(
+        default_factory=datetime.utcnow,
+        description="Fecha desde cuando la estrategia es válida",
+    )
+    valid_until: Optional[datetime] = Field(
+        default=None,
+        description="Fecha hasta cuando la estrategia es válida (None = sin fin)",
     )
 
     # Auditoría

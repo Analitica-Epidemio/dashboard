@@ -6,6 +6,7 @@ Puede ser ejecutado directamente o importado desde seed.py
 """
 
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -174,14 +175,9 @@ class StrategySeeder:
     def _create_strategy(
         self,
         tipo_eno_name: str,
-        strategy_name: str,
+        name: str,
         description: str,
-        graficos: List[str],
-        usa_provincia_carga: bool = False,
         config: Optional[Dict] = None,
-        notas_admin: Optional[str] = None,
-        casos_especiales: Optional[str] = None,
-        metadata_extractors: Optional[List[str]] = None,
         confidence_threshold: float = 0.7,
     ) -> EventStrategy:
         """Crea una estrategia base."""
@@ -200,14 +196,13 @@ class StrategySeeder:
 
         strategy = EventStrategy(
             tipo_eno_id=tipo_eno.id,
-            name=strategy_name,  # No convertir a mayúsculas
+            name=name,
             description=description,
-            notas_admin=notas_admin,
-            casos_especiales=casos_especiales,
-            usa_provincia_carga=usa_provincia_carga,
-            graficos_disponibles=graficos,
             config=config or {},
             confidence_threshold=confidence_threshold,
+            valid_from=datetime(2000, 1, 1),
+            valid_until=None,
+            is_active=True,
             created_by="seed_script",
         )
 
@@ -258,16 +253,8 @@ class StrategySeeder:
         """Seed para Dengue."""
         strategy = self._create_strategy(
             tipo_eno_name="Dengue",
-            strategy_name="DengueEstrategia",
+            name="Estrategia Dengue",
             description="Estrategia para procesar casos de Dengue",
-            graficos=[
-                "corredor_endemico",
-                "curva_epidemiologica",
-                "casos_por_ugd",
-                "torta_sexo",
-                "casos_mensuales",
-            ],
-            usa_provincia_carga=True,
         )
 
         # Regla: Confirmados - Actualizada para usar config
@@ -344,35 +331,24 @@ class StrategySeeder:
         """Seed para Accidente potencialmente rábico (APR)."""
         strategy = self._create_strategy(
             tipo_eno_name="Accidente potencialmente rábico (APR)",
-            strategy_name="APRRabiaEstrategia",
-            description="Estrategia para procesar casos de Accidentes potencialmente rábicos",
-            graficos=[
-                "rabia_animal_comparacion",
-                "grafico_por_contagios",
-                "casos_por_ugd",
-                "torta_sexo",
-            ],
-            metadata_extractors=["tipo_sujeto", "fuente_contagio"],
-            confidence_threshold=0.6,  # Más permisivo para permitir revisión manual
-            notas_admin="""
+            name="Estrategia APR - Rabia",
+            description="""Estrategia para procesar casos de Accidentes potencialmente rábicos.
+
             IMPORTANTE: En Rabia se reportan tanto casos de animales como de humanos.
-            
+
             DETECCIÓN AUTOMÁTICA:
             - ANIMALES: SEXO='IND', documentos no estándar, nomenclatura científica
             - HUMANOS: SEXO='M/F', TIPO_DOC='DNI/LC/LE', nombres típicos de personas
             - AMBIGUOS: Datos contradictorios → REQUIERE_REVISION
-            
-            La detección NO está hardcodeada, usa patrones inteligentes.
-            """,
-            casos_especiales="""
+
             Casos que requieren revisión manual:
             1. SEXO='IND' pero nombre parece de persona
             2. Documentos no estándar pero datos humanos
             3. Nomenclatura mixta o contradictoria
             4. Confidence < 60% en detección automática
-            
-            Estos casos se marcan como REQUIERE_REVISION para el equipo epidemiológico.
             """,
+            config={"metadata_extractors": ["tipo_sujeto", "fuente_contagio"]},
+            confidence_threshold=0.6,
         )
 
         # Regla 1: Extractor de metadata (se ejecuta primero)
@@ -455,18 +431,9 @@ class StrategySeeder:
         """Seed para UC-IRAG."""
         strategy = self._create_strategy(
             tipo_eno_name="Unidad Centinela de Infección Respiratoria Aguda Grave (UC-IRAG)",
-            strategy_name="UCIRAGEstrategia",
+            name="Estrategia UC-IRAG",
             description="Estrategia para procesar casos de UC-IRAG",
-            graficos=[
-                "corredor_endemico",
-                "curva_epidemiologica",
-                "curva_epi_subtipos_influenza",
-                "proporcion_ira",
-                "casos_por_ugd",
-            ],
-            config={
-                "eventos_relacionados": ["COVID", "SARS-COV-2", "Influenza", "VSR"]
-            },
+            config={"eventos_relacionados": ["COVID", "SARS-COV-2", "Influenza", "VSR"]},
         )
 
         # Regla: Confirmados (resultado positivo)
@@ -488,14 +455,8 @@ class StrategySeeder:
         """Seed para Sífilis (grupo con múltiples subtipos)."""
         strategy = self._create_strategy(
             tipo_eno_name="Sífilis",
-            strategy_name="SifilisEstrategia",
+            name="Estrategia Sífilis",
             description="Estrategia para procesar casos de Sífilis y sus variantes",
-            graficos=[
-                "casos_por_ugd",
-                "torta_sexo",
-                "casos_mensuales",
-                "totales_historicos",
-            ],
             config={
                 "grupo_evento": "Sífilis",
                 "subtipos": [
@@ -540,14 +501,8 @@ class StrategySeeder:
         """Seed para Coqueluche."""
         strategy = self._create_strategy(
             tipo_eno_name="Coqueluche",
-            strategy_name="CoquelucheEstrategia",
+            name="Estrategia Coqueluche",
             description="Estrategia para procesar casos de Coqueluche (Tos convulsa)",
-            graficos=[
-                "corredor_endemico",
-                "casos_por_ugd",
-                "torta_sexo",
-                "casos_mensuales",
-            ],
         )
 
         # Regla: Confirmados - Actualizada para usar config
@@ -595,14 +550,8 @@ class StrategySeeder:
         """Seed para Hantavirus."""
         strategy = self._create_strategy(
             tipo_eno_name="Hantavirosis",
-            strategy_name="HantavirusEstrategia",
+            name="Estrategia Hantavirus",
             description="Estrategia para procesar casos de Hantavirus",
-            graficos=[
-                "casos_por_ugd",
-                "torta_sexo",
-                "casos_mensuales",
-                "totales_historicos",
-            ],
         )
 
         # Regla: Confirmados
@@ -654,9 +603,8 @@ class StrategySeeder:
         """Seed para Chagas crónico."""
         strategy = self._create_strategy(
             tipo_eno_name="Chagas crónico",
-            strategy_name="ChagasEstrategia",
+            name="Estrategia Chagas Crónico",
             description="Estrategia para procesar casos de Chagas crónico",
-            graficos=["casos_por_ugd", "torta_sexo", "casos_mensuales"],
         )
 
         # Regla: Confirmados
@@ -678,14 +626,8 @@ class StrategySeeder:
         """Seed para Hepatitis B."""
         strategy = self._create_strategy(
             tipo_eno_name="Hepatitis B",
-            strategy_name="HepatitisBEstrategia",
+            name="Estrategia Hepatitis B",
             description="Estrategia para procesar casos de Hepatitis B",
-            graficos=[
-                "casos_por_ugd",
-                "torta_sexo",
-                "casos_mensuales",
-                "totales_historicos",
-            ],
         )
 
         # Regla: Confirmados
@@ -707,14 +649,8 @@ class StrategySeeder:
         """Seed para Intento de Suicidio."""
         strategy = self._create_strategy(
             tipo_eno_name="Intento de Suicidio",
-            strategy_name="IntentoSuicidioEstrategia",
+            name="Estrategia Intento de Suicidio",
             description="Estrategia para procesar casos de intento de suicidio",
-            graficos=[
-                "intento_suicidio_mecanismo",
-                "intento_suicidio_lugar",
-                "casos_por_ugd",
-                "torta_sexo",
-            ],
         )
 
         # Regla: Con resultado mortal
@@ -751,14 +687,8 @@ class StrategySeeder:
         """Seed para Hidatidosis."""
         strategy = self._create_strategy(
             tipo_eno_name="Hidatidosis",
-            strategy_name="HidatidosisEstrategia",
+            name="Estrategia Hidatidosis",
             description="Estrategia para procesar casos de Hidatidosis",
-            graficos=[
-                "edad_departamento",
-                "casos_por_ugd",
-                "torta_sexo",
-                "casos_mensuales",
-            ],
         )
 
         # Regla: Confirmados
@@ -780,14 +710,8 @@ class StrategySeeder:
         """Seed para Meningoencefalitis."""
         strategy = self._create_strategy(
             tipo_eno_name="Meningoencefalitis",
-            strategy_name="MeningoEstrategia",
+            name="Estrategia Meningoencefalitis",
             description="Estrategia para procesar casos de Meningoencefalitis",
-            graficos=[
-                "casos_por_ugd",
-                "torta_sexo",
-                "casos_mensuales",
-                "totales_historicos",
-            ],
         )
 
         # Regla: Confirmados
@@ -809,14 +733,8 @@ class StrategySeeder:
         """Seed para SUH - Síndrome Urémico Hemolítico."""
         strategy = self._create_strategy(
             tipo_eno_name="SUH - Sindrome Urémico Hemolítico",
-            strategy_name="SuhEstrategia",
+            name="Estrategia SUH",
             description="Estrategia para procesar casos de SUH",
-            graficos=[
-                "casos_por_ugd",
-                "torta_sexo",
-                "casos_mensuales",
-                "totales_historicos",
-            ],
         )
 
         # Regla: Confirmados
@@ -838,9 +756,8 @@ class StrategySeeder:
         """Seed para Botulismo del lactante."""
         strategy = self._create_strategy(
             tipo_eno_name="Botulismo del lactante",
-            strategy_name="BotulismoEstrategia",
+            name="Estrategia Botulismo",
             description="Estrategia para procesar casos de Botulismo",
-            graficos=["casos_por_ugd", "torta_sexo", "casos_mensuales"],
         )
 
         # Regla: Confirmados
@@ -862,9 +779,8 @@ class StrategySeeder:
         """Seed para Enfermedad Febril Exantemática."""
         strategy = self._create_strategy(
             tipo_eno_name="Enfermedad Febril Exantemática-EFE",
-            strategy_name="EfeEstrategia",
+            name="Estrategia EFE",
             description="Estrategia para procesar casos de EFE (Sarampión/Rubéola)",
-            graficos=["casos_por_ugd", "torta_sexo", "casos_mensuales"],
         )
 
         # Regla: Sospechosos
@@ -886,9 +802,8 @@ class StrategySeeder:
         """Seed para PAF - Poliomielitis."""
         strategy = self._create_strategy(
             tipo_eno_name="Poliomielitis-PAF",
-            strategy_name="PafEstrategia",
+            name="Estrategia PAF",
             description="Estrategia para procesar casos de PAF",
-            graficos=["casos_por_ugd", "torta_sexo", "casos_mensuales"],
         )
 
         # Regla: Confirmados
@@ -925,9 +840,8 @@ class StrategySeeder:
         """Seed para Mordedura de perro."""
         strategy = self._create_strategy(
             tipo_eno_name="Lesiones graves por mordedura de perro",
-            strategy_name="MordeduraPerroEstrategia",
+            name="Estrategia Mordedura de Perro",
             description="Estrategia para procesar casos de mordedura de perro",
-            graficos=["casos_por_ugd", "torta_sexo", "casos_mensuales"],
         )
 
         # Regla: Confirmados (todos los casos notificados son confirmados)
@@ -951,9 +865,8 @@ class StrategySeeder:
 
         strategy = self._create_strategy(
             tipo_eno_name="Accidentes por Ponzoña de Arácnidos (APR)",
-            strategy_name="APREstrategia",
+            name="Estrategia APR",
             description="Estrategia para procesar casos de accidentes por ponzoña de arácnidos",
-            graficos=["casos_por_ugd", "torta_sexo", "casos_mensuales"],
         )
 
         # Regla: Confirmados (todos los casos notificados son confirmados)
@@ -977,9 +890,8 @@ class StrategySeeder:
 
         strategy = self._create_strategy(
             tipo_eno_name="Hepatitis B en personas gestantes",
-            strategy_name="HepatitisBPerGesEstrategia",
+            name="Estrategia Hepatitis B en Gestantes",
             description="Estrategia para procesar casos de Hepatitis B en personas gestantes",
-            graficos=["casos_por_ugd", "casos_mensuales", "torta_edad"],
         )
 
         # Regla: Confirmados (todos los casos notificados son confirmados)
@@ -1003,9 +915,8 @@ class StrategySeeder:
 
         strategy = self._create_strategy(
             tipo_eno_name="Hepatitis C",
-            strategy_name="HepatitisCEstrategia",
+            name="Estrategia Hepatitis C",
             description="Estrategia para procesar casos de Hepatitis C",
-            graficos=["casos_por_ugd", "torta_sexo", "casos_mensuales", "torta_edad"],
         )
 
         # Regla: Confirmados (todos los casos notificados son confirmados)
@@ -1027,9 +938,8 @@ class StrategySeeder:
         """Seed Intoxicación/Exposición por Monóxido de Carbono."""
         strategy = self._create_strategy(
             tipo_eno_name="Intoxicación/Exposición por Monóxido de Carbono",
-            strategy_name="IntMonCarbonoEstrategia",
+            name="Estrategia Monóxido de Carbono",
             description="Estrategia para procesar casos de intoxicación por monóxido de carbono",
-            graficos=["casos_por_ugd", "torta_sexo", "casos_mensuales", "torta_edad"],
         )
 
         # Regla: Confirmados (todos los casos notificados son confirmados)
@@ -1051,9 +961,8 @@ class StrategySeeder:
         """Seed Otras infecciones invasivas (bacterianas y otras)."""
         strategy = self._create_strategy(
             tipo_eno_name="Otras infecciones invasivas (bacterianas y otras)",
-            strategy_name="OtrasInfeccionesInvasivasEstrategia",
+            name="Estrategia Otras Infecciones Invasivas",
             description="Estrategia para procesar casos de otras infecciones invasivas",
-            graficos=["casos_por_ugd", "torta_sexo", "casos_mensuales", "torta_edad"],
         )
 
         # Regla: Confirmados (todos los casos notificados son confirmados)
@@ -1077,9 +986,8 @@ class StrategySeeder:
         """Seed Tuberculosis."""
         strategy = self._create_strategy(
             tipo_eno_name="Tuberculosis",
-            strategy_name="TuberculosisEstrategia",
+            name="Estrategia Tuberculosis",
             description="Estrategia para procesar casos de Tuberculosis",
-            graficos=["casos_por_ugd", "torta_sexo", "casos_mensuales", "torta_edad"],
         )
 
         # Regla: Confirmados
@@ -1101,9 +1009,8 @@ class StrategySeeder:
         """Seed VIH."""
         strategy = self._create_strategy(
             tipo_eno_name="VIH",
-            strategy_name="VIHEstrategia",
+            name="Estrategia VIH",
             description="Estrategia para procesar casos de VIH",
-            graficos=["casos_por_ugd", "torta_sexo", "casos_mensuales", "torta_edad"],
         )
 
         # Regla: Notificados
@@ -1125,9 +1032,8 @@ class StrategySeeder:
         """Seed SARS-COV-2 en situaciones especiales."""
         strategy = self._create_strategy(
             tipo_eno_name="Estudio de SARS-COV-2 en situaciones especiales",
-            strategy_name="SARSCoV2EspecialEstrategia",
+            name="Estrategia SARS-COV-2 Especial",
             description="Estrategia para procesar casos de SARS-COV-2 en situaciones especiales",
-            graficos=["casos_por_ugd", "torta_sexo", "casos_mensuales"],
         )
 
         # Regla: Confirmados por laboratorio
@@ -1149,9 +1055,8 @@ class StrategySeeder:
         """Seed Sífilis en personas gestantes."""
         strategy = self._create_strategy(
             tipo_eno_name="Sífilis en personas gestantes",
-            strategy_name="SifilisGestantesEstrategia",
+            name="Estrategia Sífilis en Gestantes",
             description="Estrategia para procesar casos de Sífilis en personas gestantes",
-            graficos=["casos_por_ugd", "casos_mensuales", "torta_edad"],
         )
 
         # Regla: Confirmados
@@ -1173,9 +1078,8 @@ class StrategySeeder:
         """Seed Diarrea aguda."""
         strategy = self._create_strategy(
             tipo_eno_name="Diarrea aguda",
-            strategy_name="DiarreaAgudaEstrategia",
+            name="Estrategia Diarrea Aguda",
             description="Estrategia para procesar casos de Diarrea aguda",
-            graficos=["casos_por_ugd", "torta_sexo", "casos_mensuales", "torta_edad"],
         )
 
         # Regla: Notificados
@@ -1197,9 +1101,8 @@ class StrategySeeder:
         """Seed Araneísmo-Envenenamiento por Latrodectus."""
         strategy = self._create_strategy(
             tipo_eno_name="Araneísmo-Envenenamiento por Latrodectus (Latrodectismo)",
-            strategy_name="AraneismoEstrategia",
+            name="Estrategia Araneísmo",
             description="Estrategia para procesar casos de Araneísmo",
-            graficos=["casos_por_ugd", "torta_sexo", "casos_mensuales"],
         )
 
         # Regla: Confirmados
@@ -1221,9 +1124,8 @@ class StrategySeeder:
         """Seed Brucelosis."""
         strategy = self._create_strategy(
             tipo_eno_name="Brucelosis",
-            strategy_name="BrucelosisEstrategia",
+            name="Estrategia Brucelosis",
             description="Estrategia para procesar casos de Brucelosis",
-            graficos=["casos_por_ugd", "torta_sexo", "casos_mensuales"],
         )
 
         # Regla: Confirmados
@@ -1245,9 +1147,8 @@ class StrategySeeder:
         """Seed Sospecha de brote de ETA."""
         strategy = self._create_strategy(
             tipo_eno_name="Sospecha de brote de ETA",
-            strategy_name="BroteETAEstrategia",
+            name="Estrategia Brote ETA",
             description="Estrategia para procesar casos de sospecha de brote de ETA",
-            graficos=["casos_por_ugd", "casos_mensuales", "torta_sexo"],
         )
 
         # Regla: En estudio
@@ -1264,6 +1165,15 @@ class StrategySeeder:
             ],
             priority=1,
         )
+
+
+def seed_all_strategies(session: Session):
+    """
+    Función de wrapper para seed.py - carga todas las estrategias.
+    Recibe una sesión existente.
+    """
+    seeder = StrategySeeder(session)
+    seeder.seed_all()
 
 
 def main():
@@ -1286,8 +1196,7 @@ def main():
         engine = create_engine(database_url)
 
         with Session(engine) as session:
-            seeder = StrategySeeder(session)
-            seeder.seed_all()
+            seed_all_strategies(session)
 
     except Exception as e:
         print(f"❌ Error en main: {e}")

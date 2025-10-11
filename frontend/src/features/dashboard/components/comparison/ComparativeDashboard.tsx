@@ -27,6 +27,7 @@ interface DateRange {
 interface ComparativeDashboardProps {
   dateRange: DateRange;
   filterCombinations: FilterCombination[];
+  soloChubutEnabled: boolean;
   onBack?: () => void;
 }
 
@@ -34,7 +35,8 @@ interface ComparativeDashboardProps {
 const DynamicChartsColumn: React.FC<{
   combination: FilterCombination;
   dateRange: DateRange;
-}> = ({ combination, dateRange }) => {
+  soloChubutEnabled: boolean;
+}> = ({ combination, dateRange, soloChubutEnabled }) => {
   // Format dates for API
   const formatDateForApi = (date: Date | null) => {
     if (!date) return null;
@@ -44,19 +46,21 @@ const DynamicChartsColumn: React.FC<{
   // Fetch charts data
   const { data, isLoading, error } = useDashboardCharts({
     grupoId: combination.groupId ? parseInt(combination.groupId) : null,
-    eventoId: combination.eventIds?.[0] || null,
+    eventoIds: combination.eventIds || [], // Send array of all event IDs
     fechaDesde: formatDateForApi(dateRange.from),
     fechaHasta: formatDateForApi(dateRange.to),
     clasificaciones: combination.clasificaciones || [],
+    provinciaId: soloChubutEnabled ? 26 : undefined, // 26 = Chubut INDEC code
   });
 
   // Fetch indicadores data
   const { data: indicadores, isLoading: indicadoresLoading } = useIndicadores({
     grupo_id: combination.groupId ? parseInt(combination.groupId) : undefined,
-    evento_id: combination.eventIds?.[0] || undefined,
+    tipo_eno_ids: combination.eventIds || [], // Send array of all event IDs
     fecha_desde: formatDateForApi(dateRange.from) || undefined,
     fecha_hasta: formatDateForApi(dateRange.to) || undefined,
     clasificaciones: combination.clasificaciones || undefined,
+    provincia_id: soloChubutEnabled ? 26 : undefined, // 26 = Chubut INDEC code
   });
 
   if (isLoading) {
@@ -157,6 +161,7 @@ const DynamicChartsColumn: React.FC<{
 export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
   dateRange,
   filterCombinations,
+  soloChubutEnabled,
   onBack,
 }) => {
   // Calculate column width based on number of combinations
@@ -329,6 +334,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
               <DynamicChartsColumn
                 combination={combination}
                 dateRange={dateRange}
+                soloChubutEnabled={soloChubutEnabled}
               />
             </div>
           ))}

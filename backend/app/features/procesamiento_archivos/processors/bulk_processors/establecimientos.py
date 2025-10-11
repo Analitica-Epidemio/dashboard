@@ -91,7 +91,7 @@ class EstablecimientosBulkProcessor(BulkProcessorBase):
                 nuevos_establecimientos.append(
                     {
                         "nombre": nombre,
-                        "id_localidad_establecimiento": id_localidad,
+                        "id_localidad_indec": id_localidad,
                         "created_at": self._get_current_timestamp(),
                         "updated_at": self._get_current_timestamp(),
                     }
@@ -172,20 +172,37 @@ class EstablecimientosBulkProcessor(BulkProcessorBase):
                 # La localidad ya existe y tiene departamento
                 viaje_con_departamento[loc_viaje] = existing_localidades[loc_viaje]
         
+        # Obtener mapeo de código INDEC -> ID auto-generado para departamentos
+        dep_indec_codes = set(localidad_data.values())
+        if dep_indec_codes:
+            stmt_deptos = select(
+                Departamento.id_departamento_indec,
+                Departamento.id
+            ).where(
+                Departamento.id_departamento_indec.in_(list(dep_indec_codes))
+            )
+            dep_indec_to_id = {
+                indec_code: auto_id
+                for indec_code, auto_id in self.context.session.execute(stmt_deptos).all()
+            }
+        else:
+            dep_indec_to_id = {}
+
         # Crear localidades faltantes
         nuevas_localidades = []
-        
+
         # Localidades regulares con departamento
-        for loc_id, dep_id in localidad_data.items():
+        for loc_id, dep_indec in localidad_data.items():
             if loc_id not in existing_localidades:
                 nuevas_localidades.append({
                     "id_localidad_indec": loc_id,
                     "nombre": f"Localidad INDEC {loc_id}",  # Nombre temporal
-                    "id_departamento_indec": dep_id,  # Usar departamento real del CSV
+                    "id_departamento_indec": dep_indec,  # Código INDEC del departamento
+                    "id_departamento": dep_indec_to_id.get(dep_indec),  # ID auto-generado (FK)
                     "created_at": self._get_current_timestamp(),
                     "updated_at": self._get_current_timestamp(),
                 })
-        
+
         # Localidades de viaje que no existen - crear sin departamento (NULL)
         for loc_viaje in viaje_localidades:
             if loc_viaje not in existing_localidades:
@@ -193,6 +210,7 @@ class EstablecimientosBulkProcessor(BulkProcessorBase):
                     "id_localidad_indec": loc_viaje,
                     "nombre": f"Localidad Viaje INDEC {loc_viaje}",  # Nombre temporal específico
                     "id_departamento_indec": None,  # NULL - sin departamento conocido
+                    "id_departamento": None,  # NULL - sin departamento conocido
                     "created_at": self._get_current_timestamp(),
                     "updated_at": self._get_current_timestamp(),
                 })

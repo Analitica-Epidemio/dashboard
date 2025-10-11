@@ -127,9 +127,12 @@ class OptimizedDataValidator(BatchProcessor):
         df = df.copy()
 
         # 1. Limpiar strings: strip espacios
+        # IMPORTANTE: NO usar .astype(str) porque convierte NaN → "nan" string
+        # En su lugar, solo limpiar valores que ya son strings
         string_cols = df.select_dtypes(include=["object"]).columns
         for col in string_cols:
-            df[col] = df[col].astype(str).str.strip()
+            # Solo aplicar strip a valores no-nulos para preservar NaN originales
+            df[col] = df[col].str.strip()
 
         # 2. Reemplazar valores nulos en una operación
         df = df.replace(list(NULL_VALUES), np.nan)

@@ -206,6 +206,10 @@ class MuestraEvento(BaseModel, table=True):
     """
 
     __tablename__ = "muestra_evento"
+    __table_args__ = (
+        UniqueConstraint('id_snvs_muestra', 'id_evento',
+                        name='uq_muestra_evento'),
+    )
 
     # Campos propios
     fecha_toma_muestra: Optional[date] = Field(
@@ -236,11 +240,11 @@ class MuestraEvento(BaseModel, table=True):
     id_snvs_prueba: Optional[int] = Field(None, description="ID de la prueba")
     id_snvs_resultado: Optional[int] = Field(None, description="ID del resultado")
     fecha_papel: Optional[date] = Field(None, description="Fecha en papel")
-    
-    # Campo para identificación única SNVS
+
+    # Campo para identificación SNVS (no único por sí solo, ver __table_args__)
     id_snvs_muestra: Optional[int] = Field(
-        None, sa_type=BigInteger, unique=True, index=True, 
-        description="ID SNVS único de la muestra"
+        None, sa_type=BigInteger, index=True,
+        description="ID SNVS de la muestra (único en combinación con id_evento)"
     )
 
     # Foreign Keys

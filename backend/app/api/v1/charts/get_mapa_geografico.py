@@ -46,10 +46,11 @@ class MapaGeograficoResponse(BaseModel):
 
 async def get_mapa_geografico(
     grupo_id: Optional[int] = Query(None, description="ID del grupo seleccionado"),
-    evento_id: Optional[int] = Query(None, description="ID del evento seleccionado"),
+    tipo_eno_ids: Optional[List[int]] = Query(None, description="IDs de los eventos a filtrar"),
     fecha_desde: Optional[date] = Query(None, description="Fecha desde (formato: YYYY-MM-DD)"),
     fecha_hasta: Optional[date] = Query(None, description="Fecha hasta (formato: YYYY-MM-DD)"),
     clasificaciones: Optional[List[str]] = Query(None, description="Filtrar por clasificaciones estratégicas"),
+    provincia_id: Optional[int] = Query(None, description="Código INDEC de provincia (opcional, si no se envía muestra todas las provincias)"),
     db: AsyncSession = Depends(get_async_session),
     current_user: Optional[User] = RequireAuthOrSignedUrl
 ) -> SuccessResponse[MapaGeograficoResponse]:
@@ -68,28 +69,37 @@ async def get_mapa_geografico(
     SELECT
         COALESCE(d.id_departamento_indec, 0) as codigo_indec,
         COALESCE(d.nombre, 'Sin datos') as nombre,
-        COUNT(*) as casos
+        COUNT(DISTINCT e.id) as casos
     FROM evento e
     LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
-    LEFT JOIN localidad l ON est.id_localidad_establecimiento = l.id_localidad_indec
+    LEFT JOIN localidad l ON est.id_localidad_indec = l.id_localidad_indec
     LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
-    WHERE d.id_provincia_indec = 26  -- Solo Chubut
+    WHERE 1=1
     """
 
-    params = {"provincia_id": 26}  # Chubut
+    params = {}
+
+    # Filtro de provincia
+    logger.info(f"🔍 Mapa - Filtro provincia_id recibido: {provincia_id}")
+    if provincia_id:
+        query += " AND d.id_provincia_indec = :provincia_id"
+        params["provincia_id"] = provincia_id
+        logger.info(f"✅ Mapa - Aplicando filtro por provincia: {provincia_id}")
+    else:
+        logger.info(f"🌍 Mapa - Sin filtro de provincia - mostrando TODAS las provincias")
 
     # Aplicar filtros
     if grupo_id:
         query += """
             AND e.id_tipo_eno IN (
-                SELECT id FROM tipo_eno WHERE id_grupo_eno = :grupo_id
+                SELECT id_tipo_eno FROM tipo_eno_grupo_eno WHERE id_grupo_eno = :grupo_id
             )
         """
         params["grupo_id"] = grupo_id
 
-    if evento_id:
-        query += " AND e.id_tipo_eno = :evento_id"
-        params["evento_id"] = evento_id
+    if tipo_eno_ids and len(tipo_eno_ids) > 0:
+        query += " AND e.id_tipo_eno = ANY(:tipo_eno_ids)"
+        params["tipo_eno_ids"] = tipo_eno_ids
 
     if fecha_desde:
         query += " AND e.fecha_minima_evento >= :fecha_desde"
@@ -103,11 +113,18 @@ async def get_mapa_geografico(
         query += " AND e.clasificacion_estrategia = ANY(:clasificaciones)"
         params["clasificaciones"] = clasificaciones
 
+    # Log de filtros aplicados
+    logger.info(f"📊 Mapa - Filtros aplicados: grupo_id={params.get('grupo_id')}, tipo_eno_ids={params.get('tipo_eno_ids')}, "
+                f"fecha_desde={params.get('fecha_desde')}, fecha_hasta={params.get('fecha_hasta')}, "
+                f"clasificaciones={params.get('clasificaciones')}, provincia_id={params.get('provincia_id')}")
+
     query += " GROUP BY d.id_departamento_indec, d.nombre"
 
     # Ejecutar query
     result = await db.execute(text(query), params)
     rows = result.fetchall()
+
+    logger.info(f"🗺️ Mapa - Filas encontradas en query: {len(rows)}")
 
     # Crear mapa de casos por departamento
     casos_por_departamento = {row.codigo_indec: row.casos for row in rows if row.codigo_indec}
@@ -132,17 +149,18 @@ async def get_mapa_geografico(
 
         total_casos += casos
 
-    logger.info(f"Mapa geográfico - Total departamentos: {len(departamentos_data)}, Total casos: {total_casos}")
+    logger.info(f"📊 Mapa RESUMEN - Total departamentos: {len(departamentos_data)}, Total casos: {total_casos}")
 
     response = MapaGeograficoResponse(
         departamentos=departamentos_data,
         total_casos=total_casos,
         filtros_aplicados={
             "grupo_id": grupo_id,
-            "evento_id": evento_id,
+            "tipo_eno_ids": tipo_eno_ids,
             "fecha_desde": fecha_desde.isoformat() if fecha_desde else None,
             "fecha_hasta": fecha_hasta.isoformat() if fecha_hasta else None,
-            "clasificaciones": clasificaciones
+            "clasificaciones": clasificaciones,
+            "provincia_id": provincia_id
         }
     )
 

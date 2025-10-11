@@ -4,10 +4,10 @@ name: epidemiologia-dev
 
 services:
   # =============================================================================
-  # Base de datos PostgreSQL
+  # Base de datos PostgreSQL con PostGIS
   # =============================================================================
   db:
-    image: postgres:17-alpine  # Actualizado a PostgreSQL 17
+    image: postgis/postgis:16-3.4  # PostgreSQL 16 + PostGIS 3.4 (ARM64 compatible)
     container_name: ${COMPOSE_PROJECT_NAME:-epi}_postgres_dev
     environment:
       POSTGRES_DB: ${DB_NAME:-epidemiologia_db}

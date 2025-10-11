@@ -6,9 +6,11 @@ from fastapi import APIRouter, Depends
 
 from app.api.v1.auth.router import router as auth_router
 from app.api.v1.charts.router import router as charts_router
+from app.api.v1.dashboard.router import router as dashboard_router
 from app.api.v1.estrategias.router import router as estrategias_router
 from app.api.v1.eventos.router import router as eventos_router
 from app.api.v1.grupos_eno.router import router as grupos_router
+from app.api.v1.personas.router import router as personas_router
 from app.api.v1.reports.router import router as reports_router
 from app.api.v1.tipos_eno.router import router as tipos_router
 from app.api.v1.uploads.router import router as uploads_router
@@ -20,8 +22,10 @@ api_router = APIRouter(prefix="/api/v1")
 # Incluir routers
 api_router.include_router(auth_router)
 api_router.include_router(uploads_router)
+api_router.include_router(dashboard_router)
 api_router.include_router(estrategias_router)
 api_router.include_router(eventos_router)
+api_router.include_router(personas_router)  # Nuevo router de personas
 api_router.include_router(tipos_router)
 api_router.include_router(grupos_router)
 api_router.include_router(charts_router)

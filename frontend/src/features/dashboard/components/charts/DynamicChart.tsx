@@ -139,16 +139,65 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
 
     // Manejar errores del procesador
     if (data.error) {
-      return (
-        <div className="flex flex-col items-center justify-center h-48 p-6 text-center">
-          <div className="text-yellow-600 font-medium mb-2">
-            ⚠️ Advertencia
+      // Check if error is structured (new format) or plain string (old format)
+      const isStructuredError = typeof data.error === 'object' && data.error.code;
+
+      if (isStructuredError) {
+        const error = data.error as {
+          code: string;
+          title: string;
+          message: string;
+          details?: any;
+          suggestion?: string;
+        };
+
+        return (
+          <div className="flex items-center justify-center h-full min-h-[300px] max-h-[400px] p-6">
+            <div className="max-w-md w-full">
+              {/* Error card */}
+              <div className="border border-gray-200 rounded-lg bg-gray-50 p-6 space-y-4">
+                {/* Title */}
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-5 h-5 mt-0.5">
+                    <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-base font-semibold text-gray-900 mb-1">
+                      {error.title}
+                    </h3>
+                    <p className="text-sm text-gray-600 leading-relaxed">
+                      {error.message}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Suggestion */}
+                {error.suggestion && (
+                  <div className="bg-blue-50 border border-blue-100 rounded-md px-4 py-3">
+                    <p className="text-sm text-blue-900">
+                      {error.suggestion}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="text-sm text-gray-600">
-            {data.error}
+        );
+      } else {
+        // Fallback for old string errors
+        return (
+          <div className="flex flex-col items-center justify-center h-48 p-6 text-center">
+            <div className="text-yellow-600 font-medium mb-2">
+              ⚠️ Advertencia
+            </div>
+            <div className="text-sm text-gray-600 whitespace-pre-line">
+              {data.error as string}
+            </div>
           </div>
-        </div>
-      );
+        );
+      }
     }
 
     const height = config.height || 300;

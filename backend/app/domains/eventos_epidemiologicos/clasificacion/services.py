@@ -538,11 +538,33 @@ class StrategyValidationService:
         """
         errors = []
 
-        # Validar nombre único
-        existing = await self.strategy_repo.get_by_tipo_eno(strategy.tipo_eno_id)
-        if existing and existing.id != strategy.id:
+        # Validar que valid_from sea anterior a valid_until
+        if strategy.valid_until is not None and strategy.valid_from >= strategy.valid_until:
             errors.append(
-                f"Ya existe una estrategia para el tipo ENO {strategy.tipo_eno_id}"
+                f"valid_from ({strategy.valid_from}) debe ser anterior a valid_until ({strategy.valid_until})"
+            )
+
+        # Validar que no haya solapamiento de fechas con otras estrategias
+        overlapping_strategies = await self.strategy_repo.check_date_overlap(
+            tipo_eno_id=strategy.tipo_eno_id,
+            valid_from=strategy.valid_from,
+            valid_until=strategy.valid_until,
+            exclude_strategy_id=strategy.id,
+        )
+
+        if overlapping_strategies:
+            overlap_details = []
+            for overlap in overlapping_strategies:
+                valid_until_str = (
+                    overlap.valid_until.strftime("%Y-%m-%d")
+                    if overlap.valid_until
+                    else "sin fin"
+                )
+                overlap_details.append(
+                    f"'{overlap.name}' ({overlap.valid_from.strftime('%Y-%m-%d')} - {valid_until_str})"
+                )
+            errors.append(
+                f"El período de validez se solapa con las siguientes estrategias: {', '.join(overlap_details)}"
             )
 
         # Validar gráficos disponibles

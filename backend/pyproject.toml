@@ -17,6 +17,7 @@ dependencies = [
     "redis>=5.0.0",
     "pandas>=2.0.0",
     "openpyxl>=3.1.0",
+    "xlrd>=2.0.1",
     "python-magic>=0.4.27",
     "asyncpg>=0.30.0",
     "werkzeug>=3.0.0",
@@ -29,6 +30,10 @@ dependencies = [
     "playwright>=1.40.0",
     "python-jose[cryptography]>=3.3.0",
     "passlib[bcrypt]>=1.7.4,<2.0",
+    "requests>=2.31.0",
+    "geoalchemy2>=0.14.0",
+    "geopandas>=0.14.0",
+    "shapely>=2.0.0",
 ]
 
 [project.optional-dependencies]

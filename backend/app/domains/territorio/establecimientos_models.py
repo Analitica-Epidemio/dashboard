@@ -19,6 +19,7 @@ class Establecimiento(BaseModel, table=True):
 
     Registra información básica de establecimientos donde se realizan
     atenciones médicas, toma de muestras, diagnósticos y tratamientos.
+    Datos obtenidos del Instituto Geográfico Nacional (IGN) - Capa: ign:salud_020801.
     """
 
     __tablename__ = "establecimiento"
@@ -29,12 +30,24 @@ class Establecimiento(BaseModel, table=True):
         None, max_length=150, description="Nombre del establecimiento"
     )
 
-    # Foreign Keys
-    id_localidad_establecimiento: Optional[int] = Field(
+    # Campos IGN (Instituto Geográfico Nacional)
+    codigo_refes: Optional[str] = Field(
+        None, max_length=50, description="Código GID del IGN (antes REFES)"
+    )
+    latitud: Optional[float] = Field(
+        None, description="Latitud del establecimiento (WGS84)"
+    )
+    longitud: Optional[float] = Field(
+        None, description="Longitud del establecimiento (WGS84)"
+    )
+
+    # Foreign Keys - Localidad
+    id_localidad_indec: Optional[int] = Field(
         None,
         sa_type=BigInteger,
         foreign_key="localidad.id_localidad_indec",
-        description="ID de la localidad INDEC",
+        index=True,
+        description="ID INDEC de la localidad donde se encuentra el establecimiento"
     )
 
     # Relaciones

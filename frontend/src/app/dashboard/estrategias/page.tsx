@@ -1,21 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus,
-  MoreVertical,
-  History,
   Search,
   AlertTriangle,
   CheckCircle2,
-  Copy,
-  Trash2,
-  PlayCircle,
-  Info,
-  HelpCircle,
+  Eye,
+  Edit,
+  MoreHorizontal,
+  Calendar,
   Sparkles,
-  ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -23,15 +19,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Select,
   SelectContent,
@@ -39,13 +26,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Sheet,
   SheetContent,
@@ -64,12 +44,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Skeleton } from "@/components/ui/skeleton";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
@@ -78,25 +58,25 @@ import {
 } from "@/components/ui/sidebar";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AppSidebar } from "@/features/layout/components";
+import { Card, CardContent } from "@/components/ui/card";
 
 // API and types
 import {
   useStrategies,
   useDeleteStrategy,
-  useActivateStrategy,
   extractSuccessData,
   type EventStrategy,
 } from "@/lib/api/strategies";
 
 // Components
-import { StrategyForm } from "./_components/strategy-form";
 import { StrategyPreview } from "./_components/strategy-preview";
-import { AuditLog } from "./_components/audit-log";
+import { StrategyForm } from "./_components/strategy-form";
 
 // Utils
 import { useMediaQuery } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
-export default function ConfiguracionPage() {
+export default function EstrategiasPage() {
   const router = useRouter();
   const isMobile = useMediaQuery("(max-width: 768px)");
 
@@ -109,7 +89,6 @@ export default function ConfiguracionPage() {
     useState<EventStrategy | null>(null);
   const [viewSheetOpen, setViewSheetOpen] = useState(false);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
-  const [auditSheetOpen, setAuditSheetOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [strategyToDelete, setStrategyToDelete] =
     useState<EventStrategy | null>(null);
@@ -119,38 +98,56 @@ export default function ConfiguracionPage() {
   const strategiesData = extractSuccessData<EventStrategy[]>(
     strategiesQuery.data
   );
-  const strategies = Array.isArray(strategiesData) ? strategiesData : [];
+
+  // Memoize strategies to avoid recreating on every render
+  const strategies = useMemo(() => {
+    return Array.isArray(strategiesData) ? strategiesData : [];
+  }, [strategiesData]);
+
   const isLoading = strategiesQuery.isLoading;
   const error = strategiesQuery.error;
 
   const deleteStrategyMutation = useDeleteStrategy();
-  const activateStrategyMutation = useActivateStrategy();
 
-  // Filtering
-  const filteredStrategies = strategies.filter((strategy: EventStrategy) => {
-    const matchesSearch =
-      strategy.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      strategy.tipo_eno_name?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter =
-      filterStatus === "all" ||
-      (filterStatus === "active" && strategy.active) ||
-      (filterStatus === "inactive" && !strategy.active);
-    return matchesSearch && matchesFilter;
-  });
+  // Filtrar estrategias
+  const filteredStrategies = useMemo(() => {
+    return strategies.filter((strategy) => {
+      const matchesSearch =
+        strategy.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        strategy.tipo_eno_name?.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesFilter =
+        filterStatus === "all" ||
+        (filterStatus === "active" && strategy.active) ||
+        (filterStatus === "inactive" && !strategy.active);
+
+      return matchesSearch && matchesFilter;
+    });
+  }, [strategies, searchQuery, filterStatus]);
+
+  // Estadísticas
+  const stats = useMemo(() => {
+    const totalStrategies = strategies.length;
+    const activeStrategies = strategies.filter((s) => s.active).length;
+    const eventsWithStrategy = new Set(strategies.map((s) => s.tipo_eno_id))
+      .size;
+
+    return {
+      totalStrategies,
+      activeStrategies,
+      eventsWithStrategy,
+    };
+  }, [strategies]);
 
   // Handlers
   const handleView = (strategy: EventStrategy) => {
-    if (isMobile) {
-      router.push(`/configuracion/estrategias/${strategy.id}`);
-    } else {
-      setSelectedStrategy(strategy);
-      setViewSheetOpen(true);
-    }
+    setSelectedStrategy(strategy);
+    setViewSheetOpen(true);
   };
 
   const handleEdit = (strategy: EventStrategy) => {
     if (isMobile) {
-      router.push(`/configuracion/estrategias/${strategy.id}/edit`);
+      router.push(`/dashboard/estrategias/${strategy.id}/edit`);
     } else {
       setSelectedStrategy(strategy);
       setEditSheetOpen(true);
@@ -167,586 +164,383 @@ export default function ConfiguracionPage() {
         },
       });
 
-      toast.success(
-        <div className="flex items-center gap-2">
-          <CheckCircle2 className="h-4 w-4" />
-          <div>
-            <p className="font-semibold">Estrategia eliminada</p>
-            <p className="text-sm">{strategyToDelete.name}</p>
-          </div>
-        </div>,
-        {
-          action: {
-            label: "Deshacer",
-            onClick: () => {
-              toast.info("Función de deshacer en desarrollo");
-            },
-          },
-        }
-      );
-
+      toast.success("Estrategia eliminada correctamente");
       setDeleteDialogOpen(false);
       setStrategyToDelete(null);
+      strategiesQuery.refetch();
     } catch {
       toast.error("Error al eliminar la estrategia");
     }
   };
 
-  const handleToggleActive = async (strategy: EventStrategy) => {
-    try {
-      if (strategy.active) {
-        // Deactivate
-        toast.info("Función de desactivación en desarrollo");
-      } else {
-        // Activate
-        await activateStrategyMutation.mutateAsync({
-          params: {
-            path: { strategy_id: strategy.id },
-          },
-        });
-        toast.success("Estrategia activada correctamente");
-      }
-      strategiesQuery.refetch();
-    } catch {
-      toast.error("Error al cambiar el estado de la estrategia");
-    }
+  const formatDate = (dateStr: string | undefined) => {
+    if (!dateStr) return "Sin fecha";
+    return new Date(dateStr).toLocaleDateString("es-ES", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
   };
-
-  const handleDuplicate = (_strategy: EventStrategy) => {
-    toast.info("Función de duplicar en desarrollo");
-  };
-
-  const handleTest = (_strategy: EventStrategy) => {
-    toast.info("Función de prueba en desarrollo");
-  };
-
-  const formatRelativeTime = (date: string | undefined) => {
-    if (!date) return "Nunca";
-    const now = new Date();
-    const past = new Date(date);
-    const diffInHours = Math.floor(
-      (now.getTime() - past.getTime()) / (1000 * 60 * 60)
-    );
-
-    if (diffInHours < 1) return "Hace menos de 1 hora";
-    if (diffInHours < 24) return `Hace ${diffInHours} horas`;
-    if (diffInHours < 48) return "Ayer";
-    if (diffInHours < 168) return `Hace ${Math.floor(diffInHours / 24)} días`;
-    return past.toLocaleDateString("es-ES", { day: "numeric", month: "short" });
-  };
-
-  // Loading skeleton
-  const StrategyRowSkeleton = () => (
-    <TableRow>
-      <TableCell>
-        <div className="space-y-2">
-          <Skeleton className="h-5 w-48" />
-          <Skeleton className="h-4 w-32" />
-        </div>
-      </TableCell>
-      <TableCell>
-        <Skeleton className="h-10 w-24" />
-      </TableCell>
-      <TableCell>
-        <Skeleton className="h-6 w-20" />
-      </TableCell>
-      <TableCell>
-        <div className="space-y-1">
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-3 w-20" />
-        </div>
-      </TableCell>
-      <TableCell>
-        <div className="flex gap-2">
-          <Skeleton className="h-9 w-16" />
-          <Skeleton className="h-9 w-16" />
-        </div>
-      </TableCell>
-    </TableRow>
-  );
 
   return (
-    <TooltipProvider>
-      <SidebarProvider>
-        <AppSidebar variant="inset" />
-        <SidebarInset>
-          {/* Header */}
-          <header className="flex h-14 items-center gap-4 border-b bg-background px-6">
-            <SidebarTrigger className="-ml-2" />
-            <Separator orientation="vertical" className="h-6" />
-            <div className="flex flex-1 items-center justify-between">
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg font-semibold">
-                  Estrategias de Clasificación
-                </h1>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
-                    <p>
-                      Las estrategias definen cómo se clasifican automáticamente
-                      los eventos epidemiológicos según reglas configurables
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setAuditSheetOpen(true)}
-                >
-                  <History className="mr-2 h-4 w-4" />
-                  <span className="hidden sm:inline">Historial</span>
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    setSelectedStrategy(null);
-                    setEditSheetOpen(true);
-                  }}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Nueva Estrategia
-                </Button>
-              </div>
-            </div>
-          </header>
+    <SidebarProvider>
+      <AppSidebar variant="inset" />
+      <SidebarInset>
+        {/* Header */}
+        <header className="flex h-14 shrink-0 items-center gap-4 border-b bg-background px-6">
+          <SidebarTrigger className="-ml-2" />
+          <Separator orientation="vertical" className="h-6" />
+          <div className="flex flex-1 items-center justify-between">
+            <h1 className="text-lg font-semibold">Estrategias de Clasificación</h1>
+            <Button
+              size="sm"
+              onClick={() => {
+                setSelectedStrategy(null);
+                setEditSheetOpen(true);
+              }}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Nueva
+            </Button>
+          </div>
+        </header>
 
-          {/* Main Content */}
-          <main className="flex-1 p-6 space-y-6 overflow-y-scroll">
-            {/* Info Banner */}
-            <Alert className="border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/20">
-              <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-              <AlertDescription className="text-sm">
-                <strong>¿Qué son las estrategias?</strong> Las estrategias son
-                conjuntos de reglas que clasifican automáticamente los eventos
-                epidemiológicos (como dengue o rabia) en categorías como
-                &quot;confirmado&quot;, &quot;sospechoso&quot; o
-                &quot;descartado&quot; según los datos recibidos.
+        {/* Main Content */}
+        <main className="flex-1 p-6 space-y-6 overflow-y-auto">
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-4">
+            <Card className="p-0">
+              <CardContent className="p-4">
+                <div className="text-2xl font-bold">{stats.eventsWithStrategy}</div>
+                <p className="text-xs text-muted-foreground mt-1">Eventos con estrategia</p>
+              </CardContent>
+            </Card>
+            <Card className="p-0">
+              <CardContent className="p-4">
+                <div className="text-2xl font-bold">{stats.totalStrategies}</div>
+                <p className="text-xs text-muted-foreground mt-1">Total estrategias</p>
+              </CardContent>
+            </Card>
+            <Card className="p-0">
+              <CardContent className="p-4">
+                <div className="text-2xl font-bold text-green-600">{stats.activeStrategies}</div>
+                <p className="text-xs text-muted-foreground mt-1">Activas ahora</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Filters */}
+          <div className="flex gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Buscar estrategias..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Select
+              value={filterStatus}
+              onValueChange={(value) =>
+                setFilterStatus(value as "all" | "active" | "inactive")
+              }
+            >
+              <SelectTrigger className="w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                <SelectItem value="active">Activas</SelectItem>
+                <SelectItem value="inactive">Inactivas</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Error State */}
+          {error && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                Error al cargar estrategias. Intenta recargar la página.
               </AlertDescription>
             </Alert>
+          )}
 
-            {/* Filters */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-              <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar por nombre o tipo de evento..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <Select
-                value={filterStatus}
-                onValueChange={(value) =>
-                  setFilterStatus(value as "all" | "active" | "inactive")
-                }
-              >
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas las estrategias</SelectItem>
-                  <SelectItem value="active">Solo activas</SelectItem>
-                  <SelectItem value="inactive">Solo inactivas</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Error State */}
-            {error && (
-              <Alert variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  <strong>Error al cargar estrategias.</strong> Por favor,
-                  recarga la página o contacta soporte si el problema persiste.
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {/* Table */}
-            {!error && (
-              <div className="rounded-lg border bg-card">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-transparent border-b">
-                      <TableHead className="font-medium">Estrategia</TableHead>
-                      <TableHead className="font-medium">
-                        <div className="flex items-center gap-1">
-                          Estado
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <HelpCircle className="h-3 w-3 text-muted-foreground" />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>
-                                Solo puede haber una estrategia activa por tipo
-                                de evento
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </div>
-                      </TableHead>
-                      <TableHead className="font-medium">Reglas</TableHead>
-                      <TableHead className="font-medium">
-                        Última modificación
-                      </TableHead>
-                      <TableHead className="text-right font-medium">
-                        Acciones
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoading ? (
-                      <>
-                        <StrategyRowSkeleton />
-                        <StrategyRowSkeleton />
-                        <StrategyRowSkeleton />
-                      </>
-                    ) : filteredStrategies.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="h-40 text-center">
-                          <div className="flex flex-col items-center gap-3">
-                            <div className="rounded-full bg-muted p-3">
-                              <Sparkles className="h-6 w-6 text-muted-foreground" />
-                            </div>
-                            <div className="space-y-1">
-                              <p className="font-medium text-base">
-                                {searchQuery || filterStatus !== "all"
-                                  ? "No se encontraron estrategias"
-                                  : "No hay estrategias configuradas"}
-                              </p>
-                              <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                                {searchQuery || filterStatus !== "all"
-                                  ? "Prueba con otros filtros o términos de búsqueda"
-                                  : "Las estrategias permiten clasificar automáticamente los eventos. Crea tu primera estrategia para comenzar."}
-                              </p>
-                            </div>
-                            {!searchQuery && filterStatus === "all" && (
-                              <Button
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedStrategy(null);
-                                  setEditSheetOpen(true);
-                                }}
-                              >
-                                <Plus className="mr-2 h-4 w-4" />
-                                Crear primera estrategia
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredStrategies.map((strategy) => (
-                        <TableRow
-                          key={strategy.id}
-                          className="group hover:bg-muted/30 transition-colors"
-                        >
-                          <TableCell>
-                            <div className="space-y-1">
-                              <div className="font-medium text-sm">
-                                {strategy.name}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Badge
-                                  variant="outline"
-                                  className="text-xs font-normal"
-                                >
-                                  {strategy.tipo_eno_name ||
-                                    `Evento ${strategy.tipo_eno_id}`}
-                                </Badge>
-                                {strategy.usa_provincia_carga && (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Badge
-                                        variant="outline"
-                                        className="text-xs font-normal"
-                                      >
-                                        <ShieldCheck className="mr-1 h-3 w-3" />
-                                        Filtro provincia
-                                      </Badge>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>
-                                        Esta estrategia solo procesa eventos de
-                                        provincias específicas
-                                      </p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                )}
-                              </div>
-                            </div>
-                          </TableCell>
-
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <Switch
-                                checked={strategy.active}
-                                onCheckedChange={() =>
-                                  handleToggleActive(strategy)
-                                }
-                                disabled={activateStrategyMutation.isPending}
-                              />
-                              <Badge
-                                variant={
-                                  strategy.active ? "default" : "secondary"
-                                }
-                                className="min-w-[80px] justify-center"
-                              >
-                                {strategy.active ? "Activa" : "Inactiva"}
-                              </Badge>
-                            </div>
-                          </TableCell>
-
-                          <TableCell>
-                            <Badge variant="outline" className="font-normal">
-                              {strategy.classification_rules?.length || 0}{" "}
-                              {strategy.classification_rules?.length === 1
-                                ? "regla"
-                                : "reglas"}
-                            </Badge>
-                          </TableCell>
-
-                          <TableCell>
-                            <div className="space-y-0.5 text-sm">
-                              <div className="text-foreground">
-                                {formatRelativeTime(strategy.updated_at)}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                por {strategy.created_by || "Sistema"}
-                              </div>
-                            </div>
-                          </TableCell>
-
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleView(strategy)}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity"
-                              >
-                                Ver detalles
-                              </Button>
-                              <Button
-                                variant="default"
-                                size="sm"
-                                onClick={() => handleEdit(strategy)}
-                              >
-                                Editar
-                              </Button>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity"
-                                  >
-                                    <MoreVertical className="h-4 w-4" />
-                                    <span className="sr-only">
-                                      Más opciones
-                                    </span>
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent
-                                  align="end"
-                                  className="w-48"
-                                >
-                                  <DropdownMenuItem
-                                    onClick={() => handleDuplicate(strategy)}
-                                  >
-                                    <Copy className="mr-2 h-4 w-4" />
-                                    Duplicar estrategia
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => handleTest(strategy)}
-                                  >
-                                    <PlayCircle className="mr-2 h-4 w-4" />
-                                    Probar con datos
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem
-                                    className="text-destructive focus:text-destructive"
-                                    onClick={() => {
-                                      setStrategyToDelete(strategy);
-                                      setDeleteDialogOpen(true);
-                                    }}
-                                  >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Eliminar
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
+          {/* Strategies List */}
+          {!error && (
+            <div className="space-y-3">
+              {isLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3, 4].map((i) => (
+                    <Card key={i} className="h-24 animate-pulse bg-muted" />
+                  ))}
+                </div>
+              ) : filteredStrategies.length === 0 ? (
+                <Card className="p-12">
+                  <div className="flex flex-col items-center gap-3 text-center">
+                    <div className="rounded-full bg-muted p-3">
+                      <Sparkles className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="font-medium">
+                        {searchQuery || filterStatus !== "all"
+                          ? "No se encontraron estrategias"
+                          : "No hay estrategias configuradas"}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {searchQuery || filterStatus !== "all"
+                          ? "Prueba con otros filtros"
+                          : "Crea tu primera estrategia para automatizar clasificaciones"}
+                      </p>
+                    </div>
+                    {!searchQuery && filterStatus === "all" && (
+                      <Button
+                        onClick={() => {
+                          setSelectedStrategy(null);
+                          setEditSheetOpen(true);
+                        }}
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Crear primera estrategia
+                      </Button>
                     )}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </main>
-        </SidebarInset>
+                  </div>
+                </Card>
+              ) : (
+                filteredStrategies.map((strategy) => {
+                  const now = new Date();
+                  const from = new Date(strategy.valid_from || 0);
+                  const until = strategy.valid_until
+                    ? new Date(strategy.valid_until)
+                    : null;
+                  const isActive =
+                    from <= now && (!until || until > now) && strategy.active;
+                  const isPast = until && until < now;
+                  const isFuture = from > now;
 
-        {/* View Sheet - Wider */}
-        <Sheet open={viewSheetOpen} onOpenChange={setViewSheetOpen}>
-          <SheetContent className="w-full overflow-y-auto sm:max-w-3xl lg:max-w-4xl p-0">
-            <div className="p-6">
-              {selectedStrategy && (
-                <StrategyPreview
-                  strategy={selectedStrategy}
-                  onClose={() => setViewSheetOpen(false)}
-                />
+                  return (
+                    <Card
+                      key={strategy.id}
+                      className={cn(
+                        "group transition-all hover:shadow-md cursor-pointer",
+                        isActive && "border-green-500/30 bg-green-50/30 dark:bg-green-950/10"
+                      )}
+                      onClick={() => handleView(strategy)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-4">
+                          {/* Left: Main Info */}
+                          <div className="flex-1 min-w-0 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-medium truncate">
+                                {strategy.name}
+                              </h3>
+                              {isActive && (
+                                <Badge className="bg-green-500 text-white shrink-0">
+                                  <CheckCircle2 className="mr-1 h-3 w-3" />
+                                  Activa
+                                </Badge>
+                              )}
+                              {isPast && (
+                                <Badge variant="secondary" className="shrink-0">
+                                  Finalizada
+                                </Badge>
+                              )}
+                              {isFuture && (
+                                <Badge variant="outline" className="shrink-0">
+                                  Programada
+                                </Badge>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                              <div className="flex items-center gap-1">
+                                <span className="font-medium">
+                                  {strategy.tipo_eno_name || `Evento ${strategy.tipo_eno_id}`}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                <span>
+                                  {formatDate(strategy.valid_from)} - {until ? formatDate(strategy.valid_until) : "∞"}
+                                </span>
+                              </div>
+                              <div>
+                                {strategy.classification_rules_count || 0} reglas
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Right: Actions */}
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleView(strategy);
+                              }}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEdit(strategy);
+                              }}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                <Button variant="ghost" size="sm">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEdit(strategy);
+                                  }}
+                                >
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-destructive focus:text-destructive"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setStrategyToDelete(strategy);
+                                    setDeleteDialogOpen(true);
+                                  }}
+                                >
+                                  <AlertTriangle className="mr-2 h-4 w-4" />
+                                  Eliminar
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })
               )}
             </div>
-          </SheetContent>
-        </Sheet>
+          )}
+        </main>
+      </SidebarInset>
 
-        {/* Edit Sheet - Much Wider for forms */}
-        <Sheet open={editSheetOpen} onOpenChange={setEditSheetOpen}>
-          <SheetContent className="w-full overflow-y-auto sm:max-w-4xl lg:max-w-5xl p-0">
-            <div className="p-6 space-y-6">
-              <SheetHeader className="space-y-3">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2">
-                    <SheetTitle className="text-xl">
-                      {selectedStrategy
-                        ? "Editar Estrategia"
-                        : "Nueva Estrategia de Clasificación"}
-                    </SheetTitle>
-                    <SheetDescription>
-                      {selectedStrategy
-                        ? "Modifica las reglas que determinan cómo se clasifican los eventos"
-                        : "Configura reglas para clasificar automáticamente eventos epidemiológicos"}
-                    </SheetDescription>
-                  </div>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <HelpCircle className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">
-                      <div className="space-y-2 text-sm">
-                        <p>
-                          <strong>¿Qué es una estrategia?</strong>
-                        </p>
-                        <p>
-                          Es un conjunto de reglas que evalúan los datos de cada
-                          evento para clasificarlo automáticamente.
-                        </p>
-                        <p>
-                          <strong>¿Qué es la prioridad?</strong>
-                        </p>
-                        <p>
-                          Las reglas se evalúan en orden de prioridad (1 es la
-                          más alta). La primera regla que coincida determina la
-                          clasificación.
-                        </p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-              </SheetHeader>
-              <div className="px-2">
-                <StrategyForm
-                  strategy={selectedStrategy}
-                  onClose={() => {
-                    setEditSheetOpen(false);
-                    setSelectedStrategy(null);
-                  }}
-                  onSuccess={(message: string) => {
-                    toast.success(message);
-                    setEditSheetOpen(false);
-                    setSelectedStrategy(null);
-                    strategiesQuery.refetch();
-                  }}
-                />
-              </div>
-            </div>
-          </SheetContent>
-        </Sheet>
-
-        {/* Audit Sheet - Wide for table */}
-        <Sheet open={auditSheetOpen} onOpenChange={setAuditSheetOpen}>
-          <SheetContent className="w-full overflow-y-auto sm:max-w-5xl lg:max-w-6xl p-0">
-            <div className="p-6 space-y-6">
-              <SheetHeader className="space-y-3">
-                <SheetTitle className="text-xl">
-                  Historial de Cambios
-                </SheetTitle>
-                <SheetDescription>
-                  Registro completo de todas las modificaciones realizadas en
-                  las estrategias
-                </SheetDescription>
-              </SheetHeader>
-              <div className="px-2">
-                <AuditLog />
-              </div>
-            </div>
-          </SheetContent>
-        </Sheet>
-
-        {/* Delete Confirmation Dialog */}
-        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>¿Eliminar estrategia?</AlertDialogTitle>
-              <AlertDialogDescription asChild>
-                <div className="space-y-3">
-                  <p>
-                    Esta acción no se puede deshacer. Se eliminará
-                    permanentemente:
-                  </p>
-                  <div className="rounded-md border bg-muted/50 p-3 space-y-1">
-                    <p className="font-medium text-foreground">
-                      {strategyToDelete?.name}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Contiene{" "}
-                      {strategyToDelete?.classification_rules?.length || 0}{" "}
-                      reglas de clasificación
-                    </p>
-                  </div>
-                  {strategyToDelete?.active && (
-                    <Alert className="border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/20">
-                      <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                      <AlertDescription className="text-sm font-medium">
-                        Esta estrategia está activa. Al eliminarla, los eventos
-                        dejarán de clasificarse automáticamente.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </div>
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel
-                onClick={() => {
-                  setStrategyToDelete(null);
-                  setDeleteDialogOpen(false);
+      {/* View Sheet */}
+      <Sheet open={viewSheetOpen} onOpenChange={setViewSheetOpen}>
+        <SheetContent className="w-full overflow-y-auto sm:max-w-3xl lg:max-w-4xl p-0">
+          <div className="p-6">
+            <SheetHeader className="mb-6">
+              <SheetTitle>Detalles de la Estrategia</SheetTitle>
+              <SheetDescription>
+                Visualiza las reglas y configuración de esta estrategia
+              </SheetDescription>
+            </SheetHeader>
+            {selectedStrategy && (
+              <StrategyPreview
+                strategy={selectedStrategy}
+                onClose={() => setViewSheetOpen(false)}
+                onEdit={() => {
+                  setViewSheetOpen(false);
+                  handleEdit(selectedStrategy);
                 }}
-              >
-                Cancelar
-              </AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDelete}
-                disabled={deleteStrategyMutation.isPending}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                {deleteStrategyMutation.isPending
-                  ? "Eliminando..."
-                  : "Eliminar estrategia"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </SidebarProvider>
-    </TooltipProvider>
+              />
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Edit Sheet */}
+      <Sheet open={editSheetOpen} onOpenChange={setEditSheetOpen}>
+        <SheetContent className="w-full overflow-y-auto sm:max-w-4xl lg:max-w-5xl p-0">
+          <div className="p-6 space-y-6">
+            <SheetHeader>
+              <SheetTitle>
+                {selectedStrategy ? "Editar Estrategia" : "Nueva Estrategia"}
+              </SheetTitle>
+              <SheetDescription>
+                {selectedStrategy
+                  ? "Modifica las reglas y configuración"
+                  : "Configura reglas para clasificar eventos automáticamente"}
+              </SheetDescription>
+            </SheetHeader>
+            <StrategyForm
+              strategy={selectedStrategy}
+              onClose={() => {
+                setEditSheetOpen(false);
+                setSelectedStrategy(null);
+              }}
+              onSuccess={(message: string) => {
+                toast.success(message);
+                setEditSheetOpen(false);
+                setSelectedStrategy(null);
+                strategiesQuery.refetch();
+              }}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar estrategia?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>Esta acción no se puede deshacer.</p>
+                <div className="rounded-lg border bg-muted/50 p-3">
+                  <p className="font-medium text-foreground">
+                    {strategyToDelete?.name}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {strategyToDelete?.classification_rules_count || 0} reglas
+                  </p>
+                </div>
+                {strategyToDelete?.active && (
+                  <Alert className="border-amber-200 bg-amber-50/50">
+                    <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    <AlertDescription className="text-sm">
+                      Esta estrategia está activa. Los eventos dejarán de
+                      clasificarse automáticamente.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setStrategyToDelete(null);
+                setDeleteDialogOpen(false);
+              }}
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleteStrategyMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteStrategyMutation.isPending
+                ? "Eliminando..."
+                : "Eliminar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </SidebarProvider>
   );
 }

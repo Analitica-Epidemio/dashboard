@@ -38,6 +38,10 @@ interface FilterContextType {
   dateRange: DateRange;
   setDateRange: (range: DateRange) => void;
 
+  // Province Filter
+  soloChubutEnabled: boolean;
+  setSoloChubutEnabled: (enabled: boolean) => void;
+
   // Filter Combinations
   filterCombinations: FilterCombination[];
   addFilterCombination: (combination: Omit<FilterCombination, "id">) => void;
@@ -63,6 +67,12 @@ interface FilterContextType {
   allEvents: Event[];
   allEventsLoading: boolean;
   allEventsError: QueryError;
+
+  // Events filtered by selected group
+  availableEvents: Event[];
+  eventsLoading: boolean;
+  eventsError: QueryError;
+  setSelectedGroup: (groupId: string | null) => void;
 
   // View state
   isComparisonView: boolean;
@@ -91,6 +101,8 @@ export function FilterProvider({ children }: FilterProviderProps) {
     from: new Date(2020, 0, 1),
     to: new Date(2025, 11, 31),
   });
+
+  const [soloChubutEnabled, setSoloChubutEnabled] = useState(true); // Default to Chubut only
 
   const [filterCombinations, setFilterCombinations] = useState<
     FilterCombination[]
@@ -159,6 +171,8 @@ export function FilterProvider({ children }: FilterProviderProps) {
       value={{
         dateRange,
         setDateRange,
+        soloChubutEnabled,
+        setSoloChubutEnabled,
         filterCombinations,
         addFilterCombination,
         updateFilterCombination,
@@ -177,6 +191,11 @@ export function FilterProvider({ children }: FilterProviderProps) {
         allEvents: dashboardFilters.allEvents,
         allEventsLoading: dashboardFilters.allEventsLoading,
         allEventsError: dashboardFilters.allEventsError,
+        // Events filtered by selected group
+        availableEvents: dashboardFilters.availableEvents,
+        eventsLoading: dashboardFilters.eventsLoading,
+        eventsError: dashboardFilters.eventsError,
+        setSelectedGroup: dashboardFilters.setSelectedGroup,
         isComparisonView,
         setIsComparisonView,
       }}
