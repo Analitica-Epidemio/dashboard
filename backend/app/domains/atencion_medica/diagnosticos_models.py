@@ -3,6 +3,7 @@
 from datetime import date
 from typing import TYPE_CHECKING, Optional
 
+from sqlalchemy import UniqueConstraint
 from sqlmodel import Field, Relationship
 
 from app.core.models import BaseModel
@@ -23,7 +24,10 @@ class DiagnosticoEvento(BaseModel, table=True):
     """
 
     __tablename__ = "diagnostico_evento"
-    __table_args__ = {"extend_existing": True}
+    __table_args__ = (
+        UniqueConstraint('id_evento', name='uq_diagnostico_evento'),
+        {"extend_existing": True}
+    )
 
     # Campos propios
     clasificacion_manual: str = Field(
@@ -82,7 +86,10 @@ class InternacionEvento(BaseModel, table=True):
     """
 
     __tablename__ = "internacion_evento"
-    __table_args__ = {"extend_existing": True}
+    __table_args__ = (
+        UniqueConstraint('id_evento', name='uq_internacion_evento'),
+        {"extend_existing": True}
+    )
 
     # Campos propios
     fue_internado: Optional[bool] = Field(None, description="Fue internado")
@@ -155,7 +162,11 @@ class TratamientoEvento(BaseModel, table=True):
     """
 
     __tablename__ = "tratamiento_evento"
-    __table_args__ = {"extend_existing": True}
+    __table_args__ = (
+        UniqueConstraint('id_evento', 'descripcion_tratamiento', 'fecha_inicio_tratamiento',
+                        name='uq_tratamiento_evento'),
+        {"extend_existing": True}
+    )
 
     # Campos propios
     # TODO: Chequear con Luciano si estab_tto debería ser el FK directamente

@@ -1,0 +1,6 @@
+# Ignorar todos los archivos de caché
+*.cache
+*.meta.json
+
+# Mantener este directorio en git
+!.gitignore

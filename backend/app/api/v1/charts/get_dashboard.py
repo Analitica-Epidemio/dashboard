@@ -43,10 +43,11 @@ class DashboardChartsResponse(BaseModel):
 
 async def get_dashboard_charts(
     grupo_id: Optional[int] = Query(None, description="ID del grupo seleccionado"),
-    evento_id: Optional[int] = Query(None, description="ID del evento seleccionado"),
+    tipo_eno_ids: Optional[List[int]] = Query(None, description="IDs de los eventos a filtrar"),
     fecha_desde: Optional[date] = Query(None, description="Fecha desde (formato: YYYY-MM-DD)"),
     fecha_hasta: Optional[date] = Query(None, description="Fecha hasta (formato: YYYY-MM-DD)"),
     clasificaciones: Optional[List[str]] = Query(None, description="Filtrar por clasificaciones estratégicas"),
+    provincia_id: Optional[int] = Query(None, description="Código INDEC de provincia (opcional, si no se envía muestra todas las provincias)"),
     db: AsyncSession = Depends(get_async_session),
     current_user: Optional[User] = RequireAuthOrSignedUrl
 ) -> SuccessResponse[DashboardChartsResponse]:
@@ -62,10 +63,11 @@ async def get_dashboard_charts(
     # Preparar filtros (convertir fechas a string para el procesador)
     filtros = {
         "grupo_id": grupo_id,
-        "evento_id": evento_id,
+        "tipo_eno_ids": tipo_eno_ids,
         "fecha_desde": fecha_desde.isoformat() if fecha_desde else None,
         "fecha_hasta": fecha_hasta.isoformat() if fecha_hasta else None,
-        "clasificaciones": clasificaciones
+        "clasificaciones": clasificaciones,
+        "provincia_id": provincia_id
     }
 
     # Obtener charts aplicables

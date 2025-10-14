@@ -110,7 +110,7 @@ export const ClassificationSelector: React.FC<ClassificationSelectorProps> = ({
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal={true}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -123,7 +123,7 @@ export const ClassificationSelector: React.FC<ClassificationSelectorProps> = ({
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0" align="start">
+      <PopoverContent className="w-full p-0 z-[100]" align="start">
         <Command>
           <CommandInput placeholder="Buscar clasificación..." />
           <CommandEmpty>No se encontraron clasificaciones.</CommandEmpty>
@@ -139,14 +139,12 @@ export const ClassificationSelector: React.FC<ClassificationSelectorProps> = ({
             {Object.values(TipoClasificacion).map((classification) => {
               const isSelected =
                 selectedClassifications.includes(classification);
-              const isDisabled = !isSelected;
 
               return (
                 <CommandItem
                   key={classification}
                   value={CLASSIFICATION_LABELS[classification]}
                   onSelect={() => handleToggleClassification(classification)}
-                  disabled={isDisabled}
                   className="flex items-center justify-between"
                 >
                   <div className="flex items-center gap-2">

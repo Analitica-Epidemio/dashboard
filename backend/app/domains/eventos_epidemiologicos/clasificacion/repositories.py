@@ -120,18 +120,25 @@ class EventStrategyRepository:
         return strategy
 
     async def get_by_tipo_eno_id(
-        self, tipo_eno_id: int, active_only: bool = True
+        self,
+        tipo_eno_id: int,
+        active_only: bool = True,
+        fecha: Optional[datetime] = None,
     ) -> Optional[EventStrategy]:
         """
-        Obtiene una estrategia por tipo de ENO.
+        Obtiene una estrategia por tipo de ENO válida en una fecha específica.
 
         Args:
             tipo_eno_id: ID del tipo de ENO
             active_only: Solo estrategias activas
+            fecha: Fecha para la cual buscar estrategia válida (default: ahora)
 
         Returns:
             Estrategia encontrada o None
         """
+        if fecha is None:
+            fecha = datetime.utcnow()
+
         query = (
             select(EventStrategy)
             .where(EventStrategy.tipo_eno_id == tipo_eno_id)
@@ -144,6 +151,17 @@ class EventStrategyRepository:
 
         if active_only:
             query = query.where(EventStrategy.is_active == True)
+
+        # Filtrar por validez temporal:
+        # La estrategia es válida si:
+        # - fecha >= valid_from AND
+        # - (valid_until IS NULL OR fecha < valid_until)
+        query = query.where(
+            and_(
+                EventStrategy.valid_from <= fecha,
+                (EventStrategy.valid_until == None) | (EventStrategy.valid_until > fecha),
+            )
+        )
 
         result = await self.session.execute(query)
         strategy = result.scalar_one_or_none()
@@ -185,10 +203,11 @@ class EventStrategyRepository:
             name=strategy_data.name,
             tipo_eno_id=strategy_data.tipo_eno_id,
             is_active=strategy_data.active,
-            usa_provincia_carga=strategy_data.usa_provincia_carga,
-            provincia_field=strategy_data.provincia_field,
             confidence_threshold=strategy_data.confidence_threshold,
             description=strategy_data.description,
+            config=strategy_data.config,
+            valid_from=strategy_data.valid_from,
+            valid_until=strategy_data.valid_until,
             created_by=created_by,
             updated_by=created_by,
         )
@@ -290,22 +309,11 @@ class EventStrategyRepository:
             strategy.is_active = strategy_data.active
 
         if (
-            strategy_data.usa_provincia_carga is not None
-            and strategy_data.usa_provincia_carga != strategy.usa_provincia_carga
+            strategy_data.config is not None
+            and strategy_data.config != strategy.config
         ):
-            changes.append(
-                f"usa_provincia_carga: {strategy.usa_provincia_carga} → {strategy_data.usa_provincia_carga}"
-            )
-            strategy.usa_provincia_carga = strategy_data.usa_provincia_carga
-
-        if (
-            strategy_data.provincia_field is not None
-            and strategy_data.provincia_field != strategy.provincia_field
-        ):
-            changes.append(
-                f"provincia_field: {strategy.provincia_field} → {strategy_data.provincia_field}"
-            )
-            strategy.provincia_field = strategy_data.provincia_field
+            changes.append("config updated")
+            strategy.config = strategy_data.config
 
         if (
             strategy_data.confidence_threshold is not None
@@ -322,6 +330,21 @@ class EventStrategyRepository:
         ):
             changes.append("description updated")
             strategy.description = strategy_data.description
+
+        if (
+            strategy_data.valid_from is not None
+            and strategy_data.valid_from != strategy.valid_from
+        ):
+            changes.append(
+                f"valid_from: {strategy.valid_from} → {strategy_data.valid_from}"
+            )
+            strategy.valid_from = strategy_data.valid_from
+
+        if strategy_data.valid_until != strategy.valid_until:
+            changes.append(
+                f"valid_until: {strategy.valid_until} → {strategy_data.valid_until}"
+            )
+            strategy.valid_until = strategy_data.valid_until
 
         strategy.updated_by = updated_by
 
@@ -515,6 +538,69 @@ class EventStrategyRepository:
             .order_by(desc(EventClassificationAudit.created_at))
             .limit(limit)
         )
+        return list(result.scalars().all())
+
+    async def check_date_overlap(
+        self,
+        tipo_eno_id: int,
+        valid_from: datetime,
+        valid_until: Optional[datetime],
+        exclude_strategy_id: Optional[int] = None,
+    ) -> List[EventStrategy]:
+        """
+        Verifica si existen estrategias con solapamiento de fechas.
+
+        Args:
+            tipo_eno_id: ID del tipo de ENO
+            valid_from: Fecha de inicio del nuevo período
+            valid_until: Fecha de fin del nuevo período (None = sin fin)
+            exclude_strategy_id: ID de estrategia a excluir (para updates)
+
+        Returns:
+            Lista de estrategias que se solapan con el período especificado
+        """
+        # Construir query base
+        query = select(EventStrategy).where(EventStrategy.tipo_eno_id == tipo_eno_id)
+
+        # Excluir estrategia específica si se proporciona (para updates)
+        if exclude_strategy_id is not None:
+            query = query.where(EventStrategy.id != exclude_strategy_id)
+
+        # Lógica de solapamiento:
+        # Dos rangos [A_start, A_end] y [B_start, B_end] se solapan si:
+        # A_start < B_end AND A_end > B_start
+        #
+        # Casos especiales con None (sin fin):
+        # - Si valid_until es None, el rango nuevo termina en infinito
+        # - Si strategy.valid_until es None, el rango existente termina en infinito
+
+        # Condición 1: El nuevo período empieza antes de que termine el existente
+        # valid_from < strategy.valid_until OR strategy.valid_until IS NULL
+        if valid_until is not None:
+            # El nuevo período tiene fin, entonces:
+            # No hay solapamiento si el nuevo período termina antes de que empiece el existente
+            # O si el nuevo período empieza después de que termine el existente
+            query = query.where(
+                and_(
+                    # El nuevo período termina después de que empiece el existente
+                    valid_until > EventStrategy.valid_from,
+                    # El nuevo período empieza antes de que termine el existente (o el existente no tiene fin)
+                    and_(
+                        (EventStrategy.valid_until == None)
+                        | (valid_from < EventStrategy.valid_until)
+                    ),
+                )
+            )
+        else:
+            # El nuevo período no tiene fin (termina en infinito)
+            # Hay solapamiento si el período existente termina después de que empiece el nuevo
+            # o si el período existente tampoco tiene fin
+            query = query.where(
+                (EventStrategy.valid_until == None)
+                | (EventStrategy.valid_until > valid_from)
+            )
+
+        result = await self.session.execute(query)
         return list(result.scalars().all())
 
     async def _log_audit(

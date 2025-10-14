@@ -112,83 +112,84 @@ export function EpiWeekRangeSelector() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Calendar className="h-5 w-5" />
-          Período de Análisis (Semanas Epidemiológicas)
-        </CardTitle>
+        <div className="flex items-start justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Período de Análisis
+            </CardTitle>
+            <p className="text-sm text-gray-500 mt-1">
+              Aplica a todas las combinaciones de filtros
+            </p>
+          </div>
+          {(epiStart || epiEnd) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearSelection}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              Limpiar
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Selected Range Display */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">Período Seleccionado:</span>
-            {(epiStart || epiEnd) && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearSelection}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                Limpiar
-              </Button>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            {!epiStart && !epiEnd ? (
-              <span className="text-gray-500 text-sm">Selecciona un rango de semanas</span>
-            ) : (
-              <>
-                {epiStart && (
-                  <Badge variant="secondary" className="px-3 py-1">
-                    <CalendarRange className="h-3 w-3 mr-1" />
-                    Desde: {formatEpiWeek(epiStart)}
-                  </Badge>
-                )}
-                {epiEnd && (
-                  <Badge variant="secondary" className="px-3 py-1">
-                    <CalendarRange className="h-3 w-3 mr-1" />
-                    Hasta: {formatEpiWeek(epiEnd)}
-                  </Badge>
-                )}
-              </>
-            )}
-          </div>
-
-          {epiStart && epiEnd && (
-            <div className="mt-2 text-xs text-gray-600">
-              {formatDateRange(epiStart.startDate, epiEnd.endDate)}
+        {(epiStart || epiEnd) && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              {epiStart && (
+                <Badge variant="secondary" className="px-3 py-1">
+                  <CalendarRange className="h-3 w-3 mr-1" />
+                  Desde: {formatEpiWeek(epiStart)}
+                </Badge>
+              )}
+              {epiEnd && (
+                <Badge variant="secondary" className="px-3 py-1">
+                  <CalendarRange className="h-3 w-3 mr-1" />
+                  Hasta: {formatEpiWeek(epiEnd)}
+                </Badge>
+              )}
             </div>
-          )}
-        </div>
-
-        {/* Instructions */}
-        <div className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
-          <p className="font-medium mb-1">Instrucciones:</p>
-          <ul className="list-disc list-inside space-y-1 text-xs">
-            <li>Selecciona la semana epidemiológica inicial en el calendario izquierdo</li>
-            <li>Selecciona la semana epidemiológica final en el calendario derecho</li>
-            <li>Las semanas epidemiológicas van de domingo a sábado</li>
-            <li>El calendario mostrará la semana completa resaltada</li>
-          </ul>
-        </div>
+            {epiStart && epiEnd && (
+              <div className="mt-2 text-xs text-gray-600">
+                {formatDateRange(epiStart.startDate, epiEnd.endDate)}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Calendar Components - Side by Side */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Start Week Selector */}
-          <div className="border rounded-lg p-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3 text-center">Semana Inicial</h3>
-            <EpiCalendar
-              onWeekSelect={handleStartWeekSelect}
-            />
+          <div className="border rounded-lg overflow-hidden bg-card">
+            <h3 className="text-sm font-semibold text-foreground p-4 text-center border-b bg-muted/30">
+              Semana Inicial
+            </h3>
+            <div className="p-4">
+              <EpiCalendar
+                onWeekSelect={handleStartWeekSelect}
+                selectedStart={epiStart}
+                selectedEnd={epiEnd}
+                selectingEnd={false}
+              />
+            </div>
           </div>
 
           {/* End Week Selector */}
-          <div className="border rounded-lg p-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3 text-center">Semana Final</h3>
-            <EpiCalendar
-              onWeekSelect={handleEndWeekSelect}
-            />
+          <div className="border rounded-lg overflow-hidden bg-card">
+            <h3 className="text-sm font-semibold text-foreground p-4 text-center border-b bg-muted/30">
+              Semana Final
+            </h3>
+            <div className="p-4">
+              <EpiCalendar
+                onWeekSelect={handleEndWeekSelect}
+                selectedStart={epiStart}
+                selectedEnd={epiEnd}
+                selectingEnd={true}
+              />
+            </div>
           </div>
         </div>
       </CardContent>

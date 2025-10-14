@@ -6,10 +6,11 @@ import { env } from '@/env';
 
 export interface DashboardChartsParams {
   grupoId?: number | null;
-  eventoId?: number | null;
+  eventoIds?: number[]; // Array of event IDs
   fechaDesde?: string | null;
   fechaHasta?: string | null;
   clasificaciones?: string[];
+  provinciaId?: number; // INDEC province code (26 = Chubut)
 }
 
 export interface ChartConfig {
@@ -60,12 +61,18 @@ export function useDashboardCharts(params: DashboardChartsParams) {
       const queryParams = new URLSearchParams();
 
       if (params.grupoId) queryParams.append('grupo_id', params.grupoId.toString());
-      if (params.eventoId) queryParams.append('evento_id', params.eventoId.toString());
+
+      // Add event IDs as array
+      if (params.eventoIds && params.eventoIds.length > 0) {
+        params.eventoIds.forEach(id => queryParams.append('tipo_eno_ids', id.toString()));
+      }
+
       if (params.fechaDesde) queryParams.append('fecha_desde', params.fechaDesde);
       if (params.fechaHasta) queryParams.append('fecha_hasta', params.fechaHasta);
       if (params.clasificaciones && params.clasificaciones.length > 0) {
         params.clasificaciones.forEach(c => queryParams.append('clasificaciones', c));
       }
+      if (params.provinciaId) queryParams.append('provincia_id', params.provinciaId.toString());
 
       // Obtener el token de la sesión
       const { getSession } = await import('next-auth/react');

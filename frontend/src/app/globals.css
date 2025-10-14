@@ -120,3 +120,63 @@
     @apply bg-background text-foreground;
   }
 }
+
+@media print {
+  /* Evitar que elementos se corten entre páginas */
+  .chart-container,
+  .indicator-card,
+  .section-header {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Grid de charts en 1 columna para PDF */
+  .charts-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1.5rem !important;
+  }
+
+  /* Evitar cortes en medio de charts */
+  .dynamic-chart {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    overflow: visible !important;
+  }
+
+  /* Limitar altura de SVG para evitar overflow */
+  .dynamic-chart svg {
+    max-height: 400px;
+    overflow: visible !important;
+  }
+
+  /* Cards con overflow controlado */
+  .dynamic-chart > div {
+    overflow: visible !important;
+  }
+
+  /* Salto de página antes de cada combinación (excepto la primera) */
+  .combination-section:not(:first-child) {
+    page-break-before: always;
+    break-before: page;
+  }
+
+  /* Grid de indicadores responsive */
+  .indicators-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 1rem !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+}
+
+/* Estilos generales para mejorar visualización */
+.chart-container {
+  position: relative;
+  overflow: visible;
+}
+
+.chart-container svg {
+  overflow: visible;
+}

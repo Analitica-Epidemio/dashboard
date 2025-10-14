@@ -7,14 +7,24 @@ from typing import Optional
 
 from fastapi import Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.database import get_async_session
 from app.core.schemas.response import PaginatedResponse
 from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User
-from app.domains.eventos_epidemiologicos.eventos.models import GrupoEno
+from app.domains.eventos_epidemiologicos.eventos.models import (
+    GrupoEno,
+    TipoEno,
+    TipoEnoGrupoEno,
+)
+
+
+class TipoEnoSimple(BaseModel):
+    id: int = Field(..., description="ID del tipo ENO")
+    nombre: str = Field(..., max_length=200, description="Nombre del tipo ENO")
 
 
 class GrupoEnoInfo(BaseModel):
@@ -24,6 +34,9 @@ class GrupoEnoInfo(BaseModel):
         None, max_length=500, description="Descripción del grupo"
     )
     codigo: Optional[str] = Field(None, max_length=200, description="Código del grupo")
+    eventos: list[TipoEnoSimple] = Field(
+        default_factory=list, description="Eventos (tipos ENO) que pertenecen a este grupo"
+    )
 
 
 logger = logging.getLogger(__name__)
@@ -37,17 +50,46 @@ async def list_grupos_eno(
     current_user: User = Depends(RequireAnyRole()),
 ) -> PaginatedResponse[GrupoEnoInfo]:
     try:
-        # Construir query base
-        query = select(GrupoEno)
+        # Construir query base - cargar eventos relacionados
+        query = (
+            select(GrupoEno)
+            .distinct()
+            .options(
+                selectinload(GrupoEno.grupo_tipos).selectinload(TipoEnoGrupoEno.tipo_eno)
+            )
+        )
 
-        # Aplicar filtros
+        # Aplicar filtros - buscar en nombre de grupo O en eventos que pertenecen al grupo
         if nombre:
-            query = query.where(GrupoEno.nombre.ilike(f"%{nombre}%"))
+            # Subquery para encontrar grupos que tienen eventos con el nombre buscado
+            subquery_eventos = (
+                select(TipoEnoGrupoEno.id_grupo_eno)
+                .join(TipoEno, TipoEnoGrupoEno.id_tipo_eno == TipoEno.id)
+                .where(TipoEno.nombre.ilike(f"%{nombre}%"))
+            )
 
-        # Contar total de elementos
-        count_query = select(func.count()).select_from(GrupoEno)
+            # Buscar grupos cuyo nombre coincida O que tengan eventos que coincidan
+            query = query.where(
+                or_(
+                    GrupoEno.nombre.ilike(f"%{nombre}%"),
+                    GrupoEno.id.in_(subquery_eventos)
+                )
+            )
+
+        # Contar total de elementos (usar la misma lógica de filtrado)
+        count_query = select(func.count(func.distinct(GrupoEno.id))).select_from(GrupoEno)
         if nombre:
-            count_query = count_query.where(GrupoEno.nombre.ilike(f"%{nombre}%"))
+            subquery_eventos = (
+                select(TipoEnoGrupoEno.id_grupo_eno)
+                .join(TipoEno, TipoEnoGrupoEno.id_tipo_eno == TipoEno.id)
+                .where(TipoEno.nombre.ilike(f"%{nombre}%"))
+            )
+            count_query = count_query.where(
+                or_(
+                    GrupoEno.nombre.ilike(f"%{nombre}%"),
+                    GrupoEno.id.in_(subquery_eventos)
+                )
+            )
 
         total_result = await db.execute(count_query)
         total = total_result.scalar() or 0
@@ -59,7 +101,6 @@ async def list_grupos_eno(
         # Ejecutar query
         result = await db.execute(query)
         grupos = result.scalars().all()
-        print(grupos)
 
         # Convertir a modelo de respuesta
         grupos_info = [
@@ -68,6 +109,10 @@ async def list_grupos_eno(
                 nombre=grupo.nombre,
                 descripcion=grupo.descripcion,
                 codigo=grupo.codigo,
+                eventos=[
+                    TipoEnoSimple(id=rel.tipo_eno.id, nombre=rel.tipo_eno.nombre)
+                    for rel in grupo.grupo_tipos
+                ],
             )
             for grupo in grupos
         ]

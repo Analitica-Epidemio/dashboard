@@ -4,27 +4,14 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useDebounce } from "use-debounce";
 import {
-  Search,
-  Filter,
-  Calendar,
   Download,
   ChevronRight,
-  Info,
   AlertTriangle,
-  MapPin,
-  Hash,
-  User,
-  Activity,
-  TrendingUp,
-  AlertCircle,
   FileText,
 } from "lucide-react";
 
 // UI Components
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Sheet,
   SheetContent,
@@ -40,26 +27,22 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/features/layout/components";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
+
+// Shared filter components
+import { FilterToolbar, StatsBar, type StatItem } from "@/components/shared/filters";
 
 // API y tipos
 import {
   useEventos,
   getClasificacionLabel,
-  getClasificacionVariant,
-  getClasificacionEstrategiaColor,
+  getClasificacionColorClasses,
   type EventoFilters,
 } from "@/lib/api/eventos";
-import { TipoClasificacion } from "@/lib/types/clasificacion";
 
 // Componentes
-import { EventoDetail } from "./_components/evento-detail";
-import { EventoFiltersPanel } from "./_components/evento-filters";
+import { EventoDetailModern } from "./_components/evento-detail-modern";
+import { EventoFiltersModern } from "./_components/evento-filters-modern";
 import { useMediaQuery } from "@/hooks/use-mobile";
 
 export default function EventosPage() {
@@ -94,6 +77,7 @@ export default function EventosPage() {
   const eventosData = eventosQuery.data;
   const eventos = eventosData?.data.data || [];
   const pagination = eventosData?.data.pagination;
+  const stats = eventosData?.data.stats;
   const isLoading = eventosQuery.isLoading;
   const error = eventosQuery.error;
 
@@ -124,39 +108,35 @@ export default function EventosPage() {
     console.log("Exportando eventos...");
   };
 
-  // Calcular estadísticas rápidas
-  const stats = {
-    total: pagination?.total || 0,
-    confirmados: eventos.filter(
-      (e) => e.clasificacion_estrategia === TipoClasificacion.CONFIRMADOS
-    ).length,
-    sospechosos: eventos.filter(
-      (e) => e.clasificacion_estrategia === TipoClasificacion.SOSPECHOSOS
-    ).length,
-    requiereRevision: eventos.filter(
-      (e) => e.clasificacion_estrategia === TipoClasificacion.REQUIERE_REVISION
-    ).length,
-    sinClasificar: eventos.filter((e) => !e.clasificacion_estrategia).length,
-  };
+  // Preparar stats para StatsBar
+  const statsItems: StatItem[] = stats ? [
+    { id: "total", label: "Total", value: stats.total || 0 },
+    { id: "confirmados", label: "Confirmados", value: stats.confirmados || 0, color: "text-red-600" },
+    { id: "sospechosos", label: "Sospechosos", value: stats.sospechosos || 0, color: "text-yellow-600" },
+    { id: "probables", label: "Probables", value: stats.probables || 0, color: "text-orange-600" },
+    { id: "en_estudio", label: "En Estudio", value: stats.en_estudio || 0, color: "text-blue-600" },
+    { id: "negativos", label: "Negativos", value: stats.negativos || 0, color: "text-green-600" },
+    { id: "descartados", label: "Descartados", value: stats.descartados || 0, color: "text-gray-600" },
+    ...(stats.requiere_revision ? [{ id: "requiere_revision", label: "Requiere Revisión", value: stats.requiere_revision, color: "text-purple-600" }] : []),
+    ...(stats.sin_clasificar ? [{ id: "sin_clasificar", label: "Sin Clasificar", value: stats.sin_clasificar, color: "text-muted-foreground" }] : []),
+  ] : [];
 
-  // Skeleton para carga
-  const EventoCardSkeleton = () => (
-    <Card className="p-4">
-      <div className="space-y-3">
-        <div className="flex justify-between items-start">
-          <Skeleton className="h-5 w-32" />
-          <Skeleton className="h-6 w-20" />
-        </div>
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-48" />
-          <Skeleton className="h-4 w-36" />
-        </div>
-        <div className="flex gap-2">
-          <Skeleton className="h-5 w-16" />
-          <Skeleton className="h-5 w-24" />
-        </div>
-      </div>
-    </Card>
+  // Contar filtros activos (excluyendo page, page_size, sort_by)
+  const activeFiltersCount = Object.entries(filters).filter(
+    ([key, value]) => value && !["page", "page_size", "sort_by"].includes(key)
+  ).length;
+
+  // Skeleton para carga de tabla
+  const EventoRowSkeleton = () => (
+    <div className="px-4 py-3 flex items-center gap-4">
+      <Skeleton className="h-4 w-12" />
+      <Skeleton className="h-4 w-40" />
+      <Skeleton className="h-4 w-32" />
+      <Skeleton className="h-4 w-24" />
+      <Skeleton className="h-6 w-20" />
+      <Skeleton className="h-4 w-32" />
+      <Skeleton className="h-4 w-16" />
+    </div>
   );
 
   return (
@@ -168,135 +148,33 @@ export default function EventosPage() {
           <header className="flex h-14 items-center gap-4 border-b bg-background px-6">
             <SidebarTrigger className="-ml-2" />
             <Separator orientation="vertical" className="h-6" />
-            <div className="flex flex-1 items-center justify-between">
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg font-semibold">
-                  Eventos Epidemiológicos
-                </h1>
-                <Badge variant="secondary" className="ml-2">
-                  {stats.total} eventos
-                </Badge>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setFiltersOpen(!filtersOpen)}
-                >
-                  <Filter className="mr-2 h-4 w-4" />
-                  Filtros
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleExport}>
-                  <Download className="mr-2 h-4 w-4" />
-                  <span className="hidden sm:inline">Exportar</span>
-                </Button>
-              </div>
-            </div>
+            <h1 className="text-lg font-semibold">Eventos</h1>
           </header>
 
           {/* Main Content */}
-          <main className="flex-1 p-6 overflow-y-scroll">
-            {/* Info Banner */}
-            <Alert className="mb-6 border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/20">
-              <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-              <AlertDescription className="text-sm">
-                <strong>Vista de Eventos Epidemiológicos</strong> - Aquí puedes
-                ver todos los eventos procesados, filtrar por tipo, fecha,
-                clasificación y más. Haz clic en un evento para ver su
-                información completa.
-              </AlertDescription>
-            </Alert>
-
-            {/* Estadísticas rápidas */}
-            <div className="grid gap-4 md:grid-cols-4 mb-6">
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">
-                        Total Eventos
-                      </p>
-                      <p className="text-2xl font-bold">{stats.total}</p>
-                    </div>
-                    <Activity className="h-8 w-8 text-muted-foreground opacity-50" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">
-                        Confirmados
-                      </p>
-                      <p className="text-2xl font-bold text-green-600">
-                        {stats.confirmados}
-                      </p>
-                    </div>
-                    <TrendingUp className="h-8 w-8 text-green-600 opacity-50" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">
-                        Sospechosos
-                      </p>
-                      <p className="text-2xl font-bold text-yellow-600">
-                        {stats.sospechosos}
-                      </p>
-                    </div>
-                    <AlertCircle className="h-8 w-8 text-yellow-600 opacity-50" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">
-                        Requiere Revisión
-                      </p>
-                      <p className="text-2xl font-bold text-red-600">
-                        {stats.requiereRevision}
-                      </p>
-                    </div>
-                    <AlertTriangle className="h-8 w-8 text-red-600 opacity-50" />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Barra de búsqueda */}
+          <main className="flex-1 p-6 overflow-y-scroll bg-muted/40">
+            {/* Toolbar moderno con componentes compartidos */}
             <div className="mb-6">
-              <div className="relative max-w-md">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar por ID, nombre o documento..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
+              <FilterToolbar
+                searchPlaceholder="Buscar por nombre, DNI o ID de evento..."
+                searchValue={searchQuery}
+                onSearchChange={setSearchQuery}
+                onFiltersClick={() => setFiltersOpen(!filtersOpen)}
+                activeFiltersCount={activeFiltersCount}
+                actions={[
+                  {
+                    id: "export",
+                    label: "Exportar",
+                    icon: <Download className="h-4 w-4" />,
+                    onClick: handleExport,
+                    hideOnMobile: true,
+                  },
+                ]}
+              >
+                <StatsBar stats={statsItems} />
+              </FilterToolbar>
             </div>
 
-            {/* Panel de filtros (cuando está abierto) */}
-            {filtersOpen && (
-              <Card className="mb-6">
-                <CardContent className="p-4">
-                  <EventoFiltersPanel
-                    filters={filters}
-                    onFilterChange={handleFilterChange}
-                    onClose={() => setFiltersOpen(false)}
-                  />
-                </CardContent>
-              </Card>
-            )}
 
             {/* Error State */}
             {error && (
@@ -309,19 +187,19 @@ export default function EventosPage() {
               </Alert>
             )}
 
-            {/* Lista de eventos */}
+            {/* Lista de eventos - Table moderna estilo Linear/GitHub */}
             {!error && (
-              <div className="space-y-4">
+              <div className="border border-border bg-background rounded-lg overflow-hidden">
                 {isLoading ? (
                   // Loading state
-                  <>
-                    <EventoCardSkeleton />
-                    <EventoCardSkeleton />
-                    <EventoCardSkeleton />
-                  </>
+                  <div className="divide-y divide-border">
+                    {[...Array(5)].map((_, i) => (
+                      <EventoRowSkeleton key={i} />
+                    ))}
+                  </div>
                 ) : eventos.length === 0 ? (
                   // Empty state
-                  <Card className="p-12">
+                  <div className="p-12">
                     <div className="text-center">
                       <FileText className="mx-auto h-12 w-12 text-muted-foreground opacity-50 mb-4" />
                       <h3 className="text-lg font-medium mb-2">
@@ -334,152 +212,129 @@ export default function EventosPage() {
                           : "No hay eventos registrados aún"}
                       </p>
                     </div>
-                  </Card>
+                  </div>
                 ) : (
-                  // Lista de eventos
-                  eventos.map((evento) => (
-                    <Card
-                      key={evento.id}
-                      className="p-4 hover:bg-muted/30 transition-colors cursor-pointer"
-                      onClick={() => handleViewDetalle(evento.id)}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 space-y-2">
-                          {/* Header del evento */}
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-lg font-medium">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="border-b border-border bg-muted/50">
+                        <tr>
+                          <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3 w-[50px]">ID</th>
+                          <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Persona</th>
+                          <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Tipo ENO</th>
+                          <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Fecha</th>
+                          <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Clasificación</th>
+                          <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Ubicación</th>
+                          <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3 w-[100px]">Estado</th>
+                          <th className="w-[40px]"></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {eventos.map((evento) => (
+                          <tr
+                            key={evento.id}
+                            onClick={() => handleViewDetalle(evento.id)}
+                            className="group hover:bg-muted/50 cursor-pointer transition-colors"
+                          >
+                            {/* ID */}
+                            <td className="px-4 py-3 text-sm text-muted-foreground font-mono">
+                              #{evento.id_evento_caso}
+                            </td>
+
+                            {/* Persona */}
+                            <td className="px-4 py-3">
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-sm font-medium truncate max-w-[200px]">
                                   {evento.nombre_sujeto || "Sin identificar"}
                                 </span>
-                                {evento.clasificacion_estrategia && (
-                                  <span
-                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getClasificacionEstrategiaColor(
-                                      evento.clasificacion_estrategia
-                                    )}`}
-                                  >
-                                    {getClasificacionLabel(
-                                      evento.clasificacion_estrategia
-                                    )}
-                                  </span>
-                                )}
-                                {evento.clasificacion_estrategia && (
-                                  <Badge
-                                    variant={getClasificacionVariant(
-                                      evento.clasificacion_estrategia
-                                    )}
-                                  >
-                                    {getClasificacionLabel(
-                                      evento.clasificacion_estrategia
-                                    )}
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                                <span className="flex items-center gap-1">
-                                  <Hash className="h-3 w-3" />
-                                  {evento.id_evento_caso}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <Calendar className="h-3 w-3" />
-                                  {new Date(
-                                    evento.fecha_minima_evento
-                                  ).toLocaleDateString("es-ES")}
-                                </span>
-                                {evento.tipo_eno_nombre && (
-                                  <span className="flex items-center gap-1">
-                                    <Activity className="h-3 w-3" />
-                                    {evento.tipo_eno_nombre}
+                                {evento.documento_sujeto && (
+                                  <span className="text-xs text-muted-foreground">
+                                    DNI {evento.documento_sujeto}
                                   </span>
                                 )}
                               </div>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleViewDetalle(evento.id);
-                              }}
-                            >
-                              Ver detalle
-                              <ChevronRight className="ml-1 h-4 w-4" />
-                            </Button>
-                          </div>
+                            </td>
 
-                          {/* Información adicional */}
-                          <div className="flex flex-wrap gap-4 text-sm">
-                            {evento.provincia && (
-                              <span className="flex items-center gap-1 text-muted-foreground">
-                                <MapPin className="h-3 w-3" />
-                                {evento.provincia}
-                                {evento.localidad && `, ${evento.localidad}`}
-                              </span>
-                            )}
-                            {evento.edad && (
-                              <span className="flex items-center gap-1 text-muted-foreground">
-                                <User className="h-3 w-3" />
-                                {evento.edad} años
-                              </span>
-                            )}
-                            {evento.documento_sujeto && (
-                              <span className="flex items-center gap-1 text-muted-foreground">
-                                <FileText className="h-3 w-3" />
-                                DNI: {evento.documento_sujeto}
-                              </span>
-                            )}
-                          </div>
+                            {/* Tipo ENO */}
+                            <td className="px-4 py-3 text-sm max-w-[200px] truncate">
+                              {evento.tipo_eno_nombre || "-"}
+                            </td>
 
-                          {/* Badges de estado */}
-                          <div className="flex flex-wrap gap-2">
-                            {evento.es_caso_sintomatico && (
-                              <Badge variant="outline" className="text-xs">
-                                Sintomático
-                              </Badge>
-                            )}
-                            {evento.requiere_revision_especie && (
-                              <Badge variant="destructive" className="text-xs">
-                                Requiere Revisión
-                              </Badge>
-                            )}
-                            {evento.confidence_score && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Badge
-                                    variant="secondary"
-                                    className="text-xs"
-                                  >
-                                    Confianza:{" "}
-                                    {(evento.confidence_score * 100).toFixed(0)}
-                                    %
-                                  </Badge>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>
-                                    Nivel de confianza de la clasificación
-                                    automática
-                                  </p>
-                                </TooltipContent>
-                              </Tooltip>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </Card>
-                  ))
+                            {/* Fecha */}
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-sm text-foreground">
+                                  {evento.fecha_minima_evento ? (
+                                    new Date(evento.fecha_minima_evento).toLocaleDateString("es-ES", {
+                                      day: "2-digit",
+                                      month: "short",
+                                      year: "numeric"
+                                    })
+                                  ) : (
+                                    <span className="text-muted-foreground">Sin fecha</span>
+                                  )}
+                                </span>
+                                {evento.semana_epidemiologica_apertura && evento.anio_epidemiologico_apertura && (
+                                  <span className="text-xs text-muted-foreground">
+                                    SE {evento.semana_epidemiologica_apertura}/{evento.anio_epidemiologico_apertura}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* Clasificación */}
+                            <td className="px-4 py-3">
+                              {evento.clasificacion_estrategia ? (
+                                <span
+                                  className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border ${getClasificacionColorClasses(evento.clasificacion_estrategia)}`}
+                                >
+                                  {getClasificacionLabel(evento.clasificacion_estrategia)}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">Sin clasificar</span>
+                              )}
+                            </td>
+
+                            {/* Ubicación */}
+                            <td className="px-4 py-3 text-sm text-muted-foreground max-w-[150px] truncate">
+                              {evento.provincia ? (
+                                <>
+                                  {evento.provincia}
+                                  {evento.localidad && `, ${evento.localidad}`}
+                                </>
+                              ) : (
+                                "-"
+                              )}
+                            </td>
+
+                            {/* Estado */}
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-1.5">
+                                {evento.requiere_revision_especie && (
+                                  <div className="h-2 w-2 rounded-full bg-red-500" title="Requiere revisión" />
+                                )}
+                                {evento.es_caso_sintomatico && (
+                                  <div className="h-2 w-2 rounded-full bg-yellow-500" title="Sintomático" />
+                                )}
+                              </div>
+                            </td>
+
+                            {/* Chevron */}
+                            <td className="px-4 py-3">
+                              <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
 
                 {/* Paginación */}
-                {pagination && pagination.total_pages > 1 && (
-                  <div className="flex items-center justify-between pt-4">
-                    <p className="text-sm text-muted-foreground">
-                      Mostrando{" "}
-                      {(pagination.page - 1) * pagination.page_size + 1} -{" "}
-                      {Math.min(
-                        pagination.page * pagination.page_size,
-                        pagination.total
-                      )}{" "}
-                      de {pagination.total} eventos
+                {!isLoading && pagination && pagination.total_pages > 1 && (
+                  <div className="flex items-center justify-between border-t border-border px-4 py-3 bg-muted/30">
+                    <p className="text-xs text-muted-foreground">
+                      Mostrando {(pagination.page - 1) * pagination.page_size + 1}-
+                      {Math.min(pagination.page * pagination.page_size, pagination.total)} de {pagination.total}
                     </p>
                     <div className="flex gap-2">
                       <Button
@@ -506,20 +361,55 @@ export default function EventosPage() {
           </main>
         </SidebarInset>
 
-        {/* Sheet de detalle */}
+        {/* Sheet de detalle (Quick view - Linear/GitHub style) */}
         <Sheet open={detailSheetOpen} onOpenChange={setDetailSheetOpen}>
           <SheetContent className="w-full overflow-y-auto sm:max-w-3xl lg:max-w-5xl p-0">
-            <SheetHeader className="sr-only">
-              <SheetTitle>Detalle del Evento Epidemiológico</SheetTitle>
+            <SheetHeader className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur p-4">
+              <div className="flex items-center justify-between">
+                <SheetTitle className="text-lg">
+                  Evento #{selectedEventoId}
+                </SheetTitle>
+                <div className="flex items-center gap-2">
+                  {/* Open in full page button (Vercel/Linear style) */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(`/dashboard/eventos/${selectedEventoId}`);
+                    }}
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
+                    <span className="hidden sm:inline">Abrir en página</span>
+                  </Button>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Presiona <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs">ESC</kbd> para cerrar o click en &quot;Abrir en página&quot; para vista completa
+              </p>
             </SheetHeader>
             {selectedEventoId && (
-              <div className="p-6">
-                <EventoDetail
-                  eventoId={selectedEventoId}
-                  onClose={() => setDetailSheetOpen(false)}
-                />
-              </div>
+              <EventoDetailModern
+                eventoId={selectedEventoId}
+                onClose={() => setDetailSheetOpen(false)}
+              />
             )}
+          </SheetContent>
+        </Sheet>
+
+        {/* Sheet de filtros modernos */}
+        <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+          <SheetContent className="w-full sm:max-w-2xl p-0 flex flex-col">
+            <SheetHeader className="flex-shrink-0 border-b bg-background px-6 py-4">
+              <SheetTitle className="text-lg font-semibold">Filtros Avanzados</SheetTitle>
+            </SheetHeader>
+            <div className="flex-1 overflow-y-auto px-6 py-6">
+              <EventoFiltersModern
+                filters={filters}
+                onFilterChange={handleFilterChange}
+                onClose={() => setFiltersOpen(false)}
+              />
+            </div>
           </SheetContent>
         </Sheet>
       </SidebarProvider>

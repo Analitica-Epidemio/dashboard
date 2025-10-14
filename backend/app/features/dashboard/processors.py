@@ -10,6 +10,11 @@ import pandas as pd
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.procesamiento_archivos.utils.epidemiological_calculations import (
+    obtener_fechas_semana_epidemiologica,
+    generar_metadata_semanas
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -43,14 +48,16 @@ class ChartDataProcessor:
         if filtros.get("grupo_id"):
             query += """
                 AND id_tipo_eno IN (
-                    SELECT id FROM tipo_eno WHERE id_grupo_eno = :grupo_id
+                    SELECT id_tipo_eno FROM tipo_eno_grupo_eno WHERE id_grupo_eno = :grupo_id
                 )
             """
             params["grupo_id"] = filtros["grupo_id"]
 
-        if filtros.get("evento_id"):
-            query += " AND id_tipo_eno = :evento_id"
-            params["evento_id"] = filtros["evento_id"]
+        if filtros.get("tipo_eno_ids"):
+            tipo_eno_ids = filtros["tipo_eno_ids"]
+            if tipo_eno_ids and len(tipo_eno_ids) > 0:
+                query += " AND id_tipo_eno = ANY(:tipo_eno_ids)"
+                params["tipo_eno_ids"] = tipo_eno_ids
 
         # Filtro por clasificación estrategia
         if filtros.get("clasificaciones"):
@@ -85,6 +92,51 @@ class ChartDataProcessor:
 
         return query
 
+    def _add_provincia_filter(self, query: str, filtros: Dict[str, Any], params: Dict[str, Any], table_alias: str = "d") -> tuple[str, Dict[str, Any]]:
+        """Helper para agregar filtro de provincia por código INDEC"""
+        provincia_id = filtros.get("provincia_id")
+
+        if provincia_id:
+            query += f" AND {table_alias}.id_provincia_indec = :provincia_id"
+            params["provincia_id"] = provincia_id
+            logger.debug(f"🔍 Filtro provincia aplicado: {provincia_id}")
+        else:
+            logger.debug(f"🌍 Sin filtro de provincia - datos de TODAS las provincias")
+
+        return query, params
+
+    def _generate_week_metadata_from_rows(self, rows: list) -> list:
+        """
+        Genera metadata de semanas epidemiológicas a partir de filas con (semana, año, ...)
+
+        Args:
+            rows: Lista de filas de query con formato (semana, año, ...)
+
+        Returns:
+            Lista de diccionarios con metadata de cada semana
+        """
+        if not rows:
+            return []
+
+        metadata = []
+        for row in rows:
+            semana = int(row[0])
+            año = int(row[1]) if len(row) > 1 and row[1] is not None else datetime.now().year
+
+            try:
+                start_date, end_date = obtener_fechas_semana_epidemiologica(año, semana)
+                metadata.append({
+                    "year": año,
+                    "week": semana,
+                    "start_date": start_date.strftime("%Y-%m-%d"),
+                    "end_date": end_date.strftime("%Y-%m-%d")
+                })
+            except Exception as e:
+                logger.warning(f"Error generando metadata para semana {semana}/{año}: {e}")
+                continue
+
+        return metadata
+
     async def process_chart(
         self, 
         chart_config: Any,
@@ -106,12 +158,12 @@ class ChartDataProcessor:
             "corredor_endemico": self.process_corredor_endemico,
             "piramide_poblacional": self.process_piramide_poblacional,
             "mapa_geografico": self.process_mapa_geografico,
-            "totales_historicos": self.process_totales_historicos,
-            "torta_sexo": self.process_torta_sexo,
+            "estacionalidad": self.process_estacionalidad,
             "casos_edad": self.process_casos_edad,
             "intento_suicidio": self.process_intento_suicidio,
             "rabia_animal": self.process_rabia_animal,
             "proporcion_ira": self.process_proporcion_ira,
+            "distribucion_clasificacion": self.process_distribucion_clasificacion,
         }
         
         processor_func = processor_map.get(chart_config.funcion_procesamiento)
@@ -145,54 +197,61 @@ class ChartDataProcessor:
         Basado en el sistema Chubut: casos por semana epidemiológica
         """
         # Construir query para obtener casos por semana epidemiológica
+        # IMPORTANTE: Incluir año epidemiológico para metadata correcta
         query = """
         SELECT
             e.semana_epidemiologica_apertura as semana,
+            e.anio_epidemiologico_apertura as año,
             COUNT(*) as casos
         FROM evento e
         LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
-        LEFT JOIN localidad l ON est.id_localidad_establecimiento = l.id_localidad_indec
+        LEFT JOIN localidad l ON est.id_localidad_indec = l.id_localidad_indec
         LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
         WHERE e.semana_epidemiologica_apertura IS NOT NULL
-            AND d.id_provincia_indec = 26
+            AND e.anio_epidemiologico_apertura IS NOT NULL
         """
-        
+
         params = {}
-        
+
+        # Filtro de provincia
+        query, params = self._add_provincia_filter(query, filtros, params, "d")
+
         # Aplicar filtros
         if filtros.get("grupo_id"):
             query += """
-                AND id_tipo_eno IN (
-                    SELECT id FROM tipo_eno WHERE id_grupo_eno = :grupo_id
+                AND e.id_tipo_eno IN (
+                    SELECT id_tipo_eno FROM tipo_eno_grupo_eno WHERE id_grupo_eno = :grupo_id
                 )
             """
             params["grupo_id"] = filtros["grupo_id"]
 
-        if filtros.get("evento_id"):
-            query += " AND id_tipo_eno = :evento_id"
-            params["evento_id"] = filtros["evento_id"]
+        if filtros.get("tipo_eno_ids"):
+            tipo_eno_ids = filtros["tipo_eno_ids"]
+            if tipo_eno_ids and len(tipo_eno_ids) > 0:
+                query += " AND e.id_tipo_eno = ANY(:tipo_eno_ids)"
+                params["tipo_eno_ids"] = tipo_eno_ids
 
         # Filtro por clasificación estrategia
-        query = self._add_classification_filter(query, filtros, params)
+        query = self._add_classification_filter(query, filtros, params, "e")
 
         if filtros.get("fecha_desde"):
-            query += " AND fecha_minima_evento >= :fecha_desde"
+            query += " AND e.fecha_minima_evento >= :fecha_desde"
             params["fecha_desde"] = self._parse_date(filtros["fecha_desde"])
 
         if filtros.get("fecha_hasta"):
-            query += " AND fecha_minima_evento <= :fecha_hasta"
+            query += " AND e.fecha_minima_evento <= :fecha_hasta"
             params["fecha_hasta"] = self._parse_date(filtros["fecha_hasta"])
-            
-        query += " GROUP BY semana ORDER BY semana"
-        
+
+        query += " GROUP BY semana, año ORDER BY año, semana"
+
         # Ejecutar query
         result = await self.db.execute(text(query), params)
         rows = result.fetchall()
-        
+
         logger.info(f"Curva epidemiológica - Filas encontradas: {len(rows)}")
         if rows and len(rows) > 0:
             logger.info(f"Curva epidemiológica - Primeras 3 filas: {rows[:3]}")
-        
+
         # Si no hay datos, retornar estructura vacía
         if not rows:
             return {
@@ -204,166 +263,282 @@ class ChartDataProcessor:
                         "data": [],
                         "borderColor": "rgb(75, 192, 192)",
                         "tension": 0.1
-                    }]
+                    }],
+                    "metadata": []
                 }
             }
-        
-        # Formatear para el frontend
+
+        # Generar metadata con fechas de inicio/fin
+        metadata = self._generate_week_metadata_from_rows(rows)
+
+        # Formatear para el frontend con labels mejorados
         return {
             "type": "line",
             "data": {
-                "labels": [f"Semana {int(row[0])}" for row in rows],
+                "labels": [f"SE {int(row[0])}/{int(row[1])}" for row in rows],
                 "datasets": [{
                     "label": "Casos",
-                    "data": [row[1] for row in rows],
+                    "data": [row[2] for row in rows],  # row[2] ahora es casos (antes era row[1])
                     "borderColor": "rgb(75, 192, 192)",
                     "tension": 0.1
-                }]
+                }],
+                "metadata": metadata
             }
         }
     
     async def process_corredor_endemico(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
         """
         Procesa datos para corredor endémico
-        Calcula percentiles basados en datos históricos
+        Calcula percentiles basados en datos históricos (últimos 5 años)
+        Muestra solo las semanas del rango de fechas seleccionado
         """
-        # Query para obtener datos históricos por semana
-        query = """
-        SELECT 
-            semana_epidemiologica_apertura as semana,
-            anio_epidemiologico_apertura as año,
-            COUNT(*) as casos
-        FROM evento
-        WHERE fecha_minima_evento >= CURRENT_DATE - INTERVAL '5 years'
-            AND semana_epidemiologica_apertura IS NOT NULL
-        """
-        
-        params = {}
-        
-        if filtros.get("grupo_id"):
-            query += """
-                AND id_tipo_eno IN (
-                    SELECT id FROM tipo_eno WHERE id_grupo_eno = :grupo_id
-                )
-            """
-            params["grupo_id"] = filtros["grupo_id"]
-            
-        if filtros.get("evento_id"):
-            query += " AND id_tipo_eno = :evento_id"
-            params["evento_id"] = filtros["evento_id"]
+        from app.features.procesamiento_archivos.utils.epidemiological_calculations import (
+            calcular_semana_epidemiologica
+        )
 
-        # Filtro por clasificación estrategia
-        query = self._add_classification_filter(query, filtros, params)
+        # Determinar rango de semanas a mostrar basado en filtros de fecha
+        fecha_desde = self._parse_date(filtros.get("fecha_desde")) if filtros.get("fecha_desde") else None
+        fecha_hasta = self._parse_date(filtros.get("fecha_hasta")) if filtros.get("fecha_hasta") else None
 
-        query += " GROUP BY semana, año ORDER BY semana, año"
-        
-        result = await self.db.execute(text(query), params)
-        rows = result.fetchall()
-        
-        if not rows:
-            # Retornar datos vacíos si no hay histórico
-            weeks = list(range(1, 53))
+        if not fecha_desde or not fecha_hasta:
             return {
                 "type": "area",
                 "data": {
-                    "labels": [f"S{w}" for w in weeks],
-                    "datasets": [
-                        {
-                            "label": "Máximo",
-                            "data": [0] * 52,
-                            "borderColor": "red",
-                            "backgroundColor": "rgba(255, 0, 0, 0.1)",
-                            "fill": "+1"
-                        },
-                        {
-                            "label": "Mediana",
-                            "data": [0] * 52,
-                            "borderColor": "orange",
-                            "backgroundColor": "rgba(255, 165, 0, 0.1)",
-                            "fill": False
-                        },
-                        {
-                            "label": "Mínimo",
-                            "data": [0] * 52,
-                            "borderColor": "green",
-                            "backgroundColor": "rgba(0, 255, 0, 0.1)",
-                            "fill": False
-                        }
-                    ]
+                    "labels": [],
+                    "datasets": [],
+                    "metadata": []
+                },
+                "error": {
+                    "code": "NO_DATE_RANGE",
+                    "title": "Rango de fechas requerido",
+                    "message": "Seleccione un período de tiempo para visualizar el corredor endémico.",
+                    "suggestion": "Configure las fechas desde y hasta en los filtros."
+                }
+            }
+
+        # Calcular semanas epidemiológicas del rango
+        semana_inicio, año_inicio = calcular_semana_epidemiologica(fecha_desde)
+        semana_fin, año_fin = calcular_semana_epidemiologica(fecha_hasta)
+
+        logger.info(f"Corredor endémico - Rango: SE {semana_inicio}/{año_inicio} - SE {semana_fin}/{año_fin}")
+
+        # Query para obtener datos históricos (últimos 5 años antes del rango)
+        query = """
+        SELECT
+            semana_epidemiologica_apertura as semana,
+            anio_epidemiologico_apertura as año,
+            COUNT(*) as casos
+        FROM evento e
+        WHERE fecha_minima_evento >= :fecha_historica_inicio
+            AND fecha_minima_evento < :fecha_desde
+            AND semana_epidemiologica_apertura IS NOT NULL
+            AND anio_epidemiologico_apertura IS NOT NULL
+        """
+
+        params = {
+            "fecha_desde": fecha_desde,
+            "fecha_historica_inicio": date(fecha_desde.year - 5, 1, 1)  # 5 años atrás
+        }
+
+        logger.info(f"Corredor endémico - DEBUG: fecha_desde={fecha_desde}, fecha_historica_inicio={params['fecha_historica_inicio']}")
+
+        if filtros.get("grupo_id"):
+            query += """
+                AND e.id_tipo_eno IN (
+                    SELECT id_tipo_eno FROM tipo_eno_grupo_eno WHERE id_grupo_eno = :grupo_id
+                )
+            """
+            params["grupo_id"] = filtros["grupo_id"]
+
+        if filtros.get("tipo_eno_ids"):
+            tipo_eno_ids = filtros["tipo_eno_ids"]
+            if tipo_eno_ids and len(tipo_eno_ids) > 0:
+                query += " AND e.id_tipo_eno = ANY(:tipo_eno_ids)"
+                params["tipo_eno_ids"] = tipo_eno_ids
+
+        # Filtro por clasificación estrategia
+        query = self._add_classification_filter(query, filtros, params, "e")
+
+        query += " GROUP BY semana, año ORDER BY semana, año"
+
+        result = await self.db.execute(text(query), params)
+        rows = result.fetchall()
+
+        logger.info(f"Corredor endémico - DEBUG: Registros históricos encontrados: {len(rows)}")
+        if rows:
+            logger.info(f"Corredor endémico - DEBUG: Primeros 5 registros: {rows[:5]}")
+
+        # Validar que hay suficientes datos históricos
+        if not rows or len(rows) < 10:  # Mínimo 10 registros históricos
+            return {
+                "type": "area",
+                "data": {
+                    "labels": [],
+                    "datasets": [],
+                    "metadata": []
+                },
+                "error": {
+                    "code": "INSUFFICIENT_HISTORICAL_DATA",
+                    "title": "Sin datos históricos",
+                    "message": f"Se requieren al menos 3 años de datos previos a {año_inicio} para calcular las referencias estadísticas del corredor endémico.",
+                    "details": {
+                        "selected_period": f"{año_inicio}-{año_fin}",
+                        "historical_search_range": f"{params['fecha_historica_inicio'].strftime('%Y')} - {fecha_desde.year - 1}",
+                        "records_found": len(rows) if rows else 0,
+                        "records_required": 10
+                    },
+                    "suggestion": f"Importe datos de al menos 3 años anteriores a {año_inicio} para habilitar este gráfico."
                 }
             }
         
         # Procesar datos para calcular percentiles
         df = pd.DataFrame(rows, columns=['semana', 'año', 'casos'])
-        
-        # Calcular percentiles por semana
+
+        logger.info(f"Corredor endémico - DEBUG: DataFrame shape: {df.shape}")
+        logger.info(f"Corredor endémico - DEBUG: DataFrame head:\n{df.head(10)}")
+
+        # Validar que tenemos al menos 3 años diferentes de datos
+        años_unicos = df['año'].nunique()
+        años_lista = sorted(df['año'].unique().tolist())
+        logger.info(f"Corredor endémico - Años únicos en histórico: {años_unicos}")
+        logger.info(f"Corredor endémico - DEBUG: Lista de años: {años_lista}")
+
+        if años_unicos < 3:
+            año_texto = "año" if años_unicos == 1 else "años"
+            return {
+                "type": "area",
+                "data": {
+                    "labels": [],
+                    "datasets": [],
+                    "metadata": []
+                },
+                "error": {
+                    "code": "INSUFFICIENT_HISTORICAL_YEARS",
+                    "title": "Datos históricos insuficientes",
+                    "message": f"Se necesitan al menos 3 años de datos previos a {año_inicio}. Solo hay {años_unicos} {año_texto} disponible{'s' if años_unicos > 1 else ''}: {', '.join(map(str, años_lista))}.",
+                    "details": {
+                        "selected_period": f"{año_inicio}-{año_fin}",
+                        "historical_search_range": f"{params['fecha_historica_inicio'].strftime('%Y')} - {fecha_desde.year - 1}",
+                        "years_found": años_lista,
+                        "years_count": años_unicos,
+                        "years_required": 3
+                    },
+                    "suggestion": f"Importe datos de al menos {3 - años_unicos} año{'s' if (3 - años_unicos) > 1 else ''} adicional{'es' if (3 - años_unicos) > 1 else ''} anterior{'es' if (3 - años_unicos) > 1 else ''} a {años_lista[0]}."
+                }
+            }
+
+        # Generar lista de semanas del rango seleccionado
+        weeks_in_range = []
+        if año_inicio == año_fin:
+            # Mismo año
+            weeks_in_range = list(range(semana_inicio, semana_fin + 1))
+        else:
+            # Múltiples años - para simplificar, mostrar todas las semanas
+            # TODO: Manejar rangos multi-año correctamente
+            weeks_in_range = list(range(1, 53))
+
+        logger.info(f"Corredor endémico - Semanas a mostrar: {len(weeks_in_range)} semanas")
+
+        # Calcular percentiles solo para las semanas en el rango
         percentiles = df.groupby('semana')['casos'].agg([
             ('minimo', lambda x: x.quantile(0.25)),
             ('mediana', lambda x: x.quantile(0.5)),
             ('maximo', lambda x: x.quantile(0.75))
         ]).reset_index()
+
+        # Filtrar percentiles para solo las semanas del rango
+        weeks_df = pd.DataFrame({'semana': weeks_in_range})
+        percentiles = weeks_df.merge(percentiles, on='semana', how='left').fillna(0)
         
-        # Asegurar que tenemos todas las semanas
-        all_weeks = pd.DataFrame({'semana': range(1, 53)})
-        percentiles = all_weeks.merge(percentiles, on='semana', how='left').fillna(0)
-        
-        # Obtener casos del año actual
-        current_year_query = """
-        SELECT 
+        # Obtener casos actuales para el período seleccionado
+        current_query = """
+        SELECT
             semana_epidemiologica_apertura as semana,
             COUNT(*) as casos
         FROM evento
-        WHERE anio_epidemiologico_apertura = EXTRACT(YEAR FROM CURRENT_DATE)
+        WHERE fecha_minima_evento >= :fecha_desde
+            AND fecha_minima_evento <= :fecha_hasta
+            AND semana_epidemiologica_apertura IS NOT NULL
         """
-        
+
+        current_params = {
+            "fecha_desde": fecha_desde,
+            "fecha_hasta": fecha_hasta
+        }
+
         if filtros.get("grupo_id"):
-            current_year_query += """
+            current_query += """
                 AND id_tipo_eno IN (
-                    SELECT id FROM tipo_eno WHERE id_grupo_eno = :grupo_id
+                    SELECT id_tipo_eno FROM tipo_eno_grupo_eno WHERE id_grupo_eno = :grupo_id
                 )
             """
-            
-        if filtros.get("evento_id"):
-            current_year_query += " AND id_tipo_eno = :evento_id"
+            current_params["grupo_id"] = filtros["grupo_id"]
+
+        if filtros.get("tipo_eno_ids"):
+            tipo_eno_ids = filtros["tipo_eno_ids"]
+            if tipo_eno_ids and len(tipo_eno_ids) > 0:
+                current_query += " AND id_tipo_eno = ANY(:tipo_eno_ids)"
+                current_params["tipo_eno_ids"] = tipo_eno_ids
 
         # Filtro por clasificación estrategia
-        current_year_query = self._add_classification_filter(current_year_query, filtros, params)
+        current_query = self._add_classification_filter(current_query, filtros, current_params)
 
-        current_year_query += " GROUP BY semana ORDER BY semana"
-        
-        current_result = await self.db.execute(text(current_year_query), params)
+        current_query += " GROUP BY semana ORDER BY semana"
+
+        current_result = await self.db.execute(text(current_query), current_params)
         current_rows = current_result.fetchall()
-        
+
         current_df = pd.DataFrame(current_rows, columns=['semana', 'casos']) if current_rows else pd.DataFrame()
-        
-        # Merge con todas las semanas
+
+        # Merge casos actuales con las semanas del rango
         if not current_df.empty:
-            current_data = all_weeks.merge(current_df, on='semana', how='left').fillna(0)
+            current_data = weeks_df.merge(current_df, on='semana', how='left').fillna(0)
             casos_actuales = current_data['casos'].tolist()
         else:
-            casos_actuales = [0] * 52
-        
+            casos_actuales = [0] * len(weeks_in_range)
+
+        # Generar metadata para las semanas del rango
+        metadata = []
+        for week in weeks_in_range:
+            try:
+                # Usar año correspondiente (año_inicio para simplificar, o año_fin si es multi-año)
+                year_for_week = año_inicio if año_inicio == año_fin else año_fin
+                start_date, end_date = obtener_fechas_semana_epidemiologica(year_for_week, week)
+                metadata.append({
+                    "year": year_for_week,
+                    "week": week,
+                    "start_date": start_date.strftime("%Y-%m-%d"),
+                    "end_date": end_date.strftime("%Y-%m-%d")
+                })
+            except Exception as e:
+                logger.warning(f"Error generando metadata para semana {week}/{year_for_week}: {e}")
+                continue
+
+        # Generar labels
+        year_label = año_inicio if año_inicio == año_fin else f"{año_inicio}-{año_fin}"
+        labels = [f"SE {int(week)}/{year_label}" for week in weeks_in_range]
+
         return {
             "type": "area",
             "data": {
-                "labels": [f"S{int(i)}" for i in range(1, 53)],
+                "labels": labels,
                 "datasets": [
                     {
-                        "label": "Máximo",
+                        "label": "Máximo (P75)",
                         "data": percentiles['maximo'].tolist(),
                         "borderColor": "red",
                         "backgroundColor": "rgba(255, 0, 0, 0.1)",
                         "fill": "+1"
                     },
                     {
-                        "label": "Mediana",
+                        "label": "Mediana (P50)",
                         "data": percentiles['mediana'].tolist(),
                         "borderColor": "orange",
                         "backgroundColor": "rgba(255, 165, 0, 0.1)",
                         "fill": False
                     },
                     {
-                        "label": "Mínimo",
+                        "label": "Mínimo (P25)",
                         "data": percentiles['minimo'].tolist(),
                         "borderColor": "green",
                         "backgroundColor": "rgba(0, 255, 0, 0.1)",
@@ -376,7 +551,8 @@ class ChartDataProcessor:
                         "type": "line",
                         "fill": False
                     }
-                ]
+                ],
+                "metadata": metadata
             }
         }
     
@@ -408,28 +584,41 @@ class ChartDataProcessor:
         FROM evento e
         LEFT JOIN ciudadano c ON e.codigo_ciudadano = c.codigo_ciudadano
         LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
-        LEFT JOIN localidad l ON est.id_localidad_establecimiento = l.id_localidad_indec
+        LEFT JOIN localidad l ON est.id_localidad_indec = l.id_localidad_indec
         LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
         WHERE e.edad_anos_al_momento_apertura IS NOT NULL
-            AND d.id_provincia_indec = 26
         """
-        
+
         params = {}
-        
+
+        # Filtro de provincia
+        query, params = self._add_provincia_filter(query, filtros, params, "d")
+
         if filtros.get("grupo_id"):
             query += """
                 AND e.id_tipo_eno IN (
-                    SELECT id FROM tipo_eno WHERE id_grupo_eno = :grupo_id
+                    SELECT id_tipo_eno FROM tipo_eno_grupo_eno WHERE id_grupo_eno = :grupo_id
                 )
             """
             params["grupo_id"] = filtros["grupo_id"]
-            
-        if filtros.get("evento_id"):
-            query += " AND e.id_tipo_eno = :evento_id"
-            params["evento_id"] = filtros["evento_id"]
+
+        if filtros.get("tipo_eno_ids"):
+            tipo_eno_ids = filtros["tipo_eno_ids"]
+            if tipo_eno_ids and len(tipo_eno_ids) > 0:
+                query += " AND e.id_tipo_eno = ANY(:tipo_eno_ids)"
+                params["tipo_eno_ids"] = tipo_eno_ids
 
         # Filtro por clasificación estrategia
         query = self._add_classification_filter(query, filtros, params, "e")
+
+        # CRÍTICO: Agregar filtros de fecha
+        if filtros.get("fecha_desde"):
+            query += " AND e.fecha_minima_evento >= :fecha_desde"
+            params["fecha_desde"] = self._parse_date(filtros["fecha_desde"])
+
+        if filtros.get("fecha_hasta"):
+            query += " AND e.fecha_minima_evento <= :fecha_hasta"
+            params["fecha_hasta"] = self._parse_date(filtros["fecha_hasta"])
 
         query += " GROUP BY grupo_edad, sexo ORDER BY grupo_edad"
         
@@ -501,27 +690,32 @@ class ChartDataProcessor:
         query = """
         SELECT
             COALESCE(d.id_departamento_indec, 0) as codigo_indec,
-            COUNT(*) as casos
+            COUNT(DISTINCT e.id) as casos
         FROM evento e
         LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
-        LEFT JOIN localidad l ON est.id_localidad_establecimiento = l.id_localidad_indec
+        LEFT JOIN localidad l ON est.id_localidad_indec = l.id_localidad_indec
         LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
-        WHERE d.id_provincia_indec = 26
+        WHERE 1=1
         """
 
-        params = {"provincia_id": 26}
+        params = {}
+
+        # Filtro de provincia
+        query, params = self._add_provincia_filter(query, filtros, params, "d")
 
         if filtros.get("grupo_id"):
             query += """
                 AND e.id_tipo_eno IN (
-                    SELECT id FROM tipo_eno WHERE id_grupo_eno = :grupo_id
+                    SELECT id_tipo_eno FROM tipo_eno_grupo_eno WHERE id_grupo_eno = :grupo_id
                 )
             """
             params["grupo_id"] = filtros["grupo_id"]
 
-        if filtros.get("evento_id"):
-            query += " AND e.id_tipo_eno = :evento_id"
-            params["evento_id"] = filtros["evento_id"]
+        if filtros.get("tipo_eno_ids"):
+            tipo_eno_ids = filtros["tipo_eno_ids"]
+            if tipo_eno_ids and len(tipo_eno_ids) > 0:
+                query += " AND e.id_tipo_eno = ANY(:tipo_eno_ids)"
+                params["tipo_eno_ids"] = tipo_eno_ids
 
         # Filtro por clasificación estrategia
         query = self._add_classification_filter(query, filtros, params, "e")
@@ -566,153 +760,112 @@ class ChartDataProcessor:
                 "tasa_incidencia": tasa_incidencia
             })
 
+        total_casos = sum(casos_por_departamento.values())
         logger.info(f"Mapa geográfico - Departamentos con casos: {len(casos_por_departamento)}")
+        logger.info(f"📊 Mapa geográfico - TOTAL CASOS: {total_casos}")
 
         return {
             "type": "mapa",
             "data": {
                 "departamentos": departamentos_data,
-                "total_casos": sum(casos_por_departamento.values())
+                "total_casos": total_casos
             }
         }
 
-    async def process_totales_historicos(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
+    async def process_estacionalidad(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Procesa datos para totales históricos por año - Solo Chubut
-        """
-        query = """
-        SELECT
-            e.anio_epidemiologico_apertura as año,
-            COUNT(*) as casos
-        FROM evento e
-        LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
-        LEFT JOIN localidad l ON est.id_localidad_establecimiento = l.id_localidad_indec
-        LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
-        WHERE e.anio_epidemiologico_apertura IS NOT NULL
-            AND d.id_provincia_indec = 26
-        """
-        
-        params = {}
-        
-        if filtros.get("grupo_id"):
-            query += """
-                AND id_tipo_eno IN (
-                    SELECT id FROM tipo_eno WHERE id_grupo_eno = :grupo_id
-                )
-            """
-            params["grupo_id"] = filtros["grupo_id"]
-            
-        if filtros.get("evento_id"):
-            query += " AND id_tipo_eno = :evento_id"
-            params["evento_id"] = filtros["evento_id"]
-
-        # Filtro por clasificación estrategia
-        query = self._add_classification_filter(query, filtros, params)
-
-        query += " GROUP BY año ORDER BY año"
-        
-        result = await self.db.execute(text(query), params)
-        rows = result.fetchall()
-        
-        if not rows:
-            return {
-                "type": "bar",
-                "data": {
-                    "labels": [],
-                    "datasets": [{
-                        "label": "Casos totales",
-                        "data": [],
-                        "backgroundColor": "rgba(75, 192, 192, 0.5)"
-                    }]
-                }
-            }
-        
-        return {
-            "type": "bar",
-            "data": {
-                "labels": [int(row[0]) for row in rows],
-                "datasets": [{
-                    "label": "Casos totales",
-                    "data": [row[1] for row in rows],
-                    "backgroundColor": "rgba(75, 192, 192, 0.5)"
-                }]
-            }
-        }
-    
-    async def process_torta_sexo(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Procesa datos para distribución por sexo - Solo Chubut
+        Procesa datos para estacionalidad mensual - Solo Chubut
+        Muestra la distribución de casos por mes del año
         """
         query = """
         SELECT
-            CASE
-                WHEN c.sexo_biologico = 'MASCULINO' THEN 'Masculino'
-                WHEN c.sexo_biologico = 'FEMENINO' THEN 'Femenino'
-                WHEN c.sexo_biologico = 'NO_ESPECIFICADO' THEN 'No especificado'
-                ELSE 'Sin datos'
-            END as sexo,
+            EXTRACT(MONTH FROM e.fecha_minima_evento) as mes,
             COUNT(*) as casos
         FROM evento e
-        LEFT JOIN ciudadano c ON e.codigo_ciudadano = c.codigo_ciudadano
         LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
-        LEFT JOIN localidad l ON est.id_localidad_establecimiento = l.id_localidad_indec
+        LEFT JOIN localidad l ON est.id_localidad_indec = l.id_localidad_indec
         LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
-        WHERE d.id_provincia_indec = 26
+        WHERE e.fecha_minima_evento IS NOT NULL
         """
-        
+
         params = {}
-        
+
+        # Filtro de provincia (Chubut si está activado)
+        query, params = self._add_provincia_filter(query, filtros, params, "d")
+
         if filtros.get("grupo_id"):
             query += """
                 AND e.id_tipo_eno IN (
-                    SELECT id FROM tipo_eno WHERE id_grupo_eno = :grupo_id
+                    SELECT id_tipo_eno FROM tipo_eno_grupo_eno WHERE id_grupo_eno = :grupo_id
                 )
             """
             params["grupo_id"] = filtros["grupo_id"]
-            
-        if filtros.get("evento_id"):
-            query += " AND e.id_tipo_eno = :evento_id"
-            params["evento_id"] = filtros["evento_id"]
+
+        if filtros.get("tipo_eno_ids"):
+            tipo_eno_ids = filtros["tipo_eno_ids"]
+            if tipo_eno_ids and len(tipo_eno_ids) > 0:
+                query += " AND e.id_tipo_eno = ANY(:tipo_eno_ids)"
+                params["tipo_eno_ids"] = tipo_eno_ids
 
         # Filtro por clasificación estrategia
         query = self._add_classification_filter(query, filtros, params, "e")
 
-        query += " GROUP BY sexo"
-        
+        # Filtros de fecha
+        if filtros.get("fecha_desde"):
+            query += " AND e.fecha_minima_evento >= :fecha_desde"
+            params["fecha_desde"] = self._parse_date(filtros["fecha_desde"])
+
+        if filtros.get("fecha_hasta"):
+            query += " AND e.fecha_minima_evento <= :fecha_hasta"
+            params["fecha_hasta"] = self._parse_date(filtros["fecha_hasta"])
+
+        query += " GROUP BY mes ORDER BY mes"
+
         result = await self.db.execute(text(query), params)
         rows = result.fetchall()
-        
-        logger.info(f"Torta sexo - Filas encontradas: {len(rows)}")
-        if rows and len(rows) > 0:
-            logger.info(f"Torta sexo - Datos: {rows}")
-        
+
+        logger.info(f"Estacionalidad - Filas encontradas: {len(rows)}")
+
+        # Nombres de meses en español
+        meses_nombres = [
+            "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+        ]
+
+        # Crear diccionario con todos los meses (inicializar en 0)
+        casos_por_mes = {i: 0 for i in range(1, 13)}
+
+        # Llenar con los datos obtenidos
+        for row in rows:
+            mes = int(row[0]) if row[0] else 0
+            if 1 <= mes <= 12:
+                casos_por_mes[mes] = row[1]
+
         if not rows:
             return {
-                "type": "pie",
+                "type": "bar",
                 "data": {
-                    "labels": ["Sin datos"],
+                    "labels": meses_nombres,
                     "datasets": [{
-                        "data": [1],
-                        "backgroundColor": ["rgba(200, 200, 200, 0.5)"]
+                        "label": "Casos por mes",
+                        "data": [0] * 12,
+                        "backgroundColor": "rgba(54, 162, 235, 0.5)"
                     }]
                 }
             }
-        
+
         return {
-            "type": "pie",
+            "type": "bar",
             "data": {
-                "labels": [row[0] for row in rows],
+                "labels": meses_nombres,
                 "datasets": [{
-                    "data": [row[1] for row in rows],
-                    "backgroundColor": [
-                        "rgba(54, 162, 235, 0.5)",
-                        "rgba(255, 99, 132, 0.5)",
-                        "rgba(75, 192, 192, 0.5)"
-                    ]
+                    "label": "Casos por mes",
+                    "data": [casos_por_mes[i] for i in range(1, 13)],
+                    "backgroundColor": "rgba(54, 162, 235, 0.5)"
                 }]
             }
         }
-    
+
     async def process_casos_edad(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
         """
         Procesa datos para casos por grupos de edad - Solo Chubut
@@ -736,25 +889,42 @@ class ChartDataProcessor:
         FROM evento e
         LEFT JOIN ciudadano c ON e.codigo_ciudadano = c.codigo_ciudadano
         LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
-        LEFT JOIN localidad l ON est.id_localidad_establecimiento = l.id_localidad_indec
+        LEFT JOIN localidad l ON est.id_localidad_indec = l.id_localidad_indec
         LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
-        WHERE d.id_provincia_indec = 26
+        WHERE 1=1
         """
-        
+
         params = {}
-        
+
+        # Filtro de provincia (Chubut si está activado)
+        query, params = self._add_provincia_filter(query, filtros, params, "d")
+
         if filtros.get("grupo_id"):
             query += """
                 AND e.id_tipo_eno IN (
-                    SELECT id FROM tipo_eno WHERE id_grupo_eno = :grupo_id
+                    SELECT id_tipo_eno FROM tipo_eno_grupo_eno WHERE id_grupo_eno = :grupo_id
                 )
             """
             params["grupo_id"] = filtros["grupo_id"]
-            
-        if filtros.get("evento_id"):
-            query += " AND e.id_tipo_eno = :evento_id"
-            params["evento_id"] = filtros["evento_id"]
-            
+
+        if filtros.get("tipo_eno_ids"):
+            tipo_eno_ids = filtros["tipo_eno_ids"]
+            if tipo_eno_ids and len(tipo_eno_ids) > 0:
+                query += " AND e.id_tipo_eno = ANY(:tipo_eno_ids)"
+                params["tipo_eno_ids"] = tipo_eno_ids
+
+        # Filtro por clasificación estrategia
+        query = self._add_classification_filter(query, filtros, params, "e")
+
+        # CRÍTICO: Agregar filtros de fecha
+        if filtros.get("fecha_desde"):
+            query += " AND e.fecha_minima_evento >= :fecha_desde"
+            params["fecha_desde"] = self._parse_date(filtros["fecha_desde"])
+
+        if filtros.get("fecha_hasta"):
+            query += " AND e.fecha_minima_evento <= :fecha_hasta"
+            params["fecha_hasta"] = self._parse_date(filtros["fecha_hasta"])
+
         query += " GROUP BY grupo_edad ORDER BY MIN(e.edad_anos_al_momento_apertura)"
         
         result = await self.db.execute(text(query), params)
@@ -807,11 +977,22 @@ class ChartDataProcessor:
         """
         
         params = {}
-        
-        if filtros.get("evento_id"):
-            query += " AND e.id_tipo_eno = :evento_id"
-            params["evento_id"] = filtros["evento_id"]
-            
+
+        if filtros.get("tipo_eno_ids"):
+            tipo_eno_ids = filtros["tipo_eno_ids"]
+            if tipo_eno_ids and len(tipo_eno_ids) > 0:
+                query += " AND e.id_tipo_eno = ANY(:tipo_eno_ids)"
+                params["tipo_eno_ids"] = tipo_eno_ids
+
+        # CRÍTICO: Agregar filtros de fecha
+        if filtros.get("fecha_desde"):
+            query += " AND e.fecha_minima_evento >= :fecha_desde"
+            params["fecha_desde"] = self._parse_date(filtros["fecha_desde"])
+
+        if filtros.get("fecha_hasta"):
+            query += " AND e.fecha_minima_evento <= :fecha_hasta"
+            params["fecha_hasta"] = self._parse_date(filtros["fecha_hasta"])
+
         query += " GROUP BY categoria"
         
         result = await self.db.execute(text(query), params)
@@ -860,11 +1041,22 @@ class ChartDataProcessor:
         """
         
         params = {}
-        
-        if filtros.get("evento_id"):
-            query += " AND e.id_tipo_eno = :evento_id"
-            params["evento_id"] = filtros["evento_id"]
-            
+
+        if filtros.get("tipo_eno_ids"):
+            tipo_eno_ids = filtros["tipo_eno_ids"]
+            if tipo_eno_ids and len(tipo_eno_ids) > 0:
+                query += " AND e.id_tipo_eno = ANY(:tipo_eno_ids)"
+                params["tipo_eno_ids"] = tipo_eno_ids
+
+        # CRÍTICO: Agregar filtros de fecha
+        if filtros.get("fecha_desde"):
+            query += " AND e.fecha_minima_evento >= :fecha_desde"
+            params["fecha_desde"] = self._parse_date(filtros["fecha_desde"])
+
+        if filtros.get("fecha_hasta"):
+            query += " AND e.fecha_minima_evento <= :fecha_hasta"
+            params["fecha_hasta"] = self._parse_date(filtros["fecha_hasta"])
+
         query += " GROUP BY especie"
         
         result = await self.db.execute(text(query), params)
@@ -906,8 +1098,8 @@ class ChartDataProcessor:
         Basado en unidades centinela
         """
         query = """
-        SELECT 
-            CASE 
+        SELECT
+            CASE
                 WHEN LOWER(t.nombre) LIKE '%ira%' OR LOWER(t.nombre) LIKE '%respiratoria%' THEN 'IRA'
                 WHEN LOWER(t.nombre) LIKE '%irag%' OR LOWER(t.nombre) LIKE '%grave%' THEN 'IRAG'
                 WHEN LOWER(t.nombre) LIKE '%neumonia%' THEN 'Neumonía'
@@ -917,21 +1109,24 @@ class ChartDataProcessor:
             COUNT(*) as casos
         FROM evento e
         JOIN tipo_eno t ON e.id_tipo_eno = t.id
-        JOIN grupo_eno g ON t.id_grupo_eno = g.id
-        WHERE LOWER(g.nombre) LIKE '%respiratoria%' 
-           OR LOWER(t.nombre) LIKE '%ira%' 
+        JOIN tipo_eno_grupo_eno tge ON t.id = tge.id_tipo_eno
+        JOIN grupo_eno g ON tge.id_grupo_eno = g.id
+        WHERE LOWER(g.nombre) LIKE '%respiratoria%'
+           OR LOWER(t.nombre) LIKE '%ira%'
            OR LOWER(t.nombre) LIKE '%respiratoria%'
         """
-        
+
         params = {}
-        
+
         if filtros.get("grupo_id"):
-            query += " AND t.id_grupo_eno = :grupo_id"
+            query += " AND tge.id_grupo_eno = :grupo_id"
             params["grupo_id"] = filtros["grupo_id"]
             
-        if filtros.get("evento_id"):
-            query += " AND e.id_tipo_eno = :evento_id"
-            params["evento_id"] = filtros["evento_id"]
+        if filtros.get("tipo_eno_ids"):
+            tipo_eno_ids = filtros["tipo_eno_ids"]
+            if tipo_eno_ids and len(tipo_eno_ids) > 0:
+                query += " AND e.id_tipo_eno = ANY(:tipo_eno_ids)"
+                params["tipo_eno_ids"] = tipo_eno_ids
             
         if filtros.get("fecha_desde"):
             query += " AND e.fecha_minima_evento >= :fecha_desde"
@@ -989,6 +1184,128 @@ class ChartDataProcessor:
                         "porcentaje": round((row[1] / total_casos) * 100, 2) if total_casos > 0 else 0
                     }
                     for row in rows
+                ]
+            }
+        }
+
+    async def process_distribucion_clasificacion(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Procesa datos para distribución por clasificación estratégica - Solo Chubut
+        Muestra casos por tipo de clasificación (CONFIRMADOS, PROBABLES, SOSPECHOSOS, etc.)
+        """
+        query = """
+        SELECT
+            COALESCE(e.clasificacion_estrategia, 'SIN_CLASIFICAR') as clasificacion,
+            COUNT(DISTINCT e.id) as casos
+        FROM evento e
+        LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
+        LEFT JOIN localidad l ON est.id_localidad_indec = l.id_localidad_indec
+        LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
+        WHERE 1=1
+        """
+
+        params = {}
+
+        # Filtro de provincia (Chubut si está activado)
+        query, params = self._add_provincia_filter(query, filtros, params, "d")
+
+        if filtros.get("grupo_id"):
+            query += """
+                AND e.id_tipo_eno IN (
+                    SELECT id_tipo_eno FROM tipo_eno_grupo_eno WHERE id_grupo_eno = :grupo_id
+                )
+            """
+            params["grupo_id"] = filtros["grupo_id"]
+
+        if filtros.get("tipo_eno_ids"):
+            tipo_eno_ids = filtros["tipo_eno_ids"]
+            if tipo_eno_ids and len(tipo_eno_ids) > 0:
+                query += " AND e.id_tipo_eno = ANY(:tipo_eno_ids)"
+                params["tipo_eno_ids"] = tipo_eno_ids
+
+        # Filtro por clasificaciones (usar helper consistente)
+        query = self._add_classification_filter(query, filtros, params, table_alias="e")
+
+        # Filtros de fecha
+        if filtros.get("fecha_desde"):
+            query += " AND e.fecha_minima_evento >= :fecha_desde"
+            params["fecha_desde"] = self._parse_date(filtros["fecha_desde"])
+
+        if filtros.get("fecha_hasta"):
+            query += " AND e.fecha_minima_evento <= :fecha_hasta"
+            params["fecha_hasta"] = self._parse_date(filtros["fecha_hasta"])
+
+        query += " GROUP BY clasificacion ORDER BY casos DESC"
+
+        result = await self.db.execute(text(query), params)
+        rows = result.fetchall()
+
+        logger.info(f"Distribución clasificación - Filas encontradas: {len(rows)}")
+        if rows and len(rows) > 0:
+            logger.info(f"Distribución clasificación - Datos: {rows}")
+
+        if not rows:
+            return {
+                "type": "pie",
+                "data": {
+                    "labels": ["Sin datos"],
+                    "datasets": [{
+                        "data": [1],
+                        "backgroundColor": ["rgba(200, 200, 200, 0.5)"]
+                    }]
+                }
+            }
+
+        # Mapeo de colores por clasificación
+        color_map = {
+            "CONFIRMADOS": "rgba(76, 175, 80, 0.7)",      # Verde
+            "PROBABLES": "rgba(255, 193, 7, 0.7)",        # Amarillo
+            "SOSPECHOSOS": "rgba(255, 152, 0, 0.7)",      # Naranja
+            "EN_ESTUDIO": "rgba(33, 150, 243, 0.7)",      # Azul
+            "NEGATIVOS": "rgba(158, 158, 158, 0.7)",      # Gris
+            "DESCARTADOS": "rgba(189, 189, 189, 0.7)",    # Gris claro
+            "NOTIFICADOS": "rgba(3, 169, 244, 0.7)",      # Celeste
+            "CON_RESULTADO_MORTAL": "rgba(244, 67, 54, 0.7)",   # Rojo oscuro
+            "SIN_RESULTADO_MORTAL": "rgba(139, 195, 74, 0.7)",  # Verde claro
+            "REQUIERE_REVISION": "rgba(156, 39, 176, 0.7)",     # Púrpura
+            "SIN_CLASIFICAR": "rgba(224, 224, 224, 0.7)",       # Gris muy claro
+        }
+
+        # Preparar datos con colores apropiados
+        labels = []
+        data = []
+        colors = []
+
+        for row in rows:
+            clasificacion = row[0]
+            casos = row[1]
+
+            # Formatear label para mostrar
+            label_formateado = clasificacion.replace("_", " ").title()
+            labels.append(label_formateado)
+            data.append(casos)
+            colors.append(color_map.get(clasificacion, "rgba(158, 158, 158, 0.7)"))
+
+        total_casos = sum(data)
+
+        return {
+            "type": "pie",
+            "data": {
+                "labels": labels,
+                "datasets": [{
+                    "data": data,
+                    "backgroundColor": colors
+                }]
+            },
+            "metadata": {
+                "total_casos": total_casos,
+                "proporciones": [
+                    {
+                        "clasificacion": labels[i],
+                        "casos": data[i],
+                        "porcentaje": round((data[i] / total_casos) * 100, 2) if total_casos > 0 else 0
+                    }
+                    for i in range(len(labels))
                 ]
             }
         }

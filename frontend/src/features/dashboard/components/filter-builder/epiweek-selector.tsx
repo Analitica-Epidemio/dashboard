@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getEpiWeek, epiWeekToDates } from './epiweek-utils'; // Asegurate de tener esta función
 import { ChevronRight, ChevronLeft, ChevronFirst, ChevronLast } from 'lucide-react';
 
@@ -11,7 +11,7 @@ function getCalendarWeeks(year: number, month: number) {
   startDate.setDate(startOfMonth.getDate() - startOfMonth.getDay());
 
   const weeks: Date[][] = [];
-  let current = new Date(startDate);
+  const current = new Date(startDate);
 
   while (current <= endOfMonth || weeks.length < 6) {
     const week: Date[] = [];
@@ -37,24 +37,26 @@ interface EpiCalendarProps {
   selectingEnd?: boolean;
 }
 
-export default function EpiCalendar({ onWeekSelect }: EpiCalendarProps) {
+export default function EpiCalendar({ onWeekSelect, selectedStart, selectedEnd, selectingEnd }: EpiCalendarProps) {
 	const today = new Date();
-	const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-	const [selectedWeek, setSelectedWeek] = useState<{ startDate: Date; endDate: Date } | null>(null);
-	const [currentYear, setCurrentYear] = useState(today.getFullYear());
-	const [currentMonth, setCurrentMonth] = useState(today.getMonth());
+
+	// Inicializar en el mes de la fecha seleccionada relevante
+	const initialDate = selectingEnd ? (selectedEnd?.startDate || today) : (selectedStart?.startDate || today);
+	const [currentYear, setCurrentYear] = useState(initialDate.getFullYear());
+	const [currentMonth, setCurrentMonth] = useState(initialDate.getMonth());
+
+	// Actualizar el mes mostrado cuando cambian las selecciones
+	useEffect(() => {
+		const relevantDate = selectingEnd ? selectedEnd?.startDate : selectedStart?.startDate;
+		if (relevantDate) {
+			setCurrentYear(relevantDate.getFullYear());
+			setCurrentMonth(relevantDate.getMonth());
+		}
+	}, [selectedStart, selectedEnd, selectingEnd]);
 
 	const weeks = getCalendarWeeks(currentYear, currentMonth);
 
-
 	const handleSelect = (date: Date) => {
-		console.log(date.toDateString());
-		setSelectedDate(date);
-		const epiWeek = getEpiWeek(date);
-		console.log(epiWeek);
-		const rango = epiWeekToDates(epiWeek.year, epiWeek.week);
-		console.log(rango)
-		setSelectedWeek({startDate: rango.start, endDate: rango.end});
 		onWeekSelect?.(date);
 	};
 		
@@ -85,30 +87,58 @@ export default function EpiCalendar({ onWeekSelect }: EpiCalendarProps) {
   };
 
   return (
-    <div style={{ display: 'inline-block', fontFamily: 'sans-serif' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-		 <button onClick={goToPrevYear} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-			<ChevronFirst size={20}/>
-		 </button>
-        <button onClick={goToPrevMonth} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-			<ChevronLeft size={20}/>
+    <div className="w-full">
+      {/* Header con navegación */}
+      <div className="flex items-center justify-between mb-4">
+        <button
+          onClick={goToPrevYear}
+          className="p-1.5 hover:bg-accent rounded-md transition-colors"
+          aria-label="Año anterior"
+        >
+          <ChevronFirst className="h-4 w-4 text-muted-foreground" />
         </button>
-        <h3 style={{ margin: 0 }}>
+        <button
+          onClick={goToPrevMonth}
+          className="p-1.5 hover:bg-accent rounded-md transition-colors"
+          aria-label="Mes anterior"
+        >
+          <ChevronLeft className="h-4 w-4 text-muted-foreground" />
+        </button>
+        <h3 className="text-sm font-semibold text-foreground min-w-[140px] text-center">
           {MONTH_NAMES[currentMonth]} {currentYear}
         </h3>
-        <button onClick={goToNextMonth} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-			<ChevronRight size={20}/>
+        <button
+          onClick={goToNextMonth}
+          className="p-1.5 hover:bg-accent rounded-md transition-colors"
+          aria-label="Mes siguiente"
+        >
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
         </button>
-        <button onClick={goToNextYear} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-			<ChevronLast size={20}/>
+        <button
+          onClick={goToNextYear}
+          className="p-1.5 hover:bg-accent rounded-md transition-colors"
+          aria-label="Año siguiente"
+        >
+          <ChevronLast className="h-4 w-4 text-muted-foreground" />
         </button>
       </div>
-      <table style={{ borderCollapse: 'collapse' }}>
+
+      {/* Tabla del calendario */}
+      <table className="w-full border-collapse">
         <thead>
           <tr>
-            <th style={{ padding: '4px' }}>SE</th>
-            {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map((day) => (
-              <th key={day} style={{ padding: '4px', textAlign: 'center' }}>{day}</th>
+            <th className="p-2 text-xs font-medium text-muted-foreground bg-muted/50 rounded-tl-md">
+              SE
+            </th>
+            {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map((day, idx) => (
+              <th
+                key={day}
+                className={`p-2 text-xs font-medium text-muted-foreground bg-muted/50 text-center ${
+                  idx === 6 ? 'rounded-tr-md' : ''
+                }`}
+              >
+                {day}
+              </th>
             ))}
           </tr>
         </thead>
@@ -117,28 +147,57 @@ export default function EpiCalendar({ onWeekSelect }: EpiCalendarProps) {
             const epiWeek = getEpiWeek(week[0]).week;
             return (
               <tr key={wIdx}>
-                <td style={{ padding: '4px', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#f0f0f0' }}>
+                <td className="p-2 text-xs font-semibold text-center bg-muted/30 text-muted-foreground border-r border-border">
                   {epiWeek}
                 </td>
                 {week.map((date, dIdx) => {
                   const isCurrentMonth = date.getMonth() === currentMonth;
-                  const isSelected = selectedDate?.toDateString() === date.toDateString();
-                  const isInSelectedWeek = selectedWeek && date >= selectedWeek.startDate && date <= selectedWeek.endDate;
+                  const isToday = date.toDateString() === today.toDateString();
+
+                  // Determinar si está en el rango seleccionado
+                  const isInRange = selectedStart && selectedEnd &&
+                    date >= selectedStart.startDate && date <= selectedEnd.endDate;
+
+                  // Determinar si es el inicio o fin del rango
+                  const isStartWeek = selectedStart &&
+                    date >= selectedStart.startDate && date <= selectedStart.endDate;
+                  const isEndWeek = selectedEnd &&
+                    date >= selectedEnd.startDate && date <= selectedEnd.endDate;
+
+                  // Clases base
+                  let cellClasses = 'p-2 text-center cursor-pointer transition-all border border-border';
+
+                  // Semanas de inicio/fin (máxima prioridad)
+                  if (isStartWeek || isEndWeek) {
+                    cellClasses += ' bg-primary text-primary-foreground font-bold ring-2 ring-primary ring-inset hover:bg-primary/90';
+                  }
+                  // Rango entre fechas
+                  else if (isInRange) {
+                    cellClasses += ' bg-primary/10 hover:bg-accent hover:text-accent-foreground';
+                  }
+                  // Día de hoy
+                  else if (isToday) {
+                    cellClasses += ' font-semibold text-primary hover:bg-accent hover:text-accent-foreground';
+                  }
+                  // Días normales
+                  else {
+                    cellClasses += ' hover:bg-accent hover:text-accent-foreground';
+                  }
+
+                  // Color para días fuera del mes
+                  if (!isCurrentMonth && !isStartWeek && !isEndWeek) {
+                    cellClasses += ' text-muted-foreground bg-muted/20';
+                  }
+
                   return (
                     <td
                       key={dIdx}
                       onClick={() => handleSelect(date)}
-                      style={{
-                        padding: '8px',
-                        textAlign: 'center',
-                        backgroundColor: isInSelectedWeek ? "#d0eaff" : isCurrentMonth ? "#fff" : "#eee",
-                        cursor: 'pointer',
-                        border: '1px solid #ccc',
-                        width: '40px',
-                        height: '40px'
-                      }}
+                      className={cellClasses}
                     >
-                      {date.getDate()}
+                      <div className="w-8 h-8 flex items-center justify-center text-sm mx-auto">
+                        {date.getDate()}
+                      </div>
                     </td>
                   );
                 })}

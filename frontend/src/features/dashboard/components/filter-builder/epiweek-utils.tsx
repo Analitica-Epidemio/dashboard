@@ -12,7 +12,7 @@ export function getEpiWeek(date: Date): { year: number; week: number } {
   const year = date.getFullYear();
 
   // buscar primer jueves de enero
-  let firstThursday = new Date(year, 0, 1);
+  const firstThursday = new Date(year, 0, 1);
   while (firstThursday.getDay() !== 4) {
     firstThursday.setDate(firstThursday.getDate() + 1);
   }
@@ -20,7 +20,7 @@ export function getEpiWeek(date: Date): { year: number; week: number } {
   se1Start.setDate(se1Start.getDate() - firstThursday.getDay()); // domingo anterior
 
   // buscar primer jueves del año siguiente
-  let nextFirstThursday = new Date(year + 1, 0, 1);
+  const nextFirstThursday = new Date(year + 1, 0, 1);
   while (nextFirstThursday.getDay() !== 4) {
     nextFirstThursday.setDate(nextFirstThursday.getDate() + 1);
   }
@@ -38,7 +38,7 @@ export function getEpiWeek(date: Date): { year: number; week: number } {
   }
 
   // calcular semanas
-  let weekStart = new Date(se1Start);
+  const weekStart = new Date(se1Start);
   let week = 1;
 
   while (weekStart < nextSe1Start) {
@@ -63,7 +63,7 @@ export function getEpiWeek(date: Date): { year: number; week: number } {
  */
 export function epiWeekToDates(year: number, week: number): { start: Date; end: Date } {
   // Buscar primer jueves de enero
-  let firstThursday = new Date(year, 0, 1);
+  const firstThursday = new Date(year, 0, 1);
   while (firstThursday.getDay() !== 4) {
     firstThursday.setDate(firstThursday.getDate() + 1);
   }

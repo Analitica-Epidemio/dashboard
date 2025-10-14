@@ -86,6 +86,15 @@ class Settings(BaseSettings):
     PAGINATION_MAX_PAGE_SIZE: int = 200
 
     # =============================================================================
+    # CONFIGURACIÓN DE GEOCODIFICACIÓN
+    # =============================================================================
+    ENABLE_GEOCODING: bool = False
+    MAPBOX_ACCESS_TOKEN: str = ""
+    GEOCODING_PROVIDER: str = "mapbox"
+    GEOCODING_RATE_LIMIT: int = 600
+    GEOCODING_TIMEOUT: int = 5
+
+    # =============================================================================
     # CONFIGURACIÓN DE DESARROLLO
     # =============================================================================
     ENABLE_DOCS: bool = True

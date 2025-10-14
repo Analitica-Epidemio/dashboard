@@ -19,6 +19,15 @@ export interface FilterCombination {
   color?: string;
 }
 
+export interface DraftFilter {
+  groupId: string | null;
+  groupName?: string;
+  eventIds: number[];
+  eventNames?: string[];
+  clasificaciones?: TipoClasificacion[];
+  label?: string;
+}
+
 export interface DateRange {
   from: Date | null;
   to: Date | null;
@@ -29,12 +38,27 @@ interface FilterContextType {
   dateRange: DateRange;
   setDateRange: (range: DateRange) => void;
 
+  // Province Filter
+  soloChubutEnabled: boolean;
+  setSoloChubutEnabled: (enabled: boolean) => void;
+
   // Filter Combinations
   filterCombinations: FilterCombination[];
   addFilterCombination: (combination: Omit<FilterCombination, "id">) => void;
+  updateFilterCombination: (id: string, combination: Omit<FilterCombination, "id">) => void;
   removeFilterCombination: (id: string) => void;
   duplicateFilterCombination: (id: string) => void;
   clearFilterCombinations: () => void;
+
+  // Editing state
+  editingCombinationId: string | null;
+  startEditingCombination: (id: string) => void;
+  cancelEditing: () => void;
+  getEditingCombination: () => FilterCombination | null;
+
+  // Draft filter (preview en vivo)
+  draftFilter: DraftFilter | null;
+  setDraftFilter: (filter: DraftFilter | null) => void;
 
   // Data from hooks
   groups: Group[];
@@ -43,6 +67,12 @@ interface FilterContextType {
   allEvents: Event[];
   allEventsLoading: boolean;
   allEventsError: QueryError;
+
+  // Events filtered by selected group
+  availableEvents: Event[];
+  eventsLoading: boolean;
+  eventsError: QueryError;
+  setSelectedGroup: (groupId: string | null) => void;
 
   // View state
   isComparisonView: boolean;
@@ -72,10 +102,14 @@ export function FilterProvider({ children }: FilterProviderProps) {
     to: new Date(2025, 11, 31),
   });
 
+  const [soloChubutEnabled, setSoloChubutEnabled] = useState(true); // Default to Chubut only
+
   const [filterCombinations, setFilterCombinations] = useState<
     FilterCombination[]
   >([]);
   const [isComparisonView, setIsComparisonView] = useState(false);
+  const [editingCombinationId, setEditingCombinationId] = useState<string | null>(null);
+  const [draftFilter, setDraftFilter] = useState<DraftFilter | null>(null);
 
   const addFilterCombination = (combination: Omit<FilterCombination, "id">) => {
     const newCombination: FilterCombination = {
@@ -89,8 +123,19 @@ export function FilterProvider({ children }: FilterProviderProps) {
     setFilterCombinations((prev: FilterCombination[]) => [...prev, newCombination]);
   };
 
+  const updateFilterCombination = (id: string, combination: Omit<FilterCombination, "id">) => {
+    setFilterCombinations((prev: FilterCombination[]) =>
+      prev.map((f) => (f.id === id ? { ...combination, id, color: f.color } : f))
+    );
+    setEditingCombinationId(null);
+  };
+
   const removeFilterCombination = (id: string) => {
     setFilterCombinations((prev: FilterCombination[]) => prev.filter((f) => f.id !== id));
+    // Si estamos editando esta combinación, cancelar la edición
+    if (editingCombinationId === id) {
+      setEditingCombinationId(null);
+    }
   };
 
   const duplicateFilterCombination = (id: string) => {
@@ -105,6 +150,20 @@ export function FilterProvider({ children }: FilterProviderProps) {
 
   const clearFilterCombinations = () => {
     setFilterCombinations([]);
+    setEditingCombinationId(null);
+  };
+
+  const startEditingCombination = (id: string) => {
+    setEditingCombinationId(id);
+  };
+
+  const cancelEditing = () => {
+    setEditingCombinationId(null);
+  };
+
+  const getEditingCombination = (): FilterCombination | null => {
+    if (!editingCombinationId) return null;
+    return filterCombinations.find((f) => f.id === editingCombinationId) ?? null;
   };
 
   return (
@@ -112,17 +171,31 @@ export function FilterProvider({ children }: FilterProviderProps) {
       value={{
         dateRange,
         setDateRange,
+        soloChubutEnabled,
+        setSoloChubutEnabled,
         filterCombinations,
         addFilterCombination,
+        updateFilterCombination,
         removeFilterCombination,
         duplicateFilterCombination,
         clearFilterCombinations,
+        editingCombinationId,
+        startEditingCombination,
+        cancelEditing,
+        getEditingCombination,
+        draftFilter,
+        setDraftFilter,
         groups: dashboardFilters.groups,
         groupsLoading: dashboardFilters.groupsLoading,
         groupsError: dashboardFilters.groupsError,
         allEvents: dashboardFilters.allEvents,
         allEventsLoading: dashboardFilters.allEventsLoading,
         allEventsError: dashboardFilters.allEventsError,
+        // Events filtered by selected group
+        availableEvents: dashboardFilters.availableEvents,
+        eventsLoading: dashboardFilters.eventsLoading,
+        eventsError: dashboardFilters.eventsError,
+        setSelectedGroup: dashboardFilters.setSelectedGroup,
         isComparisonView,
         setIsComparisonView,
       }}

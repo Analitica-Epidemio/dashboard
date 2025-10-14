@@ -34,10 +34,18 @@ class BulkProcessorBase:
             return None
 
     def _safe_date(self, value: Any):
-        """Conversión segura a date."""
+        """Conversión segura de datetime a date.
+
+        Las fechas ya vienen parseadas por read_csv(parse_dates=..., dayfirst=True),
+        este método solo convierte datetime → date y maneja edge cases.
+        """
         if pd.isna(value) or value is None:
             return None
         try:
+            # Caso más común: ya es datetime (viene de parse_dates)
+            if hasattr(value, 'date'):
+                return value.date()
+            # Fallback: parsear string si es necesario
             if isinstance(value, str):
                 return pd.to_datetime(value, dayfirst=True).date()
             return pd.to_datetime(value).date()

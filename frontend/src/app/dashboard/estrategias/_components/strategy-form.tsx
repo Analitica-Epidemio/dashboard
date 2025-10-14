@@ -94,7 +94,10 @@ export function StrategyForm({ strategy, onClose }: StrategyFormProps) {
     usa_provincia_carga: strategy?.usa_provincia_carga || false,
     provincia_field: strategy?.provincia_field || 'PROVINCIA_RESIDENCIA',
     confidence_threshold: strategy?.confidence_threshold || 0.5,
-    description: strategy?.description || ''
+    description: strategy?.description || '',
+    valid_from: strategy?.valid_from || new Date().toISOString().split('T')[0],
+    valid_until: strategy?.valid_until || '',
+    has_end_date: !!strategy?.valid_until,
   })
 
   const [rules, setRules] = useState<ClassificationRule[]>([
@@ -264,6 +267,57 @@ export function StrategyForm({ strategy, onClose }: StrategyFormProps) {
         <p className="text-xs text-muted-foreground">
           Agregue cualquier información relevante que ayude a entender cómo funciona esta estrategia
         </p>
+      </div>
+
+      <div className="space-y-3">
+        <Label className="text-base">Período de Vigencia</Label>
+        <div className="rounded-lg border p-4 space-y-4 bg-muted/30">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="valid_from">Válida desde</Label>
+              <Input
+                id="valid_from"
+                type="date"
+                value={formData.valid_from}
+                onChange={(e) => setFormData(prev => ({ ...prev, valid_from: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="valid_until">Válida hasta</Label>
+              <div className="space-y-2">
+                <Input
+                  id="valid_until"
+                  type="date"
+                  value={formData.valid_until}
+                  onChange={(e) => setFormData(prev => ({ ...prev, valid_until: e.target.value }))}
+                  disabled={!formData.has_end_date}
+                  min={formData.valid_from}
+                />
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="has_end_date"
+                    checked={!formData.has_end_date}
+                    onCheckedChange={(checked) => setFormData(prev => ({
+                      ...prev,
+                      has_end_date: !checked,
+                      valid_until: checked ? '' : prev.valid_until
+                    }))}
+                  />
+                  <Label htmlFor="has_end_date" className="text-sm font-normal cursor-pointer">
+                    Vigencia infinita (sin fecha de fin)
+                  </Label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="text-xs">
+              <strong>Importante:</strong> El sistema validará automáticamente que no haya solapamientos
+              con otras estrategias del mismo tipo de evento.
+            </AlertDescription>
+          </Alert>
+        </div>
       </div>
 
       <div className="flex items-center space-x-6">

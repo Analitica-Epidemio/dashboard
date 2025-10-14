@@ -719,11 +719,11 @@ class EpiColumns:
                 "INTERNADO",
                 "CURADO",
                 "FALLECIDO",
-                "MUESTRA",
+                # "MUESTRA" NO es booleana - es categorical (tipo de muestra: Suero, LCR, etc.)
                 "PUEBLO_INDIGENA",
                 "BARRIO_POPULAR",
                 "CUIDADO_INTENSIVO",
-                "FIS",
+                # "FIS" NO es booleana - es fecha (FIS = Fecha de Inicio de Síntomas)
                 "CENTINELA",
                 "INVESTIGACION",
             ]
@@ -735,6 +735,7 @@ class EpiColumns:
             "CLASIFICACION_AUTOMATICA",
             "SEXO",
             "TIPO_DOC",
+            "MUESTRA",  # Tipo de muestra (Suero, LCR, Sangre entera, etc.)
         ]:
             data_type = ColumnType.CATEGORICAL
         else:

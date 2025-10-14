@@ -1,7 +1,8 @@
 from datetime import date
+from decimal import Decimal
 from typing import TYPE_CHECKING, Dict, List, Optional
 
-from sqlalchemy import JSON, BigInteger, Column, Text
+from sqlalchemy import JSON, BigInteger, Column, Numeric, Text, UniqueConstraint
 from sqlmodel import Field, Relationship
 
 from app.core.models import BaseModel
@@ -10,17 +11,77 @@ if TYPE_CHECKING:
     from app.domains.sujetos_epidemiologicos.ciudadanos_models import Ciudadano
     from app.domains.sujetos_epidemiologicos.animales_models import Animal
     from app.domains.eventos_epidemiologicos.ambitos_models import AmbitosConcurrenciaEvento
+    from app.domains.eventos_epidemiologicos.clasificacion.models import EventStrategy
     from app.domains.atencion_medica.diagnosticos_models import (
         DiagnosticoEvento,
         InternacionEvento,
         TratamientoEvento,
     )
     from app.domains.territorio.establecimientos_models import Establecimiento
+    from app.domains.territorio.geografia_models import Domicilio
     from app.domains.atencion_medica.investigaciones_models import (
         ContactosNotificacion,
         InvestigacionEvento,
     )
     from app.domains.atencion_medica.salud_models import MuestraEvento, Sintoma, VacunasCiudadano
+
+
+class EventoGrupoEno(BaseModel, table=True):
+    """
+    Tabla de unión para relación many-to-many entre Evento y GrupoEno.
+
+    Permite que un evento epidemiológico pertenezca a múltiples grupos.
+    Por ejemplo, un caso de neumonía puede pertenecer tanto al grupo de
+    "Infecciones Respiratorias" como al grupo de "Infecciones Invasivas".
+    """
+
+    __tablename__ = "evento_grupo_eno"
+    __table_args__ = (
+        UniqueConstraint('id_evento', 'id_grupo_eno', name='uq_evento_grupo_eno'),
+    )
+
+    # Foreign Keys
+    id_evento: int = Field(
+        foreign_key="evento.id",
+        description="ID del evento epidemiológico"
+    )
+    id_grupo_eno: int = Field(
+        foreign_key="grupo_eno.id",
+        description="ID del grupo ENO"
+    )
+
+    # Relaciones
+    evento: "Evento" = Relationship(back_populates="evento_grupos")
+    grupo_eno: "GrupoEno" = Relationship(back_populates="grupo_eventos")
+
+
+class TipoEnoGrupoEno(BaseModel, table=True):
+    """
+    Tabla de unión para relación many-to-many entre TipoEno y GrupoEno.
+
+    Permite que un tipo de evento epidemiológico pertenezca a múltiples grupos.
+    Por ejemplo, "Neumonía" puede pertenecer tanto a "Infecciones Respiratorias"
+    como a "Infecciones Invasivas".
+    """
+
+    __tablename__ = "tipo_eno_grupo_eno"
+    __table_args__ = (
+        UniqueConstraint('id_tipo_eno', 'id_grupo_eno', name='uq_tipo_eno_grupo_eno'),
+    )
+
+    # Foreign Keys
+    id_tipo_eno: int = Field(
+        foreign_key="tipo_eno.id",
+        description="ID del tipo ENO"
+    )
+    id_grupo_eno: int = Field(
+        foreign_key="grupo_eno.id",
+        description="ID del grupo ENO"
+    )
+
+    # Relaciones
+    tipo_eno: "TipoEno" = Relationship(back_populates="tipo_grupos")
+    grupo_eno: "GrupoEno" = Relationship(back_populates="grupo_tipos")
 
 
 class GrupoEno(BaseModel, table=True):
@@ -38,7 +99,10 @@ class GrupoEno(BaseModel, table=True):
     )
 
     # Relaciones
-    tipos_eno: List["TipoEno"] = Relationship(back_populates="grupo_eno")
+    # Many-to-many con TipoEno a través de TipoEnoGrupoEno
+    grupo_tipos: List["TipoEnoGrupoEno"] = Relationship(back_populates="grupo_eno")
+    # Many-to-many con Evento a través de EventoGrupoEno
+    grupo_eventos: List["EventoGrupoEno"] = Relationship(back_populates="grupo_eno")
 
 
 class TipoEno(BaseModel, table=True):
@@ -55,13 +119,9 @@ class TipoEno(BaseModel, table=True):
         None, max_length=200, unique=True, index=True, description="Código del tipo"
     )
 
-    # Foreign Keys
-    id_grupo_eno: int = Field(
-        foreign_key="grupo_eno.id", description="ID del grupo ENO"
-    )
-
     # Relaciones
-    grupo_eno: "GrupoEno" = Relationship(back_populates="tipos_eno")
+    # Many-to-many con GrupoEno a través de TipoEnoGrupoEno
+    tipo_grupos: List["TipoEnoGrupoEno"] = Relationship(back_populates="tipo_eno")
     eventos: List["Evento"] = Relationship(back_populates="tipo_eno")
 
 
@@ -96,8 +156,8 @@ class Evento(BaseModel, table=True):
         index=True,
         description="ID único del evento caso epidemiológico",
     )
-    fecha_minima_evento: date = Field(
-        ..., description="Fecha mínima registrada del evento"
+    fecha_minima_evento: Optional[date] = Field(
+        None, description="Fecha mínima registrada del evento (NULL si no hay fechas válidas)"
     )
     fecha_inicio_sintomas: Optional[date] = Field(
         None, description="Fecha de inicio de síntomas"
@@ -158,6 +218,7 @@ class Evento(BaseModel, table=True):
 
     # Foreign Keys
     id_tipo_eno: int = Field(foreign_key="tipo_eno.id", description="ID del tipo ENO")
+    # NOTA: id_grupo_eno eliminado - ahora se usa relación many-to-many via EventoGrupoEno
     codigo_ciudadano: Optional[int] = Field(
         None,
         sa_type=BigInteger,
@@ -221,10 +282,35 @@ class Evento(BaseModel, table=True):
         None, description="Score de confianza de la clasificación (0-1)"
     )
 
+    # Campos de trazabilidad de clasificación
+    id_estrategia_aplicada: Optional[int] = Field(
+        None,
+        foreign_key="event_strategy.id",
+        description="ID de la estrategia que se aplicó para clasificar este evento",
+    )
+    trazabilidad_clasificacion: Optional[Dict] = Field(
+        None,
+        sa_column=Column(JSON),
+        description="Trazabilidad completa de la clasificación: reglas evaluadas, condiciones cumplidas, razón de la clasificación",
+    )
+
+    # Domicilio del evento (INMUTABLE - donde ocurrió el caso)
+    id_domicilio: Optional[int] = Field(
+        None,
+        foreign_key="domicilio.id",
+        index=True,
+        description="ID del domicilio donde ocurrió el evento (inmutable, permite clusters)",
+    )
+
     # Relaciones
     tipo_eno: "TipoEno" = Relationship(back_populates="eventos")
+    # Many-to-many con GrupoEno a través de EventoGrupoEno
+    evento_grupos: List["EventoGrupoEno"] = Relationship(back_populates="evento")
     ciudadano: Optional["Ciudadano"] = Relationship(back_populates="eventos")
     animal: Optional["Animal"] = Relationship(back_populates="eventos")
+    estrategia_aplicada: Optional["EventStrategy"] = Relationship(
+        sa_relationship_kwargs={"foreign_keys": "[Evento.id_estrategia_aplicada]"}
+    )
     # Agregado por Ignacio - Relaciones con establecimientos
     establecimiento_consulta: Optional["Establecimiento"] = Relationship(
         sa_relationship_kwargs={"foreign_keys": "[Evento.id_establecimiento_consulta]"}
@@ -252,6 +338,8 @@ class Evento(BaseModel, table=True):
     ambitos_concurrencia: List["AmbitosConcurrenciaEvento"] = Relationship(
         back_populates="evento"
     )
+    # Domicilio del evento (inmutable)
+    domicilio: Optional["Domicilio"] = Relationship(back_populates="eventos")
 
 
 class DetalleEventoSintomas(BaseModel, table=True):
@@ -262,6 +350,9 @@ class DetalleEventoSintomas(BaseModel, table=True):
     """
 
     __tablename__ = "detalle_evento_sintomas"
+    __table_args__ = (
+        UniqueConstraint('id_evento', 'id_sintoma', name='uq_evento_sintoma'),
+    )
 
     # Campos propios
     semana_epidemiologica_aparicion_sintoma: Optional[int] = Field(
@@ -292,6 +383,9 @@ class AntecedentesEpidemiologicosEvento(BaseModel, table=True):
     """
 
     __tablename__ = "antecedentes_epidemiologicos_evento"
+    __table_args__ = (
+        UniqueConstraint('id_evento', 'id_antecedente_epidemiologico', name='uq_evento_antecedente'),
+    )
 
     # Campos propios
     fecha_antecedente_epidemiologico: Optional[date] = Field(

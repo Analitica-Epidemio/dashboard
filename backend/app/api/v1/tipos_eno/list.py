@@ -15,7 +15,13 @@ from app.core.database import get_async_session
 from app.core.schemas.response import PaginatedResponse
 from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User
-from app.domains.eventos_epidemiologicos.eventos.models import TipoEno
+from app.domains.eventos_epidemiologicos.eventos.models import TipoEno, TipoEnoGrupoEno, GrupoEno
+
+
+class GrupoInfo(BaseModel):
+    """Información de un grupo"""
+    id: int
+    nombre: str
 
 
 class TipoEnoInfo(BaseModel):
@@ -27,11 +33,8 @@ class TipoEnoInfo(BaseModel):
     codigo: Optional[str] = Field(
         None, description="Código del tipo"
     )
-    id_grupo_eno: int = Field(
-        ..., description="ID del grupo ENO"
-    )
-    grupo_nombre: Optional[str] = Field(
-        None, description="Nombre del grupo ENO"
+    grupos: List[GrupoInfo] = Field(
+        default_factory=list, description="Lista de grupos a los que pertenece este tipo"
     )
 
 logger = logging.getLogger(__name__)
@@ -47,25 +50,53 @@ async def list_tipos_eno(
     current_user: User = Depends(RequireAnyRole()),
 ) -> PaginatedResponse[TipoEnoInfo]:
     try:
-        # Construir query base con join para obtener el nombre del grupo
-        query = select(TipoEno).options(selectinload(TipoEno.grupo_eno))
+        # Construir query base
+        query = select(TipoEno).options(
+            selectinload(TipoEno.tipo_grupos).selectinload(TipoEnoGrupoEno.grupo_eno)
+        )
 
         # Aplicar filtros
         if nombre:
             query = query.where(TipoEno.nombre.ilike(f"%{nombre}%"))
-        if grupo_id:
-            query = query.where(TipoEno.id_grupo_eno == grupo_id)
-        if grupos:
-            query = query.where(TipoEno.id_grupo_eno.in_(grupos))
 
-        # Contar total de elementos
-        count_query = select(func.count()).select_from(TipoEno)
+        # Filtrar por grupo usando subquery en la tabla de unión
+        if grupo_id:
+            query = query.where(
+                TipoEno.id.in_(
+                    select(TipoEnoGrupoEno.id_tipo_eno).where(
+                        TipoEnoGrupoEno.id_grupo_eno == grupo_id
+                    )
+                )
+            )
+        elif grupos:
+            query = query.where(
+                TipoEno.id.in_(
+                    select(TipoEnoGrupoEno.id_tipo_eno).where(
+                        TipoEnoGrupoEno.id_grupo_eno.in_(grupos)
+                    )
+                )
+            )
+
+        # Contar total de elementos con los mismos filtros
+        count_query = select(func.count(TipoEno.id.distinct()))
         if nombre:
             count_query = count_query.where(TipoEno.nombre.ilike(f"%{nombre}%"))
         if grupo_id:
-            count_query = count_query.where(TipoEno.id_grupo_eno == grupo_id)
-        if grupos:
-            count_query = count_query.where(TipoEno.id_grupo_eno.in_(grupos))
+            count_query = count_query.where(
+                TipoEno.id.in_(
+                    select(TipoEnoGrupoEno.id_tipo_eno).where(
+                        TipoEnoGrupoEno.id_grupo_eno == grupo_id
+                    )
+                )
+            )
+        elif grupos:
+            count_query = count_query.where(
+                TipoEno.id.in_(
+                    select(TipoEnoGrupoEno.id_tipo_eno).where(
+                        TipoEnoGrupoEno.id_grupo_eno.in_(grupos)
+                    )
+                )
+            )
 
         total_result = await db.execute(count_query)
         total = total_result.scalar() or 0
@@ -79,17 +110,26 @@ async def list_tipos_eno(
         tipos = result.scalars().all()
 
         # Convertir a modelo de respuesta
-        tipos_info = [
-            TipoEnoInfo(
-                id=tipo.id,
-                nombre=tipo.nombre,
-                descripcion=tipo.descripcion,
-                codigo=tipo.codigo,
-                id_grupo_eno=tipo.id_grupo_eno,
-                grupo_nombre=tipo.grupo_eno.nombre if tipo.grupo_eno else None
+        tipos_info = []
+        for tipo in tipos:
+            # Extraer grupos desde la relación many-to-many
+            grupos_list = []
+            if hasattr(tipo, 'tipo_grupos') and tipo.tipo_grupos:
+                grupos_list = [
+                    GrupoInfo(id=tg.grupo_eno.id, nombre=tg.grupo_eno.nombre)
+                    for tg in tipo.tipo_grupos
+                    if tg.grupo_eno
+                ]
+
+            tipos_info.append(
+                TipoEnoInfo(
+                    id=tipo.id,
+                    nombre=tipo.nombre,
+                    descripcion=tipo.descripcion,
+                    codigo=tipo.codigo,
+                    grupos=grupos_list
+                )
             )
-            for tipo in tipos
-        ]
 
         # Calcular páginas totales
         total_pages = (total + per_page - 1) // per_page if total > 0 else 0

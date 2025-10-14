@@ -11,7 +11,7 @@ from app.core.shared.enums import SexoBiologico, TipoDocumento
 
 if TYPE_CHECKING:
     from app.domains.eventos_epidemiologicos.eventos.models import Evento
-    from app.domains.territorio.geografia_models import Localidad
+    from app.domains.territorio.geografia_models import Localidad, Domicilio
     from app.domains.atencion_medica.salud_models import Comorbilidad, VacunasCiudadano
     from .viajes_models import ViajesCiudadano
 
@@ -63,6 +63,7 @@ class Ciudadano(BaseModel, table=True):
 
     # Relaciones
     domicilios: List["CiudadanoDomicilio"] = Relationship(back_populates="ciudadano")
+    domicilios_historico: List["PersonaDomicilio"] = Relationship(back_populates="ciudadano")
     datos: List["CiudadanoDatos"] = Relationship(back_populates="ciudadano")
     eventos: List["Evento"] = Relationship(back_populates="ciudadano")
     comorbilidades: List["CiudadanoComorbilidades"] = Relationship(
@@ -166,3 +167,58 @@ class CiudadanoComorbilidades(BaseModel, table=True):
     # Relaciones
     ciudadano: "Ciudadano" = Relationship(back_populates="comorbilidades")
     comorbilidad: "Comorbilidad" = Relationship()
+
+
+class PersonaDomicilio(BaseModel, table=True):
+    """
+    Historial temporal de domicilios de una persona.
+
+    Tabla intermedia que mantiene el registro de CUÁNDO una persona vivió en DÓNDE.
+    - Permite saber dónde vivía la persona en cualquier momento del tiempo
+    - Múltiples personas pueden vivir en el mismo domicilio
+    - Una persona puede tener múltiples domicilios a lo largo del tiempo
+
+    Casos de uso:
+    - "¿Dónde vivía Juan en enero 2023?" → Query por rango de fechas
+    - "¿Quiénes viven actualmente en San Martin 123?" → Query por fecha_hasta IS NULL
+    - "Mudanzas de María" → ORDER BY fecha_desde
+    """
+
+    __tablename__ = "persona_domicilio"
+    __table_args__ = (
+        # Un ciudadano no puede tener dos domicilios simultáneos con mismas fechas
+        UniqueConstraint(
+            "codigo_ciudadano",
+            "id_domicilio",
+            "fecha_desde",
+            name="uq_persona_domicilio_fecha"
+        ),
+    )
+
+    # Foreign Keys
+    codigo_ciudadano: int = Field(
+        sa_type=BigInteger,
+        foreign_key="ciudadano.codigo_ciudadano",
+        index=True,
+        description="Código del ciudadano"
+    )
+    id_domicilio: int = Field(
+        foreign_key="domicilio.id",
+        index=True,
+        description="ID del domicilio"
+    )
+
+    # Rango temporal
+    fecha_desde: date = Field(
+        ...,
+        index=True,
+        description="Fecha desde la cual vive en este domicilio"
+    )
+    fecha_hasta: Optional[date] = Field(
+        None,
+        description="Fecha hasta la cual vivió en este domicilio (NULL = domicilio actual)"
+    )
+
+    # Relaciones
+    ciudadano: "Ciudadano" = Relationship(back_populates="domicilios_historico")
+    domicilio: "Domicilio" = Relationship()

@@ -189,8 +189,11 @@ migration: ## Create new migration (use: make migration MSG="description")
 rollback: ## Rollback last migration
 	docker compose exec api uv run alembic downgrade -1
 
-seed: ## Seed database with initial data
-	docker compose exec api uv run python -m app.scripts.seed
+seed: ## Seed database with complete Argentina data (assumes empty DB)
+	docker compose exec api uv run python app/scripts/seed.py
+
+seed-estrategias: ## Seed ONLY strategies and charts (PASO 5 y 6)
+	docker compose exec api uv run python app/scripts/seed_estrategias_charts.py
 
 create-superadmin: ## Create initial superadmin user interactively
 	docker compose exec -it api uv run python -m app.commands.create_superadmin
@@ -206,6 +209,12 @@ clean: ## Remove all containers, volumes and clean cache
 	find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name ".mypy_cache" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name ".ruff_cache" -exec rm -rf {} + 2>/dev/null || true
+
+truncate-db: ## Empty all tables but keep structure (TRUNCATE)
+	@echo "⚠️  WARNING: This will delete all table data but keep structure"
+	@printf "Are you sure? (y/N): "; read confirm && [ "$$confirm" = "y" ] || exit 1
+	docker compose exec api uv run python -m app.scripts.truncate_all
+	@echo "✅ All tables truncated successfully"
 
 reset-db: ## Reset ONLY database (keeps Redis cache)
 	@echo "⚠️  WARNING: This will delete ALL database data (keeps Redis)"

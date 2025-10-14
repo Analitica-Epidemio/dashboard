@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   InfiniteCombobox,
   type ComboboxOption,
@@ -66,17 +66,6 @@ export function GroupSelector({
     isError,
   }: UseInfiniteGroupsResult = useInfiniteGroups(search);
 
-  // Determine which data source to use
-  const displayGroups: Group[] =
-    shouldUseInfinite && infiniteGroups.length > 0
-      ? infiniteGroups
-      : fallbackGroups;
-
-  const loading: boolean = shouldUseInfinite
-    ? isLoading && infiniteGroups.length === 0
-    : Boolean(fallbackLoading);
-  const error: QueryError = shouldUseInfinite && isError ? infiniteError : fallbackError;
-
   // Enable infinite scrolling when user starts searching
   useEffect(() => {
     if (search) {
@@ -84,7 +73,35 @@ export function GroupSelector({
     }
   }, [search]);
 
-  if (loading) {
+  // Determine which data source to use
+  // If searching (shouldUseInfinite), show infinite results (may be empty)
+  // If NOT searching, show fallback
+  // This allows InfiniteCombobox to show proper loading/empty states
+  const displayGroups: Group[] = shouldUseInfinite
+    ? infiniteGroups  // Can be [] during loading or when no results
+    : fallbackGroups;
+
+  const loading: boolean = shouldUseInfinite
+    ? isLoading
+    : Boolean(fallbackLoading);
+  const error: QueryError = shouldUseInfinite && isError ? infiniteError : fallbackError;
+
+  // Convert groups to combobox options
+  // IMPORTANT: Memoize to prevent unnecessary re-renders of InfiniteCombobox
+  const options: ComboboxOption[] = useMemo(
+    () => displayGroups.map((group) => ({
+      value: group.id,
+      label: group.name,
+    })),
+    [displayGroups]
+  );
+
+  // CRITICAL: Only show skeleton on INITIAL load (fallback loading)
+  // Don't unmount the combobox during searches!
+  const showInitialLoading = !shouldUseInfinite && Boolean(fallbackLoading);
+  const showError = !shouldUseInfinite && Boolean(fallbackError);
+
+  if (showInitialLoading) {
     return (
       <div className="space-y-2">
         <label className="text-sm font-medium">Seleccionar Grupo</label>
@@ -93,30 +110,25 @@ export function GroupSelector({
     );
   }
 
-  if (error) {
+  if (showError) {
     return (
       <div className="space-y-2">
         <label className="text-sm font-medium">Seleccionar Grupo</label>
         <Alert variant="destructive" className="w-[300px]">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            {getErrorMessage(error)}
+            {getErrorMessage(fallbackError)}
           </AlertDescription>
         </Alert>
       </div>
     );
   }
 
-  // Convert groups to combobox options
-  const options: ComboboxOption[] = displayGroups.map((group) => ({
-    value: group.id,
-    label: group.name,
-  }));
-
   return (
     <div className="space-y-2">
       <label className="text-sm font-medium">Seleccionar Grupo</label>
       <InfiniteCombobox
+        key="group-selector-combobox" // CRITICAL: Stable key prevents unmount
         options={options}
         value={selectedGroupId || undefined}
         onValueChange={(value: string | undefined) => {

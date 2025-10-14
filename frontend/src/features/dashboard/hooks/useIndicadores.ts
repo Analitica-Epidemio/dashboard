@@ -10,10 +10,11 @@ import { $api } from '@/lib/api/client';
  */
 export interface ChartFilters {
   grupo_id?: number;
-  evento_id?: number;
+  tipo_eno_ids?: number[]; // Array of event IDs
   fecha_desde?: string;
   fecha_hasta?: string;
   clasificaciones?: string[];
+  provincia_id?: number; // INDEC province code (26 = Chubut)
 }
 
 /**

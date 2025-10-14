@@ -3,7 +3,7 @@
 from datetime import date
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import BigInteger
+from sqlalchemy import BigInteger, UniqueConstraint
 from sqlmodel import Field, Relationship
 
 from app.core.models import BaseModel
@@ -18,6 +18,9 @@ class AmbitosConcurrenciaEvento(BaseModel, table=True):
     """Ámbitos de concurrencia durante eventos epidemiológicos"""
 
     __tablename__ = "ambitos_concurrencia_evento"
+    __table_args__ = (
+        UniqueConstraint('id_evento', name='uq_ambito_evento'),
+    )
 
     # Foreign Keys
     id_evento: int = Field(foreign_key="evento.id", description="ID del evento")

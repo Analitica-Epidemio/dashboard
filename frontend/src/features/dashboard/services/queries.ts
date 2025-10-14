@@ -33,13 +33,19 @@ export const useAllEvents = () => {
     }
   })
 
-  const mappedData = query.data?.data?.map((tipo) => ({
-    id: String(tipo.id),
-    name: tipo.nombre,
-    groupId: String(tipo.id_grupo_eno),
-    description: tipo.descripcion,
-    groupName: tipo.grupo_nombre
-  }));
+  const mappedData = query.data?.data?.map((tipo) => {
+    // Un tipo puede pertenecer a múltiples grupos (many-to-many)
+    // Por ahora tomamos el primer grupo, pero idealmente deberíamos manejar múltiples
+    const primerGrupo = tipo.grupos?.[0];
+
+    return {
+      id: String(tipo.id),
+      name: tipo.nombre,
+      groupId: primerGrupo ? String(primerGrupo.id) : null,
+      description: tipo.descripcion,
+      groupName: primerGrupo?.nombre
+    };
+  });
 
   return {
     ...query,
@@ -52,19 +58,25 @@ export const useEventsByGroup = (groupId: string | null) => {
     params: {
       query: {
         per_page: 100,
-        id_grupo_eno: groupId ? Number(groupId) : undefined
+        grupo_id: groupId ? Number(groupId) : undefined
       }
     },
     enabled: !!groupId
   })
 
-  const mappedData = query.data?.data?.map((tipo) => ({
-    id: String(tipo.id),
-    name: tipo.nombre,
-    groupId: String(tipo.id_grupo_eno),
-    description: tipo.descripcion,
-    groupName: tipo.grupo_nombre
-  }));
+  const mappedData = query.data?.data?.map((tipo) => {
+    // Un tipo puede pertenecer a múltiples grupos (many-to-many)
+    // Por ahora tomamos el primer grupo, pero idealmente deberíamos manejar múltiples
+    const primerGrupo = tipo.grupos?.[0];
+
+    return {
+      id: String(tipo.id),
+      name: tipo.nombre,
+      groupId: primerGrupo ? String(primerGrupo.id) : null,
+      description: tipo.descripcion,
+      groupName: primerGrupo?.nombre
+    };
+  });
 
   return {
     ...query,

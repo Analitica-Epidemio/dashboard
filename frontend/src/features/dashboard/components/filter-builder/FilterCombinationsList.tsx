@@ -4,7 +4,7 @@ import React from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Filter, Trash2, Copy, X, Play } from 'lucide-react'
+import { Filter, Trash2, Copy, X, Play, Pencil } from 'lucide-react'
 import { ClassificationBadges, TipoClasificacion } from '../selectors/ClassificationSelector'
 import { useFilterContext } from '../../contexts/FilterContext'
 
@@ -76,6 +76,7 @@ function CombinationsList() {
     filterCombinations,
     removeFilterCombination,
     duplicateFilterCombination,
+    startEditingCombination,
   } = useFilterContext()
 
   return (
@@ -85,6 +86,7 @@ function CombinationsList() {
           key={combination.id}
           combination={combination}
           index={index}
+          onEdit={() => startEditingCombination(combination.id)}
           onDuplicate={() => duplicateFilterCombination(combination.id)}
           onRemove={() => removeFilterCombination(combination.id)}
         />
@@ -105,11 +107,12 @@ interface CombinationItemProps {
     color?: string
   }
   index: number
+  onEdit: () => void
   onDuplicate: () => void
   onRemove: () => void
 }
 
-function CombinationItem({ combination, index, onDuplicate, onRemove }: CombinationItemProps) {
+function CombinationItem({ combination, index, onEdit, onDuplicate, onRemove }: CombinationItemProps) {
   return (
     <div className="border rounded-lg p-3 bg-white hover:shadow-sm transition-shadow">
       <div className="flex items-center justify-between">
@@ -118,6 +121,11 @@ function CombinationItem({ combination, index, onDuplicate, onRemove }: Combinat
             {index + 1}
           </Badge>
           <div className="flex-1">
+            {combination.label && (
+              <div className="text-xs font-semibold text-blue-700 mb-0.5">
+                {combination.label}
+              </div>
+            )}
             <span className="text-sm font-medium text-gray-900">
               {combination.groupName}
             </span>
@@ -131,7 +139,22 @@ function CombinationItem({ combination, index, onDuplicate, onRemove }: Combinat
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={onDuplicate}>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-6 w-6 hover:text-blue-600"
+            onClick={onEdit}
+            title="Editar"
+          >
+            <Pencil className="h-3 w-3" />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-6 w-6"
+            onClick={onDuplicate}
+            title="Duplicar"
+          >
             <Copy className="h-3 w-3" />
           </Button>
           <Button
@@ -139,6 +162,7 @@ function CombinationItem({ combination, index, onDuplicate, onRemove }: Combinat
             variant="ghost"
             className="h-6 w-6 hover:text-red-600"
             onClick={onRemove}
+            title="Eliminar"
           >
             <X className="h-3 w-3" />
           </Button>
