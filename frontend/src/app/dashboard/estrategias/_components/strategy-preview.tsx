@@ -224,12 +224,21 @@ export function StrategyPreview({ strategy, onClose, onEdit }: StrategyPreviewPr
               </div>
             )}
             {normalization && Object.keys(normalization).length > 0 && (
-              <div className="text-xs text-muted-foreground mt-1">
-                {Object.entries(normalization).length} normalizaciones configuradas
+              <div className="space-y-1 mt-1">
+                <div className="text-xs text-muted-foreground font-medium">
+                  Normalizaciones:
+                </div>
+                <div className="text-xs space-y-0.5 pl-2 border-l-2 border-muted">
+                  {Object.entries(normalization).map(([k, v], i) => (
+                    <div key={i}>
+                      <strong>&quot;{k}&quot;</strong> → <strong>&quot;{v}&quot;</strong>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
             {filter.extracted_metadata_field && (
-              <div className="text-xs text-muted-foreground">
+              <div className="text-xs text-muted-foreground mt-1">
                 → Guarda en: <strong>{filter.extracted_metadata_field}</strong>
               </div>
             )}
