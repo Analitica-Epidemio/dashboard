@@ -14,18 +14,7 @@ import {
 } from "lucide-react";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
-
-interface Event {
-  id: number | string;
-  name: string;
-  groupId?: string;
-}
-
-interface Group {
-  id: number | string;
-  name: string;
-  eventos?: Event[]; // Eventos incluidos en este grupo (del backend)
-}
+import type { Event, Group } from "@/features/dashboard/types";
 
 interface Selection {
   groups: string[]; // IDs de grupos seleccionados

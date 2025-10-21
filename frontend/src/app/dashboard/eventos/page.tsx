@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useDebounce } from "use-debounce";
 import {
   Download,
@@ -43,12 +42,8 @@ import {
 // Componentes
 import { EventoDetailModern } from "./_components/evento-detail-modern";
 import { EventoFiltersModern } from "./_components/evento-filters-modern";
-import { useMediaQuery } from "@/hooks/use-mobile";
 
 export default function EventosPage() {
-  const router = useRouter();
-  const isMobile = useMediaQuery("(max-width: 768px)");
-
   // Estados de filtros y búsqueda
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch] = useDebounce(searchQuery, 300);
@@ -83,12 +78,8 @@ export default function EventosPage() {
 
   // Handlers
   const handleViewDetalle = (eventoId: number) => {
-    if (isMobile) {
-      router.push(`/eventos/${eventoId}`);
-    } else {
-      setSelectedEventoId(eventoId);
-      setDetailSheetOpen(true);
-    }
+    setSelectedEventoId(eventoId);
+    setDetailSheetOpen(true);
   };
 
   const handlePageChange = (newPage: number) => {
@@ -122,7 +113,7 @@ export default function EventosPage() {
   ] : [];
 
   // Contar filtros activos (excluyendo page, page_size, sort_by)
-  const activeFiltersCount = Object.entries(filters).filter(
+  const activeFiltersCount = Object.entries(filters ?? {}).filter(
     ([key, value]) => value && !["page", "page_size", "sort_by"].includes(key)
   ).length;
 
@@ -207,7 +198,7 @@ export default function EventosPage() {
                       </h3>
                       <p className="text-sm text-muted-foreground">
                         {debouncedSearch ||
-                        Object.values(filters).some((v) => v)
+                        Object.values(filters ?? {}).some((v) => v)
                           ? "Prueba con otros filtros o términos de búsqueda"
                           : "No hay eventos registrados aún"}
                       </p>
@@ -365,27 +356,11 @@ export default function EventosPage() {
         <Sheet open={detailSheetOpen} onOpenChange={setDetailSheetOpen}>
           <SheetContent className="w-full overflow-y-auto sm:max-w-3xl lg:max-w-5xl p-0">
             <SheetHeader className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur p-4">
-              <div className="flex items-center justify-between">
-                <SheetTitle className="text-lg">
-                  Evento #{selectedEventoId}
-                </SheetTitle>
-                <div className="flex items-center gap-2">
-                  {/* Open in full page button (Vercel/Linear style) */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(`/dashboard/eventos/${selectedEventoId}`);
-                    }}
-                  >
-                    <FileText className="mr-2 h-4 w-4" />
-                    <span className="hidden sm:inline">Abrir en página</span>
-                  </Button>
-                </div>
-              </div>
+              <SheetTitle className="text-lg">
+                Evento #{selectedEventoId}
+              </SheetTitle>
               <p className="text-xs text-muted-foreground mt-1">
-                Presiona <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs">ESC</kbd> para cerrar o click en &quot;Abrir en página&quot; para vista completa
+                Presiona <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs">ESC</kbd> para cerrar
               </p>
             </SheetHeader>
             {selectedEventoId && (

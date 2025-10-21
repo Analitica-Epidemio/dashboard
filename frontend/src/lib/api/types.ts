@@ -1029,6 +1029,35 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
+         * AggregatedStats
+         * @description Estadísticas agregadas sobre TODAS las personas que coinciden con los filtros
+         */
+        AggregatedStats: {
+            /**
+             * Total Personas
+             * @description Total de personas (mismo que pagination.total)
+             */
+            total_personas: number;
+            /**
+             * Personas Con Multiples Eventos
+             * @description Personas con más de un evento
+             * @default 0
+             */
+            personas_con_multiples_eventos: number;
+            /**
+             * Personas Con Confirmados
+             * @description Personas con al menos un evento confirmado
+             * @default 0
+             */
+            personas_con_confirmados: number;
+            /**
+             * Personas Activas
+             * @description Personas con eventos en últimos 30 días
+             * @default 0
+             */
+            personas_activas: number;
+        };
+        /**
          * AmbitoConcurrenciaInfo
          * @description Información de ámbito de concurrencia
          */
@@ -1489,6 +1518,49 @@ export interface components {
             updated_at?: string | null;
         };
         /**
+         * CondicionEvaluada
+         * @description Detalle de una condición evaluada (estructura real del backend)
+         */
+        CondicionEvaluada: {
+            /**
+             * Condicion Id
+             * @description ID de la condición
+             */
+            condicion_id?: number | null;
+            /**
+             * Campo
+             * @description Campo evaluado
+             */
+            campo: string;
+            /**
+             * Tipo Filtro
+             * @description Tipo de filtro aplicado
+             */
+            tipo_filtro: string;
+            /**
+             * Operador Logico
+             * @description Operador lógico (AND/OR)
+             */
+            operador_logico?: string | null;
+            /**
+             * Resultado
+             * @description Si la condición se cumplió
+             */
+            resultado: boolean;
+            /**
+             * Config
+             * @description Configuración del filtro
+             */
+            config?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Valor Campo
+             * @description Valor del campo evaluado
+             */
+            valor_campo?: string | null;
+        };
+        /**
          * ContactoInfo
          * @description Información de contactos
          */
@@ -1917,8 +1989,11 @@ export interface components {
             tipo_eno_id?: number | null;
             /** Tipo Eno Nombre */
             tipo_eno_nombre?: string | null;
-            /** Grupo Eno Nombre */
-            grupo_eno_nombre?: string | null;
+            /**
+             * Grupos Eno Nombres
+             * @description Nombres de grupos ENO (puede pertenecer a múltiples)
+             */
+            grupos_eno_nombres?: string[];
             /** Fecha Minima Evento */
             fecha_minima_evento?: string | null;
             /** Fecha Inicio Sintomas */
@@ -2103,9 +2178,7 @@ export interface components {
              * Trazabilidad Clasificacion
              * @description Trazabilidad completa: reglas evaluadas, condiciones cumplidas, razón de clasificación
              */
-            trazabilidad_clasificacion?: {
-                [key: string]: unknown;
-            } | null;
+            trazabilidad_clasificacion?: components["schemas"]["TrazabilidadReglaAplicada"] | components["schemas"]["TrazabilidadEvaluando"] | components["schemas"]["TrazabilidadRequiereRevision"] | components["schemas"]["TrazabilidadSinEstrategia"] | components["schemas"]["TrazabilidadError"] | null;
             /**
              * Tipo Sujeto
              * @description Tipo de sujeto
@@ -2204,12 +2277,12 @@ export interface components {
              * Created At
              * @description Fecha de creación
              */
-            created_at?: unknown | null;
+            created_at?: string | null;
             /**
              * Updated At
              * @description Fecha de actualización
              */
-            updated_at?: unknown | null;
+            updated_at?: string | null;
             /**
              * Total Sintomas
              * @description Total de síntomas
@@ -2675,6 +2748,21 @@ export interface components {
              * @description Código del grupo
              */
             codigo?: string | null;
+            /**
+             * Eventos
+             * @description Eventos (tipos ENO) que pertenecen a este grupo
+             */
+            eventos?: components["schemas"]["TipoEnoSimple"][];
+        };
+        /**
+         * GrupoInfo
+         * @description Información de un grupo
+         */
+        GrupoInfo: {
+            /** Id */
+            id: number;
+            /** Nombre */
+            nombre: string;
         };
         /**
          * GrupoStats
@@ -3192,6 +3280,8 @@ export interface components {
              */
             data: components["schemas"]["PersonaListItem"][];
             pagination: components["schemas"]["PaginationInfo"];
+            /** @description Estadísticas agregadas sobre todos los resultados */
+            stats: components["schemas"]["AggregatedStats"];
             /**
              * Filters Applied
              * @description Filtros aplicados
@@ -3270,6 +3360,37 @@ export interface components {
         RefreshToken: {
             /** Refresh Token */
             refresh_token: string;
+        };
+        /**
+         * ReglaEvaluada
+         * @description Información de una regla que fue evaluada pero no cumplió
+         */
+        ReglaEvaluada: {
+            /**
+             * Regla Id
+             * @description ID de la regla
+             */
+            regla_id: number;
+            /**
+             * Regla Nombre
+             * @description Nombre de la regla
+             */
+            regla_nombre?: string | null;
+            /**
+             * Regla Prioridad
+             * @description Prioridad de la regla
+             */
+            regla_prioridad: number;
+            /**
+             * Cumplida
+             * @description Si la regla se cumplió
+             */
+            cumplida: boolean;
+            /**
+             * Condiciones
+             * @description Condiciones evaluadas
+             */
+            condiciones?: components["schemas"]["CondicionEvaluada"][];
         };
         /**
          * ReportFiltersRequest
@@ -3798,15 +3919,23 @@ export interface components {
              */
             codigo?: string | null;
             /**
-             * Id Grupo Eno
-             * @description ID del grupo ENO
+             * Grupos
+             * @description Lista de grupos a los que pertenece este tipo
              */
-            id_grupo_eno: number;
+            grupos?: components["schemas"]["GrupoInfo"][];
+        };
+        /** TipoEnoSimple */
+        TipoEnoSimple: {
             /**
-             * Grupo Nombre
-             * @description Nombre del grupo ENO
+             * Id
+             * @description ID del tipo ENO
              */
-            grupo_nombre?: string | null;
+            id: number;
+            /**
+             * Nombre
+             * @description Nombre del tipo ENO
+             */
+            nombre: string;
         };
         /**
          * TipoFiltro
@@ -3846,6 +3975,152 @@ export interface components {
             /** Apellido */
             apellido: string;
             role: components["schemas"]["UserRole"];
+        };
+        /**
+         * TrazabilidadError
+         * @description Trazabilidad cuando ocurre un error
+         */
+        TrazabilidadError: {
+            /**
+             * Razon
+             * @description Razón de clasificación
+             * @default error
+             */
+            razon: string;
+            /**
+             * Mensaje
+             * @description Mensaje de error
+             */
+            mensaje: string;
+        };
+        /**
+         * TrazabilidadEvaluando
+         * @description Trazabilidad cuando se está evaluando sin clasificar aún
+         */
+        TrazabilidadEvaluando: {
+            /**
+             * Razon
+             * @description Razón de clasificación
+             * @default evaluando
+             */
+            razon: string;
+            /**
+             * Estrategia Id
+             * @description ID de la estrategia
+             */
+            estrategia_id: number;
+            /**
+             * Estrategia Nombre
+             * @description Nombre de la estrategia
+             */
+            estrategia_nombre: string;
+            /**
+             * Reglas Evaluadas
+             * @description Reglas que se han evaluado
+             */
+            reglas_evaluadas?: components["schemas"]["ReglaEvaluada"][];
+        };
+        /**
+         * TrazabilidadReglaAplicada
+         * @description Trazabilidad cuando se aplicó una regla exitosamente
+         */
+        TrazabilidadReglaAplicada: {
+            /**
+             * Razon
+             * @description Razón de clasificación
+             * @default regla_aplicada
+             */
+            razon: string;
+            /**
+             * Estrategia Id
+             * @description ID de la estrategia aplicada
+             */
+            estrategia_id: number;
+            /**
+             * Estrategia Nombre
+             * @description Nombre de la estrategia
+             */
+            estrategia_nombre: string;
+            /**
+             * Regla Id
+             * @description ID de la regla aplicada
+             */
+            regla_id: number;
+            /**
+             * Regla Nombre
+             * @description Nombre de la regla
+             */
+            regla_nombre?: string | null;
+            /**
+             * Regla Prioridad
+             * @description Prioridad de la regla
+             */
+            regla_prioridad: number;
+            /**
+             * Clasificacion Aplicada
+             * @description Clasificación resultante
+             */
+            clasificacion_aplicada: string;
+            /**
+             * Condiciones Evaluadas
+             * @description Condiciones que se evaluaron
+             */
+            condiciones_evaluadas?: components["schemas"]["CondicionEvaluada"][];
+        };
+        /**
+         * TrazabilidadRequiereRevision
+         * @description Trazabilidad cuando ninguna regla cumplió y requiere revisión manual
+         */
+        TrazabilidadRequiereRevision: {
+            /**
+             * Razon
+             * @description Razón de clasificación
+             * @default requiere_revision
+             */
+            razon: string;
+            /**
+             * Mensaje
+             * @description Mensaje descriptivo
+             */
+            mensaje: string;
+            /**
+             * Estrategia Id
+             * @description ID de la estrategia evaluada
+             */
+            estrategia_id?: number | null;
+            /**
+             * Estrategia Nombre
+             * @description Nombre de la estrategia
+             */
+            estrategia_nombre?: string | null;
+            /**
+             * Reglas Evaluadas
+             * @description Reglas evaluadas que no cumplieron
+             */
+            reglas_evaluadas?: components["schemas"]["ReglaEvaluada"][] | null;
+        };
+        /**
+         * TrazabilidadSinEstrategia
+         * @description Trazabilidad cuando no existe estrategia definida
+         */
+        TrazabilidadSinEstrategia: {
+            /**
+             * Razon
+             * @description Razón de clasificación
+             * @default sin_estrategia
+             */
+            razon: string;
+            /**
+             * Mensaje
+             * @description Mensaje descriptivo
+             */
+            mensaje: string;
+            /**
+             * Estrategia Evaluada
+             * @description Si se evaluó estrategia
+             * @default false
+             */
+            estrategia_evaluada: boolean;
         };
         /**
          * UserChangePassword
@@ -5557,13 +5832,22 @@ export interface operations {
                 page_size?: number;
                 /** @description Búsqueda por ID, nombre o documento */
                 search?: string | null;
-                tipo_eno_id?: number | null;
+                /** @description Lista de IDs de tipos de eventos */
+                tipo_eno_ids?: number[] | null;
+                /** @description Lista de IDs de grupos de eventos */
+                grupo_eno_ids?: number[] | null;
                 fecha_desde?: string | null;
                 fecha_hasta?: string | null;
-                clasificacion?: string | null;
-                provincia?: string | null;
+                /** @description Lista de clasificaciones */
+                clasificacion?: string[] | null;
+                /** @description Lista de códigos INDEC de provincias (filtro por ESTABLECIMIENTO DE NOTIFICACIÓN) */
+                provincia_id?: number[] | null;
                 tipo_sujeto?: string | null;
                 requiere_revision?: boolean | null;
+                /** @description Edad mínima */
+                edad_min?: number | null;
+                /** @description Edad máxima */
+                edad_max?: number | null;
                 sort_by?: components["schemas"]["EventoSortBy"];
             };
             header?: never;
@@ -5807,9 +6091,18 @@ export interface operations {
                 search?: string | null;
                 /** @description Filtro por tipo: humano, animal, todos */
                 tipo_sujeto?: string | null;
-                provincia?: string | null;
+                /** @description Lista de códigos INDEC de provincias (filtro por ESTABLECIMIENTO DE NOTIFICACIÓN de eventos) */
+                provincia_id?: number[] | null;
+                /** @description Lista de IDs de tipos de eventos */
+                tipo_eno_ids?: number[] | null;
+                /** @description Lista de IDs de grupos de eventos */
+                grupo_eno_ids?: number[] | null;
                 /** @description Solo personas con múltiples eventos */
                 tiene_multiples_eventos?: boolean | null;
+                /** @description Edad mínima */
+                edad_min?: number | null;
+                /** @description Edad máxima */
+                edad_max?: number | null;
                 sort_by?: components["schemas"]["PersonaSortBy"];
             };
             header?: never;
@@ -6053,14 +6346,16 @@ export interface operations {
             query?: {
                 /** @description ID del grupo seleccionado */
                 grupo_id?: number | null;
-                /** @description ID del evento seleccionado */
-                evento_id?: number | null;
+                /** @description IDs de los eventos a filtrar */
+                tipo_eno_ids?: number[] | null;
                 /** @description Fecha desde (formato: YYYY-MM-DD) */
                 fecha_desde?: string | null;
                 /** @description Fecha hasta (formato: YYYY-MM-DD) */
                 fecha_hasta?: string | null;
                 /** @description Filtrar por clasificaciones estratégicas */
                 clasificaciones?: string[] | null;
+                /** @description Código INDEC de provincia (opcional, si no se envía muestra todas las provincias) */
+                provincia_id?: number | null;
             };
             header?: never;
             path?: never;
@@ -6093,14 +6388,16 @@ export interface operations {
             query?: {
                 /** @description ID del grupo seleccionado */
                 grupo_id?: number | null;
-                /** @description ID del evento seleccionado */
-                evento_id?: number | null;
+                /** @description IDs de los eventos a filtrar */
+                tipo_eno_ids?: number[] | null;
                 /** @description Fecha desde (formato: YYYY-MM-DD) */
                 fecha_desde?: string | null;
                 /** @description Fecha hasta (formato: YYYY-MM-DD) */
                 fecha_hasta?: string | null;
                 /** @description Filtrar por clasificaciones estratégicas */
                 clasificaciones?: string[] | null;
+                /** @description Código INDEC de provincia (opcional, si no se envía muestra todas las provincias) */
+                provincia_id?: number | null;
             };
             header?: never;
             path?: never;
@@ -6153,14 +6450,16 @@ export interface operations {
             query?: {
                 /** @description ID del grupo seleccionado */
                 grupo_id?: number | null;
-                /** @description ID del evento seleccionado */
-                evento_id?: number | null;
+                /** @description IDs de los eventos a filtrar */
+                tipo_eno_ids?: number[] | null;
                 /** @description Fecha desde (formato: YYYY-MM-DD) */
                 fecha_desde?: string | null;
                 /** @description Fecha hasta (formato: YYYY-MM-DD) */
                 fecha_hasta?: string | null;
                 /** @description Filtrar por clasificaciones estratégicas */
                 clasificaciones?: string[] | null;
+                /** @description Código INDEC de provincia (opcional, si no se envía muestra todas las provincias) */
+                provincia_id?: number | null;
             };
             header?: never;
             path?: never;

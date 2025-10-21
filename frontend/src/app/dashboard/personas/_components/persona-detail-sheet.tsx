@@ -24,7 +24,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { getClasificacionColorClasses, getClasificacionLabel } from "@/lib/api/eventos";
 
 interface PersonaDetailSheetProps {
-  tipoSujeto: string;
+  tipoSujeto: 'humano' | 'animal';
   personaId: number;
   onClose?: () => void;
 }
@@ -86,11 +86,6 @@ export function PersonaDetailSheet({
               </Badge>
               {persona.sexo_biologico && (
                 <Badge variant="outline">{persona.sexo_biologico}</Badge>
-              )}
-              {persona.tiene_eventos_activos && (
-                <Badge variant="default" className="bg-green-500">
-                  Activo
-                </Badge>
               )}
             </div>
           </div>

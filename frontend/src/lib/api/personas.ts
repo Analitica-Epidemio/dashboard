@@ -4,27 +4,24 @@
  */
 
 import { $api } from '@/lib/api/client';
+import type { operations, components } from '@/lib/api/types';
 
 /**
- * Persona filters interface
- * Filtra personas por características de sus eventos asociados
- *
+ * Persona filters - extracted from API types
  * IMPORTANTE: provincia_id filtra por ESTABLECIMIENTO DE NOTIFICACIÓN de los eventos,
  * no por domicilio de la persona
  */
-export interface PersonaFilters {
-  page?: number;
-  page_size?: number;
-  search?: string;
-  tipo_sujeto?: 'humano' | 'animal' | 'todos';
-  provincia_id?: number[];  // Backend alias para provincia_ids_establecimiento_notificacion
-  tipo_eno_ids?: number[];  // IDs de tipos de eventos
-  grupo_eno_ids?: number[];  // IDs de grupos de eventos
-  tiene_multiples_eventos?: boolean;
-  edad_min?: number;
-  edad_max?: number;
-  sort_by?: 'nombre_asc' | 'nombre_desc' | 'eventos_desc' | 'eventos_asc' | 'ultimo_evento_desc' | 'ultimo_evento_asc';
-}
+export type PersonaFilters = operations["list_personas_api_v1_personas__get"]["parameters"]["query"];
+
+/**
+ * Persona detail response - extracted from API types
+ */
+export type PersonaDetail = components["schemas"]["PersonaDetailResponse"];
+
+/**
+ * Persona list item - extracted from API types
+ */
+export type PersonaListItem = components["schemas"]["PersonaListItem"];
 
 /**
  * Hook to fetch personas list with filters

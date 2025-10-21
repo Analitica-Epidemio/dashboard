@@ -17,8 +17,10 @@ export interface Strategy {
   valid_from: string
   valid_until: string | null
   active: boolean
-  created_by?: string
-  classification_rules_count?: number
+  created_by?: string | null
+  classification_rules_count?: number | null
+  usa_provincia_carga?: boolean
+  provincia_field?: string
 }
 
 interface StrategyTimelineProps {

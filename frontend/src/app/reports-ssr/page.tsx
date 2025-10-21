@@ -367,8 +367,8 @@ export default async function ReportsSSRPage({ searchParams }: PageProps) {
                           nombre={chart.nombre}
                           descripcion={chart.descripcion}
                           tipo={chart.tipo}
-                          data={chart.data}
-                          config={chart.config}
+                          data={chart.data as any}
+                          config={chart.config as any}
                         />
                       </div>
                     )

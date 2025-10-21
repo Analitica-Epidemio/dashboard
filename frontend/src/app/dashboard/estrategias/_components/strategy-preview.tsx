@@ -46,24 +46,28 @@ interface FilterConfig {
 }
 
 interface Filter {
-  id?: number;
+  id?: number | null;
   filter_type: string;
   field_name: string;
-  value?: string;
-  values?: string[];
-  config?: FilterConfig;
-  extracted_metadata_field?: string;
-  logical_operator?: string;
+  value?: string | null;
+  values?: string[] | null;
+  config?: FilterConfig | null;
+  extracted_metadata_field?: string | null;
+  logical_operator?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
 interface Rule {
-  id?: number;
+  id?: number | null;
   classification: string;
   priority: number;
   is_active: boolean;
   auto_approve: boolean;
-  required_confidence?: number;
+  required_confidence?: number | null;
   filters: Filter[];
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
 export function StrategyPreview({ strategy, onClose, onEdit }: StrategyPreviewProps) {
@@ -163,11 +167,14 @@ export function StrategyPreview({ strategy, onClose, onEdit }: StrategyPreviewPr
                 {filter.field_name}
               </code>
             </div>
-            {getConfigValue(filter, "pattern") && (
-              <code className="block bg-muted px-2 py-1 rounded text-xs font-mono mt-1">
-                {getConfigValue(filter, "pattern") as string}
-              </code>
-            )}
+            {(() => {
+              const pattern = getConfigValue(filter, "pattern");
+              return pattern && typeof pattern === 'string' ? (
+                <code className="block bg-muted px-2 py-1 rounded text-xs font-mono mt-1">
+                  {pattern}
+                </code>
+              ) : null;
+            })()}
             {filter.extracted_metadata_field && (
               <div className="text-xs text-muted-foreground mt-1">
                 → Guarda en: <strong>{filter.extracted_metadata_field}</strong>
@@ -177,8 +184,8 @@ export function StrategyPreview({ strategy, onClose, onEdit }: StrategyPreviewPr
         );
 
       case "detector_tipo_sujeto":
-        const targetType = getConfigValue(filter, "target_type");
-        const minConfidence = getConfigValue(filter, "min_confidence");
+        const targetType = getConfigValue(filter, "target_type") as string | undefined;
+        const minConfidence = getConfigValue(filter, "min_confidence") as number | undefined;
         return (
           <div className="space-y-1">
             <div>
@@ -193,7 +200,7 @@ export function StrategyPreview({ strategy, onClose, onEdit }: StrategyPreviewPr
                   : "Indeterminado"}
               </strong>
             </div>
-            {minConfidence !== undefined && minConfidence > 0 && (
+            {minConfidence !== undefined && minConfidence !== null && minConfidence > 0 && (
               <div className="text-xs text-muted-foreground">
                 Confianza mínima: {(minConfidence * 100).toFixed(0)}%
               </div>
@@ -207,14 +214,14 @@ export function StrategyPreview({ strategy, onClose, onEdit }: StrategyPreviewPr
         );
 
       case "extractor_metadata":
-        const extractionFields = getConfigValue(filter, "extraction_fields");
-        const normalization = getConfigValue(filter, "normalization");
+        const extractionFields = getConfigValue(filter, "extraction_fields") as string[] | undefined;
+        const normalization = getConfigValue(filter, "normalization") as Record<string, unknown> | undefined;
         return (
           <div className="space-y-1">
             <div>
               <span className="text-muted-foreground">Extrae metadata de:</span>
             </div>
-            {extractionFields && extractionFields.length > 0 && (
+            {extractionFields && Array.isArray(extractionFields) && extractionFields.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1">
                 {extractionFields.map((f: string, i: number) => (
                   <Badge key={i} variant="secondary" className="text-xs">
@@ -223,7 +230,7 @@ export function StrategyPreview({ strategy, onClose, onEdit }: StrategyPreviewPr
                 ))}
               </div>
             )}
-            {normalization && Object.keys(normalization).length > 0 && (
+            {normalization && typeof normalization === 'object' && Object.keys(normalization).length > 0 && (
               <div className="space-y-1 mt-1">
                 <div className="text-xs text-muted-foreground font-medium">
                   Normalizaciones:
@@ -231,7 +238,7 @@ export function StrategyPreview({ strategy, onClose, onEdit }: StrategyPreviewPr
                 <div className="text-xs space-y-0.5 pl-2 border-l-2 border-muted">
                   {Object.entries(normalization).map(([k, v], i) => (
                     <div key={i}>
-                      <strong>&quot;{k}&quot;</strong> → <strong>&quot;{v}&quot;</strong>
+                      <strong>&quot;{k}&quot;</strong> → <strong>&quot;{String(v)}&quot;</strong>
                     </div>
                   ))}
                 </div>
@@ -250,7 +257,7 @@ export function StrategyPreview({ strategy, onClose, onEdit }: StrategyPreviewPr
           <div>
             <span className="text-muted-foreground">Función personalizada:</span>{" "}
             <code className="bg-muted px-1.5 py-0.5 rounded text-xs">
-              {getConfigValue(filter, "function_name") || filter.field_name}
+              {(getConfigValue(filter, "function_name") as string) || filter.field_name}
             </code>
           </div>
         );
