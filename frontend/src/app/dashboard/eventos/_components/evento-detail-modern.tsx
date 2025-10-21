@@ -42,6 +42,45 @@ import {
   getClasificacionColorClasses,
 } from "@/lib/api/eventos";
 import { cn } from "@/lib/utils";
+import type { components } from "@/lib/api/types";
+
+// Type guards for TrazabilidadClasificacion discriminated union
+type TrazabilidadClasificacion =
+  | components["schemas"]["TrazabilidadReglaAplicada"]
+  | components["schemas"]["TrazabilidadEvaluando"]
+  | components["schemas"]["TrazabilidadRequiereRevision"]
+  | components["schemas"]["TrazabilidadSinEstrategia"]
+  | components["schemas"]["TrazabilidadError"];
+
+function isReglaAplicada(
+  traz: TrazabilidadClasificacion
+): traz is components["schemas"]["TrazabilidadReglaAplicada"] {
+  return traz.razon === "regla_aplicada";
+}
+
+function isEvaluando(
+  traz: TrazabilidadClasificacion
+): traz is components["schemas"]["TrazabilidadEvaluando"] {
+  return traz.razon === "evaluando";
+}
+
+function isRequiereRevision(
+  traz: TrazabilidadClasificacion
+): traz is components["schemas"]["TrazabilidadRequiereRevision"] {
+  return traz.razon === "requiere_revision";
+}
+
+function isSinEstrategia(
+  traz: TrazabilidadClasificacion
+): traz is components["schemas"]["TrazabilidadSinEstrategia"] {
+  return traz.razon === "sin_estrategia";
+}
+
+function isError(
+  traz: TrazabilidadClasificacion
+): traz is components["schemas"]["TrazabilidadError"] {
+  return traz.razon === "error";
+}
 
 interface EventoDetailProps {
   eventoId: number;
@@ -86,9 +125,7 @@ function CollapsibleSection({
         )}
       </button>
       {isOpen && (
-        <div className={cn("px-4 pb-4", isEmpty && "pb-3")}>
-          {children}
-        </div>
+        <div className={cn("px-4 pb-4", isEmpty && "pb-3")}>{children}</div>
       )}
     </div>
   );
@@ -116,7 +153,15 @@ function EmptyState({
 }
 
 // Data Row Component (key-value pairs)
-function DataRow({ label, value, icon: Icon }: { label: string; value: string | React.ReactNode; icon?: any }) {
+function DataRow({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string;
+  value: string | React.ReactNode;
+  icon?: any;
+}) {
   return (
     <div className="flex items-start justify-between py-2 text-sm">
       <div className="flex items-center gap-2 text-muted-foreground">
@@ -174,8 +219,8 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
   const getSexoCompleto = (sexo: string | null | undefined) => {
     if (!sexo) return "No especificado";
     const sexoLower = sexo.toLowerCase();
-    if (sexoLower === 'm' || sexoLower === 'masculino') return 'Masculino';
-    if (sexoLower === 'f' || sexoLower === 'femenino') return 'Femenino';
+    if (sexoLower === "m" || sexoLower === "masculino") return "Masculino";
+    if (sexoLower === "f" || sexoLower === "femenino") return "Femenino";
     return sexo;
   };
 
@@ -227,7 +272,8 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
         </div>
         <h3 className="text-lg font-semibold mb-2">Error al cargar evento</h3>
         <p className="text-sm text-muted-foreground mb-4">
-          No pudimos cargar la información del evento. Por favor, intenta nuevamente.
+          No pudimos cargar la información del evento. Por favor, intenta
+          nuevamente.
         </p>
         {onClose && (
           <Button variant="outline" onClick={onClose}>
@@ -245,7 +291,11 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
     ? evento.animal.identificacion || `Animal #${evento.animal.id}`
     : "Sujeto no identificado";
 
-  const subjectType = evento.ciudadano ? "Humano" : evento.animal ? "Animal" : "Desconocido";
+  const subjectType = evento.ciudadano
+    ? "Humano"
+    : evento.animal
+    ? "Animal"
+    : "Desconocido";
 
   return (
     <div className="px-6 py-6 space-y-6">
@@ -260,10 +310,14 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
               <span>•</span>
               <span>{subjectType}</span>
             </div>
-            <h1 className="text-2xl font-semibold tracking-tight">{subjectName}</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">
+              {subjectName}
+            </h1>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Activity className="h-4 w-4" />
-              <span>{evento.tipo_eno_nombre || `Tipo ${evento.tipo_eno_id}`}</span>
+              <span>
+                {evento.tipo_eno_nombre || `Tipo ${evento.tipo_eno_id}`}
+              </span>
             </div>
           </div>
 
@@ -289,7 +343,9 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
           {evento.confidence_score && (
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <Shield className="h-4 w-4" />
-              <span>Confianza: {(evento.confidence_score * 100).toFixed(0)}%</span>
+              <span>
+                Confianza: {(evento.confidence_score * 100).toFixed(0)}%
+              </span>
             </div>
           )}
           {evento.requiere_revision_especie && (
@@ -324,28 +380,41 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
           {evento.ciudadano ? (
             <div className="space-y-4">
               <div className="grid gap-x-8 gap-y-3 md:grid-cols-2">
-                <DataRow label="Documento" value={evento.ciudadano.documento || "No especificado"} />
+                <DataRow
+                  label="Documento"
+                  value={evento.ciudadano.documento || "No especificado"}
+                />
                 <DataRow
                   label="Fecha de nacimiento"
                   value={
                     <>
                       {formatDate(evento.ciudadano.fecha_nacimiento)}
-                      {evento.ciudadano.fecha_nacimiento && calcularEdad(evento.ciudadano.fecha_nacimiento) !== null && (
-                        <span className="text-muted-foreground ml-2">
-                          ({calcularEdad(evento.ciudadano.fecha_nacimiento)} años)
-                        </span>
-                      )}
+                      {evento.ciudadano.fecha_nacimiento &&
+                        calcularEdad(evento.ciudadano.fecha_nacimiento) !==
+                          null && (
+                          <span className="text-muted-foreground ml-2">
+                            ({calcularEdad(evento.ciudadano.fecha_nacimiento)}{" "}
+                            años)
+                          </span>
+                        )}
                     </>
                   }
                 />
-                <DataRow label="Sexo" value={getSexoCompleto(evento.ciudadano.sexo)} />
+                <DataRow
+                  label="Sexo"
+                  value={getSexoCompleto(evento.ciudadano.sexo)}
+                />
                 {evento.ciudadano.telefono && (
                   <DataRow label="Teléfono" value={evento.ciudadano.telefono} />
                 )}
               </div>
 
               {/* Domicilio */}
-              {(evento.ciudadano.calle || evento.ciudadano.numero || evento.ciudadano.barrio || evento.ciudadano.localidad || evento.ciudadano.provincia) && (
+              {(evento.ciudadano.calle ||
+                evento.ciudadano.numero ||
+                evento.ciudadano.barrio ||
+                evento.ciudadano.localidad ||
+                evento.ciudadano.provincia) && (
                 <div className="pt-4 border-t">
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
                     <MapPin className="h-3 w-3" />
@@ -355,31 +424,45 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                     {evento.ciudadano.calle && (
                       <div className="flex items-baseline justify-between text-sm">
                         <span className="text-muted-foreground">Calle:</span>
-                        <span className="font-medium text-right">{evento.ciudadano.calle}</span>
+                        <span className="font-medium text-right">
+                          {evento.ciudadano.calle}
+                        </span>
                       </div>
                     )}
                     {evento.ciudadano.numero && (
                       <div className="flex items-baseline justify-between text-sm">
                         <span className="text-muted-foreground">Número:</span>
-                        <span className="font-medium text-right">{evento.ciudadano.numero}</span>
+                        <span className="font-medium text-right">
+                          {evento.ciudadano.numero}
+                        </span>
                       </div>
                     )}
                     {evento.ciudadano.barrio && (
                       <div className="flex items-baseline justify-between text-sm">
                         <span className="text-muted-foreground">Barrio:</span>
-                        <span className="font-medium text-right">{evento.ciudadano.barrio}</span>
+                        <span className="font-medium text-right">
+                          {evento.ciudadano.barrio}
+                        </span>
                       </div>
                     )}
                     {evento.ciudadano.localidad && (
                       <div className="flex items-baseline justify-between text-sm">
-                        <span className="text-muted-foreground">Localidad:</span>
-                        <span className="font-medium text-right">{evento.ciudadano.localidad}</span>
+                        <span className="text-muted-foreground">
+                          Localidad:
+                        </span>
+                        <span className="font-medium text-right">
+                          {evento.ciudadano.localidad}
+                        </span>
                       </div>
                     )}
                     {evento.ciudadano.provincia && (
                       <div className="flex items-baseline justify-between text-sm">
-                        <span className="text-muted-foreground">Provincia:</span>
-                        <span className="font-medium text-right">{evento.ciudadano.provincia}</span>
+                        <span className="text-muted-foreground">
+                          Provincia:
+                        </span>
+                        <span className="font-medium text-right">
+                          {evento.ciudadano.provincia}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -387,7 +470,9 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
               )}
 
               {/* Datos adicionales si existen */}
-              {(evento.ciudadano.es_embarazada !== null || evento.ciudadano.cobertura_social || evento.ciudadano.ocupacion_laboral) && (
+              {(evento.ciudadano.es_embarazada !== null ||
+                evento.ciudadano.cobertura_social ||
+                evento.ciudadano.ocupacion_laboral) && (
                 <div className="pt-4 border-t">
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
                     Información Adicional
@@ -398,17 +483,30 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                         label="Embarazo"
                         icon={Baby}
                         value={
-                          <Badge variant={evento.ciudadano.es_embarazada ? "default" : "outline"} className="text-xs">
+                          <Badge
+                            variant={
+                              evento.ciudadano.es_embarazada
+                                ? "default"
+                                : "outline"
+                            }
+                            className="text-xs"
+                          >
                             {evento.ciudadano.es_embarazada ? "Sí" : "No"}
                           </Badge>
                         }
                       />
                     )}
                     {evento.ciudadano.cobertura_social && (
-                      <DataRow label="Cobertura social" value={evento.ciudadano.cobertura_social} />
+                      <DataRow
+                        label="Cobertura social"
+                        value={evento.ciudadano.cobertura_social}
+                      />
                     )}
                     {evento.ciudadano.ocupacion_laboral && (
-                      <DataRow label="Ocupación" value={evento.ciudadano.ocupacion_laboral} />
+                      <DataRow
+                        label="Ocupación"
+                        value={evento.ciudadano.ocupacion_laboral}
+                      />
                     )}
                   </div>
                 </div>
@@ -416,11 +514,27 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
             </div>
           ) : evento.animal ? (
             <div className="grid gap-x-8 gap-y-3 md:grid-cols-2">
-              <DataRow label="Identificación" value={evento.animal.identificacion || "Sin nombre"} />
-              <DataRow label="Especie" value={evento.animal.especie || "No especificada"} />
-              <DataRow label="Raza" value={evento.animal.raza || "No especificada"} />
-              <DataRow label="Provincia" value={evento.animal.provincia || "No especificada"} icon={MapPin} />
-              <DataRow label="Localidad" value={evento.animal.localidad || "No especificada"} />
+              <DataRow
+                label="Identificación"
+                value={evento.animal.identificacion || "Sin nombre"}
+              />
+              <DataRow
+                label="Especie"
+                value={evento.animal.especie || "No especificada"}
+              />
+              <DataRow
+                label="Raza"
+                value={evento.animal.raza || "No especificada"}
+              />
+              <DataRow
+                label="Provincia"
+                value={evento.animal.provincia || "No especificada"}
+                icon={MapPin}
+              />
+              <DataRow
+                label="Localidad"
+                value={evento.animal.localidad || "No especificada"}
+              />
             </div>
           ) : (
             <EmptyState
@@ -434,27 +548,42 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
         {/* Fechas */}
         <CollapsibleSection title="Cronología" icon={Calendar}>
           {/* Semana epidemiológica destacada */}
-          {(evento.semana_epidemiologica_apertura && evento.anio_epidemiologico_apertura) && (
-            <div className="mb-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                  Semana Epidemiológica {evento.semana_epidemiologica_apertura}/{evento.anio_epidemiologico_apertura}
-                </span>
+          {evento.semana_epidemiologica_apertura &&
+            evento.anio_epidemiologico_apertura && (
+              <div className="mb-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                    Semana Epidemiológica{" "}
+                    {evento.semana_epidemiologica_apertura}/
+                    {evento.anio_epidemiologico_apertura}
+                  </span>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
           <div className="grid gap-x-8 gap-y-3 md:grid-cols-2">
-            <DataRow label="Fecha del evento" value={formatDate(evento.fecha_minima_evento)} />
+            <DataRow
+              label="Fecha del evento"
+              value={formatDate(evento.fecha_minima_evento)}
+            />
             {evento.fecha_inicio_sintomas && (
-              <DataRow label="Inicio de síntomas" value={formatDate(evento.fecha_inicio_sintomas)} />
+              <DataRow
+                label="Inicio de síntomas"
+                value={formatDate(evento.fecha_inicio_sintomas)}
+              />
             )}
             {evento.fecha_apertura_caso && (
-              <DataRow label="Apertura del caso" value={formatDate(evento.fecha_apertura_caso)} />
+              <DataRow
+                label="Apertura del caso"
+                value={formatDate(evento.fecha_apertura_caso)}
+              />
             )}
             {evento.fecha_primera_consulta && (
-              <DataRow label="Primera consulta" value={formatDate(evento.fecha_primera_consulta)} />
+              <DataRow
+                label="Primera consulta"
+                value={formatDate(evento.fecha_primera_consulta)}
+              />
             )}
           </div>
 
@@ -465,8 +594,12 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                 Información Epidemiológica Adicional
               </p>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Semana epi. síntomas</span>
-                <span className="font-medium">{evento.semana_epidemiologica_sintomas}</span>
+                <span className="text-muted-foreground">
+                  Semana epi. síntomas
+                </span>
+                <span className="font-medium">
+                  {evento.semana_epidemiologica_sintomas}
+                </span>
               </div>
             </div>
           )}
@@ -497,173 +630,255 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
 
               {/* Razón de la clasificación */}
               {evento.trazabilidad_clasificacion.razon && (
-                <div className={cn(
-                  "p-3 rounded-lg border",
-                  evento.trazabilidad_clasificacion.razon === "regla_aplicada"
-                    ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900"
-                    : evento.trazabilidad_clasificacion.razon === "requiere_revision"
-                    ? "bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-900"
-                    : "bg-gray-50 dark:bg-gray-950/20 border-gray-200 dark:border-gray-900"
-                )}>
+                <div
+                  className={cn(
+                    "p-3 rounded-lg border",
+                    evento.trazabilidad_clasificacion.razon === "regla_aplicada"
+                      ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900"
+                      : evento.trazabilidad_clasificacion.razon ===
+                        "requiere_revision"
+                      ? "bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-900"
+                      : "bg-gray-50 dark:bg-gray-950/20 border-gray-200 dark:border-gray-900"
+                  )}
+                >
                   <p className="text-sm font-medium mb-1">
-                    {evento.trazabilidad_clasificacion.razon === "regla_aplicada" && "✓ Regla Aplicada"}
-                    {evento.trazabilidad_clasificacion.razon === "requiere_revision" && "⚠ Requiere Revisión"}
-                    {evento.trazabilidad_clasificacion.razon === "sin_estrategia" && "ℹ Sin Estrategia"}
-                    {evento.trazabilidad_clasificacion.razon === "error" && "✗ Error"}
+                    {isReglaAplicada(evento.trazabilidad_clasificacion) && "✓ Regla Aplicada"}
+                    {isEvaluando(evento.trazabilidad_clasificacion) && "⚠ Evaluando"}
+                    {isRequiereRevision(evento.trazabilidad_clasificacion) && "⚠ Requiere Revisión"}
+                    {isSinEstrategia(evento.trazabilidad_clasificacion) && "ℹ Sin Estrategia"}
+                    {isError(evento.trazabilidad_clasificacion) && "✗ Error"}
                   </p>
-                  {evento.trazabilidad_clasificacion.mensaje && (
+                  {(isSinEstrategia(evento.trazabilidad_clasificacion) ||
+                    isError(evento.trazabilidad_clasificacion) ||
+                    isRequiereRevision(evento.trazabilidad_clasificacion)) && (
                     <p className="text-xs text-muted-foreground">
                       {evento.trazabilidad_clasificacion.mensaje}
                     </p>
                   )}
 
                   {/* Regla aplicada con éxito */}
-                  {evento.trazabilidad_clasificacion.razon === "regla_aplicada" && (
+                  {isReglaAplicada(evento.trazabilidad_clasificacion) && (
                     <div className="mt-3 pt-3 border-t space-y-2">
                       <div className="text-xs">
-                        <span className="font-medium">Regla:</span> {evento.trazabilidad_clasificacion.regla_nombre}
+                        <span className="font-medium">Regla:</span>{" "}
+                        {evento.trazabilidad_clasificacion.regla_nombre || "Sin nombre"}
                       </div>
                       <div className="text-xs">
                         <span className="font-medium">Clasificación:</span>{" "}
-                        <Badge className={cn("text-xs", getClasificacionColorClasses(evento.trazabilidad_clasificacion.clasificacion_aplicada))}>
-                          {getClasificacionLabel(evento.trazabilidad_clasificacion.clasificacion_aplicada)}
+                        <Badge
+                          className={cn(
+                            "text-xs",
+                            getClasificacionColorClasses(
+                              evento.trazabilidad_clasificacion
+                                .clasificacion_aplicada || ""
+                            )
+                          )}
+                        >
+                          {getClasificacionLabel(
+                            evento.trazabilidad_clasificacion
+                              .clasificacion_aplicada || ""
+                          )}
                         </Badge>
                       </div>
                       <div className="text-xs">
-                        <span className="font-medium">Prioridad:</span> {evento.trazabilidad_clasificacion.regla_prioridad}
+                        <span className="font-medium">Prioridad:</span>{" "}
+                        {evento.trazabilidad_clasificacion.regla_prioridad}
                       </div>
 
                       {/* Condiciones evaluadas */}
                       {evento.trazabilidad_clasificacion.condiciones_evaluadas &&
-                       evento.trazabilidad_clasificacion.condiciones_evaluadas.length > 0 && (
-                        <div className="mt-3">
-                          <p className="text-xs font-medium mb-2">Condiciones Evaluadas:</p>
-                          <div className="space-y-2">
-                            {evento.trazabilidad_clasificacion.condiciones_evaluadas.map((cond: any, idx: number) => (
-                              <div
-                                key={idx}
-                                className={cn(
-                                  "p-3 rounded-lg border",
-                                  cond.resultado
-                                    ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900"
-                                    : "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900"
-                                )}
-                              >
-                                <div className="flex items-start gap-3">
-                                  <div className={cn(
-                                    "flex h-5 w-5 items-center justify-center rounded-full flex-shrink-0",
+                        evento.trazabilidad_clasificacion.condiciones_evaluadas
+                          .length > 0 && (
+                          <div className="mt-3">
+                            <p className="text-xs font-medium mb-2">
+                              Condiciones Evaluadas:
+                            </p>
+                            <div className="space-y-2">
+                              {evento.trazabilidad_clasificacion.condiciones_evaluadas.map(
+                                (cond, idx) => (
+                                <div
+                                  key={idx}
+                                  className={cn(
+                                    "p-3 rounded-lg border",
                                     cond.resultado
-                                      ? "bg-green-500 text-white"
-                                      : "bg-red-500 text-white"
-                                  )}>
-                                    <span className="text-xs font-bold">
-                                      {cond.resultado ? "✓" : "✗"}
-                                    </span>
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-baseline gap-2 mb-1">
-                                      <span className="font-medium text-sm">{cond.campo}</span>
-                                      <Badge variant="outline" className="text-xs">
-                                        {cond.tipo_filtro.replace('CAMPO_', '').toLowerCase()}
-                                      </Badge>
-                                    </div>
-
-                                    {/* Valor esperado */}
-                                    {cond.config && (cond.config.value || cond.config.values) && (
-                                      <p className="text-xs text-muted-foreground mb-1">
-                                        Busca: <span className="font-medium text-foreground">
-                                          {cond.config.value || (Array.isArray(cond.config.values) ? cond.config.values.join(', ') : cond.config.values)}
-                                        </span>
-                                      </p>
-                                    )}
-
-                                    {/* Valor encontrado */}
-                                    {cond.valor_campo && (
-                                      <p className="text-xs text-muted-foreground">
-                                        Encontrado: <span className="font-medium text-foreground">{cond.valor_campo}</span>
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Reglas evaluadas que no cumplieron */}
-                  {evento.trazabilidad_clasificacion.reglas_evaluadas &&
-                   evento.trazabilidad_clasificacion.reglas_evaluadas.length > 0 && (
-                    <div className="mt-3 pt-3 border-t">
-                      <p className="text-xs font-medium mb-3">
-                        Reglas evaluadas sin coincidencias ({evento.trazabilidad_clasificacion.reglas_evaluadas.length}):
-                      </p>
-                      <div className="space-y-3">
-                        {evento.trazabilidad_clasificacion.reglas_evaluadas.map((regla: any, idx: number) => (
-                          <div key={idx} className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800">
-                            <div className="flex items-start justify-between mb-3">
-                              <span className="text-sm font-medium">{regla.regla_nombre}</span>
-                              <Badge variant="outline" className="text-xs">
-                                Prioridad {regla.regla_prioridad}
-                              </Badge>
-                            </div>
-
-                            {regla.condiciones && regla.condiciones.length > 0 && (
-                              <div className="space-y-2">
-                                {regla.condiciones.map((cond: any, condIdx: number) => (
-                                  <div
-                                    key={condIdx}
-                                    className={cn(
-                                      "p-2 rounded border flex items-start gap-2",
-                                      cond.resultado
-                                        ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
-                                        : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
-                                    )}
-                                  >
-                                    <div className={cn(
-                                      "flex h-4 w-4 items-center justify-center rounded-full flex-shrink-0 mt-0.5",
-                                      cond.resultado
-                                        ? "bg-green-500 text-white"
-                                        : "bg-red-500 text-white"
-                                    )}>
-                                      <span className="text-[10px] font-bold">
+                                      ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900"
+                                      : "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900"
+                                  )}
+                                >
+                                  <div className="flex items-start gap-3">
+                                    <div
+                                      className={cn(
+                                        "flex h-5 w-5 items-center justify-center rounded-full flex-shrink-0",
+                                        cond.resultado
+                                          ? "bg-green-500 text-white"
+                                          : "bg-red-500 text-white"
+                                      )}
+                                    >
+                                      <span className="text-xs font-bold">
                                         {cond.resultado ? "✓" : "✗"}
                                       </span>
                                     </div>
                                     <div className="flex-1 min-w-0">
                                       <div className="flex items-baseline gap-2 mb-1">
-                                        <p className="text-xs font-medium">{cond.campo}</p>
-                                        {cond.tipo_filtro && (
-                                          <Badge variant="outline" className="text-[10px] px-1 py-0">
-                                            {cond.tipo_filtro.replace('CAMPO_', '').toLowerCase()}
-                                          </Badge>
-                                        )}
+                                        <span className="font-medium text-sm">
+                                          {cond.campo}
+                                        </span>
+                                        <Badge
+                                          variant="outline"
+                                          className="text-xs"
+                                        >
+                                          {cond.tipo_filtro
+                                            .replace("CAMPO_", "")
+                                            .toLowerCase()}
+                                        </Badge>
                                       </div>
 
                                       {/* Valor esperado */}
-                                      {cond.config && (cond.config.value || cond.config.values) && (
-                                        <p className="text-xs text-muted-foreground">
-                                          Busca: <span className="font-medium">
-                                            {cond.config.value || (Array.isArray(cond.config.values) ? cond.config.values.join(', ') : cond.config.values)}
-                                          </span>
-                                        </p>
-                                      )}
+                                      {(() => {
+                                        if (!cond.config) return null;
+                                        const val = cond.config.value;
+                                        const vals = cond.config.values;
+                                        if (!val && !vals) return null;
+
+                                        return (
+                                          <p className="text-xs text-muted-foreground mb-1">
+                                            Esperado:{" "}
+                                            <span className="font-medium text-foreground">
+                                              {String(val) ||
+                                                (Array.isArray(vals)
+                                                  ? (vals as any[]).join(", ")
+                                                  : String(vals))}
+                                            </span>
+                                          </p>
+                                        );
+                                      })()}
 
                                       {/* Valor encontrado */}
                                       {cond.valor_campo && (
-                                        <p className="text-xs text-muted-foreground mt-0.5">
-                                          Encontrado: <span className="font-medium">{cond.valor_campo}</span>
+                                        <p className="text-xs text-muted-foreground">
+                                          Encontrado:{" "}
+                                          <span className="font-medium text-foreground">
+                                            {cond.valor_campo}
+                                          </span>
                                         </p>
                                       )}
                                     </div>
                                   </div>
-                                ))}
-                              </div>
+                                </div>
+                              )
                             )}
+                            </div>
                           </div>
-                        ))}
+                        )}
+                    </div>
+                  )}
+
+                  {/* Reglas evaluadas que no cumplieron */}
+                  {isEvaluando(evento.trazabilidad_clasificacion) &&
+                  evento.trazabilidad_clasificacion.reglas_evaluadas &&
+                  evento.trazabilidad_clasificacion.reglas_evaluadas.length >
+                    0 && (
+                    <div className="mt-3 pt-3 border-t">
+                      <p className="text-xs font-medium mb-3">
+                        Reglas evaluadas sin coincidencias (
+                        {evento.trazabilidad_clasificacion.reglas_evaluadas.length}
+                        ):
+                      </p>
+                      <div className="space-y-3">
+                        {evento.trazabilidad_clasificacion.reglas_evaluadas.map(
+                          (regla, idx) => (
+                          <div
+                            key={idx}
+                            className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800"
+                          >
+                            <div className="flex items-start justify-between mb-3">
+                              <span className="text-sm font-medium">
+                                {regla.regla_nombre}
+                              </span>
+                              <Badge variant="outline" className="text-xs">
+                                Prioridad {regla.regla_prioridad}
+                              </Badge>
+                            </div>
+
+                            {regla.condiciones &&
+                              regla.condiciones.length > 0 && (
+                                <div className="space-y-2">
+                                  {regla.condiciones.map(
+                                    (cond, condIdx) => (
+                                      <div
+                                        key={condIdx}
+                                        className={cn(
+                                          "p-2 rounded border flex items-start gap-2",
+                                          cond.resultado
+                                            ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+                                            : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
+                                        )}
+                                      >
+                                        <div
+                                          className={cn(
+                                            "flex h-4 w-4 items-center justify-center rounded-full flex-shrink-0 mt-0.5",
+                                            cond.resultado
+                                              ? "bg-green-500 text-white"
+                                              : "bg-red-500 text-white"
+                                          )}
+                                        >
+                                          <span className="text-[10px] font-bold">
+                                            {cond.resultado ? "✓" : "✗"}
+                                          </span>
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <div className="flex items-baseline gap-2 mb-1">
+                                            <p className="text-xs font-medium">
+                                              {cond.campo}
+                                            </p>
+                                            <Badge
+                                              variant="outline"
+                                              className="text-[10px] px-1 py-0"
+                                            >
+                                              {cond.tipo_filtro
+                                                .replace("CAMPO_", "")
+                                                .toLowerCase()}
+                                            </Badge>
+                                          </div>
+
+                                          {/* Valor esperado */}
+                                          {(() => {
+                                            if (!cond.config) return null;
+                                            const val = cond.config.value;
+                                            const vals = cond.config.values;
+                                            if (!val && !vals) return null;
+
+                                            return (
+                                              <p className="text-xs text-muted-foreground">
+                                                Esperado:{" "}
+                                                <span className="font-medium">
+                                                  {String(val) ||
+                                                    (Array.isArray(vals)
+                                                      ? (vals as any[]).join(", ")
+                                                      : String(vals))}
+                                                </span>
+                                              </p>
+                                            );
+                                          })()}
+
+                                          {/* Valor encontrado */}
+                                          {cond.valor_campo && (
+                                            <p className="text-xs text-muted-foreground mt-0.5">
+                                              Encontrado:{" "}
+                                              <span className="font-medium">
+                                                {cond.valor_campo}
+                                              </span>
+                                            </p>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )
+                                  )}
+                                </div>
+                              )}
+                          </div>
+                        )
+                        )}
                       </div>
                     </div>
                   )}
@@ -688,14 +903,20 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                   className="py-3 px-3 rounded-md border border-border hover:bg-muted/50 transition-colors"
                 >
                   <div className="flex items-start justify-between mb-2">
-                    <span className="text-sm font-medium">{sintoma.nombre || "Síntoma no especificado"}</span>
+                    <span className="text-sm font-medium">
+                      {sintoma.nombre || "Síntoma no especificado"}
+                    </span>
                     {sintoma.fecha_inicio && (
-                      <span className="text-xs text-muted-foreground">{formatDate(sintoma.fecha_inicio)}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatDate(sintoma.fecha_inicio)}
+                      </span>
                     )}
                   </div>
-                  {(sintoma.semana_epidemiologica || sintoma.anio_epidemiologico) && (
+                  {(sintoma.semana_epidemiologica ||
+                    sintoma.anio_epidemiologico) && (
                     <div className="text-xs text-muted-foreground">
-                      Semana epi: {sintoma.semana_epidemiologica || "?"}/{sintoma.anio_epidemiologico || "?"}
+                      Semana epi: {sintoma.semana_epidemiologica || "?"}/
+                      {sintoma.anio_epidemiologico || "?"}
                     </div>
                   )}
                 </div>
@@ -727,7 +948,9 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                   {/* Muestra header */}
                   <div className="flex justify-between items-start gap-4">
                     <div className="space-y-1 flex-1">
-                      <p className="font-medium text-sm">{muestra.tipo || "Tipo no especificado"}</p>
+                      <p className="font-medium text-sm">
+                        {muestra.tipo || "Tipo no especificado"}
+                      </p>
                       {muestra.fecha_toma_muestra && (
                         <p className="text-xs text-muted-foreground">
                           Tomada el {formatDate(muestra.fecha_toma_muestra)}
@@ -740,11 +963,13 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                         </div>
                       )}
                     </div>
-                    {(muestra.semana_epidemiologica && muestra.anio_epidemiologico) && (
-                      <Badge variant="outline" className="text-xs">
-                        Semana {muestra.semana_epidemiologica}/{muestra.anio_epidemiologico}
-                      </Badge>
-                    )}
+                    {muestra.semana_epidemiologica &&
+                      muestra.anio_epidemiologico && (
+                        <Badge variant="outline" className="text-xs">
+                          Semana {muestra.semana_epidemiologica}/
+                          {muestra.anio_epidemiologico}
+                        </Badge>
+                      )}
                   </div>
 
                   {/* Estudios nested */}
@@ -760,11 +985,18 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                         >
                           <div className="flex justify-between items-start gap-2">
                             <span className="text-sm font-medium">
-                              {estudio.determinacion || "Estudio no especificado"}
+                              {estudio.determinacion ||
+                                "Estudio no especificado"}
                             </span>
                             {estudio.resultado && (
                               <Badge
-                                variant={estudio.resultado.toLowerCase().includes("positivo") ? "destructive" : "outline"}
+                                variant={
+                                  estudio.resultado
+                                    .toLowerCase()
+                                    .includes("positivo")
+                                    ? "destructive"
+                                    : "outline"
+                                }
                                 className="text-xs"
                               >
                                 {estudio.resultado}
@@ -778,10 +1010,14 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                           )}
                           <div className="flex gap-4 text-xs text-muted-foreground">
                             {estudio.fecha_estudio && (
-                              <span>Estudio: {formatDate(estudio.fecha_estudio)}</span>
+                              <span>
+                                Estudio: {formatDate(estudio.fecha_estudio)}
+                              </span>
                             )}
                             {estudio.fecha_recepcion && (
-                              <span>Recepción: {formatDate(estudio.fecha_recepcion)}</span>
+                              <span>
+                                Recepción: {formatDate(estudio.fecha_recepcion)}
+                              </span>
                             )}
                           </div>
                         </div>
@@ -815,13 +1051,19 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                   className="flex items-start justify-between py-2 px-3 rounded-md hover:bg-muted/50 transition-colors"
                 >
                   <div className="space-y-1 flex-1">
-                    <p className="text-sm">{diagnostico.diagnostico || "Diagnóstico no especificado"}</p>
+                    <p className="text-sm">
+                      {diagnostico.diagnostico || "Diagnóstico no especificado"}
+                    </p>
                     {diagnostico.fecha && (
-                      <p className="text-xs text-muted-foreground">{formatDate(diagnostico.fecha)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDate(diagnostico.fecha)}
+                      </p>
                     )}
                   </div>
                   {diagnostico.es_principal && (
-                    <Badge variant="default" className="text-xs ml-2">Principal</Badge>
+                    <Badge variant="default" className="text-xs ml-2">
+                      Principal
+                    </Badge>
                   )}
                 </div>
               ))}
@@ -839,24 +1081,38 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
         <CollapsibleSection
           title="Establecimientos"
           icon={Building}
-          isEmpty={!evento.establecimiento_consulta && !evento.establecimiento_notificacion && !evento.establecimiento_carga}
+          isEmpty={
+            !evento.establecimiento_consulta &&
+            !evento.establecimiento_notificacion &&
+            !evento.establecimiento_carga
+          }
         >
-          {(evento.establecimiento_consulta || evento.establecimiento_notificacion || evento.establecimiento_carga) ? (
+          {evento.establecimiento_consulta ||
+          evento.establecimiento_notificacion ||
+          evento.establecimiento_carga ? (
             <div className="space-y-4">
               {evento.establecimiento_consulta && (
                 <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Consulta</p>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Consulta
+                  </p>
                   <div className="pl-3 border-l-2 border-blue-200 dark:border-blue-900">
-                    <p className="text-sm font-medium">{evento.establecimiento_consulta.nombre}</p>
+                    <p className="text-sm font-medium">
+                      {evento.establecimiento_consulta.nombre}
+                    </p>
                     {evento.establecimiento_consulta.tipo && (
-                      <p className="text-xs text-muted-foreground">{evento.establecimiento_consulta.tipo}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {evento.establecimiento_consulta.tipo}
+                      </p>
                     )}
-                    {(evento.establecimiento_consulta.provincia || evento.establecimiento_consulta.localidad) && (
+                    {(evento.establecimiento_consulta.provincia ||
+                      evento.establecimiento_consulta.localidad) && (
                       <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                         <MapPin className="h-3 w-3" />
                         <span>
                           {evento.establecimiento_consulta.localidad}
-                          {evento.establecimiento_consulta.provincia && `, ${evento.establecimiento_consulta.provincia}`}
+                          {evento.establecimiento_consulta.provincia &&
+                            `, ${evento.establecimiento_consulta.provincia}`}
                         </span>
                       </div>
                     )}
@@ -866,18 +1122,26 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
 
               {evento.establecimiento_notificacion && (
                 <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Notificación</p>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Notificación
+                  </p>
                   <div className="pl-3 border-l-2 border-yellow-200 dark:border-yellow-900">
-                    <p className="text-sm font-medium">{evento.establecimiento_notificacion.nombre}</p>
+                    <p className="text-sm font-medium">
+                      {evento.establecimiento_notificacion.nombre}
+                    </p>
                     {evento.establecimiento_notificacion.tipo && (
-                      <p className="text-xs text-muted-foreground">{evento.establecimiento_notificacion.tipo}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {evento.establecimiento_notificacion.tipo}
+                      </p>
                     )}
-                    {(evento.establecimiento_notificacion.provincia || evento.establecimiento_notificacion.localidad) && (
+                    {(evento.establecimiento_notificacion.provincia ||
+                      evento.establecimiento_notificacion.localidad) && (
                       <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                         <MapPin className="h-3 w-3" />
                         <span>
                           {evento.establecimiento_notificacion.localidad}
-                          {evento.establecimiento_notificacion.provincia && `, ${evento.establecimiento_notificacion.provincia}`}
+                          {evento.establecimiento_notificacion.provincia &&
+                            `, ${evento.establecimiento_notificacion.provincia}`}
                         </span>
                       </div>
                     )}
@@ -887,18 +1151,26 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
 
               {evento.establecimiento_carga && (
                 <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Carga</p>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Carga
+                  </p>
                   <div className="pl-3 border-l-2 border-gray-200 dark:border-gray-800">
-                    <p className="text-sm font-medium">{evento.establecimiento_carga.nombre}</p>
+                    <p className="text-sm font-medium">
+                      {evento.establecimiento_carga.nombre}
+                    </p>
                     {evento.establecimiento_carga.tipo && (
-                      <p className="text-xs text-muted-foreground">{evento.establecimiento_carga.tipo}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {evento.establecimiento_carga.tipo}
+                      </p>
                     )}
-                    {(evento.establecimiento_carga.provincia || evento.establecimiento_carga.localidad) && (
+                    {(evento.establecimiento_carga.provincia ||
+                      evento.establecimiento_carga.localidad) && (
                       <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                         <MapPin className="h-3 w-3" />
                         <span>
                           {evento.establecimiento_carga.localidad}
-                          {evento.establecimiento_carga.provincia && `, ${evento.establecimiento_carga.provincia}`}
+                          {evento.establecimiento_carga.provincia &&
+                            `, ${evento.establecimiento_carga.provincia}`}
                         </span>
                       </div>
                     )}
@@ -920,7 +1192,9 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
           title="Investigaciones Epidemiológicas"
           icon={Search}
           count={evento.investigaciones?.length}
-          isEmpty={!evento.investigaciones || evento.investigaciones.length === 0}
+          isEmpty={
+            !evento.investigaciones || evento.investigaciones.length === 0
+          }
           defaultOpen={false}
         >
           {evento.investigaciones && evento.investigaciones.length > 0 ? (
@@ -953,25 +1227,37 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                     {inv.fecha_investigacion && (
                       <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">Fecha:</span>
-                        <span className="font-medium">{formatDate(inv.fecha_investigacion)}</span>
+                        <span className="font-medium">
+                          {formatDate(inv.fecha_investigacion)}
+                        </span>
                       </div>
                     )}
                     {inv.tipo_lugar_investigacion && (
                       <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">Lugar:</span>
-                        <span className="font-medium text-right">{inv.tipo_lugar_investigacion}</span>
+                        <span className="font-medium text-right">
+                          {inv.tipo_lugar_investigacion}
+                        </span>
                       </div>
                     )}
                     {inv.origen_financiamiento && (
                       <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Financiamiento:</span>
-                        <span className="font-medium">{inv.origen_financiamiento}</span>
+                        <span className="text-muted-foreground">
+                          Financiamiento:
+                        </span>
+                        <span className="font-medium">
+                          {inv.origen_financiamiento}
+                        </span>
                       </div>
                     )}
                     {inv.participo_usuario_centinela && (
                       <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Participó centinela:</span>
-                        <Badge variant="outline" className="text-xs">Sí</Badge>
+                        <span className="text-muted-foreground">
+                          Participó centinela:
+                        </span>
+                        <Badge variant="outline" className="text-xs">
+                          Sí
+                        </Badge>
                       </div>
                     )}
                   </div>
@@ -998,7 +1284,10 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
           {evento.contactos && evento.contactos.length > 0 ? (
             <div className="space-y-4">
               {evento.contactos.map((contacto: any) => (
-                <div key={contacto.id} className="p-4 rounded-lg border space-y-3">
+                <div
+                  key={contacto.id}
+                  className="p-4 rounded-lg border space-y-3"
+                >
                   {/* Tipo de contacto */}
                   <div className="flex flex-wrap gap-2">
                     {contacto.contacto_caso_confirmado && (
@@ -1023,7 +1312,9 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                           <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                             {contacto.contactos_menores_un_ano}
                           </p>
-                          <p className="text-xs text-muted-foreground mt-1">Menores de 1 año</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Menores de 1 año
+                          </p>
                         </div>
                       )}
                       {contacto.contactos_vacunados !== null && (
@@ -1031,7 +1322,9 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                           <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                             {contacto.contactos_vacunados}
                           </p>
-                          <p className="text-xs text-muted-foreground mt-1">Vacunados</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Vacunados
+                          </p>
                         </div>
                       )}
                       {contacto.contactos_embarazadas !== null && (
@@ -1039,7 +1332,9 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                           <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                             {contacto.contactos_embarazadas}
                           </p>
-                          <p className="text-xs text-muted-foreground mt-1">Embarazadas</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Embarazadas
+                          </p>
                         </div>
                       )}
                     </div>
@@ -1066,10 +1361,15 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
           >
             <div className="space-y-3">
               {evento.tratamientos.map((trat: any, idx: number) => (
-                <div key={`${trat.id}-${idx}`} className="p-4 rounded-lg border space-y-2">
+                <div
+                  key={`${trat.id}-${idx}`}
+                  className="p-4 rounded-lg border space-y-2"
+                >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <p className="text-sm font-medium mb-1">{trat.descripcion || "Tratamiento no especificado"}</p>
+                      <p className="text-sm font-medium mb-1">
+                        {trat.descripcion || "Tratamiento no especificado"}
+                      </p>
                       {trat.establecimiento && (
                         <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
                           <Building className="h-3 w-3" />
@@ -1085,8 +1385,12 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                   </div>
                   {(trat.fecha_inicio || trat.fecha_fin) && (
                     <div className="flex gap-4 text-xs text-muted-foreground pt-2 border-t">
-                      {trat.fecha_inicio && <span>Inicio: {formatDate(trat.fecha_inicio)}</span>}
-                      {trat.fecha_fin && <span>Fin: {formatDate(trat.fecha_fin)}</span>}
+                      {trat.fecha_inicio && (
+                        <span>Inicio: {formatDate(trat.fecha_inicio)}</span>
+                      )}
+                      {trat.fecha_fin && (
+                        <span>Fin: {formatDate(trat.fecha_fin)}</span>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1112,20 +1416,26 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                       <span className="text-sm font-medium">Internación</span>
                     </div>
                     {int.requirio_uci && (
-                      <Badge variant="destructive" className="text-xs">UCI</Badge>
+                      <Badge variant="destructive" className="text-xs">
+                        UCI
+                      </Badge>
                     )}
                   </div>
                   <div className="grid gap-2 md:grid-cols-2 text-sm">
                     {int.fecha_internacion && (
                       <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">Ingreso:</span>
-                        <span className="font-medium">{formatDate(int.fecha_internacion)}</span>
+                        <span className="font-medium">
+                          {formatDate(int.fecha_internacion)}
+                        </span>
                       </div>
                     )}
                     {int.fecha_alta && (
                       <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">Alta:</span>
-                        <span className="font-medium">{formatDate(int.fecha_alta)}</span>
+                        <span className="font-medium">
+                          {formatDate(int.fecha_alta)}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -1148,7 +1458,9 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                 <div key={vac.id} className="p-3 rounded-lg border">
                   <div className="flex items-start justify-between">
                     <div className="space-y-1">
-                      <p className="text-sm font-medium">{vac.nombre_vacuna || "Vacuna no especificada"}</p>
+                      <p className="text-sm font-medium">
+                        {vac.nombre_vacuna || "Vacuna no especificada"}
+                      </p>
                       {vac.fecha_ultima_dosis && (
                         <p className="text-xs text-muted-foreground">
                           Última dosis: {formatDate(vac.fecha_ultima_dosis)}
@@ -1157,7 +1469,8 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                     </div>
                     {vac.dosis_total && (
                       <Badge variant="outline" className="text-xs">
-                        {vac.dosis_total} {vac.dosis_total === 1 ? 'dosis' : 'dosis'}
+                        {vac.dosis_total}{" "}
+                        {vac.dosis_total === 1 ? "dosis" : "dosis"}
                       </Badge>
                     )}
                   </div>
@@ -1178,7 +1491,9 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
             <div className="space-y-2">
               {evento.antecedentes.map((ant: any) => (
                 <div key={ant.id} className="p-3 rounded-lg border">
-                  <p className="text-sm">{ant.descripcion || "Antecedente no especificado"}</p>
+                  <p className="text-sm">
+                    {ant.descripcion || "Antecedente no especificado"}
+                  </p>
                   {ant.fecha_antecedente && (
                     <p className="text-xs text-muted-foreground mt-1">
                       {formatDate(ant.fecha_antecedente)}
@@ -1191,36 +1506,50 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
         )}
 
         {/* Ámbitos de concurrencia */}
-        {evento.ambitos_concurrencia && evento.ambitos_concurrencia.length > 0 && (
-          <CollapsibleSection
-            title="Ámbitos de Concurrencia"
-            icon={MapPinned}
-            count={evento.ambitos_concurrencia.length}
-            defaultOpen={false}
-          >
-            <div className="space-y-3">
-              {evento.ambitos_concurrencia.map((amb: any) => (
-                <div key={amb.id} className="p-3 rounded-lg border">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">{amb.nombre_lugar || "Lugar no especificado"}</p>
-                      {amb.tipo_lugar && (
-                        <p className="text-xs text-muted-foreground">{amb.tipo_lugar}</p>
+        {evento.ambitos_concurrencia &&
+          evento.ambitos_concurrencia.length > 0 && (
+            <CollapsibleSection
+              title="Ámbitos de Concurrencia"
+              icon={MapPinned}
+              count={evento.ambitos_concurrencia.length}
+              defaultOpen={false}
+            >
+              <div className="space-y-3">
+                {evento.ambitos_concurrencia.map((amb: any) => (
+                  <div key={amb.id} className="p-3 rounded-lg border">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">
+                          {amb.nombre_lugar || "Lugar no especificado"}
+                        </p>
+                        {amb.tipo_lugar && (
+                          <p className="text-xs text-muted-foreground">
+                            {amb.tipo_lugar}
+                          </p>
+                        )}
+                      </div>
+                      {amb.frecuencia_concurrencia && (
+                        <Badge variant="outline" className="text-xs">
+                          {amb.frecuencia_concurrencia}
+                        </Badge>
                       )}
                     </div>
-                    {amb.frecuencia_concurrencia && (
-                      <Badge variant="outline" className="text-xs">{amb.frecuencia_concurrencia}</Badge>
-                    )}
+                    <div className="flex gap-4 text-xs text-muted-foreground">
+                      {amb.localidad && (
+                        <span>
+                          <MapPin className="inline h-3 w-3 mr-1" />
+                          {amb.localidad}
+                        </span>
+                      )}
+                      {amb.fecha_ocurrencia && (
+                        <span>{formatDate(amb.fecha_ocurrencia)}</span>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex gap-4 text-xs text-muted-foreground">
-                    {amb.localidad && <span><MapPin className="inline h-3 w-3 mr-1" />{amb.localidad}</span>}
-                    {amb.fecha_ocurrencia && <span>{formatDate(amb.fecha_ocurrencia)}</span>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CollapsibleSection>
-        )}
+                ))}
+              </div>
+            </CollapsibleSection>
+          )}
 
         {/* Timeline */}
         <CollapsibleSection
@@ -1238,11 +1567,15 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted flex-shrink-0">
                       <div className="h-2 w-2 rounded-full bg-primary" />
                     </div>
-                    {index < timeline.length - 1 && <div className="w-px flex-1 bg-border mt-2" />}
+                    {index < timeline.length - 1 && (
+                      <div className="w-px flex-1 bg-border mt-2" />
+                    )}
                   </div>
                   <div className="flex-1 pb-4">
                     <p className="text-sm font-medium">{item.descripcion}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{formatDate(item.fecha)}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {formatDate(item.fecha)}
+                    </p>
                   </div>
                 </div>
               ))}

@@ -363,7 +363,7 @@ export default function EstrategiasPage() {
                               <div className="flex items-center gap-1">
                                 <Calendar className="h-3 w-3" />
                                 <span>
-                                  {formatDate(strategy.valid_from)} - {until ? formatDate(strategy.valid_until) : "∞"}
+                                  {formatDate(strategy.valid_from)} - {until && strategy.valid_until ? formatDate(strategy.valid_until) : "∞"}
                                 </span>
                               </div>
                               <div>

@@ -19,52 +19,51 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import type { TipoClasificacion } from "@/lib/api/eventos";
 
-// Tipos de clasificación epidemiológica
-export enum TipoClasificacion {
-  CONFIRMADOS = "CONFIRMADOS",
-  SOSPECHOSOS = "SOSPECHOSOS",
-  PROBABLES = "PROBABLES",
-  EN_ESTUDIO = "EN_ESTUDIO",
-  NEGATIVOS = "NEGATIVOS",
-  DESCARTADOS = "DESCARTADOS",
-  NOTIFICADOS = "NOTIFICADOS",
-  CON_RESULTADO_MORTAL = "CON_RESULTADO_MORTAL",
-  SIN_RESULTADO_MORTAL = "SIN_RESULTADO_MORTAL",
-  REQUIERE_REVISION = "REQUIERE_REVISION",
-}
+// Re-export TipoClasificacion for use by other components
+export type { TipoClasificacion };
+
+// Valores de clasificación epidemiológica
+const CLASIFICACIONES: TipoClasificacion[] = [
+  "CONFIRMADOS",
+  "SOSPECHOSOS",
+  "PROBABLES",
+  "EN_ESTUDIO",
+  "NEGATIVOS",
+  "DESCARTADOS",
+  "NOTIFICADOS",
+  "CON_RESULTADO_MORTAL",
+  "SIN_RESULTADO_MORTAL",
+  "REQUIERE_REVISION",
+] as const;
 
 // Colores para cada clasificación
 const CLASSIFICATION_COLORS: Record<TipoClasificacion, string> = {
-  [TipoClasificacion.CONFIRMADOS]: "bg-red-100 text-red-800 border-red-300",
-  [TipoClasificacion.SOSPECHOSOS]:
-    "bg-yellow-100 text-yellow-800 border-yellow-300",
-  [TipoClasificacion.PROBABLES]:
-    "bg-orange-100 text-orange-800 border-orange-300",
-  [TipoClasificacion.EN_ESTUDIO]: "bg-blue-100 text-blue-800 border-blue-300",
-  [TipoClasificacion.NEGATIVOS]: "bg-green-100 text-green-800 border-green-300",
-  [TipoClasificacion.DESCARTADOS]: "bg-gray-100 text-gray-800 border-gray-300",
-  [TipoClasificacion.NOTIFICADOS]:
-    "bg-purple-100 text-purple-800 border-purple-300",
-  [TipoClasificacion.CON_RESULTADO_MORTAL]: "bg-black text-white border-black",
-  [TipoClasificacion.SIN_RESULTADO_MORTAL]:
-    "bg-gray-200 text-gray-700 border-gray-400",
-  [TipoClasificacion.REQUIERE_REVISION]:
-    "bg-pink-100 text-pink-800 border-pink-300",
+  "CONFIRMADOS": "bg-red-100 text-red-800 border-red-300",
+  "SOSPECHOSOS": "bg-yellow-100 text-yellow-800 border-yellow-300",
+  "PROBABLES": "bg-orange-100 text-orange-800 border-orange-300",
+  "EN_ESTUDIO": "bg-blue-100 text-blue-800 border-blue-300",
+  "NEGATIVOS": "bg-green-100 text-green-800 border-green-300",
+  "DESCARTADOS": "bg-gray-100 text-gray-800 border-gray-300",
+  "NOTIFICADOS": "bg-purple-100 text-purple-800 border-purple-300",
+  "CON_RESULTADO_MORTAL": "bg-black text-white border-black",
+  "SIN_RESULTADO_MORTAL": "bg-gray-200 text-gray-700 border-gray-400",
+  "REQUIERE_REVISION": "bg-pink-100 text-pink-800 border-pink-300",
 };
 
 // Labels amigables
 const CLASSIFICATION_LABELS: Record<TipoClasificacion, string> = {
-  [TipoClasificacion.CONFIRMADOS]: "Confirmados",
-  [TipoClasificacion.SOSPECHOSOS]: "Sospechosos",
-  [TipoClasificacion.PROBABLES]: "Probables",
-  [TipoClasificacion.EN_ESTUDIO]: "En estudio",
-  [TipoClasificacion.NEGATIVOS]: "Negativos",
-  [TipoClasificacion.DESCARTADOS]: "Descartados",
-  [TipoClasificacion.NOTIFICADOS]: "Notificados",
-  [TipoClasificacion.CON_RESULTADO_MORTAL]: "Con resultado mortal",
-  [TipoClasificacion.SIN_RESULTADO_MORTAL]: "Sin resultado mortal",
-  [TipoClasificacion.REQUIERE_REVISION]: "Requiere revisión",
+  "CONFIRMADOS": "Confirmados",
+  "SOSPECHOSOS": "Sospechosos",
+  "PROBABLES": "Probables",
+  "EN_ESTUDIO": "En estudio",
+  "NEGATIVOS": "Negativos",
+  "DESCARTADOS": "Descartados",
+  "NOTIFICADOS": "Notificados",
+  "CON_RESULTADO_MORTAL": "Con resultado mortal",
+  "SIN_RESULTADO_MORTAL": "Sin resultado mortal",
+  "REQUIERE_REVISION": "Requiere revisión",
 };
 
 interface ClassificationSelectorProps {
@@ -136,7 +135,7 @@ export const ClassificationSelector: React.FC<ClassificationSelectorProps> = ({
                 Limpiar selección
               </CommandItem>
             )}
-            {Object.values(TipoClasificacion).map((classification) => {
+            {CLASIFICACIONES.map((classification) => {
               const isSelected =
                 selectedClassifications.includes(classification);
 

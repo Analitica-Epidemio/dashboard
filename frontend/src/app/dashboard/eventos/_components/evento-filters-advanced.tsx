@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { ClassificationSelector } from "@/features/dashboard/components/selectors/ClassificationSelector";
-import type { EventoFilters } from "@/lib/api/eventos";
+import type { EventoFilters, TipoClasificacion } from "@/lib/api/eventos";
 import { useInfiniteGroups } from "@/features/dashboard/services/paginatedQueries";
 import { EventoSelectorUnified } from "./evento-selector-unified";
 import {
@@ -138,7 +138,7 @@ const ProvinciasMultiSelect = ({
 };
 
 interface EventoFiltersAdvancedProps {
-  filters: EventoFilters;
+  filters?: EventoFilters;
   onFilterChange: (key: string, value: unknown) => void;
   onClose: () => void;
 }
@@ -160,11 +160,12 @@ export function EventoFiltersAdvanced({
   }, [infiniteGrupos]);
 
   // Contador de filtros activos
-  const activeFiltersCount = Object.entries(filters).filter(
+  const activeFiltersCount = filters ? Object.entries(filters).filter(
     ([key, value]) => value && !["page", "page_size", "sort_by"].includes(key)
-  ).length;
+  ).length : 0;
 
   const handleClearFilters = () => {
+    if (!filters) return;
     const keysToReset = Object.keys(filters).filter(
       (key) => !["page", "page_size", "sort_by"].includes(key)
     );
@@ -210,8 +211,8 @@ export function EventoFiltersAdvanced({
             );
           }}
           initialSelection={{
-            groups: filters.grupo_eno_ids?.map(String) || [],
-            events: filters.tipo_eno_ids?.map(String) || [],
+            groups: filters?.grupo_eno_ids?.map(String) || [],
+            events: filters?.tipo_eno_ids?.map(String) || [],
           }}
         />
       </div>
@@ -226,7 +227,7 @@ export function EventoFiltersAdvanced({
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground font-normal">Clasificación Estratégica</Label>
             <ClassificationSelector
-              selectedClassifications={Array.isArray(filters.clasificacion) ? filters.clasificacion : []}
+              selectedClassifications={Array.isArray(filters?.clasificacion) ? (filters.clasificacion as TipoClasificacion[]) : []}
               onClassificationChange={(classifications) => {
                 onFilterChange("clasificacion", classifications.length > 0 ? classifications : undefined);
               }}
@@ -240,7 +241,7 @@ export function EventoFiltersAdvanced({
               Tipo de Sujeto
             </Label>
           <Select
-            value={filters.tipo_sujeto || ""}
+            value={filters?.tipo_sujeto || ""}
             onValueChange={(value) =>
               onFilterChange("tipo_sujeto", value || undefined)
             }
@@ -273,9 +274,9 @@ export function EventoFiltersAdvanced({
               Provincias
             </Label>
             <ProvinciasMultiSelect
-              selectedProvincias={Array.isArray(filters.provincia) ? filters.provincia : []}
+              selectedProvincias={Array.isArray(filters?.provincia_id) ? filters.provincia_id.map(String) : []}
               onProvinciasChange={(provincias) => {
-                onFilterChange("provincia", provincias.length > 0 ? provincias : undefined);
+                onFilterChange("provincia_id", provincias.length > 0 ? provincias.map(Number) : undefined);
               }}
             />
           </div>
@@ -288,7 +289,7 @@ export function EventoFiltersAdvanced({
           <Input
             id="fecha_desde"
             type="date"
-            value={filters.fecha_desde || ""}
+            value={filters?.fecha_desde || ""}
             onChange={(e) =>
               onFilterChange("fecha_desde", e.target.value || undefined)
             }
@@ -303,7 +304,7 @@ export function EventoFiltersAdvanced({
           <Input
             id="fecha_hasta"
             type="date"
-            value={filters.fecha_hasta || ""}
+            value={filters?.fecha_hasta || ""}
             onChange={(e) =>
               onFilterChange("fecha_hasta", e.target.value || undefined)
             }
@@ -326,7 +327,7 @@ export function EventoFiltersAdvanced({
               min="0"
               max="120"
               placeholder="0"
-              value={filters.edad_min || ""}
+              value={filters?.edad_min || ""}
               onChange={(e) =>
                 onFilterChange("edad_min", e.target.value ? parseInt(e.target.value) : undefined)
               }
@@ -340,16 +341,16 @@ export function EventoFiltersAdvanced({
               min="0"
               max="120"
               placeholder="120"
-              value={filters.edad_max || ""}
+              value={filters?.edad_max || ""}
               onChange={(e) =>
                 onFilterChange("edad_max", e.target.value ? parseInt(e.target.value) : undefined)
               }
             />
           </div>
         </div>
-        {(filters.edad_min || filters.edad_max) && (
+        {(filters?.edad_min || filters?.edad_max) && (
           <p className="text-xs text-muted-foreground">
-            Filtrando: {filters.edad_min || 0} - {filters.edad_max || 120} años
+            Filtrando: {filters?.edad_min || 0} - {filters?.edad_max || 120} años
           </p>
         )}
       </div>
@@ -362,7 +363,7 @@ export function EventoFiltersAdvanced({
         <div className="space-y-2">
           <Label htmlFor="sort_by" className="text-xs text-muted-foreground font-normal">Ordenar por</Label>
         <Select
-          value={filters.sort_by || "fecha_desc"}
+          value={filters?.sort_by || "fecha_desc"}
           onValueChange={(value) => onFilterChange("sort_by", value)}
         >
           <SelectTrigger id="sort_by">
