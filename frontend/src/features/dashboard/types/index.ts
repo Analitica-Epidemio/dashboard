@@ -2,7 +2,7 @@
 export interface Event {
   id: string
   name: string
-  groupId?: string
+  groupId?: string | null
   description?: string | null | undefined
   groupName?: string | null | undefined
 }

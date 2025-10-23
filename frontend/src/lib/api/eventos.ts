@@ -5,29 +5,27 @@
 
 import { $api } from '@/lib/api/client';
 import { useQuery } from '@tanstack/react-query';
+import type { operations, components } from '@/lib/api/types';
 
 /**
- * Event filters interface
+ * Event filters - extracted from API types
  */
-export interface EventoFilters {
-  page?: number;
-  page_size?: number;
-  search?: string;
-  grupo_eno_id?: number; // Single group filter (legacy)
-  grupo_eno_ids?: number[]; // Multiple groups filter
-  tipo_eno_id?: number; // Single tipo filter (legacy)
-  tipo_eno_ids?: number[]; // Multiple tipos filter
-  fecha_desde?: string;
-  fecha_hasta?: string;
-  clasificacion?: string | string[]; // Can be single or multiple
-  es_positivo?: boolean;
-  provincia_id?: number[]; // Multiple provinces by INDEC code
-  tipo_sujeto?: string;
-  requiere_revision?: boolean;
-  edad_min?: number;
-  edad_max?: number;
-  sort_by?: 'fecha_desc' | 'fecha_asc' | 'id_desc' | 'id_asc' | 'tipo_eno';
-}
+export type EventoFilters = operations["list_eventos_api_v1_eventos__get"]["parameters"]["query"];
+
+/**
+ * Tipo de clasificación - extracted from API types
+ */
+export type TipoClasificacion = components["schemas"]["TipoClasificacion"];
+
+/**
+ * Evento detail response - extracted from API types
+ */
+export type EventoDetail = components["schemas"]["EventoDetailResponse"];
+
+/**
+ * Evento list item - extracted from API types
+ */
+export type EventoListItem = components["schemas"]["EventoListItem"];
 
 /**
  * Hook to fetch a single evento by ID
@@ -96,7 +94,7 @@ export function extractEventosData(response: unknown) {
 /**
  * Utility functions for clasificacion display
  */
-export function getClasificacionLabel(clasificacion: string | null | undefined): string {
+export function getClasificacionLabel(clasificacion: TipoClasificacion | string | null | undefined): string {
   if (!clasificacion) return "Sin clasificar";
 
   const labels: Record<string, string> = {
@@ -118,7 +116,7 @@ export function getClasificacionLabel(clasificacion: string | null | undefined):
   return labels[clasificacion] || clasificacion;
 }
 
-export function getClasificacionVariant(clasificacion: string | null | undefined): "default" | "destructive" | "secondary" | "outline" {
+export function getClasificacionVariant(clasificacion: TipoClasificacion | string | null | undefined): "default" | "destructive" | "secondary" | "outline" {
   if (!clasificacion) return "default";
 
   const variants: Record<string, "default" | "destructive" | "secondary" | "outline"> = {
@@ -143,7 +141,7 @@ export function getClasificacionVariant(clasificacion: string | null | undefined
 /**
  * Obtiene clases de Tailwind para colorear clasificaciones
  */
-export function getClasificacionColorClasses(clasificacion: string | null | undefined): string {
+export function getClasificacionColorClasses(clasificacion: TipoClasificacion | string | null | undefined): string {
   if (!clasificacion) return "bg-muted text-muted-foreground";
 
   const colors: Record<string, string> = {
@@ -182,7 +180,7 @@ export function getClasificacionEstrategiaColor(clasificacion: string | null | u
 export function useGruposEno() {
   return $api.useQuery(
     'get',
-    '/api/v1/grupos_eno/',
+    '/api/v1/gruposEno/',
     {}
   );
 }

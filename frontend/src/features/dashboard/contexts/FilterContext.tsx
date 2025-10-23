@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, ReactNode } from "react";
 import { useDashboardFilters } from "../hooks/useDashboardFilters";
 import type { Group, Event } from "../types";
-import { TipoClasificacion } from "@/lib/types/clasificacion";
+import type { TipoClasificacion } from "@/lib/api/eventos";
 
 // Tipo más flexible para errores de query - compatible con los tipos de react-query
 type QueryError = unknown;

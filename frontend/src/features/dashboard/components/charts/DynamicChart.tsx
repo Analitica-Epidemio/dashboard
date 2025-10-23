@@ -23,6 +23,7 @@ import {
   Cell,
   TooltipProps,
 } from "recharts";
+import type { components } from "@/lib/api/types";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -33,7 +34,8 @@ interface WeekMetadata {
   end_date: string;
 }
 
-interface ChartData {
+// Tipos base para datos de charts
+interface BaseChartData {
   labels: string[];
   datasets: Array<{
     label?: string;
@@ -42,16 +44,65 @@ interface ChartData {
   metadata?: WeekMetadata[];
 }
 
-interface DynamicChartProps {
-  codigo: string;
-  nombre: string;
-  descripcion?: string;
-  tipo: string;
-  data: {
-    data: ChartData;
-  };
-  config?: any;
+interface MapChartData {
+  departamentos: Array<{
+    nombre: string;
+    casos: number;
+    [key: string]: unknown;
+  }>;
+  total_casos: number;
 }
+
+interface PyramidChartData extends Array<{
+  age_group: string;
+  male: number;
+  female: number;
+  [key: string]: unknown;
+}> {}
+
+// Error estructurado del backend
+interface ChartError {
+  code: string;
+  title: string;
+  message: string;
+  details?: unknown;
+  suggestion?: string;
+}
+
+// Data wrapper genérico con error
+interface ChartDataWithError<T> {
+  data?: T;
+  error?: string | ChartError;
+}
+
+// Union type discriminado por el campo 'tipo'
+type DynamicChartProps = Omit<components["schemas"]["ChartDataItem"], 'data' | 'tipo'> & (
+  | {
+      tipo: "line" | "bar" | "area";
+      data: ChartDataWithError<BaseChartData>;
+      config?: { height?: number; [key: string]: unknown };
+    }
+  | {
+      tipo: "pie";
+      data: ChartDataWithError<BaseChartData>;
+      config?: { height?: number; [key: string]: unknown };
+    }
+  | {
+      tipo: "d3_pyramid";
+      data: ChartDataWithError<PyramidChartData>;
+      config?: { height?: number; [key: string]: unknown };
+    }
+  | {
+      tipo: "mapa";
+      data: ChartDataWithError<MapChartData>;
+      config?: { height?: number; [key: string]: unknown };
+    }
+  | {
+      tipo: string; // Fallback para tipos desconocidos
+      data: ChartDataWithError<unknown>;
+      config?: { height?: number; [key: string]: unknown };
+    }
+);
 
 // Colores predefinidos para los charts
 const COLORS = [
@@ -127,6 +178,9 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
   data,
   config = {},
 }) => {
+  // Type assertion para config ya que viene como unknown del schema
+  const chartConfig = config as { height?: number; [key: string]: unknown };
+
   // Renderizar el tipo de chart apropiado
   const renderChart = () => {
     if (!data || !data.data) {
@@ -140,16 +194,10 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
     // Manejar errores del procesador
     if (data.error) {
       // Check if error is structured (new format) or plain string (old format)
-      const isStructuredError = typeof data.error === 'object' && data.error.code;
+      const isStructuredError = typeof data.error === 'object' && 'code' in data.error;
 
       if (isStructuredError) {
-        const error = data.error as {
-          code: string;
-          title: string;
-          message: string;
-          details?: any;
-          suggestion?: string;
-        };
+        const error = data.error as ChartError;
 
         return (
           <div className="flex items-center justify-center h-full min-h-[300px] max-h-[400px] p-6">
@@ -200,7 +248,7 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
       }
     }
 
-    const height = config.height || 300;
+    const height: number = chartConfig.height || 300;
 
     // Convertir datos de Chart.js a formato Recharts
     const convertChartJsToRecharts = (chartJsData: { labels: string[]; datasets: Array<{ label?: string; data: number[] }> }) => {
@@ -230,12 +278,14 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
     };
 
     switch (tipo) {
-      case "line":
-        const lineData = convertChartJsToRecharts(data.data);
-        const lineKeys = data.data.datasets?.map((d: { label?: string }) => d.label || "value") || [
-          "value",
-        ];
-        const lineMetadata = data.data.metadata;
+      case "line": {
+        // Type guard para BaseChartData
+        const chartData = data.data as BaseChartData | undefined;
+        if (!chartData?.labels || !chartData?.datasets) return null;
+
+        const lineData = convertChartJsToRecharts(chartData);
+        const lineKeys = chartData.datasets.map((d) => d.label || "value");
+        const lineMetadata = chartData.metadata;
 
         return (
           <ResponsiveContainer width="100%" height={height}>
@@ -266,13 +316,16 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
             </LineChart>
           </ResponsiveContainer>
         );
+      }
 
-      case "bar":
-        const barData = convertChartJsToRecharts(data.data);
-        const barKeys = data.data.datasets?.map((d: { label?: string }) => d.label || "value") || [
-          "value",
-        ];
-        const barMetadata = data.data.metadata;
+      case "bar": {
+        // Type guard para BaseChartData
+        const chartData = data.data as BaseChartData | undefined;
+        if (!chartData?.labels || !chartData?.datasets) return null;
+
+        const barData = convertChartJsToRecharts(chartData);
+        const barKeys = chartData.datasets.map((d) => d.label || "value");
+        const barMetadata = chartData.metadata;
 
         return (
           <ResponsiveContainer width="100%" height={height}>
@@ -299,9 +352,14 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
             </BarChart>
           </ResponsiveContainer>
         );
+      }
 
-      case "pie":
-        const pieData = convertPieData(data.data);
+      case "pie": {
+        // Type guard para BaseChartData
+        const chartData = data.data as BaseChartData | undefined;
+        if (!chartData?.labels || !chartData?.datasets) return null;
+
+        const pieData = convertPieData(chartData);
 
         return (
           <ResponsiveContainer width="100%" height={height}>
@@ -334,13 +392,16 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
             </PieChart>
           </ResponsiveContainer>
         );
+      }
 
-      case "area":
-        const areaData = convertChartJsToRecharts(data.data);
-        const areaKeys = data.data.datasets?.map((d: { label?: string }) => d.label || "value") || [
-          "value",
-        ];
-        const areaMetadata = data.data.metadata;
+      case "area": {
+        // Type guard para BaseChartData
+        const chartData = data.data as BaseChartData | undefined;
+        if (!chartData?.labels || !chartData?.datasets) return null;
+
+        const areaData = convertChartJsToRecharts(chartData);
+        const areaKeys = chartData.datasets.map((d) => d.label || "value");
+        const areaMetadata = chartData.metadata;
 
         return (
           <ResponsiveContainer width="100%" height={height}>
@@ -370,10 +431,13 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
             </AreaChart>
           </ResponsiveContainer>
         );
+      }
 
-      case "d3_pyramid":
+      case "d3_pyramid": {
         // Renderizar pirámide poblacional con D3
-        if (!data.data || !Array.isArray(data.data)) {
+        // Type guard para PyramidChartData
+        const chartData = data.data as PyramidChartData | undefined;
+        if (!chartData || !Array.isArray(chartData) || chartData.length === 0) {
           return (
             <div className="flex items-center justify-center h-48 text-gray-500">
               No hay datos para la pirámide poblacional
@@ -391,15 +455,18 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
         return (
           <React.Suspense fallback={<div>Cargando pirámide...</div>}>
             <PopulationPyramid
-              data={data.data}
-              height={config.height || 400}
+              data={chartData as any}
+              height={chartConfig.height || 400}
             />
           </React.Suspense>
         );
+      }
 
-      case "mapa":
+      case "mapa": {
         // Renderizar mapa geográfico de Chubut
-        if (!data?.data || !data.data.departamentos) {
+        // Type guard para MapChartData
+        const chartData = data.data as MapChartData | undefined;
+        if (!chartData || !chartData.departamentos) {
           return (
             <div className="flex items-center justify-center h-48 text-gray-500">
               No hay datos geográficos disponibles
@@ -412,9 +479,10 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
 
         return (
           <React.Suspense fallback={<div>Cargando mapa...</div>}>
-            <ChubutMapChart data={data.data} />
+            <ChubutMapChart data={chartData as any} />
           </React.Suspense>
         );
+      }
 
       default:
         return (

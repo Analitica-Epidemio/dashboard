@@ -27,7 +27,7 @@ import {
 } from "@/app/dashboard/eventos/_components/evento-filters-modern";
 
 interface PersonaFiltersAdvancedProps {
-  filters: PersonaFilters;
+  filters?: PersonaFilters;
   onFilterChange: (key: string, value: unknown) => void;
   onClose: () => void;
 }
@@ -38,12 +38,12 @@ export function PersonaFiltersAdvanced({
 }: PersonaFiltersAdvancedProps) {
 
   // Contador de filtros activos
-  const activeFiltersCount = Object.entries(filters).filter(
+  const activeFiltersCount = Object.entries(filters ?? {}).filter(
     ([key, value]) => value && !["page", "page_size", "sort_by"].includes(key)
   ).length;
 
   const handleClearFilters = () => {
-    const keysToReset = Object.keys(filters).filter(
+    const keysToReset = Object.keys(filters ?? {}).filter(
       (key) => !["page", "page_size", "sort_by"].includes(key)
     );
     keysToReset.forEach((key) => {
@@ -64,7 +64,7 @@ export function PersonaFiltersAdvanced({
             Tipo de Sujeto
           </Label>
           <Select
-            value={filters.tipo_sujeto || "todos"}
+            value={filters?.tipo_sujeto || "todos"}
             onValueChange={(value) =>
               onFilterChange("tipo_sujeto", value === "todos" ? undefined : value)
             }
@@ -100,8 +100,8 @@ export function PersonaFiltersAdvanced({
 
           {/* Selector de Eventos compartido con eventos page */}
           <EventoSelectorInfinite
-            selectedGroupIds={filters.grupo_eno_ids || []}
-            selectedEventIds={filters.tipo_eno_ids || []}
+            selectedGroupIds={filters?.grupo_eno_ids || []}
+            selectedEventIds={filters?.tipo_eno_ids || []}
             onSelectionChange={(groups, events) => {
               onFilterChange("grupo_eno_ids", groups.length > 0 ? groups : undefined);
               onFilterChange("tipo_eno_ids", events.length > 0 ? events : undefined);
@@ -123,7 +123,7 @@ export function PersonaFiltersAdvanced({
           </Label>
           {/* Selector de Provincias compartido con eventos page */}
           <ProvinciasMultiSelect
-            selectedProvinciaIds={filters.provincia_id || []}
+            selectedProvinciaIds={filters?.provincia_id || []}
             onProvinciasChange={(provinciaIds) => {
               onFilterChange("provincia_id", provinciaIds.length > 0 ? provinciaIds : undefined);
             }}
@@ -152,7 +152,7 @@ export function PersonaFiltersAdvanced({
                 min="0"
                 max="120"
                 placeholder="0"
-                value={filters.edad_min || ""}
+                value={filters?.edad_min || ""}
                 onChange={(e) =>
                   onFilterChange("edad_min", e.target.value ? parseInt(e.target.value) : undefined)
                 }
@@ -168,16 +168,16 @@ export function PersonaFiltersAdvanced({
                 min="0"
                 max="120"
                 placeholder="120"
-                value={filters.edad_max || ""}
+                value={filters?.edad_max || ""}
                 onChange={(e) =>
                   onFilterChange("edad_max", e.target.value ? parseInt(e.target.value) : undefined)
                 }
               />
             </div>
           </div>
-          {(filters.edad_min || filters.edad_max) && (
+          {(filters?.edad_min || filters?.edad_max) && (
             <p className="text-xs text-muted-foreground bg-muted p-2 rounded-md">
-              Filtrando: {filters.edad_min || 0} - {filters.edad_max || 120} años
+              Filtrando: {filters?.edad_min || 0} - {filters?.edad_max || 120} años
             </p>
           )}
         </div>
@@ -200,7 +200,7 @@ export function PersonaFiltersAdvanced({
             </div>
             <Switch
               id="multiples_eventos"
-              checked={filters.tiene_multiples_eventos || false}
+              checked={filters?.tiene_multiples_eventos || false}
               onCheckedChange={(checked) =>
                 onFilterChange("tiene_multiples_eventos", checked || undefined)
               }
@@ -220,7 +220,7 @@ export function PersonaFiltersAdvanced({
             Ordenar por
           </Label>
           <Select
-            value={filters.sort_by || "ultimo_evento_desc"}
+            value={filters?.sort_by || "ultimo_evento_desc"}
             onValueChange={(value) => onFilterChange("sort_by", value)}
           >
             <SelectTrigger id="sort_by">

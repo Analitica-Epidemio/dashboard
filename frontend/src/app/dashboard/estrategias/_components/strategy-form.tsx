@@ -91,8 +91,6 @@ export function StrategyForm({ strategy, onClose }: StrategyFormProps) {
     name: strategy?.name || '',
     tipo_eno_id: strategy?.tipo_eno_id || '',
     active: strategy?.active || false,
-    usa_provincia_carga: strategy?.usa_provincia_carga || false,
-    provincia_field: strategy?.provincia_field || 'PROVINCIA_RESIDENCIA',
     confidence_threshold: strategy?.confidence_threshold || 0.5,
     description: strategy?.description || '',
     valid_from: strategy?.valid_from || new Date().toISOString().split('T')[0],
@@ -328,15 +326,6 @@ export function StrategyForm({ strategy, onClose }: StrategyFormProps) {
             onCheckedChange={(checked) => setFormData(prev => ({ ...prev, active: checked }))}
           />
           <Label htmlFor="active">Estrategia Activa</Label>
-        </div>
-        
-        <div className="flex items-center space-x-2">
-          <Switch
-            id="usa_provincia"
-            checked={formData.usa_provincia_carga}
-            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, usa_provincia_carga: checked }))}
-          />
-          <Label htmlFor="usa_provincia">Filtrar por Provincia</Label>
         </div>
       </div>
 

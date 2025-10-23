@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useDebounce } from "use-debounce";
-import { Download, Users, ChevronRight, FileText } from "lucide-react";
+import { Download, Users, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,12 +23,9 @@ import { FilterToolbar, StatsBar, type StatItem } from "@/components/shared/filt
 import { usePersonas, type PersonaFilters } from "@/lib/api/personas";
 import { PersonaFiltersAdvanced } from "./_components/persona-filters";
 import { PersonaDetailModern } from "./_components/persona-detail-modern";
-import { useMediaQuery } from "@/hooks/use-mobile";
+import type { components } from "@/lib/api/types";
 
 export default function PersonasPage() {
-  const router = useRouter();
-  const isMobile = useMediaQuery("(max-width: 768px)");
-
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch] = useDebounce(searchQuery, 300);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -61,13 +57,9 @@ export default function PersonasPage() {
   const aggregatedStats = personasData?.data.stats;
   const isLoading = personasQuery.isLoading;
 
-  const handleViewDetail = (persona: any) => {
-    if (isMobile) {
-      router.push(`/dashboard/personas/${persona.tipo_sujeto}/${persona.persona_id}`);
-    } else {
-      setSelectedPersona({ tipo: persona.tipo_sujeto, id: persona.persona_id });
-      setDetailSheetOpen(true);
-    }
+  const handleViewDetail = (persona: components["schemas"]["PersonaListItem"]) => {
+    setSelectedPersona({ tipo: persona.tipo_sujeto, id: persona.persona_id });
+    setDetailSheetOpen(true);
   };
 
   // Usar estadísticas agregadas del backend (calculadas sobre TODA la DB filtrada)
@@ -87,7 +79,7 @@ export default function PersonasPage() {
   ];
 
   // Contar filtros activos (excluyendo page, page_size, sort_by)
-  const activeFiltersCount = Object.entries(filters).filter(
+  const activeFiltersCount = Object.entries(filters ?? {}).filter(
     ([key, value]) => value && !["page", "page_size", "sort_by"].includes(key)
   ).length;
 
@@ -172,7 +164,7 @@ export default function PersonasPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {personas.map((persona: any) => (
+                    {personas.map((persona: components["schemas"]["PersonaListItem"]) => (
                       <tr
                         key={`${persona.tipo_sujeto}-${persona.persona_id}`}
                         onClick={() => handleViewDetail(persona)}
@@ -286,23 +278,9 @@ export default function PersonasPage() {
       <Sheet open={detailSheetOpen} onOpenChange={setDetailSheetOpen}>
         <SheetContent className="w-full overflow-y-auto sm:max-w-3xl lg:max-w-5xl p-0">
           <SheetHeader className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur p-4">
-            <div className="flex items-center justify-between">
-              <SheetTitle className="text-lg">
-                Persona {selectedPersona?.tipo}/{selectedPersona?.id}
-              </SheetTitle>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  if (selectedPersona) {
-                    router.push(`/dashboard/personas/${selectedPersona.tipo}/${selectedPersona.id}`);
-                  }
-                }}
-              >
-                <FileText className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Abrir en página</span>
-              </Button>
-            </div>
+            <SheetTitle className="text-lg">
+              Persona {selectedPersona?.tipo}/{selectedPersona?.id}
+            </SheetTitle>
           </SheetHeader>
           {selectedPersona && (
             <PersonaDetailModern

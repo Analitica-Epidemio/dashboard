@@ -144,9 +144,6 @@ export function EventoDetail({ eventoId, onClose }: EventoDetailProps) {
             >
               {getClasificacionLabel(evento.clasificacion_estrategia)}
             </Badge>
-            {evento.es_positivo && (
-              <Badge variant="destructive">Positivo</Badge>
-            )}
           </div>
         </div>
 
@@ -418,9 +415,9 @@ export function EventoDetail({ eventoId, onClose }: EventoDetailProps) {
                       <span className="text-sm">
                         {sintoma.nombre || "Síntoma no especificado"}
                       </span>
-                      {sintoma.fecha && (
+                      {sintoma.fecha_inicio && (
                         <span className="text-xs text-muted-foreground">
-                          {formatDate(sintoma.fecha)}
+                          {formatDate(sintoma.fecha_inicio)}
                         </span>
                       )}
                     </div>
@@ -450,21 +447,21 @@ export function EventoDetail({ eventoId, onClose }: EventoDetailProps) {
                         <span className="text-sm font-medium">
                           {muestra.tipo || "Tipo no especificado"}
                         </span>
-                        {muestra.resultado && (
+                        {muestra.valor && (
                           <Badge
                             variant={
-                              muestra.resultado === "Positivo"
+                              muestra.valor === "Positivo"
                                 ? "destructive"
                                 : "outline"
                             }
                           >
-                            {muestra.resultado}
+                            {muestra.valor}
                           </Badge>
                         )}
                       </div>
-                      {muestra.fecha && (
+                      {muestra.fecha_toma_muestra && (
                         <span className="text-xs text-muted-foreground">
-                          Tomada el {formatDate(muestra.fecha)}
+                          Tomada el {formatDate(muestra.fecha_toma_muestra)}
                         </span>
                       )}
                     </div>

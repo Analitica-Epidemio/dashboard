@@ -171,6 +171,23 @@ class AuthService:
             await self.db.commit()
             logger.info(f"User session {session_id} logged out")
 
+    async def logout_specific_session(self, user_id: int, session_id: int) -> bool:
+        """
+        Logout a specific session owned by the user
+        Returns True if session was found and logged out, False otherwise
+        """
+        session = await self._get_session(session_id)
+
+        # Verificar que la sesión existe y pertenece al usuario
+        if not session or session.user_id != user_id:
+            return False
+
+        # Cerrar la sesión
+        session.is_active = False
+        await self.db.commit()
+        logger.info(f"User {user_id} logged out session {session_id}")
+        return True
+
     async def logout_all_sessions(self, user_id: int) -> None:
         """Logout user from all sessions"""
         await self.db.execute(

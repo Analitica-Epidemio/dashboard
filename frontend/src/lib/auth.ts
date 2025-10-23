@@ -2,6 +2,44 @@ import type { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { env } from '@/env';
 
+/**
+ * Refresca el access token usando el refresh token
+ * Se llama automáticamente cuando el access token expira
+ */
+async function refreshAccessToken(token: any) {
+  try {
+    const response = await fetch(`${env.NEXT_PUBLIC_API_HOST}/api/v1/auth/refresh`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        refresh_token: token.refreshToken,
+      }),
+    });
+
+    const refreshedTokens = await response.json();
+
+    if (!response.ok) {
+      throw refreshedTokens;
+    }
+
+    return {
+      ...token,
+      accessToken: refreshedTokens.access_token,
+      refreshToken: refreshedTokens.refresh_token ?? token.refreshToken,
+      accessTokenExpires: Date.now() + 24 * 60 * 60 * 1000, // 24 horas
+    };
+  } catch (error) {
+    console.error('Error refreshing access token:', error);
+
+    return {
+      ...token,
+      error: 'RefreshAccessTokenError',
+    };
+  }
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -9,7 +47,6 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
-        remember_me: { label: 'Remember Me', type: 'checkbox' }
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
@@ -25,7 +62,6 @@ export const authOptions: NextAuthOptions = {
             body: JSON.stringify({
               email: credentials.email,
               password: credentials.password,
-              remember_me: credentials.remember_me === 'true'
             }),
           });
 
@@ -47,32 +83,43 @@ export const authOptions: NextAuthOptions = {
             role: tokenPayload.role,
             accessToken: data.access_token,
             refreshToken: data.refresh_token,
+            accessTokenExpires: Date.now() + 24 * 60 * 60 * 1000, // 24 horas
           };
-        } catch (error) {
+        } catch {
           return null;
         }
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user, trigger, session }) {
+    async jwt({ token, user }) {
+      // Initial sign in
       if (user) {
         token.accessToken = user.accessToken;
         token.refreshToken = user.refreshToken;
         token.role = user.role;
+        token.accessTokenExpires = user.accessTokenExpires;
       }
 
-      // Handle token refresh
-      if (trigger === 'update' && session?.accessToken) {
-        token.accessToken = session.accessToken;
+      // Return previous token if the access token has not expired yet
+      if (Date.now() < (token.accessTokenExpires as number)) {
+        return token;
       }
 
-      return token;
+      // 🔄 Access token has expired, try to refresh it
+      console.log('Access token expired, refreshing...');
+      return refreshAccessToken(token);
     },
     async session({ session, token }) {
       session.accessToken = token.accessToken as string;
       session.refreshToken = token.refreshToken as string;
       session.user.role = token.role as string;
+
+      // Pass error to client side to handle forced re-login
+      if (token.error) {
+        session.error = token.error as string;
+      }
+
       return session;
     },
   },
@@ -81,7 +128,7 @@ export const authOptions: NextAuthOptions = {
   },
   session: {
     strategy: 'jwt',
-    maxAge: 24 * 60 * 60, // 24 hours
+    maxAge: 7 * 24 * 60 * 60, // 7 days (matches refresh token expiry)
   },
   cookies: {
     sessionToken: {

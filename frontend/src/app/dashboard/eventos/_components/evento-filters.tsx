@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import type { EventoFilters } from "@/lib/api/eventos";
 
 interface EventoFiltersPanelProps {
-  filters: EventoFilters;
+  filters?: EventoFilters;
   onFilterChange: (key: string, value: unknown) => void;
   onClose: () => void;
 }
@@ -28,16 +28,16 @@ export function EventoFiltersPanel({
   onClose,
 }: EventoFiltersPanelProps) {
   // Contador de filtros activos
-  const activeFiltersCount = Object.entries(filters).filter(
+  const activeFiltersCount = filters ? Object.entries(filters).filter(
     ([key, value]) => value && !["page", "page_size", "sort_by"].includes(key)
-  ).length;
+  ).length : 0;
 
   const handleClearFilters = () => {
     // Reset todos los filtros excepto paginación
     const clearedFilters: EventoFilters = {
       page: 1,
-      page_size: filters.page_size || 50,
-      sort_by: filters.sort_by || "fecha_desc",
+      page_size: filters?.page_size || 50,
+      sort_by: filters?.sort_by || "fecha_desc",
     };
 
     Object.keys(clearedFilters).forEach((key) => {
@@ -81,9 +81,9 @@ export function EventoFiltersPanel({
             Tipo de Evento
           </Label>
           <Select
-            value={filters.tipo_eno_id?.toString() || ""}
+            value={filters?.tipo_eno_ids?.toString() || ""}
             onValueChange={(value) =>
-              onFilterChange("tipo_eno_id", value ? parseInt(value) : undefined)
+              onFilterChange("tipo_eno_ids", value ? parseInt(value) : undefined)
             }
           >
             <SelectTrigger id="tipo_eno">
@@ -104,9 +104,9 @@ export function EventoFiltersPanel({
         <div className="space-y-2">
           <Label htmlFor="clasificacion">Clasificación</Label>
           <Select
-            value={filters.clasificacion || ""}
+            value={Array.isArray(filters?.clasificacion) ? (filters.clasificacion[0] || "") : (filters?.clasificacion || "")}
             onValueChange={(value) =>
-              onFilterChange("clasificacion", value || undefined)
+              onFilterChange("clasificacion", value ? [value] : undefined)
             }
           >
             <SelectTrigger id="clasificacion">
@@ -131,7 +131,7 @@ export function EventoFiltersPanel({
         <div className="space-y-2">
           <Label htmlFor="tipo_sujeto">Tipo de Sujeto</Label>
           <Select
-            value={filters.tipo_sujeto || ""}
+            value={filters?.tipo_sujeto || ""}
             onValueChange={(value) =>
               onFilterChange("tipo_sujeto", value || undefined)
             }
@@ -157,7 +157,7 @@ export function EventoFiltersPanel({
           <Input
             id="fecha_desde"
             type="date"
-            value={filters.fecha_desde || ""}
+            value={filters?.fecha_desde || ""}
             onChange={(e) =>
               onFilterChange("fecha_desde", e.target.value || undefined)
             }
@@ -173,7 +173,7 @@ export function EventoFiltersPanel({
           <Input
             id="fecha_hasta"
             type="date"
-            value={filters.fecha_hasta || ""}
+            value={filters?.fecha_hasta || ""}
             onChange={(e) =>
               onFilterChange("fecha_hasta", e.target.value || undefined)
             }
@@ -187,9 +187,13 @@ export function EventoFiltersPanel({
             Provincia
           </Label>
           <Select
-            value={filters.provincia || ""}
+            value={
+              Array.isArray(filters?.provincia_id)
+                ? (filters.provincia_id.length > 0 ? String(filters.provincia_id[0]) : "")
+                : ""
+            }
             onValueChange={(value) =>
-              onFilterChange("provincia", value || undefined)
+              onFilterChange("provincia_id", value ? [parseInt(value)] : undefined)
             }
           >
             <SelectTrigger id="provincia">
@@ -227,39 +231,12 @@ export function EventoFiltersPanel({
           </Select>
         </div>
 
-        {/* Es Positivo */}
-        <div className="space-y-2">
-          <Label htmlFor="es_positivo">Estado del Caso</Label>
-          <Select
-            value={
-              filters.es_positivo === undefined
-                ? ""
-                : filters.es_positivo.toString()
-            }
-            onValueChange={(value) =>
-              onFilterChange(
-                "es_positivo",
-                value === "" ? undefined : value === "true"
-              )
-            }
-          >
-            <SelectTrigger id="es_positivo">
-              <SelectValue placeholder="Todos los estados" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Todos</SelectItem>
-              <SelectItem value="true">✅ Positivos</SelectItem>
-              <SelectItem value="false">❌ Negativos</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
         {/* Requiere Revisión */}
         <div className="space-y-2">
           <Label htmlFor="requiere_revision">Revisión</Label>
           <Select
             value={
-              filters.requiere_revision === undefined
+              filters?.requiere_revision === undefined || filters?.requiere_revision === null
                 ? ""
                 : filters.requiere_revision.toString()
             }
@@ -285,7 +262,7 @@ export function EventoFiltersPanel({
         <div className="space-y-2">
           <Label htmlFor="sort_by">Ordenar por</Label>
           <Select
-            value={filters.sort_by || "fecha_desc"}
+            value={filters?.sort_by || "fecha_desc"}
             onValueChange={(value) => onFilterChange("sort_by", value)}
           >
             <SelectTrigger id="sort_by">
@@ -310,54 +287,54 @@ export function EventoFiltersPanel({
             <span className="text-sm text-muted-foreground">
               Filtros activos:
             </span>
-            {filters.tipo_eno_id && (
+            {filters?.tipo_eno_ids && (
               <Badge variant="secondary">
-                Tipo evento: {filters.tipo_eno_id}
+                Tipo evento: {filters?.tipo_eno_ids}
                 <X
                   className="ml-1 h-3 w-3 cursor-pointer"
-                  onClick={() => onFilterChange("tipo_eno_id", undefined)}
+                  onClick={() => onFilterChange("tipo_eno_ids", undefined)}
                 />
               </Badge>
             )}
-            {filters.clasificacion && (
+            {filters?.clasificacion && (
               <Badge variant="secondary">
-                {filters.clasificacion}
+                {filters?.clasificacion}
                 <X
                   className="ml-1 h-3 w-3 cursor-pointer"
                   onClick={() => onFilterChange("clasificacion", undefined)}
                 />
               </Badge>
             )}
-            {filters.provincia && (
+            {filters?.provincia_id && (
               <Badge variant="secondary">
-                {filters.provincia}
+                {filters?.provincia_id}
                 <X
                   className="ml-1 h-3 w-3 cursor-pointer"
                   onClick={() => onFilterChange("provincia", undefined)}
                 />
               </Badge>
             )}
-            {filters.tipo_sujeto && (
+            {filters?.tipo_sujeto && (
               <Badge variant="secondary">
-                Sujeto: {filters.tipo_sujeto}
+                Sujeto: {filters?.tipo_sujeto}
                 <X
                   className="ml-1 h-3 w-3 cursor-pointer"
                   onClick={() => onFilterChange("tipo_sujeto", undefined)}
                 />
               </Badge>
             )}
-            {filters.fecha_desde && (
+            {filters?.fecha_desde && (
               <Badge variant="secondary">
-                Desde: {filters.fecha_desde}
+                Desde: {filters?.fecha_desde}
                 <X
                   className="ml-1 h-3 w-3 cursor-pointer"
                   onClick={() => onFilterChange("fecha_desde", undefined)}
                 />
               </Badge>
             )}
-            {filters.fecha_hasta && (
+            {filters?.fecha_hasta && (
               <Badge variant="secondary">
-                Hasta: {filters.fecha_hasta}
+                Hasta: {filters?.fecha_hasta}
                 <X
                   className="ml-1 h-3 w-3 cursor-pointer"
                   onClick={() => onFilterChange("fecha_hasta", undefined)}

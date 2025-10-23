@@ -41,6 +41,13 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  /* Brand Colors */
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-primary-light: var(--brand-primary-light);
+  --color-brand-secondary: var(--brand-secondary);
+  --color-brand-secondary-light: var(--brand-secondary-light);
+  --color-brand-tertiary: var(--brand-tertiary);
 }
 
 :root {
@@ -76,6 +83,13 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* Brand Colors - Light Mode */
+  --brand-primary: #ff682c; /* Primary: #ff682c -> oklch(0.691 0.184 30.77) */
+  --brand-primary-light: #ff8540; /* Primary Light: #ff8540 -> oklch(0.729 0.167 34.92) */
+  --brand-secondary: #21708c; /* Secondary: #21708c -> oklch(0.469 0.075 228.18) */
+  --brand-secondary-light: #5894a7; /* Secondary Light: #5894a7 -> oklch(0.612 0.063 228.02) */
+  --brand-tertiary: #ffc815; /* Tertiary: #ffc815 -> oklch(0.842 0.145 84.37) */
 }
 
 .dark {
@@ -110,6 +124,13 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+
+  /* Brand Colors - Dark Mode (same as light mode) */
+  --brand-primary: #ff682c;
+  --brand-primary-light: #ff8540;
+  --brand-secondary: #21708c;
+  --brand-secondary-light: #5894a7;
+  --brand-tertiary: #ffc815;
 }
 
 @layer base {

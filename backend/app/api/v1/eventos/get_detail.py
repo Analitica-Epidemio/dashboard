@@ -3,9 +3,9 @@ Get evento detail endpoint
 """
 
 import logging
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from fastapi import Depends, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field
@@ -94,7 +94,7 @@ class MuestraInfo(BaseModel):
     semana_epidemiologica: Optional[int] = Field(None, description="Semana epidemiológica")
     anio_epidemiologico: Optional[int] = Field(None, description="Año epidemiológico")
     valor: Optional[str] = Field(None, description="Valor del resultado general")
-    estudios: List[EstudioInfo] = Field(default_factory=list, description="Estudios realizados sobre esta muestra")
+    estudios: list[EstudioInfo] = Field(default_factory=list, description="Estudios realizados sobre esta muestra")
 
 
 class DiagnosticoInfo(BaseModel):
@@ -228,6 +228,96 @@ class VacunaInfo(BaseModel):
     dosis_total: Optional[int] = Field(None, description="Total de dosis")
 
 
+# Modelos para trazabilidad de clasificación
+# NOTA: Estos modelos reflejan la estructura real generada por sync_services.py
+
+class CondicionEvaluada(BaseModel):
+    """Detalle de una condición evaluada (estructura real del backend)"""
+
+    condicion_id: Optional[int] = Field(None, description="ID de la condición")
+    campo: str = Field(..., description="Campo evaluado")
+    tipo_filtro: str = Field(..., description="Tipo de filtro aplicado")
+    operador_logico: Optional[str] = Field(None, description="Operador lógico (AND/OR)")
+    resultado: bool = Field(..., description="Si la condición se cumplió")
+    config: dict[str, Any] = Field(default_factory=dict, description="Configuración del filtro")
+    valor_campo: Optional[str] = Field(None, description="Valor del campo evaluado")
+
+
+class ReglaEvaluada(BaseModel):
+    """Información de una regla que fue evaluada pero no cumplió"""
+
+    regla_id: int = Field(..., description="ID de la regla")
+    regla_nombre: Optional[str] = Field(None, description="Nombre de la regla")
+    regla_prioridad: int = Field(..., description="Prioridad de la regla")
+    cumplida: bool = Field(..., description="Si la regla se cumplió")
+    condiciones: list[CondicionEvaluada] = Field(
+        default_factory=list, description="Condiciones evaluadas"
+    )
+
+
+class TrazabilidadReglaAplicada(BaseModel):
+    """Trazabilidad cuando se aplicó una regla exitosamente"""
+
+    razon: str = Field("regla_aplicada", description="Razón de clasificación")
+    estrategia_id: int = Field(..., description="ID de la estrategia aplicada")
+    estrategia_nombre: str = Field(..., description="Nombre de la estrategia")
+    regla_id: int = Field(..., description="ID de la regla aplicada")
+    regla_nombre: Optional[str] = Field(None, description="Nombre de la regla")
+    regla_prioridad: int = Field(..., description="Prioridad de la regla")
+    clasificacion_aplicada: str = Field(..., description="Clasificación resultante")
+    condiciones_evaluadas: list[CondicionEvaluada] = Field(
+        default_factory=list, description="Condiciones que se evaluaron"
+    )
+
+
+class TrazabilidadEvaluando(BaseModel):
+    """Trazabilidad cuando se está evaluando sin clasificar aún"""
+
+    razon: str = Field("evaluando", description="Razón de clasificación")
+    estrategia_id: int = Field(..., description="ID de la estrategia")
+    estrategia_nombre: str = Field(..., description="Nombre de la estrategia")
+    reglas_evaluadas: list[ReglaEvaluada] = Field(
+        default_factory=list, description="Reglas que se han evaluado"
+    )
+
+
+class TrazabilidadRequiereRevision(BaseModel):
+    """Trazabilidad cuando ninguna regla cumplió y requiere revisión manual"""
+
+    razon: str = Field("requiere_revision", description="Razón de clasificación")
+    mensaje: str = Field(..., description="Mensaje descriptivo")
+    estrategia_id: Optional[int] = Field(None, description="ID de la estrategia evaluada")
+    estrategia_nombre: Optional[str] = Field(None, description="Nombre de la estrategia")
+    reglas_evaluadas: Optional[list[ReglaEvaluada]] = Field(
+        None, description="Reglas evaluadas que no cumplieron"
+    )
+
+
+class TrazabilidadSinEstrategia(BaseModel):
+    """Trazabilidad cuando no existe estrategia definida"""
+
+    razon: str = Field("sin_estrategia", description="Razón de clasificación")
+    mensaje: str = Field(..., description="Mensaje descriptivo")
+    estrategia_evaluada: bool = Field(False, description="Si se evaluó estrategia")
+
+
+class TrazabilidadError(BaseModel):
+    """Trazabilidad cuando ocurre un error"""
+
+    razon: str = Field("error", description="Razón de clasificación")
+    mensaje: str = Field(..., description="Mensaje de error")
+
+
+# Union type para trazabilidad (discriminated union)
+TrazabilidadClasificacion = (
+    TrazabilidadReglaAplicada
+    | TrazabilidadEvaluando
+    | TrazabilidadRequiereRevision
+    | TrazabilidadSinEstrategia
+    | TrazabilidadError
+)
+
+
 class DomicilioGeograficoInfo(BaseModel):
     """Información geográfica del domicilio al momento del evento"""
 
@@ -288,10 +378,10 @@ class EventoDetailResponse(BaseModel):
         None, description="Clasificación estratégica del evento"
     )
     confidence_score: Optional[float] = Field(None, description="Score de confianza")
-    metadata_clasificacion: Optional[Dict[str, Any]] = Field(
+    metadata_clasificacion: Optional[dict[str, Any]] = Field(
         None, description="Metadata de clasificación"
     )
-    metadata_extraida: Optional[Dict[str, Any]] = Field(
+    metadata_extraida: Optional[dict[str, Any]] = Field(
         None, description="Metadata extraída"
     )
 
@@ -302,7 +392,7 @@ class EventoDetailResponse(BaseModel):
     estrategia_nombre: Optional[str] = Field(
         None, description="Nombre de la estrategia aplicada"
     )
-    trazabilidad_clasificacion: Optional[Dict[str, Any]] = Field(
+    trazabilidad_clasificacion: Optional[TrazabilidadClasificacion] = Field(
         None, description="Trazabilidad completa: reglas evaluadas, condiciones cumplidas, razón de clasificación"
     )
 
@@ -338,45 +428,45 @@ class EventoDetailResponse(BaseModel):
     # Observaciones y datos originales
     observaciones_texto: Optional[str] = Field(None, description="Observaciones")
     id_origen: Optional[str] = Field(None, description="ID del sistema origen")
-    datos_originales_csv: Optional[Dict[str, Any]] = Field(
+    datos_originales_csv: Optional[dict[str, Any]] = Field(
         None, description="Datos originales del CSV"
     )
 
     # TODAS las relaciones del evento (EVENT-CENTERED)
-    sintomas: List[SintomaInfo] = Field(
+    sintomas: list[SintomaInfo] = Field(
         default_factory=list, description="Síntomas del evento"
     )
-    muestras: List[MuestraInfo] = Field(
+    muestras: list[MuestraInfo] = Field(
         default_factory=list, description="Muestras del evento"
     )
-    diagnosticos: List[DiagnosticoInfo] = Field(
+    diagnosticos: list[DiagnosticoInfo] = Field(
         default_factory=list, description="Diagnósticos del evento"
     )
-    tratamientos: List[TratamientoInfo] = Field(
+    tratamientos: list[TratamientoInfo] = Field(
         default_factory=list, description="Tratamientos del evento"
     )
-    internaciones: List[InternacionInfo] = Field(
+    internaciones: list[InternacionInfo] = Field(
         default_factory=list, description="Internaciones del evento"
     )
-    investigaciones: List[InvestigacionInfo] = Field(
+    investigaciones: list[InvestigacionInfo] = Field(
         default_factory=list, description="Investigaciones del evento"
     )
-    contactos: List[ContactoInfo] = Field(
+    contactos: list[ContactoInfo] = Field(
         default_factory=list, description="Contactos del evento"
     )
-    ambitos_concurrencia: List[AmbitoConcurrenciaInfo] = Field(
+    ambitos_concurrencia: list[AmbitoConcurrenciaInfo] = Field(
         default_factory=list, description="Ámbitos de concurrencia"
     )
-    antecedentes: List[AntecedenteInfo] = Field(
+    antecedentes: list[AntecedenteInfo] = Field(
         default_factory=list, description="Antecedentes epidemiológicos"
     )
-    vacunas: List[VacunaInfo] = Field(
+    vacunas: list[VacunaInfo] = Field(
         default_factory=list, description="Vacunas relacionadas"
     )
 
     # Timestamps
-    created_at: Optional[Any] = Field(None, description="Fecha de creación")
-    updated_at: Optional[Any] = Field(None, description="Fecha de actualización")
+    created_at: Optional[datetime] = Field(None, description="Fecha de creación")
+    updated_at: Optional[datetime] = Field(None, description="Fecha de actualización")
 
     # Conteos
     total_sintomas: int = Field(0, description="Total de síntomas")
