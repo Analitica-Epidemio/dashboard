@@ -24,14 +24,15 @@ class Settings(BaseSettings):
     # =============================================================================
     # CONFIGURACIÓN DE BASE DE DATOS
     # =============================================================================
-    DATABASE_URL: str = (
-        "postgresql+asyncpg://epidemiologia_user:epidemiologia_password@localhost:5432/epidemiologia_db"
-    )
+    # IMPORTANTE: Usar credenciales fuertes en producción
+    DATABASE_URL: str
 
     # =============================================================================
     # CONFIGURACIÓN DE SEGURIDAD
     # =============================================================================
-    SECRET_KEY: str = "tu_clave_secreta_super_fuerte_aqui_cambiar_en_produccion"
+    # CRÍTICO: Esta clave debe ser generada con: openssl rand -hex 32
+    # NUNCA usar un valor por defecto en producción
+    SECRET_KEY: str  # Sin valor por defecto - DEBE estar en .env
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 horas
     ALLOWED_HOSTS: str = "localhost,127.0.0.1,0.0.0.0"
 

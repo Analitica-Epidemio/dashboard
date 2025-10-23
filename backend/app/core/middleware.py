@@ -168,6 +168,50 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         return response
 
 
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """
+    Middleware para agregar headers de seguridad HTTP
+
+    Protege contra ataques comunes:
+    - XSS (Cross-Site Scripting)
+    - Clickjacking
+    - MIME sniffing
+    - Información del servidor
+    """
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+
+        # Prevenir XSS
+        response.headers["X-Content-Type-Options"] = "nosniff"
+
+        # Prevenir clickjacking
+        response.headers["X-Frame-Options"] = "DENY"
+
+        # XSS Protection (legacy pero aún útil)
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+
+        # Content Security Policy (CSP) - Básico para APIs
+        response.headers["Content-Security-Policy"] = "default-src 'self'"
+
+        # HSTS - Forzar HTTPS en producción
+        # Solo habilitar en producción con HTTPS configurado
+        if request.url.scheme == "https":
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+
+        # Remover headers que exponen información del servidor
+        if "Server" in response.headers:
+            del response.headers["Server"]
+
+        # Referrer Policy - No enviar información de referrer
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+        # Permissions Policy - Deshabilitar features no necesarios
+        response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+
+        return response
+
+
 class AuthMiddleware(BaseHTTPMiddleware):
     """
     Global authentication middleware
@@ -188,6 +232,9 @@ def setup_middleware(app: FastAPI) -> None:
 
     # Middleware de autenticación (debe ir primero)
     app.add_middleware(AuthMiddleware)
+
+    # Middleware de seguridad HTTP headers (crítico para producción)
+    app.add_middleware(SecurityHeadersMiddleware)
 
     # Middleware de logging (debe ir antes del manejo de excepciones)
     app.add_middleware(RequestLoggingMiddleware)
