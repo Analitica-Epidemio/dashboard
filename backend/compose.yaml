@@ -50,10 +50,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
-      cache_from:
-        - type=registry,ref=${COMPOSE_PROJECT_NAME:-epi}/api:buildcache
-      cache_to:
-        - type=registry,ref=${COMPOSE_PROJECT_NAME:-epi}/api:buildcache,mode=max
     container_name: ${COMPOSE_PROJECT_NAME:-epi}_api_dev
     environment:
       ENVIRONMENT: development

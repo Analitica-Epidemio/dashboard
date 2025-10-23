@@ -16,7 +16,7 @@ export function useAuth() {
   const [loginError, setLoginError] = useState<string | null>(null);
 
   // Helper functions
-  const login = async (credentials: { email: string; password: string; remember_me?: boolean }) => {
+  const login = async (credentials: { email: string; password: string }) => {
     setIsLoggingIn(true);
     setLoginError(null);
 
@@ -24,7 +24,6 @@ export function useAuth() {
       const result = await signIn('credentials', {
         email: credentials.email,
         password: credentials.password,
-        remember_me: credentials.remember_me ? 'true' : 'false',
         redirect: false,
       });
 
@@ -33,7 +32,7 @@ export function useAuth() {
       } else if (result?.ok) {
         router.push('/dashboard');
       }
-    } catch (error) {
+    } catch {
       setLoginError('Login failed');
     } finally {
       setIsLoggingIn(false);
