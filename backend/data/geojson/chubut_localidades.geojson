@@ -1,0 +1,1916 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -67.4738955704894,
+          -45.8396707826001
+        ]
+      },
+      "properties": {
+        "id": "2602103022",
+        "nombre": "Kilómetro 3 - General Mosconi",
+        "categoria": "Entidad",
+        "departamento_id": "26021",
+        "departamento_nombre": "Escalante",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260049",
+        "municipio_nombre": "Comodoro Rivadavia"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -67.4960737067253,
+          -45.7837934066429
+        ]
+      },
+      "properties": {
+        "id": "2602103001",
+        "nombre": "Acceso Norte",
+        "categoria": "Entidad",
+        "departamento_id": "26021",
+        "departamento_nombre": "Escalante",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260049",
+        "municipio_nombre": "Comodoro Rivadavia"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -67.378767782759,
+          -45.7488001218466
+        ]
+      },
+      "properties": {
+        "id": "2602103002",
+        "nombre": "Barrio Caleta Córdova",
+        "categoria": "Entidad",
+        "departamento_id": "26021",
+        "departamento_nombre": "Escalante",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260049",
+        "municipio_nombre": "Comodoro Rivadavia"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -67.3888489022003,
+          -45.7751581811535
+        ]
+      },
+      "properties": {
+        "id": "2602103003",
+        "nombre": "Caleta Olivares",
+        "categoria": "Entidad",
+        "departamento_id": "26021",
+        "departamento_nombre": "Escalante",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260049",
+        "municipio_nombre": "Comodoro Rivadavia"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -67.4764194977592,
+          -45.8163897245992
+        ]
+      },
+      "properties": {
+        "id": "2602103004",
+        "nombre": "Barrio Castelli",
+        "categoria": "Entidad",
+        "departamento_id": "26021",
+        "departamento_nombre": "Escalante",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260049",
+        "municipio_nombre": "Comodoro Rivadavia"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -67.4968830233563,
+          -45.7966537301578
+        ]
+      },
+      "properties": {
+        "id": "2602103005",
+        "nombre": "Barrio Ciudadela",
+        "categoria": "Entidad",
+        "departamento_id": "26021",
+        "departamento_nombre": "Escalante",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260049",
+        "municipio_nombre": "Comodoro Rivadavia"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -67.5049449984858,
+          -45.7942341647363
+        ]
+      },
+      "properties": {
+        "id": "2602103006",
+        "nombre": "Barrio Gasoducto",
+        "categoria": "Entidad",
+        "departamento_id": "26021",
+        "departamento_nombre": "Escalante",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260049",
+        "municipio_nombre": "Comodoro Rivadavia"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -67.4920745853454,
+          -45.8222376650658
+        ]
+      },
+      "properties": {
+        "id": "2602103007",
+        "nombre": "Barrio Güemes",
+        "categoria": "Entidad",
+        "departamento_id": "26021",
+        "departamento_nombre": "Escalante",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260049",
+        "municipio_nombre": "Comodoro Rivadavia"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -67.5426438874095,
+          -45.8283932353205
+        ]
+      },
+      "properties": {
+        "id": "2602103008",
+        "nombre": "Barrio Laprida",
+        "categoria": "Entidad",
+        "departamento_id": "26021",
+        "departamento_nombre": "Escalante",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260049",
+        "municipio_nombre": "Comodoro Rivadavia"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -67.5256775019651,
+          -45.8184020010556
+        ]
+      },
+      "properties": {
+        "id": "2602103009",
+        "nombre": "Barrio Manantial Rosales",
+        "categoria": "Entidad",
+        "departamento_id": "26021",
+        "departamento_nombre": "Escalante",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260049",
+        "municipio_nombre": "Comodoro Rivadavia"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -67.470799839968,
+          -45.791898173623
+        ]
+      },
+      "properties": {
+        "id": "2602103010",
+        "nombre": "Barrio Militar y Aeropuerto",
+        "categoria": "Entidad",
+        "departamento_id": "26021",
+        "departamento_nombre": "Escalante",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260049",
+        "municipio_nombre": "Comodoro Rivadavia"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -67.4705730669736,
+          -45.7957361705675
+        ]
+      },
+      "properties": {
+        "id": "2602103011",
+        "nombre": "Barrio Próspero Palazzo",
+        "categoria": "Entidad",
+        "departamento_id": "26021",
+        "departamento_nombre": "Escalante",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260049",
+        "municipio_nombre": "Comodoro Rivadavia"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -67.4078416019458,
+          -45.7931574348705
+        ]
+      },
+      "properties": {
+        "id": "2602103012",
+        "nombre": "Barrio Restinga Alí",
+        "categoria": "Entidad",
+        "departamento_id": "26021",
+        "departamento_nombre": "Escalante",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260049",
+        "municipio_nombre": "Comodoro Rivadavia"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -67.4746310006426,
+          -45.8107675422503
+        ]
+      },
+      "properties": {
+        "id": "2602103013",
+        "nombre": "Barrio Rodríguez Peña",
+        "categoria": "Entidad",
+        "departamento_id": "26021",
+        "departamento_nombre": "Escalante",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260049",
+        "municipio_nombre": "Comodoro Rivadavia"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -67.5064244994082,
+          -45.8415111049113
+        ]
+      },
+      "properties": {
+        "id": "2602103014",
+        "nombre": "Barrio Saavedra",
+        "categoria": "Entidad",
+        "departamento_id": "26021",
+        "departamento_nombre": "Escalante",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260049",
+        "municipio_nombre": "Comodoro Rivadavia"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -67.5026252890136,
+          -45.8193716330644
+        ]
+      },
+      "properties": {
+        "id": "2602103015",
+        "nombre": "Barrio Sarmiento",
+        "categoria": "Entidad",
+        "departamento_id": "26021",
+        "departamento_nombre": "Escalante",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260049",
+        "municipio_nombre": "Comodoro Rivadavia"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -67.4632431224591,
+          -45.8264075098405
+        ]
+      },
+      "properties": {
+        "id": "2602103016",
+        "nombre": "Barrio 25 de Mayo",
+        "categoria": "Entidad",
+        "departamento_id": "26021",
+        "departamento_nombre": "Escalante",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260049",
+        "municipio_nombre": "Comodoro Rivadavia"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -67.5024540258022,
+          -45.8364861102947
+        ]
+      },
+      "properties": {
+        "id": "2602103017",
+        "nombre": "Barrio Villa S.U.P.E.",
+        "categoria": "Entidad",
+        "departamento_id": "26021",
+        "departamento_nombre": "Escalante",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260049",
+        "municipio_nombre": "Comodoro Rivadavia"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -67.494000786158,
+          -45.8625644045819
+        ]
+      },
+      "properties": {
+        "id": "2602103018",
+        "nombre": "Comodoro Rivadavia",
+        "categoria": "Entidad",
+        "departamento_id": "26021",
+        "departamento_nombre": "Escalante",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260049",
+        "municipio_nombre": "Comodoro Rivadavia"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -67.4559985151347,
+          -45.8142153386233
+        ]
+      },
+      "properties": {
+        "id": "2602103019",
+        "nombre": "Kilómetro 5 - Presidente Ortíz",
+        "categoria": "Entidad",
+        "departamento_id": "26021",
+        "departamento_nombre": "Escalante",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260049",
+        "municipio_nombre": "Comodoro Rivadavia"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -67.4312389596103,
+          -45.7892312978457
+        ]
+      },
+      "properties": {
+        "id": "2602103020",
+        "nombre": "Kilómetro 8 - Don Bosco",
+        "categoria": "Entidad",
+        "departamento_id": "26021",
+        "departamento_nombre": "Escalante",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260049",
+        "municipio_nombre": "Comodoro Rivadavia"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -67.4358568293595,
+          -45.7694264717128
+        ]
+      },
+      "properties": {
+        "id": "2602103021",
+        "nombre": "Kilómetro 11 - Cuarteles",
+        "categoria": "Entidad",
+        "departamento_id": "26021",
+        "departamento_nombre": "Escalante",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260049",
+        "municipio_nombre": "Comodoro Rivadavia"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -65.2931723873599,
+          -41.996304359528
+        ]
+      },
+      "properties": {
+        "id": "26007010",
+        "nombre": "Arroyo Verde",
+        "categoria": "Localidad simple",
+        "departamento_id": "26007",
+        "departamento_nombre": "Biedma",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "620238",
+        "municipio_nombre": "Sierra Grande"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -65.0366755877063,
+          -42.7672814961937
+        ]
+      },
+      "properties": {
+        "id": "26007020",
+        "nombre": "Puerto Madryn",
+        "categoria": "Localidad simple",
+        "departamento_id": "26007",
+        "departamento_nombre": "Biedma",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260007",
+        "municipio_nombre": "Puerto Madryn"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -64.2841628775217,
+          -42.5720910610866
+        ]
+      },
+      "properties": {
+        "id": "26007030",
+        "nombre": "Puerto Pirámides",
+        "categoria": "Localidad simple",
+        "departamento_id": "26007",
+        "departamento_nombre": "Biedma",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "265028",
+        "municipio_nombre": "Puerto Pirámides"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -65.0395251053117,
+          -42.8139694814765
+        ]
+      },
+      "properties": {
+        "id": "26007040",
+        "nombre": "Quintas El Mirador",
+        "categoria": "Localidad simple",
+        "departamento_id": "26007",
+        "departamento_nombre": "Biedma",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260007",
+        "municipio_nombre": "Puerto Madryn"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -65.0400377129512,
+          -42.6445045471263
+        ]
+      },
+      "properties": {
+        "id": "26007050",
+        "nombre": "Reserva Area Protegida El Doradillo",
+        "categoria": "Localidad simple",
+        "departamento_id": "26007",
+        "departamento_nombre": "Biedma",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260007",
+        "municipio_nombre": "Puerto Madryn"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -71.2148139824942,
+          -42.0669680433499
+        ]
+      },
+      "properties": {
+        "id": "26014010",
+        "nombre": "Buenos Aires Chico",
+        "categoria": "Localidad simple",
+        "departamento_id": "26014",
+        "departamento_nombre": "Cushamen",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260028",
+        "municipio_nombre": "El Maitén"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -71.4311343839162,
+          -42.5113511427512
+        ]
+      },
+      "properties": {
+        "id": "26014020",
+        "nombre": "Cholila",
+        "categoria": "Localidad simple",
+        "departamento_id": "26014",
+        "departamento_nombre": "Cushamen",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260014",
+        "municipio_nombre": "Cholila"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -70.4570302916977,
+          -42.6039350182085
+        ]
+      },
+      "properties": {
+        "id": "26014025",
+        "nombre": "Costa del Chubut",
+        "categoria": "Localidad simple",
+        "departamento_id": "26014",
+        "departamento_nombre": "Cushamen",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": null,
+        "municipio_nombre": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -70.6613977877613,
+          -42.1730176117551
+        ]
+      },
+      "properties": {
+        "id": "26014030",
+        "nombre": "Cushamen Centro",
+        "categoria": "Localidad simple",
+        "departamento_id": "26014",
+        "departamento_nombre": "Cushamen",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "268014",
+        "municipio_nombre": "Cushamen"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -71.5191432921128,
+          -42.0640503025439
+        ]
+      },
+      "properties": {
+        "id": "26014040",
+        "nombre": "El Hoyo",
+        "categoria": "Localidad simple",
+        "departamento_id": "26014",
+        "departamento_nombre": "Cushamen",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260021",
+        "municipio_nombre": "El Hoyo"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -71.1677874573224,
+          -42.0503208895139
+        ]
+      },
+      "properties": {
+        "id": "26014050",
+        "nombre": "El Maitén",
+        "categoria": "Localidad simple",
+        "departamento_id": "26014",
+        "departamento_nombre": "Cushamen",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260028",
+        "municipio_nombre": "El Maitén"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -71.3710597787051,
+          -42.2292260345562
+        ]
+      },
+      "properties": {
+        "id": "26014060",
+        "nombre": "Epuyén",
+        "categoria": "Localidad simple",
+        "departamento_id": "26014",
+        "departamento_nombre": "Cushamen",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260035",
+        "municipio_nombre": "Epuyén"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -70.530714862221,
+          -42.4082116628287
+        ]
+      },
+      "properties": {
+        "id": "26014065",
+        "nombre": "Fofo Cahuel",
+        "categoria": "Localidad simple",
+        "departamento_id": "26014",
+        "departamento_nombre": "Cushamen",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": null,
+        "municipio_nombre": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -70.5377200171443,
+          -42.7238322616018
+        ]
+      },
+      "properties": {
+        "id": "26014070",
+        "nombre": "Gualjaina",
+        "categoria": "Localidad simple",
+        "departamento_id": "26014",
+        "departamento_nombre": "Cushamen",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "265007",
+        "municipio_nombre": "Gualjaina"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -71.4296708918742,
+          -42.2168904344569
+        ]
+      },
+      "properties": {
+        "id": "26014080",
+        "nombre": "Lago Epuyén",
+        "categoria": "Localidad simple",
+        "departamento_id": "26014",
+        "departamento_nombre": "Cushamen",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260035",
+        "municipio_nombre": "Epuyén"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -71.5971400319398,
+          -42.0601321615066
+        ]
+      },
+      "properties": {
+        "id": "26014090",
+        "nombre": "Lago Puelo",
+        "categoria": "Localidad simple",
+        "departamento_id": "26014",
+        "departamento_nombre": "Cushamen",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260042",
+        "municipio_nombre": "Lago Puelo"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -71.0711517093,
+          -42.412947255266
+        ]
+      },
+      "properties": {
+        "id": "26014100",
+        "nombre": "Leleque",
+        "categoria": "Localidad simple",
+        "departamento_id": "26014",
+        "departamento_nombre": "Cushamen",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": null,
+        "municipio_nombre": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -67.4919959497296,
+          -45.7320397713595
+        ]
+      },
+      "properties": {
+        "id": "26021010",
+        "nombre": "Astra",
+        "categoria": "Localidad simple",
+        "departamento_id": "26021",
+        "departamento_nombre": "Escalante",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260049",
+        "municipio_nombre": "Comodoro Rivadavia"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -66.5366462623791,
+          -45.1283019301185
+        ]
+      },
+      "properties": {
+        "id": "26021020",
+        "nombre": "Bahía Bustamante",
+        "categoria": "Localidad simple",
+        "departamento_id": "26021",
+        "departamento_nombre": "Escalante",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": null,
+        "municipio_nombre": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -67.4821597739457,
+          -45.8654181470148
+        ]
+      },
+      "properties": {
+        "id": "26021030",
+        "nombre": "Comodoro Rivadavia",
+        "categoria": "Localidad simple",
+        "departamento_id": "26021",
+        "departamento_nombre": "Escalante",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260049",
+        "municipio_nombre": "Comodoro Rivadavia"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -67.674774138225,
+          -45.7749647846989
+        ]
+      },
+      "properties": {
+        "id": "26021040",
+        "nombre": "Diadema Argentina",
+        "categoria": "Localidad simple",
+        "departamento_id": "26021",
+        "departamento_nombre": "Escalante",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260049",
+        "municipio_nombre": "Comodoro Rivadavia"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -67.5537244366415,
+          -45.9249664502277
+        ]
+      },
+      "properties": {
+        "id": "26021050",
+        "nombre": "Rada Tilly",
+        "categoria": "Localidad simple",
+        "departamento_id": "26021",
+        "departamento_nombre": "Escalante",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260056",
+        "municipio_nombre": "Rada Tilly"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -65.7103327509875,
+          -44.7984548743215
+        ]
+      },
+      "properties": {
+        "id": "26028010",
+        "nombre": "Camarones",
+        "categoria": "Localidad simple",
+        "departamento_id": "26028",
+        "departamento_nombre": "Florentino Ameghino",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260063",
+        "municipio_nombre": "Camarones"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -66.6209399544842,
+          -44.6868450088092
+        ]
+      },
+      "properties": {
+        "id": "26028020",
+        "nombre": "Garayalde",
+        "categoria": "Localidad simple",
+        "departamento_id": "26028",
+        "departamento_nombre": "Florentino Ameghino",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": null,
+        "municipio_nombre": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -71.5509828278272,
+          -43.1330196007827
+        ]
+      },
+      "properties": {
+        "id": "26035010",
+        "nombre": "Aldea Escolar (Los Rápidos)",
+        "categoria": "Localidad simple",
+        "departamento_id": "26035",
+        "departamento_nombre": "Futaleufú",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260084",
+        "municipio_nombre": "Trevelin"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -71.4688553319904,
+          -43.5393021853837
+        ]
+      },
+      "properties": {
+        "id": "26035020",
+        "nombre": "Corcovado",
+        "categoria": "Localidad simple",
+        "departamento_id": "26035",
+        "departamento_nombre": "Futaleufú",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260070",
+        "municipio_nombre": "Corcovado"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -71.3215725535306,
+          -42.9173207104894
+        ]
+      },
+      "properties": {
+        "id": "26035030",
+        "nombre": "Esquel",
+        "categoria": "Localidad simple",
+        "departamento_id": "26035",
+        "departamento_nombre": "Futaleufú",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260077",
+        "municipio_nombre": "Esquel"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -71.3489468113621,
+          -43.2471603987484
+        ]
+      },
+      "properties": {
+        "id": "26035040",
+        "nombre": "Lago Rosario",
+        "categoria": "Localidad simple",
+        "departamento_id": "26035",
+        "departamento_nombre": "Futaleufú",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260084",
+        "municipio_nombre": "Trevelin"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -71.6416035359141,
+          -43.1833583618938
+        ]
+      },
+      "properties": {
+        "id": "26035050",
+        "nombre": "Los Cipreses",
+        "categoria": "Localidad simple",
+        "departamento_id": "26035",
+        "departamento_nombre": "Futaleufú",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260084",
+        "municipio_nombre": "Trevelin"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -71.4640329212327,
+          -43.0791613523395
+        ]
+      },
+      "properties": {
+        "id": "26035060",
+        "nombre": "Trevelín",
+        "categoria": "Localidad simple",
+        "departamento_id": "26035",
+        "departamento_nombre": "Futaleufú",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260084",
+        "municipio_nombre": "Trevelin"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -71.6174894440326,
+          -42.8938496103952
+        ]
+      },
+      "properties": {
+        "id": "26035070",
+        "nombre": "Villa Futalaufquen",
+        "categoria": "Localidad simple",
+        "departamento_id": "26035",
+        "departamento_nombre": "Futaleufú",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": null,
+        "municipio_nombre": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -66.4713255559932,
+          -43.6990684077202
+        ]
+      },
+      "properties": {
+        "id": "26042010",
+        "nombre": "Dique Florentino Ameghino",
+        "categoria": "Localidad simple",
+        "departamento_id": "26042",
+        "departamento_nombre": "Gaiman",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "268028",
+        "municipio_nombre": "Dique Florentino Ameghino"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -65.7098722771955,
+          -43.3079788422985
+        ]
+      },
+      "properties": {
+        "id": "26042020",
+        "nombre": "Dolavon",
+        "categoria": "Localidad simple",
+        "departamento_id": "26042",
+        "departamento_nombre": "Gaiman",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260091",
+        "municipio_nombre": "Dolavon"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -65.4983708667024,
+          -43.2916167979349
+        ]
+      },
+      "properties": {
+        "id": "26042030",
+        "nombre": "Gaiman",
+        "categoria": "Localidad simple",
+        "departamento_id": "26042",
+        "departamento_nombre": "Gaiman",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260098",
+        "municipio_nombre": "Gaiman"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -65.8404264784686,
+          -43.3892221634843
+        ]
+      },
+      "properties": {
+        "id": "26042040",
+        "nombre": "28 de Julio",
+        "categoria": "Localidad simple",
+        "departamento_id": "26042",
+        "departamento_nombre": "Gaiman",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "265014",
+        "municipio_nombre": "28 de Julio"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -68.9043046186849,
+          -42.6200606678133
+        ]
+      },
+      "properties": {
+        "id": "26049010",
+        "nombre": "Blancuntre",
+        "categoria": "Localidad simple",
+        "departamento_id": "26049",
+        "departamento_nombre": "Gastre",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": null,
+        "municipio_nombre": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -68.5398676711389,
+          -43.08976280226
+        ]
+      },
+      "properties": {
+        "id": "26049020",
+        "nombre": "El Escorial",
+        "categoria": "Localidad simple",
+        "departamento_id": "26049",
+        "departamento_nombre": "Gastre",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": null,
+        "municipio_nombre": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -69.2221438043766,
+          -42.2631981301959
+        ]
+      },
+      "properties": {
+        "id": "26049030",
+        "nombre": "Gastre",
+        "categoria": "Localidad simple",
+        "departamento_id": "26049",
+        "departamento_nombre": "Gastre",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "268035",
+        "municipio_nombre": "Gastre"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -69.1490058696414,
+          -42.742232747455
+        ]
+      },
+      "properties": {
+        "id": "26049040",
+        "nombre": "Lagunita Salada",
+        "categoria": "Localidad simple",
+        "departamento_id": "26049",
+        "departamento_nombre": "Gastre",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "268042",
+        "municipio_nombre": "Lagunita Salada"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -68.8675523265047,
+          -42.7591451208137
+        ]
+      },
+      "properties": {
+        "id": "26049050",
+        "nombre": "Yala Laubat",
+        "categoria": "Localidad simple",
+        "departamento_id": "26049",
+        "departamento_nombre": "Gastre",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": null,
+        "municipio_nombre": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -69.6922931611261,
+          -43.3208227444691
+        ]
+      },
+      "properties": {
+        "id": "26056010",
+        "nombre": "Aldea Epulef",
+        "categoria": "Localidad simple",
+        "departamento_id": "26056",
+        "departamento_nombre": "Languiñeo",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "268049",
+        "municipio_nombre": "Aldea Epulef"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -71.702134687121,
+          -43.5878979285719
+        ]
+      },
+      "properties": {
+        "id": "26056020",
+        "nombre": "Carrenleufú",
+        "categoria": "Localidad simple",
+        "departamento_id": "26056",
+        "departamento_nombre": "Languiñeo",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "268056",
+        "municipio_nombre": "Carrenleufú"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -69.9303348841452,
+          -43.2413702729388
+        ]
+      },
+      "properties": {
+        "id": "26056030",
+        "nombre": "Colan Conhué",
+        "categoria": "Localidad simple",
+        "departamento_id": "26056",
+        "departamento_nombre": "Languiñeo",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "268063",
+        "municipio_nombre": "Colan Conhue"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -69.6081536894308,
+          -42.7351158725925
+        ]
+      },
+      "properties": {
+        "id": "26056040",
+        "nombre": "Paso del Sapo",
+        "categoria": "Localidad simple",
+        "departamento_id": "26056",
+        "departamento_nombre": "Languiñeo",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "268070",
+        "municipio_nombre": "Paso del Sapo"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -70.810780740043,
+          -43.4928649439078
+        ]
+      },
+      "properties": {
+        "id": "26056050",
+        "nombre": "Tecka",
+        "categoria": "Localidad simple",
+        "departamento_id": "26056",
+        "departamento_nombre": "Languiñeo",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260105",
+        "municipio_nombre": "Tecka"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -67.7614282705723,
+          -43.2836552092519
+        ]
+      },
+      "properties": {
+        "id": "26063010",
+        "nombre": "El Mirasol",
+        "categoria": "Localidad simple",
+        "departamento_id": "26063",
+        "departamento_nombre": "Mártires",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": null,
+        "municipio_nombre": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -67.2842377970135,
+          -43.7216248834969
+        ]
+      },
+      "properties": {
+        "id": "26063020",
+        "nombre": "Las Plumas",
+        "categoria": "Localidad simple",
+        "departamento_id": "26063",
+        "departamento_nombre": "Mártires",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "268077",
+        "municipio_nombre": "Las Plumas"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -69.1642676734883,
+          -43.4197846057917
+        ]
+      },
+      "properties": {
+        "id": "26070010",
+        "nombre": "Cerro Cóndor",
+        "categoria": "Localidad simple",
+        "departamento_id": "26070",
+        "departamento_nombre": "Paso de Indios",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": null,
+        "municipio_nombre": null
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -68.4116439963048,
+          -43.8861146804746
+        ]
+      },
+      "properties": {
+        "id": "26070020",
+        "nombre": "Los Altares",
+        "categoria": "Localidad simple",
+        "departamento_id": "26070",
+        "departamento_nombre": "Paso de Indios",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "268084",
+        "municipio_nombre": "Los Altares"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -69.0465861742933,
+          -43.8643860057353
+        ]
+      },
+      "properties": {
+        "id": "26070030",
+        "nombre": "Paso de Indios",
+        "categoria": "Localidad simple",
+        "departamento_id": "26070",
+        "departamento_nombre": "Paso de Indios",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "265021",
+        "municipio_nombre": "Paso de Indios"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -65.045502263122,
+          -43.3819482673625
+        ]
+      },
+      "properties": {
+        "id": "26077010",
+        "nombre": "Playa Magagna",
+        "categoria": "Localidad simple",
+        "departamento_id": "26077",
+        "departamento_nombre": "Rawson",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260112",
+        "municipio_nombre": "Rawson"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -65.0478800374535,
+          -43.321660695384
+        ]
+      },
+      "properties": {
+        "id": "26077020",
+        "nombre": "Playa Unión",
+        "categoria": "Localidad simple",
+        "departamento_id": "26077",
+        "departamento_nombre": "Rawson",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260112",
+        "municipio_nombre": "Rawson"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -65.1036957322757,
+          -43.3052236685054
+        ]
+      },
+      "properties": {
+        "id": "26077030",
+        "nombre": "Rawson",
+        "categoria": "Localidad simple",
+        "departamento_id": "26077",
+        "departamento_nombre": "Rawson",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260112",
+        "municipio_nombre": "Rawson"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -65.3093805893395,
+          -43.2531867505795
+        ]
+      },
+      "properties": {
+        "id": "26077040",
+        "nombre": "Trelew",
+        "categoria": "Localidad simple",
+        "departamento_id": "26077",
+        "departamento_nombre": "Rawson",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260119",
+        "municipio_nombre": "Trelew"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -70.8529129101379,
+          -44.6876393507589
+        ]
+      },
+      "properties": {
+        "id": "26084010",
+        "nombre": "Aldea Apeleg",
+        "categoria": "Localidad simple",
+        "departamento_id": "26084",
+        "departamento_nombre": "Río Senguer",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260126",
+        "municipio_nombre": "Alto Río Senguer"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -71.5226366677746,
+          -45.5532682101788
+        ]
+      },
+      "properties": {
+        "id": "26084020",
+        "nombre": "Aldea Beleiro",
+        "categoria": "Localidad simple",
+        "departamento_id": "26084",
+        "departamento_nombre": "Río Senguer",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "268091",
+        "municipio_nombre": "Aldea Beleiro"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -70.8233836026475,
+          -45.0418822725479
+        ]
+      },
+      "properties": {
+        "id": "26084030",
+        "nombre": "Alto Río Senguer",
+        "categoria": "Localidad simple",
+        "departamento_id": "26084",
+        "departamento_nombre": "Río Senguer",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260126",
+        "municipio_nombre": "Alto Río Senguer"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -71.0350530145017,
+          -45.5756640605724
+        ]
+      },
+      "properties": {
+        "id": "26084040",
+        "nombre": "Doctor Ricardo Rojas",
+        "categoria": "Localidad simple",
+        "departamento_id": "26084",
+        "departamento_nombre": "Río Senguer",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "268098",
+        "municipio_nombre": "Doctor Ricardo Rojas"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -69.9748624907449,
+          -45.3086428835566
+        ]
+      },
+      "properties": {
+        "id": "26084050",
+        "nombre": "Facundo",
+        "categoria": "Localidad simple",
+        "departamento_id": "26084",
+        "departamento_nombre": "Río Senguer",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "268105",
+        "municipio_nombre": "Facundo"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -71.2682429484838,
+          -45.9369835437361
+        ]
+      },
+      "properties": {
+        "id": "26084060",
+        "nombre": "Lago Blanco",
+        "categoria": "Localidad simple",
+        "departamento_id": "26084",
+        "departamento_nombre": "Río Senguer",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "268112",
+        "municipio_nombre": "Lago Blanco"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -70.2566379579333,
+          -45.6861769975897
+        ]
+      },
+      "properties": {
+        "id": "26084070",
+        "nombre": "Río Mayo",
+        "categoria": "Localidad simple",
+        "departamento_id": "26084",
+        "departamento_nombre": "Río Senguer",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260133",
+        "municipio_nombre": "Río Mayo"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -69.4588985693576,
+          -45.0761333499749
+        ]
+      },
+      "properties": {
+        "id": "26091010",
+        "nombre": "Buen Pasto",
+        "categoria": "Localidad simple",
+        "departamento_id": "26091",
+        "departamento_nombre": "Sarmiento",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "268119",
+        "municipio_nombre": "Buen Pasto"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -69.0689409610272,
+          -45.5868679096809
+        ]
+      },
+      "properties": {
+        "id": "26091020",
+        "nombre": "Sarmiento",
+        "categoria": "Localidad simple",
+        "departamento_id": "26091",
+        "departamento_nombre": "Sarmiento",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260140",
+        "municipio_nombre": "Sarmiento"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -71.6642206830995,
+          -44.1913673349593
+        ]
+      },
+      "properties": {
+        "id": "26098010",
+        "nombre": "Doctor Oscar Atilio Viglione (Frontera de Río Pico)",
+        "categoria": "Localidad simple",
+        "departamento_id": "26098",
+        "departamento_nombre": "Tehuelches",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "268147",
+        "municipio_nombre": "Dr. Atilio Oscar Viglione"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -70.5990240935454,
+          -44.0487066290367
+        ]
+      },
+      "properties": {
+        "id": "26098020",
+        "nombre": "Gobernador Costa",
+        "categoria": "Localidad simple",
+        "departamento_id": "26098",
+        "departamento_nombre": "Tehuelches",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260147",
+        "municipio_nombre": "Gobernador Costa"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -70.4707413513195,
+          -44.0514653137899
+        ]
+      },
+      "properties": {
+        "id": "26098030",
+        "nombre": "José de San Martín",
+        "categoria": "Localidad simple",
+        "departamento_id": "26098",
+        "departamento_nombre": "Tehuelches",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260154",
+        "municipio_nombre": "José de San Martín"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -71.3683181076623,
+          -44.1793548777281
+        ]
+      },
+      "properties": {
+        "id": "26098040",
+        "nombre": "Río Pico",
+        "categoria": "Localidad simple",
+        "departamento_id": "26098",
+        "departamento_nombre": "Tehuelches",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "260161",
+        "municipio_nombre": "Río Pico"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -68.2841375256888,
+          -42.5222032556101
+        ]
+      },
+      "properties": {
+        "id": "26105010",
+        "nombre": "Gan Gan",
+        "categoria": "Localidad simple",
+        "departamento_id": "26105",
+        "departamento_nombre": "Telsen",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": "268126",
+        "municipio_nombre": "Gan Gan"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -66.9432129672812,
+          -42.4355306191918
+        ]
+      },
+      "properties": {
+        "id": "26105020",
+        "nombre": "Telsen",
+        "categoria": "Localidad simple",
+        "departamento_id": "26105",
+        "departamento_nombre": "Telsen",
+        "provincia_id": "26",
+        "provincia_nombre": "Chubut",
+        "municipio_id": null,
+        "municipio_nombre": null
+      }
+    }
+  ]
+}

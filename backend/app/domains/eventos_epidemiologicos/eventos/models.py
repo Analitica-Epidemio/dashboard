@@ -2,7 +2,7 @@ from datetime import date
 from decimal import Decimal
 from typing import TYPE_CHECKING, Dict, List, Optional
 
-from sqlalchemy import JSON, BigInteger, Column, Numeric, Text, UniqueConstraint
+from sqlalchemy import JSON, BigInteger, Column, Index, Numeric, Text, UniqueConstraint
 from sqlmodel import Field, Relationship
 
 from app.core.models import BaseModel
@@ -148,6 +148,14 @@ class Evento(BaseModel, table=True):
     """Eventos epidemiológicos (instancias específicas de un tipo ENO)"""
 
     __tablename__ = "evento"
+    __table_args__ = (
+        # Índice para filtrado por fecha (crítico para mapa temporal)
+        Index('idx_evento_fecha_minima', 'fecha_minima_evento'),
+        # Índice compuesto para JOIN + filtro fecha
+        Index('idx_evento_domicilio_fecha', 'id_domicilio', 'fecha_minima_evento'),
+        # Índice compuesto para filtros comunes
+        Index('idx_evento_tipo_eno_fecha', 'id_tipo_eno', 'fecha_minima_evento'),
+    )
 
     # Campos propios
     id_evento_caso: int = Field(
