@@ -18,7 +18,7 @@ L.Icon.Default.mergeOptions({
 
 interface MapaSimpleProps {
   onFeatureClick?: (feature: DomicilioMapaItem) => void;
-  domicilios?: DomicilioMapaItem[]; // Domicilios filtrados desde el parent
+  domicilios?: DomicilioMapaItem[]; // Eventos filtrados desde el parent
   isLoading?: boolean;
 }
 
@@ -60,7 +60,7 @@ export function MapaSimple({
 }: MapaSimpleProps) {
   // Usar datos del prop si están disponibles, si no, hacer query independiente
   const { data: dataFallback, isLoading: isLoadingFallback, error: errorFallback } = useDomiciliosMapa({
-    limit: 1000, // Máximo de puntos a mostrar
+    limit: 1000, // Mostrar a nivel de localidad por defecto
   });
 
   const domicilios = domiciliosProp || dataFallback?.data?.items || [];
@@ -80,7 +80,7 @@ export function MapaSimple({
     <div className="relative w-full h-full">
       {error && (
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[1000] text-red-500 text-center py-3 px-6 bg-red-50 rounded-lg border border-red-200 shadow-lg">
-          <strong>Error:</strong> No se pudieron cargar los eventos del mapa
+          <strong>Error:</strong> No se pudieron cargar los domicilios del mapa
         </div>
       )}
 
@@ -118,14 +118,14 @@ export function MapaSimple({
         />
 
         {/* Mostrar puntos de domicilios geocodificados */}
-        {domiciliosConCoordenadas.map((domicilio: DomicilioMapaItem) => {
-          const color = getColorPorProvincia(domicilio.id_provincia_indec);
-          const lat = domicilio.latitud;
-          const lng = domicilio.longitud;
+        {domiciliosConCoordenadas.map((evento: DomicilioMapaItem) => {
+          const color = getColorPorProvincia(evento.id_provincia_indec);
+          const lat = evento.latitud!;
+          const lng = evento.longitud!;
 
           return (
             <CircleMarker
-              key={domicilio.id}
+              key={evento.id}
               center={[lat, lng]}
               radius={6}
               pathOptions={{
@@ -138,7 +138,7 @@ export function MapaSimple({
               eventHandlers={{
                 click: () => {
                   if (onFeatureClick) {
-                    onFeatureClick(domicilio);
+                    onFeatureClick(evento);
                   }
                 },
                 mouseover: (e) => {
@@ -161,14 +161,14 @@ export function MapaSimple({
             >
               <Popup>
                 <div className="p-2 min-w-[200px]">
-                  <div className="font-semibold text-sm mb-1">{domicilio.nombre}</div>
+                  <div className="font-semibold text-sm mb-1">{evento.nombre}</div>
                   <div className="text-xs text-gray-600 mb-2">
-                    {domicilio.provincia_nombre}
-                    {domicilio.departamento_nombre && ` - ${domicilio.departamento_nombre}`}
+                    {evento.provincia_nombre}
+                    {evento.departamento_nombre && ` - ${evento.departamento_nombre}`}
                   </div>
                   <div className="text-sm">
                     <span className="text-gray-600">Eventos: </span>
-                    <span className="font-semibold">{domicilio.total_eventos}</span>
+                    <span className="font-semibold">{evento.total_domicilios}</span>
                   </div>
                   <div className="text-xs text-gray-500 mt-2">
                     📍 {lat.toFixed(6)}, {lng.toFixed(6)}
@@ -185,9 +185,9 @@ export function MapaSimple({
         <div className="absolute bottom-6 right-6 z-[1000] bg-white shadow-lg rounded-lg p-4 max-h-[400px] overflow-y-auto">
           <div className="font-semibold text-sm mb-3">Provincias</div>
           <div className="space-y-1 text-xs">
-            {Array.from(new Set(domiciliosConCoordenadas.map(d => d.id_provincia_indec))).map(
+            {Array.from(new Set(domiciliosConCoordenadas.map(e => e.id_provincia_indec))).map(
               (idProvincia) => {
-                const domicilio = domiciliosConCoordenadas.find(d => d.id_provincia_indec === idProvincia);
+                const evento = domiciliosConCoordenadas.find(e => e.id_provincia_indec === idProvincia);
                 const color = getColorPorProvincia(idProvincia);
                 return (
                   <div key={idProvincia} className="flex items-center gap-2">
@@ -195,7 +195,7 @@ export function MapaSimple({
                       className="w-3 h-3 rounded-full border border-white"
                       style={{ backgroundColor: color }}
                     />
-                    <span className="text-gray-700">{domicilio?.provincia_nombre || `Provincia ${idProvincia}`}</span>
+                    <span className="text-gray-700">{evento?.provincia_nombre || `Provincia ${idProvincia}`}</span>
                   </div>
                 );
               }

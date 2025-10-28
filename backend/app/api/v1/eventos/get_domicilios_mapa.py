@@ -81,7 +81,6 @@ async def get_domicilios_mapa(
             Domicilio.id,
             Domicilio.calle,
             Domicilio.numero,
-            Domicilio.barrio_popular,
             Domicilio.latitud,
             Domicilio.longitud,
             Localidad.id_localidad_indec,
@@ -102,10 +101,10 @@ async def get_domicilios_mapa(
         .join(
             Provincia, Departamento.id_provincia_indec == Provincia.id_provincia_indec
         )
-        # Solo domicilios geocodificados
+        # Solo domicilios geocodificados exitosamente
         .where(Domicilio.latitud.is_not(None))
         .where(Domicilio.longitud.is_not(None))
-        .where(Domicilio.geocodificado == True)
+        .where(Domicilio.estado_geocodificacion == "GEOCODIFICADO")
     )
 
     # Aplicar filtros geográficos
@@ -139,7 +138,6 @@ async def get_domicilios_mapa(
         Domicilio.id,
         Domicilio.calle,
         Domicilio.numero,
-        Domicilio.barrio_popular,
         Domicilio.latitud,
         Domicilio.longitud,
         Localidad.id_localidad_indec,
@@ -167,8 +165,6 @@ async def get_domicilios_mapa(
             if row.numero:
                 direccion += f" {row.numero}"
             partes_direccion.append(direccion)
-        if row.barrio_popular:
-            partes_direccion.append(row.barrio_popular)
         partes_direccion.append(row.localidad_nombre)
 
         nombre = ", ".join(partes_direccion)

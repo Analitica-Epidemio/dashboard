@@ -40,7 +40,7 @@ export function MapaLayout({ children, sidebar, detailsPanel }: MapaLayoutProps)
                 Dashboard de Vigilancia Epidemiológica
               </h1>
               <p className="text-xs text-gray-500">
-                Análisis geoespacial de eventos de salud pública
+                Análisis geoespacial de domicilios de salud pública
               </p>
             </div>
           </div>
