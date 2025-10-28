@@ -1,0 +1,131 @@
+/* Estilos para transiciones suaves del mapa */
+
+/* Bajar z-index del contenedor del mapa para que dialogs aparezcan encima */
+.leaflet-container {
+  z-index: 1 !important;
+}
+
+.leaflet-pane {
+  z-index: 1 !important;
+}
+
+.leaflet-interactive {
+  transition: fill-opacity 0.5s ease, stroke-width 0.3s ease, fill 0.5s ease;
+}
+
+/* Animaciones para modo temporal */
+@keyframes pulseFeature {
+  0% {
+    fill-opacity: 0.4;
+    stroke-width: 1;
+  }
+  50% {
+    fill-opacity: 0.9;
+    stroke-width: 3;
+  }
+  100% {
+    fill-opacity: 0.7;
+    stroke-width: 1.5;
+  }
+}
+
+/* Efecto de aparición para features nuevas en animación temporal */
+@keyframes fadeInFeature {
+  from {
+    fill-opacity: 0;
+  }
+  to {
+    fill-opacity: 0.7;
+  }
+}
+
+.temporal-feature-new {
+  animation: pulseFeature 1s ease-out;
+}
+
+.temporal-feature-fade-in {
+  animation: fadeInFeature 0.8s ease-out;
+}
+
+/* Tooltip personalizado */
+.custom-tooltip {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
+  padding: 0 !important;
+  font-family: inherit !important;
+}
+
+.custom-tooltip::before {
+  display: none !important;
+}
+
+/* Clusters personalizados */
+.marker-cluster {
+  background: rgba(59, 130, 246, 0.6) !important;
+  transition: all 0.3s ease !important;
+}
+
+.marker-cluster:hover {
+  background: rgba(37, 99, 235, 0.8) !important;
+  transform: scale(1.1);
+}
+
+.marker-cluster div {
+  background: rgba(59, 130, 246, 0.8) !important;
+  color: white !important;
+  font-weight: 600;
+}
+
+/* Animación del loading overlay */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.loading-overlay-enter {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Animación shimmer para buffer de timeline estilo YouTube */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+}
+
+/* Suavizar zoom del mapa */
+.leaflet-zoom-animated {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* PopUps más bonitos */
+.leaflet-popup-content-wrapper {
+  border-radius: 8px !important;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1) !important;
+}
+
+.leaflet-popup-tip {
+  box-shadow: 0 3px 14px rgba(0,0,0,0.1) !important;
+}

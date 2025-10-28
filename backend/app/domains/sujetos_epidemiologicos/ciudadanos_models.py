@@ -74,7 +74,14 @@ class Ciudadano(BaseModel, table=True):
 
 
 class CiudadanoDomicilio(BaseModel, table=True):
-    """Domicilios de ciudadanos"""
+    """
+    Domicilios de ciudadanos (vínculo con tabla normalizada Domicilio).
+
+    Esta tabla vincula ciudadanos con domicilios normalizados, permitiendo:
+    - Compartir el mismo domicilio entre múltiples ciudadanos
+    - Geocodificar una sola vez cada dirección única
+    - Análisis de clusters (múltiples personas en la misma dirección)
+    """
 
     __tablename__ = "ciudadano_domicilio"
 
@@ -84,26 +91,15 @@ class CiudadanoDomicilio(BaseModel, table=True):
         foreign_key="ciudadano.codigo_ciudadano",
         description="Código del ciudadano",
     )
-    id_localidad_indec: int = Field(
-        sa_type=BigInteger,
-        foreign_key="localidad.id_localidad_indec",
-        description="ID de la localidad INDEC",
-    )
-
-    # Campos propios
-    calle_domicilio: Optional[str] = Field(
-        None, max_length=150, description="Calle del domicilio"
-    )
-    numero_domicilio: Optional[str] = Field(
-        None, max_length=10, description="Número del domicilio"
-    )
-    barrio_popular: Optional[str] = Field(
-        None, max_length=150, description="Nombre del barrio"
+    id_domicilio: int = Field(
+        foreign_key="domicilio.id",
+        index=True,
+        description="ID del domicilio normalizado",
     )
 
     # Relaciones
     ciudadano: "Ciudadano" = Relationship(back_populates="domicilios")
-    localidad: "Localidad" = Relationship()
+    domicilio: "Domicilio" = Relationship()
 
 
 class CiudadanoDatos(BaseModel, table=True):
