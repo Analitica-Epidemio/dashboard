@@ -119,7 +119,7 @@ def seed_departamentos_desde_georef(conn):
         id_full = dept["id"]  # Ej: "06014"
         nombre = dept["nombre"]
         provincia_id = int(dept["provincia"]["id"])  # Ej: "06" -> 6
-        dept_id = int(id_full[-3:])  # Últimos 3 dígitos
+        dept_id = int(id_full)  # Usar el ID completo INDEC (5 dígitos)
 
         # Coordenadas del centroide
         latitud = dept["centroide"]["lat"]
@@ -220,7 +220,7 @@ def seed_localidades_desde_georef(conn, max_localidades=5000):
         # Departamento (si existe)
         if loc.get("departamento"):
             dept_id_full = loc["departamento"]["id"]
-            dept_id = int(dept_id_full[-3:])
+            dept_id = int(dept_id_full)  # Usar el ID completo INDEC (5 dígitos)
         else:
             skipped_no_dept += 1
             continue
