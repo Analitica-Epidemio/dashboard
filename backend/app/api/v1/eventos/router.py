@@ -9,7 +9,7 @@ from app.core.schemas.response import ErrorResponse, SuccessResponse
 
 from .export import export_eventos
 from .get_detail import EventoDetailResponse, get_evento_detail
-from .get_mapa import EventoMapaResponse, get_eventos_mapa
+from .get_domicilios_mapa import DomicilioMapaResponse, get_domicilios_mapa
 from .get_timeline import EventoTimelineResponse, get_evento_timeline
 from .list import EventoListResponse, list_eventos
 
@@ -27,16 +27,17 @@ router.add_api_route(
     },
 )
 
-# Registrar endpoint de mapa (ANTES de /{evento_id} para evitar conflicto)
+# Registrar endpoint de domicilios geocodificados para mapa de puntos
 router.add_api_route(
-    "/mapa",
-    get_eventos_mapa,
+    "/domicilios/mapa",
+    get_domicilios_mapa,
     methods=["GET"],
-    response_model=SuccessResponse[EventoMapaResponse],
+    response_model=SuccessResponse[DomicilioMapaResponse],
     responses={
         500: {"model": ErrorResponse, "description": "Error interno del servidor"}
     },
 )
+
 
 # Registrar endpoint de exportación (ANTES de /{evento_id} para evitar conflicto)
 router.add_api_route(
