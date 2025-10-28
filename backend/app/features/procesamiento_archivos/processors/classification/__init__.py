@@ -2,6 +2,6 @@
 Classification components for epidemiological file processing.
 """
 
-from .classifier import ClassifierFactory, EventClassifier
+from .classifier import EventClassifier
 
-__all__ = ["EventClassifier", "ClassifierFactory"]
+__all__ = ["EventClassifier"]

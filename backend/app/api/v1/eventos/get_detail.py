@@ -422,11 +422,6 @@ async def get_evento_detail(
                 selectinload(Evento.tipo_eno),
                 selectinload(Evento.estrategia_aplicada),
                 # Sujetos del evento
-                selectinload(Evento.ciudadano)
-                .selectinload(Ciudadano.domicilios)
-                .selectinload(CiudadanoDomicilio.localidad)
-                .selectinload(Localidad.departamento)
-                .selectinload(Departamento.provincia),
                 selectinload(Evento.ciudadano).selectinload(Ciudadano.datos),
                 selectinload(Evento.animal)
                 .selectinload(Animal.localidad)
@@ -526,25 +521,25 @@ async def get_evento_detail(
 
         # Agregar datos del sujeto
         if evento.ciudadano:
-            # Get location and address from first domicilio
+            # Get location and address from evento's domicilio (not ciudadano's)
             provincia_nombre = None
             localidad_nombre = None
             calle_domicilio = None
             numero_domicilio = None
             barrio_popular = None
-            if evento.ciudadano.domicilios:
-                primer_domicilio = evento.ciudadano.domicilios[0]
-                calle_domicilio = primer_domicilio.calle_domicilio
-                numero_domicilio = primer_domicilio.numero_domicilio
-                barrio_popular = primer_domicilio.barrio_popular
-                if primer_domicilio.localidad:
-                    localidad_nombre = primer_domicilio.localidad.nombre
+            if evento.domicilio:
+                calle_domicilio = evento.domicilio.calle
+                numero_domicilio = evento.domicilio.numero
+                # Note: barrio_popular might not exist in Domicilio model
+                barrio_popular = getattr(evento.domicilio, 'barrio_popular', None)
+                if evento.domicilio.localidad:
+                    localidad_nombre = evento.domicilio.localidad.nombre
                     if (
-                        primer_domicilio.localidad.departamento
-                        and primer_domicilio.localidad.departamento.provincia
+                        evento.domicilio.localidad.departamento
+                        and evento.domicilio.localidad.departamento.provincia
                     ):
                         provincia_nombre = (
-                            primer_domicilio.localidad.departamento.provincia.nombre
+                            evento.domicilio.localidad.departamento.provincia.nombre
                         )
 
             # Get contact info and additional data from first datos record

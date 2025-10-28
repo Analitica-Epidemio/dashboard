@@ -67,18 +67,14 @@ class AsyncFileProcessingService:
             ProcessingJob: Job creado para tracking
         """
 
-        logger.info(
-            f"🚀 Starting CSV processing - original_filename: {original_filename}, sheet_name: {sheet_name}"
-        )
+        file_size_mb = getattr(file, "size", 0) / 1024 / 1024
+        logger.info(f"Starting CSV processing: {original_filename} ({file_size_mb:.1f} MB)")
 
         try:
             # Validaciones previas
-            logger.info("🔍 Validating CSV file...")
             self.validate_csv_file(file)
-            logger.info("✅ File validation passed")
 
-            # Crear job en base de datos
-            logger.info("📝 Creating ProcessingJob object...")
+            # Crear y persistir job
             job = ProcessingJob(
                 job_type="csv_processing",
                 original_filename=original_filename,
@@ -90,58 +86,27 @@ class AsyncFileProcessingService:
                     "original_content_type": file.content_type,
                 },
             )
-            logger.info(f"✅ ProcessingJob object created - job_type: {job.job_type}")
-
-            # Persistir job
-            logger.info("💾 Persisting job to database via job_repository.create...")
             created_job = await job_repository.create(job)
-            logger.info(f"✅ Job persisted successfully - job_id: {created_job.id}")
 
             # Guardar archivo temporalmente
-            logger.info("📁 Saving temporary file...")
             file_path = await self._save_temp_file(file, created_job.id, sheet_name)
-            logger.info(f"✅ File saved to: {file_path}")
-
             created_job.file_path = str(file_path)
-            logger.info("💾 Updating job with file_path...")
             await job_repository.update(created_job)
-            logger.info("✅ Job updated with file_path")
 
             # Lanzar task asíncrona de Celery
-            logger.info("🔥 Importing and launching Celery task...")
-            logger.info(f"🔍 Celery broker URL: {celery_app.conf.broker_url}")
-            logger.info(f"🔍 Celery backend URL: {celery_app.conf.result_backend}")
-            
-            # Test Celery connection before launching task
-            try:
-                logger.info("🧪 Testing Celery connection...")
-                celery_app.control.ping(timeout=5)
-                logger.info("✅ Celery ping successful")
-            except Exception as e:
-                logger.error(f"❌ Celery connection test failed: {str(e)}")
-                logger.error("This might indicate Redis is not running or not accessible")
-            
             from app.features.procesamiento_archivos.tasks import process_csv_file
-            logger.info("📦 process_csv_file imported successfully")
-
-            logger.info(f"🚀 Launching Celery task with args: job_id={created_job.id}, file_path={file_path}")
             celery_task = process_csv_file.delay(created_job.id, str(file_path))
-            logger.info(f"✅ Celery task launched - task_id: {celery_task.id}")
-            logger.info(f"📊 Task state: {celery_task.state}")
 
             # Asociar task ID con job
-            logger.info("🔗 Associating Celery task ID with job...")
             created_job.celery_task_id = celery_task.id
             created_job.mark_started(celery_task.id)
             await job_repository.update(created_job)
-            logger.info(f"✅ Job updated with celery_task_id: {celery_task.id}")
 
-            logger.info(f"🎉 CSV processing setup complete - job_id: {created_job.id}")
+            logger.info(f"Job {created_job.id} enqueued with task {celery_task.id}")
             return created_job
 
         except Exception as e:
-            logger.error(f"💥 Error in start_csv_processing: {str(e)}")
-            logger.error(f"💥 Full traceback:\n{traceback.format_exc()}")
+            logger.error(f"Error in start_csv_processing: {str(e)}", exc_info=True)
             raise
 
     async def get_job_status(self, job_id: str) -> Optional[JobStatusResponse]:
@@ -238,13 +203,9 @@ class AsyncFileProcessingService:
             return
 
         try:
-            logger.info(f"🔄 Syncing job {job.id} with Celery task {job.celery_task_id}")
-            logger.info(f"🔍 Using Celery broker: {celery_app.conf.broker_url}")
-            
             # Obtener resultado de Celery
             celery_result = AsyncResult(job.celery_task_id, app=celery_app)
-            logger.info(f"📊 Celery task state: {celery_result.state}")
-            logger.info(f"🎯 Celery task ready: {celery_result.ready()}")
+            logger.debug(f"Syncing job {job.id}: Celery state={celery_result.state}, ready={celery_result.ready()}")
 
             if celery_result.ready():
                 if celery_result.successful():

@@ -1,5 +1,6 @@
 """Configuración de la aplicación."""
 
+from pathlib import Path
 from typing import List
 
 from pydantic_settings import BaseSettings
@@ -102,9 +103,15 @@ class Settings(BaseSettings):
     ENABLE_REDOC: bool = True
     ENABLE_OPENAPI: bool = True
 
+    @property
+    def BASE_DIR(self) -> Path:
+        """Retorna el directorio base del proyecto."""
+        return Path(__file__).resolve().parent.parent
+
     class Config:
         env_file = ".env"
         case_sensitive = True
+        extra = "ignore"  # Ignorar variables de entorno extra (ej: DB_NAME, DB_USER, etc.)
 
 
 settings = Settings()

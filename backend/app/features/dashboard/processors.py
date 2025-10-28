@@ -564,19 +564,19 @@ class ChartDataProcessor:
         query = """
         SELECT
             CASE
-                WHEN e.edad_anos_al_momento_apertura < 5 THEN '0-4'
-                WHEN e.edad_anos_al_momento_apertura < 10 THEN '5-9'
-                WHEN e.edad_anos_al_momento_apertura < 15 THEN '10-14'
-                WHEN e.edad_anos_al_momento_apertura < 20 THEN '15-19'
-                WHEN e.edad_anos_al_momento_apertura < 25 THEN '20-24'
-                WHEN e.edad_anos_al_momento_apertura < 30 THEN '25-29'
-                WHEN e.edad_anos_al_momento_apertura < 35 THEN '30-34'
-                WHEN e.edad_anos_al_momento_apertura < 40 THEN '35-39'
-                WHEN e.edad_anos_al_momento_apertura < 45 THEN '40-44'
-                WHEN e.edad_anos_al_momento_apertura < 50 THEN '45-49'
-                WHEN e.edad_anos_al_momento_apertura < 55 THEN '50-54'
-                WHEN e.edad_anos_al_momento_apertura < 60 THEN '55-59'
-                WHEN e.edad_anos_al_momento_apertura < 65 THEN '60-64'
+                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 5 THEN '0-4'
+                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 10 THEN '5-9'
+                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 15 THEN '10-14'
+                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 20 THEN '15-19'
+                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 25 THEN '20-24'
+                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 30 THEN '25-29'
+                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 35 THEN '30-34'
+                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 40 THEN '35-39'
+                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 45 THEN '40-44'
+                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 50 THEN '45-49'
+                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 55 THEN '50-54'
+                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 60 THEN '55-59'
+                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 65 THEN '60-64'
                 ELSE '65+'
             END as grupo_edad,
             COALESCE(c.sexo_biologico, 'NO_ESPECIFICADO') as sexo,
@@ -586,7 +586,8 @@ class ChartDataProcessor:
         LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
         LEFT JOIN localidad l ON est.id_localidad_indec = l.id_localidad_indec
         LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
-        WHERE e.edad_anos_al_momento_apertura IS NOT NULL
+        WHERE e.fecha_nacimiento IS NOT NULL
+          AND e.fecha_minima_evento IS NOT NULL
         """
 
         params = {}
@@ -873,16 +874,16 @@ class ChartDataProcessor:
         query = """
         SELECT
             CASE
-                WHEN e.edad_anos_al_momento_apertura < 1 THEN '< 1 año'
-                WHEN e.edad_anos_al_momento_apertura < 5 THEN '1-4'
-                WHEN e.edad_anos_al_momento_apertura < 10 THEN '5-9'
-                WHEN e.edad_anos_al_momento_apertura < 15 THEN '10-14'
-                WHEN e.edad_anos_al_momento_apertura < 20 THEN '15-19'
-                WHEN e.edad_anos_al_momento_apertura < 30 THEN '20-29'
-                WHEN e.edad_anos_al_momento_apertura < 40 THEN '30-39'
-                WHEN e.edad_anos_al_momento_apertura < 50 THEN '40-49'
-                WHEN e.edad_anos_al_momento_apertura < 60 THEN '50-59'
-                WHEN e.edad_anos_al_momento_apertura < 70 THEN '60-69'
+                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 1 THEN '< 1 año'
+                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 5 THEN '1-4'
+                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 10 THEN '5-9'
+                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 15 THEN '10-14'
+                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 20 THEN '15-19'
+                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 30 THEN '20-29'
+                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 40 THEN '30-39'
+                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 50 THEN '40-49'
+                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 60 THEN '50-59'
+                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 70 THEN '60-69'
                 ELSE '70+'
             END as grupo_edad,
             COUNT(*) as casos
@@ -891,7 +892,8 @@ class ChartDataProcessor:
         LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
         LEFT JOIN localidad l ON est.id_localidad_indec = l.id_localidad_indec
         LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
-        WHERE 1=1
+        WHERE e.fecha_nacimiento IS NOT NULL
+          AND e.fecha_minima_evento IS NOT NULL
         """
 
         params = {}
@@ -925,7 +927,7 @@ class ChartDataProcessor:
             query += " AND e.fecha_minima_evento <= :fecha_hasta"
             params["fecha_hasta"] = self._parse_date(filtros["fecha_hasta"])
 
-        query += " GROUP BY grupo_edad ORDER BY MIN(e.edad_anos_al_momento_apertura)"
+        query += " GROUP BY grupo_edad ORDER BY MIN(EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)))"
         
         result = await self.db.execute(text(query), params)
         rows = result.fetchall()

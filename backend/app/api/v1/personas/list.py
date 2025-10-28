@@ -199,15 +199,28 @@ async def list_personas(
                     TipoEnoGrupoEno.id_grupo_eno.in_(grupo_eno_ids)
                 )
 
-            if edad_min is not None:
+            # Filtros de edad (calcular edad a partir de fecha_nacimiento y fecha_apertura_caso)
+            if edad_min is not None or edad_max is not None:
+                # Calcular edad usando AGE(fecha_apertura_caso, fecha_nacimiento)
+                edad_calculada = func.extract(
+                    'year',
+                    func.age(Evento.fecha_apertura_caso, Evento.fecha_nacimiento)
+                )
+                # Asegurarse de que ambas fechas existan
                 eventos_base_query = eventos_base_query.where(
-                    Evento.edad_anos_al_momento_apertura >= edad_min
+                    Evento.fecha_nacimiento.isnot(None),
+                    Evento.fecha_apertura_caso.isnot(None)
                 )
 
-            if edad_max is not None:
-                eventos_base_query = eventos_base_query.where(
-                    Evento.edad_anos_al_momento_apertura <= edad_max
-                )
+                if edad_min is not None:
+                    eventos_base_query = eventos_base_query.where(
+                        edad_calculada >= edad_min
+                    )
+
+                if edad_max is not None:
+                    eventos_base_query = eventos_base_query.where(
+                        edad_calculada <= edad_max
+                    )
 
             # Crear subquery filtrada
             eventos_filtrados = eventos_base_query.subquery()

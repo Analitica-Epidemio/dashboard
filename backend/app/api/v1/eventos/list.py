@@ -28,7 +28,7 @@ from app.domains.sujetos_epidemiologicos.ciudadanos_models import (
     Ciudadano,
     CiudadanoDomicilio,
 )
-from app.domains.territorio.geografia_models import Departamento, Localidad
+from app.domains.territorio.geografia_models import Departamento, Domicilio, Localidad
 
 
 class EventoSortBy(str, Enum):
@@ -198,14 +198,15 @@ async def list_eventos(
         ).options(
                 selectinload(Evento.tipo_eno),
                 # Relaciones con sujetos (ciudadano/animal)
-                selectinload(Evento.ciudadano)
-                .selectinload(Ciudadano.domicilios)
-                .selectinload(CiudadanoDomicilio.localidad)
-                .selectinload(Localidad.departamento)
-                .selectinload(Departamento.provincia),
+                selectinload(Evento.ciudadano),
                 selectinload(Evento.ciudadano).selectinload(Ciudadano.datos),
                 selectinload(Evento.animal)
                 .selectinload(Animal.localidad)
+                .selectinload(Localidad.departamento)
+                .selectinload(Departamento.provincia),
+                # Domicilio del evento (no del ciudadano!)
+                selectinload(Evento.domicilio)
+                .selectinload(Domicilio.localidad)
                 .selectinload(Localidad.departamento)
                 .selectinload(Departamento.provincia),
                 # Relaciones con establecimientos
@@ -358,14 +359,15 @@ async def list_eventos(
                     .where(Evento.id.in_(evento_ids))
                     .options(
                         selectinload(Evento.tipo_eno),
-                        selectinload(Evento.ciudadano)
-                        .selectinload(Ciudadano.domicilios)
-                        .selectinload(CiudadanoDomicilio.localidad)
-                        .selectinload(Localidad.departamento)
-                        .selectinload(Departamento.provincia),
+                        selectinload(Evento.ciudadano),
                         selectinload(Evento.ciudadano).selectinload(Ciudadano.datos),
                         selectinload(Evento.animal)
                         .selectinload(Animal.localidad)
+                        .selectinload(Localidad.departamento)
+                        .selectinload(Departamento.provincia),
+                        # Domicilio del evento (no del ciudadano!)
+                        selectinload(Evento.domicilio)
+                        .selectinload(Domicilio.localidad)
                         .selectinload(Localidad.departamento)
                         .selectinload(Departamento.provincia),
                         selectinload(Evento.establecimiento_consulta),
@@ -432,25 +434,23 @@ async def list_eventos(
                     if evento.ciudadano.numero_documento
                     else None
                 )
-                edad = evento.edad_anos_al_momento_apertura
+                # Calcular edad a partir de fecha_nacimiento y fecha_apertura_caso
+                edad = None
+                if evento.fecha_nacimiento and evento.fecha_apertura_caso:
+                    edad = (evento.fecha_apertura_caso - evento.fecha_nacimiento).days // 365
                 sexo = evento.ciudadano.sexo_biologico
 
-                # Get location from first domicilio
-                if evento.ciudadano.domicilios:
-                    primer_domicilio = evento.ciudadano.domicilios[0]
-                    if primer_domicilio.localidad:
-                        localidad_res = primer_domicilio.localidad.nombre
-                        if (
-                            primer_domicilio.localidad.departamento
-                            and primer_domicilio.localidad.departamento.provincia
-                        ):
-                            provincia_res = (
-                                primer_domicilio.localidad.departamento.provincia.nombre
-                            )
-                        else:
-                            provincia_res = None
+                # Get location from evento domicilio (not ciudadano!)
+                if evento.domicilio and evento.domicilio.localidad:
+                    localidad_res = evento.domicilio.localidad.nombre
+                    if (
+                        evento.domicilio.localidad.departamento
+                        and evento.domicilio.localidad.departamento.provincia
+                    ):
+                        provincia_res = (
+                            evento.domicilio.localidad.departamento.provincia.nombre
+                        )
                     else:
-                        localidad_res = None
                         provincia_res = None
                 else:
                     localidad_res = None

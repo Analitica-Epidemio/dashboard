@@ -83,9 +83,14 @@ from app.domains.territorio.geografia_models import (
     Provincia,
     Departamento,
     Localidad,
+    Domicilio,
 )
 from app.domains.territorio.establecimientos_models import (
     Establecimiento,
+)
+from app.domains.territorio.capas_gis_models import (
+    CapaHidrografia,
+    CapaAreaUrbana,
 )
 
 # 📊 FEATURES MODELS (para detección de Alembic)
@@ -147,7 +152,10 @@ __all__ = [
     "Provincia",
     "Departamento",
     "Localidad",
+    "Domicilio",
     "Establecimiento",
+    "CapaHidrografia",
+    "CapaAreaUrbana",
     # Features
     "DashboardChart",
     "ProcessingJob",

@@ -182,8 +182,8 @@ class Evento(BaseModel, table=True):
     anio_epidemiologico_apertura: Optional[int] = Field(
         None, description="Año epidemiológico de apertura del caso"
     )
-    edad_anos_al_momento_apertura: Optional[int] = Field(
-        None, description="Edad en años al momento de apertura del caso"
+    fecha_nacimiento: Optional[date] = Field(
+        None, description="Fecha de nacimiento del ciudadano al momento de apertura del caso"
     )
     fecha_primera_consulta: Optional[date] = Field(
         None, description="Fecha de la primera consulta médica"

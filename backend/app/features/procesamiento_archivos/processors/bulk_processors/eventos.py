@@ -21,7 +21,6 @@ from app.domains.eventos_epidemiologicos.eventos.models import (
 )
 from app.domains.atencion_medica.salud_models import Sintoma
 from app.features.procesamiento_archivos.utils.epidemiological_calculations import (
-    calcular_edad,
     calcular_semana_epidemiologica,
 )
 
@@ -230,7 +229,7 @@ class EventosBulkProcessor(BulkProcessorBase):
             upsert_stmt = stmt.on_conflict_do_nothing(index_elements=["id_tipo_eno", "id_grupo_eno"])
             self.context.session.execute(upsert_stmt)
             self.logger.info(
-                f"✅ {len(relaciones_tipo_grupo)} relaciones tipo-grupo creadas "
+                f"{len(relaciones_tipo_grupo)} relaciones tipo-grupo creadas "
                 f"({len(tipo_grupos_mapping)} tipos con uno o más grupos)"
             )
 
@@ -378,14 +377,9 @@ class EventosBulkProcessor(BulkProcessorBase):
                 else:
                     evento_dict["semana_epidemiologica_sintomas"] = None
 
-                # Calcular edad al momento del evento solo si hay ambas fechas
+                # Guardar fecha de nacimiento directamente (más preciso que edad calculada)
                 fecha_nac = self._safe_date(primera_fila.get(Columns.FECHA_NACIMIENTO))
-                if fecha_nac and fecha_minima_evento:
-                    edad = calcular_edad(fecha_nac, fecha_minima_evento)
-                    evento_dict["edad_anos_al_momento_apertura"] = edad
-                else:
-                    # Si no hay fecha de nacimiento o fecha de evento, no podemos calcular edad
-                    evento_dict["edad_anos_al_momento_apertura"] = None
+                evento_dict["fecha_nacimiento"] = fecha_nac
                 
                 # Actualizar establecimientos con los valores priorizados
                 if estab_consulta_final:
@@ -443,7 +437,7 @@ class EventosBulkProcessor(BulkProcessorBase):
             "semana_epidemiologica_apertura": stmt.excluded.semana_epidemiologica_apertura,
             "anio_epidemiologico_apertura": stmt.excluded.anio_epidemiologico_apertura,
             "semana_epidemiologica_sintomas": stmt.excluded.semana_epidemiologica_sintomas,
-            "edad_anos_al_momento_apertura": stmt.excluded.edad_anos_al_momento_apertura,
+            "fecha_nacimiento": stmt.excluded.fecha_nacimiento,
             "id_tipo_eno": stmt.excluded.id_tipo_eno,
             "id_establecimiento_consulta": stmt.excluded.id_establecimiento_consulta,
             "id_establecimiento_notificacion": stmt.excluded.id_establecimiento_notificacion,
@@ -495,7 +489,7 @@ class EventosBulkProcessor(BulkProcessorBase):
             self.context.session.execute(upsert_stmt)
             eventos_unicos = len(set(r["id_evento"] for r in relaciones_eventos_grupos))
             self.logger.info(
-                f"✅ {len(relaciones_eventos_grupos)} relaciones evento-grupo creadas "
+                f"{len(relaciones_eventos_grupos)} relaciones evento-grupo creadas "
                 f"({eventos_unicos} eventos con uno o más grupos)"
             )
 
@@ -697,7 +691,7 @@ class EventosBulkProcessor(BulkProcessorBase):
             )
 
             result = self.context.session.execute(upsert_stmt)
-            self.logger.info(f"✅ {len(sintomas_eventos_data)} relaciones síntoma-evento procesadas")
+            self.logger.info(f"{len(sintomas_eventos_data)} relaciones síntoma-evento procesadas")
 
         duration = (self._get_current_timestamp() - start_time).total_seconds()
 
@@ -1110,7 +1104,7 @@ class EventosBulkProcessor(BulkProcessorBase):
         if sintomas_faltantes:
             self.logger.warning(f"⚠️  {len(sintomas_faltantes)} síntomas no encontrados en BD: {sintomas_faltantes[:3]}")
 
-        self.logger.info(f"✅ Mapping de síntomas completado: {len(final_mapping)} síntomas mapeados")
+        self.logger.info(f"Mapping de síntomas completado: {len(final_mapping)} síntomas mapeados")
         return final_mapping
 
     def _row_to_sintoma_evento(

@@ -8,7 +8,7 @@ Almacena información geoespacial complementaria útil para análisis epidemiol�
 from typing import Optional
 
 from geoalchemy2 import Geometry
-from sqlalchemy import BigInteger
+from sqlalchemy import BigInteger, Column, Index
 from sqlmodel import Field
 
 from app.core.models import BaseModel
@@ -23,7 +23,6 @@ class CapaHidrografia(BaseModel, table=True):
     """
 
     __tablename__ = "capa_hidrografia"
-    __table_args__ = {"extend_existing": True}
 
     # Identificación
     nombre: Optional[str] = Field(
@@ -35,16 +34,23 @@ class CapaHidrografia(BaseModel, table=True):
         description="Tipo: río, arroyo, canal, laguna, etc."
     )
 
-    # Geometría
+    # Geometría - spatial_index=False para crear index explícito
+    # Usa MULTILINESTRING porque los datos del IGN pueden tener múltiples segmentos
     geometria: Optional[str] = Field(
-        None,
-        sa_column_kwargs={"type_": Geometry("LINESTRING", srid=4326)},
-        description="Geometría del curso de agua (LineString en WGS84)"
+        default=None,
+        sa_column=Column(Geometry("MULTILINESTRING", srid=4326, spatial_index=False)),
+        description="Geometría del curso de agua (MultiLineString en WGS84)"
     )
 
     # Metadatos
     fuente: Optional[str] = Field(
-        None, max_length=100, default="IGN", description="Fuente de los datos"
+        default="IGN", max_length=100, description="Fuente de los datos"
+    )
+
+    # Configuración de la tabla con índice espacial explícito
+    __table_args__ = (
+        Index("idx_capa_hidrografia_geometria", "geometria", postgresql_using="gist"),
+        {"extend_existing": True},
     )
 
 
@@ -57,7 +63,6 @@ class CapaAreaUrbana(BaseModel, table=True):
     """
 
     __tablename__ = "capa_area_urbana"
-    __table_args__ = {"extend_existing": True}
 
     # Identificación
     nombre: Optional[str] = Field(
@@ -80,14 +85,21 @@ class CapaAreaUrbana(BaseModel, table=True):
         None, description="Población estimada del área urbana"
     )
 
-    # Geometría
+    # Geometría - spatial_index=False para crear index explícito
+    # Usa MULTIPOLYGON porque los datos del IGN pueden tener múltiples polígonos
     geometria: Optional[str] = Field(
-        None,
-        sa_column_kwargs={"type_": Geometry("POLYGON", srid=4326)},
-        description="Geometría del área urbana (Polygon en WGS84)"
+        default=None,
+        sa_column=Column(Geometry("MULTIPOLYGON", srid=4326, spatial_index=False)),
+        description="Geometría del área urbana (MultiPolygon en WGS84)"
     )
 
     # Metadatos
     fuente: Optional[str] = Field(
-        None, max_length=100, default="IGN", description="Fuente de los datos"
+        default="IGN", max_length=100, description="Fuente de los datos"
+    )
+
+    # Configuración de la tabla con índice espacial explícito
+    __table_args__ = (
+        Index("idx_capa_area_urbana_geometria", "geometria", postgresql_using="gist"),
+        {"extend_existing": True},
     )
