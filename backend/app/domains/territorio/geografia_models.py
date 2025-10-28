@@ -141,7 +141,7 @@ class Localidad(BaseModel, table=True):
     establecimientos: List["Establecimiento"] = Relationship(
         back_populates="localidad_establecimiento"
     )
-    domicilios_ciudadano: List["CiudadanoDomicilio"] = Relationship(back_populates="localidad")
+    # Nota: CiudadanoDomicilio no tiene FK a Localidad, la relación es indirecta via Domicilio
     domicilios: List["Domicilio"] = Relationship(back_populates="localidad")
     viajes: List["ViajesCiudadano"] = Relationship(back_populates="localidad")
     ambitos_concurrencia: List["AmbitosConcurrenciaEvento"] = Relationship(

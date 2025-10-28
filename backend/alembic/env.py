@@ -24,6 +24,9 @@ from sqlmodel import SQLModel
 
 from app.core.config import settings
 
+# Importar helpers de GeoAlchemy2 para Alembic
+from geoalchemy2 import alembic_helpers
+
 # Importar todos los modelos para que Alembic los detecte
 # IMPORTANTE: Importar todos los modelos de los dominios aquí
 from app.domains import *  # noqa: F403, F401
@@ -79,8 +82,10 @@ def run_migrations_offline() -> None:
         render_as_batch=False,
         compare_type=True,
         compare_server_default=True,
-        # Ignorar tablas de PostGIS/Tiger
+        # GeoAlchemy2 helpers
         include_object=include_object,
+        process_revision_directives=alembic_helpers.writer,
+        render_item=alembic_helpers.render_item,
     )
 
     with context.begin_transaction():
@@ -91,9 +96,14 @@ def include_object(object, name, type_, reflected, compare_to):
     """
     Determina qué objetos de la base de datos incluir en autogenerate.
 
-    Excluye las tablas de PostGIS y Tiger Geocoder que no son parte
-    de nuestro modelo de aplicación.
+    Combina la lógica de GeoAlchemy2 con filtros personalizados para
+    excluir tablas de PostGIS y Tiger Geocoder.
     """
+    # Primero, aplicar la lógica de GeoAlchemy2
+    if not alembic_helpers.include_object(object, name, type_, reflected, compare_to):
+        return False
+
+    # Luego, aplicar nuestra lógica personalizada
     if type_ == "table":
         # Tablas de PostGIS/Tiger Geocoder a ignorar
         postgis_tables = {
@@ -140,8 +150,10 @@ def do_run_migrations(connection: Connection) -> None:
         include_schemas=True,
         # Configuración para timestamps y UUIDs
         user_module_prefix="sqlalchemy_utils.",
-        # Ignorar tablas de PostGIS/Tiger
+        # GeoAlchemy2 helpers para manejo correcto de geometrías
         include_object=include_object,
+        process_revision_directives=alembic_helpers.writer,
+        render_item=alembic_helpers.render_item,
     )
 
     with context.begin_transaction():

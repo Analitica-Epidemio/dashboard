@@ -1,8 +1,8 @@
-""".
+"""initial migration with all tables
 
-Revision ID: d2f7173550f8
+Revision ID: 7f74d379f63f
 Revises: 
-Create Date: 2025-10-23 13:13:44.959215
+Create Date: 2025-10-28 16:26:35.184969
 
 """
 from typing import Sequence, Union
@@ -10,10 +10,11 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 import sqlmodel  # Always import sqlmodel for SQLModel types
+import geoalchemy2  # Required for Geometry types
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'd2f7173550f8'
+revision: str = '7f74d379f63f'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -30,6 +31,17 @@ def upgrade() -> None:
     sa.Column('descripcion', sqlmodel.sql.sqltypes.AutoString(length=150), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_table('capa_hidrografia',
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('nombre', sqlmodel.sql.sqltypes.AutoString(length=200), nullable=True),
+    sa.Column('tipo', sqlmodel.sql.sqltypes.AutoString(length=50), nullable=True),
+    sa.Column('geometria', geoalchemy2.types.Geometry(geometry_type='MULTILINESTRING', srid=4326, dimension=2, spatial_index=False, from_text='ST_GeomFromEWKT', name='geometry'), nullable=True),
+    sa.Column('fuente', sqlmodel.sql.sqltypes.AutoString(length=100), nullable=True),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_capa_hidrografia_geometria', 'capa_hidrografia', ['geometria'], unique=False, postgresql_using='gist')
     op.create_table('ciudadano',
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
@@ -352,6 +364,20 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_user_sessions_session_token'), 'user_sessions', ['session_token'], unique=True)
     op.create_index(op.f('ix_user_sessions_user_id'), 'user_sessions', ['user_id'], unique=False)
+    op.create_table('capa_area_urbana',
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('nombre', sqlmodel.sql.sqltypes.AutoString(length=200), nullable=True),
+    sa.Column('id_departamento_indec', sa.Integer(), nullable=True),
+    sa.Column('id_departamento', sa.Integer(), nullable=True),
+    sa.Column('poblacion', sa.Integer(), nullable=True),
+    sa.Column('geometria', geoalchemy2.types.Geometry(geometry_type='MULTIPOLYGON', srid=4326, dimension=2, spatial_index=False, from_text='ST_GeomFromEWKT', name='geometry'), nullable=True),
+    sa.Column('fuente', sqlmodel.sql.sqltypes.AutoString(length=100), nullable=True),
+    sa.ForeignKeyConstraint(['id_departamento'], ['departamento.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_capa_area_urbana_geometria', 'capa_area_urbana', ['geometria'], unique=False, postgresql_using='gist')
     op.create_table('classification_rule',
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
@@ -441,19 +467,6 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['id_localidad_indec'], ['localidad.id_localidad_indec'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_table('ciudadano_domicilio',
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('codigo_ciudadano', sa.BigInteger(), nullable=False),
-    sa.Column('id_localidad_indec', sa.BigInteger(), nullable=False),
-    sa.Column('calle_domicilio', sqlmodel.sql.sqltypes.AutoString(length=150), nullable=True),
-    sa.Column('numero_domicilio', sqlmodel.sql.sqltypes.AutoString(length=10), nullable=True),
-    sa.Column('barrio_popular', sqlmodel.sql.sqltypes.AutoString(length=150), nullable=True),
-    sa.ForeignKeyConstraint(['codigo_ciudadano'], ['ciudadano.codigo_ciudadano'], ),
-    sa.ForeignKeyConstraint(['id_localidad_indec'], ['localidad.id_localidad_indec'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
     op.create_table('domicilio',
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
@@ -519,6 +532,17 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_viajes_ciudadano_id_snvs_viaje_epidemiologico'), 'viajes_ciudadano', ['id_snvs_viaje_epidemiologico'], unique=True)
+    op.create_table('ciudadano_domicilio',
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('codigo_ciudadano', sa.BigInteger(), nullable=False),
+    sa.Column('id_domicilio', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['codigo_ciudadano'], ['ciudadano.codigo_ciudadano'], ),
+    sa.ForeignKeyConstraint(['id_domicilio'], ['domicilio.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_ciudadano_domicilio_id_domicilio'), 'ciudadano_domicilio', ['id_domicilio'], unique=False)
     op.create_table('evento',
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
@@ -567,6 +591,9 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['id_tipo_eno'], ['tipo_eno.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_index('idx_evento_domicilio_fecha', 'evento', ['id_domicilio', 'fecha_minima_evento'], unique=False)
+    op.create_index('idx_evento_fecha_minima', 'evento', ['fecha_minima_evento'], unique=False)
+    op.create_index('idx_evento_tipo_eno_fecha', 'evento', ['id_tipo_eno', 'fecha_minima_evento'], unique=False)
     op.create_index(op.f('ix_evento_id_domicilio'), 'evento', ['id_domicilio'], unique=False)
     op.create_index(op.f('ix_evento_id_evento_caso'), 'evento', ['id_evento_caso'], unique=True)
     op.create_table('persona_domicilio',
@@ -867,7 +894,12 @@ def downgrade() -> None:
     op.drop_table('persona_domicilio')
     op.drop_index(op.f('ix_evento_id_evento_caso'), table_name='evento')
     op.drop_index(op.f('ix_evento_id_domicilio'), table_name='evento')
+    op.drop_index('idx_evento_tipo_eno_fecha', table_name='evento')
+    op.drop_index('idx_evento_fecha_minima', table_name='evento')
+    op.drop_index('idx_evento_domicilio_fecha', table_name='evento')
     op.drop_table('evento')
+    op.drop_index(op.f('ix_ciudadano_domicilio_id_domicilio'), table_name='ciudadano_domicilio')
+    op.drop_table('ciudadano_domicilio')
     op.drop_index(op.f('ix_viajes_ciudadano_id_snvs_viaje_epidemiologico'), table_name='viajes_ciudadano')
     op.drop_table('viajes_ciudadano')
     op.drop_index(op.f('ix_filter_condition_field_name'), table_name='filter_condition')
@@ -880,7 +912,6 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_domicilio_id_localidad_indec'), table_name='domicilio')
     op.drop_index(op.f('ix_domicilio_calle'), table_name='domicilio')
     op.drop_table('domicilio')
-    op.drop_table('ciudadano_domicilio')
     op.drop_table('animal')
     op.drop_index(op.f('ix_strategy_change_log_strategy_id'), table_name='strategy_change_log')
     op.drop_index(op.f('ix_strategy_change_log_changed_at'), table_name='strategy_change_log')
@@ -896,6 +927,8 @@ def downgrade() -> None:
     op.drop_index('idx_classification_rule_strategy', table_name='classification_rule')
     op.drop_index('idx_classification_rule_priority', table_name='classification_rule')
     op.drop_table('classification_rule')
+    op.drop_index('idx_capa_area_urbana_geometria', table_name='capa_area_urbana', postgresql_using='gist')
+    op.drop_table('capa_area_urbana')
     op.drop_index(op.f('ix_user_sessions_user_id'), table_name='user_sessions')
     op.drop_index(op.f('ix_user_sessions_session_token'), table_name='user_sessions')
     op.drop_table('user_sessions')
@@ -961,5 +994,7 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_ciudadano_codigo_ciudadano'), table_name='ciudadano')
     op.drop_index(op.f('ix_ciudadano_apellido'), table_name='ciudadano')
     op.drop_table('ciudadano')
+    op.drop_index('idx_capa_hidrografia_geometria', table_name='capa_hidrografia', postgresql_using='gist')
+    op.drop_table('capa_hidrografia')
     op.drop_table('antecedente_epidemiologico')
     # ### end Alembic commands ###
