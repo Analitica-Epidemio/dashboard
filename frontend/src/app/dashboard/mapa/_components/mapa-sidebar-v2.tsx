@@ -56,8 +56,8 @@ export function MapaSidebar({
     return num.toString();
   };
 
-  // Calcular eventos no mapeados
-  const eventosNoMapeados = totalEventosGlobal - totalEventosMapeados;
+  // Calcular domicilios no mapeados
+  const domiciliosNoMapeados = totalEventosGlobal - totalEventosMapeados;
   const porcentajeCobertura = totalEventosGlobal > 0
     ? ((totalEventosMapeados / totalEventosGlobal) * 100).toFixed(1)
     : 0;
@@ -93,7 +93,7 @@ export function MapaSidebar({
                       </TooltipTrigger>
                       <TooltipContent>
                         <p className="max-w-xs text-xs">
-                          Total de eventos epidemiológicos registrados en el sistema de vigilancia
+                          Total de domicilios epidemiológicos registrados en el sistema de vigilancia
                         </p>
                       </TooltipContent>
                     </Tooltip>
@@ -133,7 +133,7 @@ export function MapaSidebar({
             </div>
 
             {/* No Mapeados - Mostrar solo si hay */}
-            {eventosNoMapeados > 0 && (
+            {domiciliosNoMapeados > 0 && (
               <>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
@@ -155,7 +155,7 @@ export function MapaSidebar({
                     </TooltipProvider>
                   </div>
                   <p className="text-lg font-bold text-amber-600">
-                    {formatNumber(eventosNoMapeados)}
+                    {formatNumber(domiciliosNoMapeados)}
                   </p>
                 </div>
               </>
@@ -310,7 +310,7 @@ export function MapaSidebar({
             Leyenda
           </CardTitle>
           <p className="text-xs text-gray-500 mt-1">
-            Colores según número de eventos
+            Colores según número de domicilios
           </p>
         </CardHeader>
         <CardContent>

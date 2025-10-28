@@ -24,7 +24,7 @@ const MapaSimple = dynamic(
 );
 
 export default function MapaPage() {
-  // Cargar domicilios geocodificados
+  // Cargar domicilios agrupados geográficamente
   const { data, isLoading } = useDomiciliosMapa({
     limit: 1000,
   });
@@ -32,9 +32,9 @@ export default function MapaPage() {
   const domicilios = data?.data?.items || [];
 
   // Calcular estadísticas
-  const totalDomicilios = domicilios.length;
-  const totalEventos = domicilios.reduce((sum, d) => sum + d.total_eventos, 0);
-  const provinciasUnicas = new Set(domicilios.map(d => d.id_provincia_indec)).size;
+  const totalLocalidades = domicilios.length;
+  const totalEventos = domicilios.reduce((sum, e) => sum + e.total_domicilios, 0);
+  const provinciasUnicas = new Set(domicilios.map(e => e.id_provincia_indec)).size;
 
   return (
     <MapaLayout
@@ -55,7 +55,7 @@ export default function MapaPage() {
         {isLoading && (
           <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[999] bg-white shadow-lg rounded-lg px-4 py-3 flex items-center gap-3 border">
             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-            <span className="text-sm font-medium">Cargando {totalDomicilios} domicilios...</span>
+            <span className="text-sm font-medium">Cargando {totalLocalidades} localidades...</span>
           </div>
         )}
 
@@ -64,8 +64,8 @@ export default function MapaPage() {
           <div className="absolute top-4 left-4 z-[999] bg-white shadow-lg rounded-lg p-4 border">
             <div className="text-sm space-y-1">
               <div>
-                <span className="text-gray-600">Domicilios: </span>
-                <span className="font-semibold">{totalDomicilios}</span>
+                <span className="text-gray-600">Localidades: </span>
+                <span className="font-semibold">{totalLocalidades}</span>
               </div>
               <div>
                 <span className="text-gray-600">Total Eventos: </span>
