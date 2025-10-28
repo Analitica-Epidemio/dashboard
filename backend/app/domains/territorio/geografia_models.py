@@ -5,6 +5,7 @@ Estructura normalizada para datos geográficos argentinos con integridad referen
 Solo incluye Argentina ya que es el único país que manejamos actualmente.
 """
 
+import enum
 from decimal import Decimal
 from typing import TYPE_CHECKING, List, Optional
 
@@ -12,6 +13,29 @@ from sqlalchemy import BigInteger, Column, Numeric, UniqueConstraint
 from sqlmodel import Field, Relationship
 
 from app.core.models import BaseModel
+
+
+class EstadoGeocodificacion(str, enum.Enum):
+    """
+    Estado del proceso de geocodificación de un domicilio.
+
+    PENDIENTE: Domicilio recién creado, aún no procesado
+    EN_COLA: Marcado para geocodificación, esperando procesamiento
+    PROCESANDO: Actualmente siendo geocodificado por un worker
+    GEOCODIFICADO: Geocodificación exitosa, tiene coordenadas válidas
+    FALLO_TEMPORAL: Error temporal (rate limit, timeout), reintentar más tarde
+    FALLO_PERMANENTE: Error permanente (dirección inválida, sin resultados), no reintentar
+    NO_GEOCODIFICABLE: Datos insuficientes para geocodificar (ej: solo número sin calle)
+    DESHABILITADO: Geocodificación deshabilitada en settings
+    """
+    PENDIENTE = "pendiente"
+    EN_COLA = "en_cola"
+    PROCESANDO = "procesando"
+    GEOCODIFICADO = "geocodificado"
+    FALLO_TEMPORAL = "fallo_temporal"
+    FALLO_PERMANENTE = "fallo_permanente"
+    NO_GEOCODIFICABLE = "no_geocodificable"
+    DESHABILITADO = "deshabilitado"
 
 if TYPE_CHECKING:
     from app.domains.sujetos_epidemiologicos.ciudadanos_models import (
@@ -210,9 +234,9 @@ class Domicilio(BaseModel, table=True):
     )
 
     # Metadata de geocodificación
-    geocodificado: bool = Field(
-        default=False,
-        description="Si ya fue geocodificado"
+    estado_geocodificacion: EstadoGeocodificacion = Field(
+        default=EstadoGeocodificacion.PENDIENTE,
+        description="Estado del proceso de geocodificación"
     )
     proveedor_geocoding: Optional[str] = Field(
         None,
@@ -222,6 +246,15 @@ class Domicilio(BaseModel, table=True):
     confidence_geocoding: Optional[float] = Field(
         None,
         description="Score de confianza de la geocodificación (0-1)"
+    )
+    intentos_geocodificacion: int = Field(
+        default=0,
+        description="Número de intentos de geocodificación realizados"
+    )
+    ultimo_error_geocodificacion: Optional[str] = Field(
+        None,
+        max_length=500,
+        description="Último mensaje de error si falló la geocodificación"
     )
 
     # Relaciones

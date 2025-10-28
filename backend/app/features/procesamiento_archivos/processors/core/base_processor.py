@@ -103,7 +103,7 @@ class ProcessingContext:
         self.progress_callback = progress_callback
         self.batch_size = batch_size
         self.stats = ProcessingStats()
-        self.cache: Dict[str, Any] = {}
+        # Note: cache removed - was never used
 
     def update_progress(self, percentage: int, message: str) -> None:
         """Actualiza el progreso del procesamiento."""

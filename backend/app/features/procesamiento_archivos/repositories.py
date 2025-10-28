@@ -1,16 +1,14 @@
 """
 Repository layer para manejo de datos de uploads y jobs.
 
-Arquitectura senior-level:
+Características:
 - Separación de data access logic
-- Interface clara para servicios
 - Manejo de errores específicos
 - Optimizaciones de queries
 """
 
 import logging
 import traceback
-from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
@@ -23,33 +21,7 @@ from app.features.procesamiento_archivos.models import JobStatus, ProcessingJob
 logger = logging.getLogger(__name__)
 
 
-class ProcessingJobRepositoryInterface(ABC):
-    """Interface abstracta para el repositorio de trabajos."""
-
-    @abstractmethod
-    async def create(self, job: ProcessingJob) -> ProcessingJob:
-        """Crear un nuevo trabajo."""
-        pass
-
-    @abstractmethod
-    async def get_by_id(self, job_id: str) -> Optional[ProcessingJob]:
-        """Obtener trabajo por ID."""
-        pass
-
-    @abstractmethod
-    async def update(self, job: ProcessingJob) -> ProcessingJob:
-        """Actualizar trabajo existente."""
-        pass
-
-    @abstractmethod
-    async def list_jobs(
-        self, status: Optional[JobStatus] = None, limit: int = 50, offset: int = 0
-    ) -> List[ProcessingJob]:
-        """Listar trabajos con filtros."""
-        pass
-
-
-class PostgreSQLProcessingJobRepository(ProcessingJobRepositoryInterface):
+class PostgreSQLProcessingJobRepository:
     """
     Implementación PostgreSQL del repositorio de trabajos.
 
@@ -76,38 +48,19 @@ class PostgreSQLProcessingJobRepository(ProcessingJobRepositoryInterface):
         Raises:
             RepositoryError: Si hay error en la creación
         """
-        logger.info(
-            f"💾 Repository.create() called - job_type: {job.job_type}, original_filename: {job.original_filename}"
-        )
         try:
-            logger.info("🔗 Creating database session...")
             with self.session_factory(engine) as session:
-                logger.info("✅ Database session created successfully")
-
-                logger.info("📝 Adding job to session...")
                 session.add(job)
-                logger.info("✅ Job added to session")
-
-                logger.info("💾 Committing transaction...")
                 session.commit()
-                logger.info("✅ Transaction committed successfully")
-
-                logger.info("🔄 Refreshing job object...")
                 session.refresh(job)
-                logger.info(f"✅ Job object refreshed - final job_id: {job.id}")
-
-                logger.info(f"🎉 Job created successfully: {job.id} - {job.job_type}")
+                logger.debug(f"Job created: {job.id}")
                 return job
 
         except SQLAlchemyError as e:
-            logger.error(f"💥 SQLAlchemy error creating job: {str(e)}")
-            logger.error(f"💥 Error type: {type(e).__name__}")
-            logger.error(f"💥 Full traceback:\n{traceback.format_exc()}")
+            logger.error(f"SQLAlchemy error creating job: {str(e)}", exc_info=True)
             raise RepositoryError(f"Error creating job: {str(e)}") from e
         except Exception as e:
-            logger.error(f"💥 Unexpected error in repository.create: {str(e)}")
-            logger.error(f"💥 Error type: {type(e).__name__}")
-            logger.error(f"💥 Full traceback:\n{traceback.format_exc()}")
+            logger.error(f"Unexpected error in repository.create: {str(e)}", exc_info=True)
             raise RepositoryError(f"Unexpected error creating job: {str(e)}") from e
 
     async def get_by_id(self, job_id: str) -> Optional[ProcessingJob]:

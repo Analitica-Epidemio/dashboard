@@ -10,7 +10,7 @@ no domicilio del ciudadano, para consistencia epidemiológica.
 
 from datetime import date
 from typing import List, Optional
-from sqlalchemy import and_, or_, String, select
+from sqlalchemy import and_, or_, String, select, func
 from sqlalchemy.orm import Query
 
 from app.domains.eventos_epidemiologicos.eventos.models import Evento, TipoEno, TipoEnoGrupoEno
@@ -35,8 +35,9 @@ class EventoQueryBuilder:
         """
         Agrega los JOINs base necesarios para filtrar eventos.
 
-        IMPORTANTE: El filtro de provincia se aplica por ESTABLECIMIENTO DE NOTIFICACIÓN,
-        no por domicilio del ciudadano.
+        IMPORTANTE:
+        - El filtro de provincia se aplica por ESTABLECIMIENTO DE NOTIFICACIÓN, no por domicilio
+        - NO incluye JOIN con TipoEnoGrupoEno (causa duplicados) - se agrega solo cuando se necesita
 
         Args:
             query: SQLAlchemy query base (select(Evento) o similar)
@@ -47,7 +48,6 @@ class EventoQueryBuilder:
         return (
             query
             .outerjoin(TipoEno, Evento.id_tipo_eno == TipoEno.id)
-            .outerjoin(TipoEnoGrupoEno, TipoEno.id == TipoEnoGrupoEno.id_tipo_eno)
             .outerjoin(Ciudadano, Evento.codigo_ciudadano == Ciudadano.codigo_ciudadano)
             .outerjoin(Animal, Evento.id_animal == Animal.id)
             # JOINs para filtro de provincia por ESTABLECIMIENTO DE NOTIFICACIÓN
@@ -130,11 +130,22 @@ class EventoQueryBuilder:
         if requiere_revision is not None:
             conditions.append(Evento.requiere_revision_especie == requiere_revision)
 
-        # Filtros de edad
-        if edad_min is not None:
-            conditions.append(Evento.edad_anos_al_momento_apertura >= edad_min)
-        if edad_max is not None:
-            conditions.append(Evento.edad_anos_al_momento_apertura <= edad_max)
+        # Filtros de edad (calcular edad a partir de fecha_nacimiento y fecha_apertura_caso)
+        # Solo aplica si tenemos ambas fechas
+        if edad_min is not None or edad_max is not None:
+            # Calcular edad usando AGE(fecha_apertura_caso, fecha_nacimiento)
+            edad_calculada = func.extract(
+                'year',
+                func.age(Evento.fecha_apertura_caso, Evento.fecha_nacimiento)
+            )
+            # Asegurarse de que ambas fechas existan
+            conditions.append(Evento.fecha_nacimiento.isnot(None))
+            conditions.append(Evento.fecha_apertura_caso.isnot(None))
+
+            if edad_min is not None:
+                conditions.append(edad_calculada >= edad_min)
+            if edad_max is not None:
+                conditions.append(edad_calculada <= edad_max)
 
         # Búsqueda por texto
         if search:
@@ -163,8 +174,13 @@ class EventoQueryBuilder:
         Returns:
             Query con JOINs y filtros aplicados
         """
-        # Agregar JOINs base
+        # Agregar JOINs base (sin TipoEnoGrupoEno)
         query = EventoQueryBuilder.add_base_joins(query)
+
+        # Si hay filtro de grupos, agregar JOIN con TipoEnoGrupoEno
+        # (solo cuando se necesita para evitar duplicados)
+        if filter_kwargs.get('grupo_eno_ids'):
+            query = query.outerjoin(TipoEnoGrupoEno, TipoEno.id == TipoEnoGrupoEno.id_tipo_eno)
 
         # Construir y aplicar condiciones
         conditions = EventoQueryBuilder.build_filter_conditions(**filter_kwargs)

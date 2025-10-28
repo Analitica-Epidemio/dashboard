@@ -33,6 +33,7 @@ def create_celery_app() -> Celery:
         backend=settings.CELERY_RESULT_BACKEND,
         include=[
             "app.features.procesamiento_archivos.tasks",
+            "app.features.geocoding.tasks",
             # Agregar más módulos de tasks aquí
         ],
     )
@@ -65,6 +66,10 @@ def create_celery_app() -> Celery:
             "app.features.procesamiento_archivos.tasks.cleanup_old_files": {
                 "queue": "maintenance",
                 "priority": 1,
+            },
+            "app.features.geocoding.tasks.geocode_pending_domicilios": {
+                "queue": "geocoding",
+                "priority": 3,  # Prioridad media-baja (no urgente)
             },
         },
         # Error handling

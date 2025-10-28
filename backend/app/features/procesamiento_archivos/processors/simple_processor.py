@@ -171,15 +171,8 @@ class SimpleEpidemiologicalProcessor:
 
     def _clean_data(self, df: pd.DataFrame) -> pd.DataFrame:
         """Limpia datos usando validador optimizado."""
-        context = ProcessingContext(
-            session=self.session,
-            progress_callback=self.progress_callback,
-            batch_size=1000,
-        )
-
-        validator = OptimizedDataValidator(context)
-        df_clean = validator.process_batch(df)
-
+        validator = OptimizedDataValidator()
+        df_clean = validator.validate(df)
         return df_clean
 
     def _classify_events(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -210,7 +203,7 @@ class SimpleEpidemiologicalProcessor:
 
         # Commit de la sesión para persistir cambios
         self.session.commit()
-        logger.info(f"✅ Commit exitoso: {total_entities} entidades creadas")
+        logger.info(f"Commit exitoso: {total_entities} entidades creadas")
 
     def _update_progress(self, percentage: int, message: str) -> None:
         """Actualiza progreso."""

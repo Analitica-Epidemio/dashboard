@@ -14,6 +14,8 @@ from app.domains.sujetos_epidemiologicos.ciudadanos_models import (
 )
 from app.domains.sujetos_epidemiologicos.viajes_models import ViajesCiudadano
 from app.domains.atencion_medica.salud_models import Comorbilidad
+from app.domains.territorio.geografia_models import Domicilio
+from app.core.config import settings
 
 from ..core.columns import Columns
 from .base import BulkProcessorBase
@@ -111,77 +113,157 @@ class CiudadanosBulkProcessor(BulkProcessorBase):
     def bulk_upsert_ciudadanos_domicilios(
         self, df: pd.DataFrame
     ) -> BulkOperationResult:
-        """Bulk upsert de domicilios de ciudadanos."""
+        """
+        Bulk upsert de domicilios y vínculos con ciudadanos.
+
+        Proceso:
+        1. Crear registros únicos en tabla Domicilio (calle, numero, localidad)
+        2. TODO: Geocodificar si ENABLE_GEOCODING está activado
+        3. Crear vínculos en CiudadanoDomicilio (codigo_ciudadano, id_domicilio)
+        """
         start_time = self._get_current_timestamp()
 
-        # Filtrar registros con datos de domicilio (localidad es opcional, la crearemos si no existe)
+        # Filtrar registros con datos de domicilio
         domicilios_df = df.dropna(subset=[Columns.CODIGO_CIUDADANO])
         domicilios_df = domicilios_df[
             (domicilios_df[Columns.CALLE_DOMICILIO].notna()
-            | domicilios_df[Columns.NUMERO_DOMICILIO].notna()
-            | domicilios_df[Columns.BARRIO_POPULAR].notna())
+            | domicilios_df[Columns.NUMERO_DOMICILIO].notna())
+            & domicilios_df[Columns.ID_LOC_INDEC_RESIDENCIA].notna()
         ]
 
         if domicilios_df.empty:
             return BulkOperationResult(0, 0, 0, [], 0.0)
 
-        self.logger.info(f"Bulk upserting {len(domicilios_df)} domicilios")
+        self.logger.info(f"Processing {len(domicilios_df)} domicilios")
 
         # Crear localidades placeholder para las que no existen
         localidad_ids_needed = domicilios_df[Columns.ID_LOC_INDEC_RESIDENCIA].dropna().unique().tolist()
         localidad_mapping = self._ensure_localidades_exist(localidad_ids_needed)
 
-        # OPTIMIZACIÓN: Procesamiento vectorizado de domicilios (80% más rápido)
+        # Paso 1: Crear registros únicos de Domicilio
+        domicilios_unicos = domicilios_df[[
+            Columns.CALLE_DOMICILIO,
+            Columns.NUMERO_DOMICILIO,
+            Columns.ID_LOC_INDEC_RESIDENCIA
+        ]].drop_duplicates()
+
+        timestamp = self._get_current_timestamp()
         domicilios_data = []
-        errors = []
 
-        if not domicilios_df.empty:
-            domicilios_df = domicilios_df.copy()
-
-            # Mapear localidades (usar placeholder si no existe)
-            domicilios_df['id_localidad_mapped'] = domicilios_df[Columns.ID_LOC_INDEC_RESIDENCIA].apply(
-                lambda x: localidad_mapping.get(self._safe_int(x)) if pd.notna(x) else None
-            )
-
-            # Crear dicts vectorialmente
-            timestamp = self._get_current_timestamp()
-            domicilios_data = domicilios_df[domicilios_df['id_localidad_mapped'].notna()].apply(
-                lambda row: {
-                    "codigo_ciudadano": self._safe_int(row.get(Columns.CODIGO_CIUDADANO)),
-                    "id_localidad_indec": int(row['id_localidad_mapped']),
-                    "calle_domicilio": self._clean_string(row.get(Columns.CALLE_DOMICILIO)),
-                    "numero_domicilio": self._clean_string(row.get(Columns.NUMERO_DOMICILIO)),
-                    "barrio_popular": self._clean_string(row.get(Columns.BARRIO_POPULAR)),
+        for _, row in domicilios_unicos.iterrows():
+            id_localidad = localidad_mapping.get(self._safe_int(row[Columns.ID_LOC_INDEC_RESIDENCIA]))
+            if id_localidad:
+                domicilios_data.append({
+                    "calle": self._clean_string(row.get(Columns.CALLE_DOMICILIO)),
+                    "numero": self._clean_string(row.get(Columns.NUMERO_DOMICILIO)),
+                    "id_localidad_indec": id_localidad,
                     "created_at": timestamp,
                     "updated_at": timestamp,
-                },
-                axis=1
-            ).tolist()
+                })
 
         if not domicilios_data:
-            return BulkOperationResult(0, 0, len(errors), errors, 0.0)
+            return BulkOperationResult(0, 0, 0, [], 0.0)
 
-        # UPSERT usando el modelo real - usar DO NOTHING ya que no hay constraint único
-        stmt = pg_insert(CiudadanoDomicilio.__table__).values(domicilios_data)
-        upsert_stmt = stmt.on_conflict_do_nothing()
-        
+        # UPSERT domicilios - usar DO NOTHING en conflicto (ya existe)
+        stmt = pg_insert(Domicilio.__table__).values(domicilios_data)
+        upsert_stmt = stmt.on_conflict_do_nothing(
+            index_elements=['calle', 'numero', 'id_localidad_indec']
+        )
+
         try:
             self.context.session.execute(upsert_stmt)
-        except Exception as insert_error:
-            self.logger.error(f"Failed to insert domicilios: {insert_error}")
-            # Log first few rows for debugging
-            self.logger.error(
-                f"Sample data: {domicilios_data[:3] if domicilios_data else 'No data'}"
+            self.context.session.flush()
+        except Exception as e:
+            self.logger.error(f"Failed to insert domicilios: {e}")
+            raise e
+
+        # Trigger geocoding if enabled
+        if settings.ENABLE_GEOCODING and domicilios_data:
+            from app.features.geocoding.tasks import geocode_pending_domicilios
+            # Encolar task de geocodificación con delay pequeño (5 segundos)
+            # para que el commit de la transacción termine antes
+            geocode_pending_domicilios.apply_async(countdown=5)
+            self.logger.info(f"Encolado task de geocodificación para {len(domicilios_data)} domicilios nuevos")
+
+        # Paso 2: Obtener TODOS los id_domicilio en una sola query usando IN
+        # Construir lista de tuplas (calle, numero, localidad) para buscar
+        domicilios_keys = [
+            (d.get("calle"), d.get("numero"), d.get("id_localidad_indec"))
+            for d in domicilios_data
+        ]
+
+        # Query optimizada: buscar todos los domicilios en una sola query
+        from sqlalchemy import tuple_
+        stmt = select(
+            Domicilio.id,
+            Domicilio.calle,
+            Domicilio.numero,
+            Domicilio.id_localidad_indec
+        ).where(
+            tuple_(Domicilio.calle, Domicilio.numero, Domicilio.id_localidad_indec).in_(
+                domicilios_keys
             )
-            raise insert_error
+        )
+
+        domicilios_results = self.context.session.execute(stmt).all()
+
+        # Mapear resultados a diccionario para lookup O(1)
+        domicilio_map = {
+            (row.calle, row.numero, row.id_localidad_indec): row.id
+            for row in domicilios_results
+        }
+
+        # Paso 3: Crear vínculos CiudadanoDomicilio usando procesamiento vectorizado
+        # Preparar columnas necesarias
+        domicilios_df = domicilios_df.copy()
+        domicilios_df['calle_clean'] = domicilios_df[Columns.CALLE_DOMICILIO].apply(self._clean_string)
+        domicilios_df['numero_clean'] = domicilios_df[Columns.NUMERO_DOMICILIO].apply(self._clean_string)
+        domicilios_df['id_localidad_mapped'] = domicilios_df[Columns.ID_LOC_INDEC_RESIDENCIA].apply(
+            lambda x: localidad_mapping.get(self._safe_int(x)) if pd.notna(x) else None
+        )
+
+        # Función vectorizada para obtener id_domicilio
+        def get_id_domicilio(row):
+            key = (row['calle_clean'], row['numero_clean'], row['id_localidad_mapped'])
+            return domicilio_map.get(key)
+
+        domicilios_df['id_domicilio'] = domicilios_df.apply(get_id_domicilio, axis=1)
+
+        # Filtrar solo los que tienen id_domicilio válido
+        domicilios_df_validos = domicilios_df[domicilios_df['id_domicilio'].notna()]
+
+        # Crear vínculos usando apply vectorizado
+        vinculos_data = domicilios_df_validos.apply(
+            lambda row: {
+                "codigo_ciudadano": self._safe_int(row[Columns.CODIGO_CIUDADANO]),
+                "id_domicilio": int(row['id_domicilio']),
+                "created_at": timestamp,
+                "updated_at": timestamp,
+            },
+            axis=1
+        ).tolist()
+
+        if vinculos_data:
+            stmt = pg_insert(CiudadanoDomicilio.__table__).values(vinculos_data)
+            # DO NOTHING si el vínculo ya existe
+            upsert_stmt = stmt.on_conflict_do_nothing()
+
+            try:
+                self.context.session.execute(upsert_stmt)
+            except Exception as e:
+                self.logger.error(f"Failed to insert ciudadano_domicilio: {e}")
+                raise e
 
         duration = (self._get_current_timestamp() - start_time).total_seconds()
+        self.logger.info(
+            f"Created {len(domicilios_data)} domicilios and {len(vinculos_data)} vínculos in {duration:.2f}s"
+        )
 
         return BulkOperationResult(
             inserted_count=len(domicilios_data),
-            updated_count=0,
+            updated_count=len(vinculos_data),
             skipped_count=0,
-            errors=errors,
+            errors=[],
             duration_seconds=duration,
         )
 
@@ -436,18 +518,16 @@ class CiudadanosBulkProcessor(BulkProcessorBase):
             "id_localidad_indec": self._safe_int(
                 row.get(Columns.ID_LOC_INDEC_RESIDENCIA)
             ),
-            "calle_domicilio": self._clean_string(row.get(Columns.CALLE_DOMICILIO)),
-            "numero_domicilio": self._clean_string(row.get(Columns.NUMERO_DOMICILIO)),
-            "barrio_popular": self._clean_string(row.get(Columns.BARRIO_POPULAR)),
+            "calle": self._clean_string(row.get(Columns.CALLE_DOMICILIO)),
+            "numero": self._clean_string(row.get(Columns.NUMERO_DOMICILIO)),
             "created_at": self._get_current_timestamp(),
             "updated_at": self._get_current_timestamp(),
         }
 
         # Solo agregar si tiene localidad válida Y datos de domicilio
-        if (domicilio_dict["id_localidad_indec"] and 
-            (domicilio_dict["calle_domicilio"] or 
-             domicilio_dict["numero_domicilio"] or 
-             domicilio_dict["barrio_popular"])):
+        if (domicilio_dict["id_localidad_indec"] and
+            (domicilio_dict["calle"] or
+             domicilio_dict["numero"])):
             return domicilio_dict
         return None
 

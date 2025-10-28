@@ -249,17 +249,24 @@ async def get_dashboard_resumen(
     )[:10]
 
     # 4. PIRÁMIDE POBLACIONAL (grupos de edad y sexo)
-    # Primero obtener eventos con ciudadanos
+    # Calcular edad a partir de fecha_nacimiento y fecha_apertura_caso
+    # Usar AGE(fecha_apertura_caso, fecha_nacimiento) para calcular la edad al momento del evento
+    edad_calculada = func.extract(
+        'year',
+        func.age(Evento.fecha_apertura_caso, Evento.fecha_nacimiento)
+    ).label('edad')
+
     query_piramide = (
         select(
-            Evento.edad_anos_al_momento_apertura,
+            edad_calculada,
             Ciudadano.sexo_biologico
         )
         .join(Ciudadano, Evento.codigo_ciudadano == Ciudadano.codigo_ciudadano)
         .where(
             and_(
                 Evento.codigo_ciudadano.isnot(None),
-                Evento.edad_anos_al_momento_apertura.isnot(None),
+                Evento.fecha_nacimiento.isnot(None),
+                Evento.fecha_apertura_caso.isnot(None),
                 Ciudadano.sexo_biologico.isnot(None),
                 *(filtros if filtros else [])
             )
