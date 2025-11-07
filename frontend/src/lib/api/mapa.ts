@@ -31,6 +31,8 @@ export interface CasoDetalle {
   clasificacion_manual?: string | null;
   estado?: string | null;
   codigo_ciudadano: number;
+  dni?: string | null;
+  nombre_completo?: string | null;
   edad?: number | null;
   sexo?: string | null;
 }

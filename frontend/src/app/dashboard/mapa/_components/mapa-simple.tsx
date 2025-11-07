@@ -1,6 +1,6 @@
 "use client";
 
-import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, CircleMarker, Tooltip } from "react-leaflet";
 import { useDomiciliosMapa, type DomicilioMapaItem } from "@/lib/api/mapa";
 import "leaflet/dist/leaflet.css";
 import "./mapa-styles.css";
@@ -272,28 +272,12 @@ export function MapaSimple({
                 },
               }}
             >
-              <Popup>
-                <div className="p-2 min-w-[200px]">
-                  <div className="font-semibold text-sm mb-1">{domicilio.nombre}</div>
-                  <div className="text-xs text-gray-600 mb-2">
-                    {domicilio.provincia_nombre}
-                    {domicilio.departamento_nombre && ` - ${domicilio.departamento_nombre}`}
-                  </div>
-                  <div className="text-sm">
-                    <span className="text-gray-600">Eventos: </span>
-                    <span className="font-semibold">{domicilio.total_eventos}</span>
-                  </div>
-                  {domicilio.tipo_evento_predominante && (
-                    <div className="text-sm mt-1">
-                      <span className="text-gray-600">Tipo: </span>
-                      <span className="font-semibold">{domicilio.tipo_evento_predominante}</span>
-                    </div>
-                  )}
-                  <div className="text-xs text-gray-500 mt-2">
-                    📍 {lat.toFixed(6)}, {lng.toFixed(6)}
-                  </div>
+              <Tooltip direction="top" opacity={0.9} permanent={false}>
+                <div className="text-sm">
+                  <div className="font-semibold">{domicilio.nombre}</div>
+                  <div className="text-xs text-gray-600">{domicilio.total_eventos} evento{domicilio.total_eventos !== 1 ? 's' : ''}</div>
                 </div>
-              </Popup>
+              </Tooltip>
             </CircleMarker>
           );
         })}

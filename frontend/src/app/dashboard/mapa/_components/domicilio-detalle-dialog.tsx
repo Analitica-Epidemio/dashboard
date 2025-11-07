@@ -168,33 +168,47 @@ function CasoCard({ caso }: { caso: CasoDetalle }) {
           </div>
 
           {/* Datos del ciudadano */}
-          <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
-            <div className="text-gray-600">
-              <span className="font-medium">Código:</span>{" "}
-              <span className="text-gray-900">{caso.codigo_ciudadano}</span>
+          <div className="space-y-2">
+            {caso.nombre_completo && (
+              <div className="text-sm">
+                <span className="font-semibold text-gray-900">{caso.nombre_completo}</span>
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
+              {caso.dni && (
+                <div className="text-gray-600">
+                  <span className="font-medium">DNI:</span>{" "}
+                  <span className="text-gray-900">{caso.dni}</span>
+                </div>
+              )}
+              <div className="text-gray-600">
+                <span className="font-medium">Código:</span>{" "}
+                <span className="text-gray-900">{caso.codigo_ciudadano}</span>
+              </div>
+              {caso.edad != null && (
+                <div className="text-gray-600">
+                  <span className="font-medium">Edad:</span>{" "}
+                  <span className="text-gray-900">{caso.edad} años</span>
+                </div>
+              )}
+              {caso.sexo && (
+                <div className="text-gray-600">
+                  <span className="font-medium">Sexo:</span>{" "}
+                  <span className="text-gray-900">{caso.sexo}</span>
+                </div>
+              )}
+              {caso.fecha_evento && (
+                <div className="text-gray-600 flex items-center gap-1 col-span-2">
+                  <Calendar className="h-3 w-3" />
+                  <span className="font-medium">Fecha evento:</span>{" "}
+                  <span>
+                    {format(new Date(caso.fecha_evento), "dd MMM yyyy", {
+                      locale: es,
+                    })}
+                  </span>
+                </div>
+              )}
             </div>
-            {caso.edad != null && (
-              <div className="text-gray-600">
-                <span className="font-medium">Edad:</span>{" "}
-                <span className="text-gray-900">{caso.edad} años</span>
-              </div>
-            )}
-            {caso.sexo && (
-              <div className="text-gray-600">
-                <span className="font-medium">Sexo:</span>{" "}
-                <span className="text-gray-900">{caso.sexo}</span>
-              </div>
-            )}
-            {caso.fecha_evento && (
-              <div className="text-gray-600 flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                <span>
-                  {format(new Date(caso.fecha_evento), "dd MMM yyyy", {
-                    locale: es,
-                  })}
-                </span>
-              </div>
-            )}
           </div>
         </div>
 

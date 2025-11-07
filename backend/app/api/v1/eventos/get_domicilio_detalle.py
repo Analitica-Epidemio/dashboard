@@ -43,8 +43,10 @@ class CasoDetalle(BaseModel):
     )
     estado: Optional[str] = Field(None, description="Estado del caso")
 
-    # Datos del ciudadano (anonimizados)
+    # Datos del ciudadano
     codigo_ciudadano: int = Field(..., description="Código del ciudadano")
+    dni: Optional[str] = Field(None, description="DNI del ciudadano")
+    nombre_completo: Optional[str] = Field(None, description="Nombre completo")
     edad: Optional[int] = Field(
         None, description="Edad del ciudadano al momento del evento"
     )
@@ -129,9 +131,13 @@ async def get_domicilio_detalle(
         select(
             Evento.id,
             Evento.fecha_minima_evento,
+            Evento.fecha_nacimiento,
             Evento.clasificacion_manual,
             Evento.clasificacion_estrategia,
             Ciudadano.codigo_ciudadano,
+            Ciudadano.numero_documento,
+            Ciudadano.nombre,
+            Ciudadano.apellido,
             Ciudadano.sexo_biologico,
             TipoEno.nombre.label("tipo_nombre"),
             GrupoEno.nombre.label("grupo_nombre"),
@@ -160,6 +166,21 @@ async def get_domicilio_detalle(
     casos_por_tipo = {}
 
     for row in results:
+        # Calcular edad al momento del evento
+        edad = None
+        if row.fecha_nacimiento and row.fecha_minima_evento:
+            edad = (row.fecha_minima_evento - row.fecha_nacimiento).days // 365
+
+        # Construir nombre completo
+        nombre_completo = None
+        if row.nombre or row.apellido:
+            partes = []
+            if row.apellido:
+                partes.append(row.apellido)
+            if row.nombre:
+                partes.append(row.nombre)
+            nombre_completo = ", ".join(partes) if partes else None
+
         caso = CasoDetalle(
             id_evento=row.id,
             fecha_evento=row.fecha_minima_evento,
@@ -168,7 +189,9 @@ async def get_domicilio_detalle(
             clasificacion_manual=row.clasificacion_manual,
             estado=row.clasificacion_estrategia,
             codigo_ciudadano=row.codigo_ciudadano,
-            edad=None,  # La edad se puede calcular desde fecha_nacimiento si es necesario
+            dni=str(row.numero_documento) if row.numero_documento else None,
+            nombre_completo=nombre_completo,
+            edad=edad,
             sexo=row.sexo_biologico.value if row.sexo_biologico else None,
         )
         casos.append(caso)

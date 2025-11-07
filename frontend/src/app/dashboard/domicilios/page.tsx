@@ -35,7 +35,8 @@ export default function DomiciliosPage() {
     setFilters((prev) => ({
       ...prev,
       [key]: value,
-      page: 1,
+      // Solo resetear page a 1 si NO estamos cambiando la página
+      ...(key !== "page" && { page: 1 }),
     }));
   };
 
