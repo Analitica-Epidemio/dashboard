@@ -163,7 +163,7 @@ class SyncGeocodingService:
             stmt = (
                 select(Localidad, Departamento, Provincia)
                 .join(Departamento, Localidad.id_departamento_indec == Departamento.id_departamento_indec)
-                .join(Provincia, Departamento.id_provincia == Provincia.id)
+                .join(Provincia, Departamento.id_provincia_indec == Provincia.id_provincia_indec)  # FIX: usar id_provincia_indec
                 .where(Localidad.id_localidad_indec == id_localidad_indec)
             )
 
@@ -171,10 +171,13 @@ class SyncGeocodingService:
 
             if result:
                 localidad, departamento, provincia = result
+                logger.debug(f"✅ Resuelto: {localidad.nombre}, {provincia.nombre} (INDEC: {id_localidad_indec})")
                 return localidad.nombre, provincia.nombre
+            else:
+                logger.warning(f"⚠️ No se encontró localidad con INDEC: {id_localidad_indec}")
 
         except Exception as e:
-            logger.warning(f"Error resolviendo nombres geográficos: {e}")
+            logger.warning(f"❌ Error resolviendo nombres geográficos para INDEC {id_localidad_indec}: {e}")
 
         return None, None
 

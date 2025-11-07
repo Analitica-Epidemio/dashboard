@@ -80,6 +80,7 @@ class MapboxAdapter(GeocodingAdapter):
                 f"&country=AR"  # Filtrar solo Argentina
                 f"&language=es"  # Resultados en español
                 f"&limit=1"  # Solo el mejor resultado
+                f"&types=address"  # Solo direcciones, no lugares/POI/regiones
             )
 
             logger.debug(f"Geocoding query: {query}")
@@ -94,6 +95,24 @@ class MapboxAdapter(GeocodingAdapter):
                 return None
 
             feature = data["features"][0]
+
+            # VALIDACIÓN ESTRICTA: Verificar relevance score
+            relevance = feature.get("relevance", 0.0)
+            if relevance < 0.8:
+                logger.warning(
+                    f"Resultado con baja relevancia ({relevance:.2f}) para: {query}. "
+                    f"Rechazando para evitar geocodificaciones imprecisas."
+                )
+                return None
+
+            # VALIDACIÓN ESTRICTA: Verificar que sea tipo 'address'
+            place_type = feature.get("place_type", [])
+            if "address" not in place_type:
+                logger.warning(
+                    f"Resultado no es tipo 'address' (es {place_type}) para: {query}. "
+                    f"Rechazando para evitar matches genéricos (ej: centros de ciudad)."
+                )
+                return None
 
             # Extraer coordenadas
             coordinates = feature.get("geometry", {}).get("coordinates", [])
@@ -127,7 +146,7 @@ class MapboxAdapter(GeocodingAdapter):
                     resultado_codigo_postal = ctx_text
 
             # Calcular confidence score basado en relevance de Mapbox
-            confidence = feature.get("relevance", 0.0)
+            confidence = relevance
 
             return GeocodingResult(
                 latitud=Decimal(str(latitude)),

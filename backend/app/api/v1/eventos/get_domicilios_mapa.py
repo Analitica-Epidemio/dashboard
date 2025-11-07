@@ -16,25 +16,46 @@ from sqlmodel import Session
 from app.core.database import get_session
 from app.core.schemas.response import SuccessResponse
 from app.domains.eventos_epidemiologicos.eventos.models import Evento, EventoGrupoEno
-from app.domains.territorio.geografia_models import Departamento, Domicilio, Localidad, Provincia
+from app.domains.eventos_epidemiologicos.eventos.models import TipoEno
+from app.domains.territorio.geografia_models import (
+    Departamento,
+    Domicilio,
+    Localidad,
+    Provincia,
+)
 
 
 class DomicilioMapaItem(BaseModel):
     """Representa un domicilio geocodificado en el mapa"""
 
     id: str = Field(..., description="ID único del domicilio")
-    nombre: str = Field(..., description="Dirección legible (calle + número + localidad)")
+    id_domicilio: int = Field(..., description="ID numérico del domicilio")
+    nombre: str = Field(
+        ..., description="Dirección legible (calle + número + localidad)"
+    )
     total_eventos: int = Field(..., description="Total de eventos en este domicilio")
     latitud: float = Field(..., description="Latitud del domicilio")
     longitud: float = Field(..., description="Longitud del domicilio")
 
     # Datos geográficos
     id_provincia_indec: int = Field(..., description="ID INDEC de provincia")
-    id_departamento_indec: Optional[int] = Field(None, description="ID INDEC de departamento")
+    id_departamento_indec: Optional[int] = Field(
+        None, description="ID INDEC de departamento"
+    )
     id_localidad_indec: int = Field(..., description="ID INDEC de localidad")
     provincia_nombre: str = Field(..., description="Nombre de provincia")
-    departamento_nombre: Optional[str] = Field(None, description="Nombre de departamento")
+    departamento_nombre: Optional[str] = Field(
+        None, description="Nombre de departamento"
+    )
     localidad_nombre: str = Field(..., description="Nombre de localidad")
+
+    # Datos de tipos de evento (para colorear markers)
+    tipo_evento_predominante: Optional[str] = Field(
+        None, description="Tipo de evento más frecuente"
+    )
+    tipos_eventos: dict = Field(
+        default_factory=dict, description="Conteo por tipo de evento"
+    )
 
 
 class DomicilioMapaResponse(BaseModel):
@@ -42,7 +63,9 @@ class DomicilioMapaResponse(BaseModel):
 
     items: List[DomicilioMapaItem] = Field(default_factory=list)
     total: int = Field(..., description="Total de domicilios geocodificados")
-    total_eventos: int = Field(..., description="Total de eventos en todos los domicilios")
+    total_eventos: int = Field(
+        ..., description="Total de eventos en todos los domicilios"
+    )
 
 
 async def get_domicilios_mapa(
@@ -61,7 +84,7 @@ async def get_domicilios_mapa(
         None, description="Filtrar eventos hasta esta fecha"
     ),
     limit: int = Query(
-        1000, ge=1, le=10000, description="Máximo de domicilios a retornar"
+        50000, ge=1, le=100000, description="Máximo de domicilios a retornar"
     ),
     session: Session = Depends(get_session),
 ) -> SuccessResponse[DomicilioMapaResponse]:
@@ -111,9 +134,7 @@ async def get_domicilios_mapa(
     if id_provincia_indec is not None:
         query = query.where(Provincia.id_provincia_indec == id_provincia_indec)
     if id_departamento_indec is not None:
-        query = query.where(
-            Departamento.id_departamento_indec == id_departamento_indec
-        )
+        query = query.where(Departamento.id_departamento_indec == id_departamento_indec)
     if id_localidad_indec is not None:
         query = query.where(Localidad.id_localidad_indec == id_localidad_indec)
 
@@ -153,6 +174,37 @@ async def get_domicilios_mapa(
 
     result = session.exec(query).all()
 
+    # Obtener tipos de evento por domicilio para todos los domicilios retornados
+    domicilio_ids = [row.id for row in result]
+    tipos_por_domicilio = {}
+
+    if domicilio_ids:
+        # Query para obtener conteo de tipos por domicilio
+        tipos_query = (
+            select(
+                Evento.id_domicilio,
+                TipoEno.nombre.label("tipo_nombre"),
+                func.count(Evento.id).label("count"),
+            )
+            .select_from(Evento)
+            .outerjoin(TipoEno, Evento.id_tipo_eno == TipoEno.id)
+            .where(Evento.id_domicilio.in_(domicilio_ids))
+            .group_by(Evento.id_domicilio, TipoEno.nombre)
+        )
+
+        tipos_result = session.exec(tipos_query).all()
+
+        # Organizar por domicilio
+        for tipo_row in tipos_result:
+            dom_id = tipo_row.id_domicilio
+            tipo_nombre = tipo_row.tipo_nombre or "Sin clasificar"
+            count = tipo_row.count
+
+            if dom_id not in tipos_por_domicilio:
+                tipos_por_domicilio[dom_id] = {}
+
+            tipos_por_domicilio[dom_id][tipo_nombre] = count
+
     # Construir items
     items: List[DomicilioMapaItem] = []
     total_eventos_global = 0
@@ -169,9 +221,17 @@ async def get_domicilios_mapa(
 
         nombre = ", ".join(partes_direccion)
 
+        # Obtener tipos para este domicilio
+        tipos_dict = tipos_por_domicilio.get(row.id, {})
+        tipo_predominante = None
+        if tipos_dict:
+            # Encontrar el tipo con más casos
+            tipo_predominante = max(tipos_dict.items(), key=lambda x: x[1])[0]
+
         items.append(
             DomicilioMapaItem(
                 id=f"domicilio_{row.id}",
+                id_domicilio=row.id,
                 nombre=nombre,
                 total_eventos=row.total_eventos,
                 latitud=float(row.latitud),
@@ -182,6 +242,8 @@ async def get_domicilios_mapa(
                 provincia_nombre=row.provincia_nombre,
                 departamento_nombre=row.departamento_nombre,
                 localidad_nombre=row.localidad_nombre,
+                tipo_evento_predominante=tipo_predominante,
+                tipos_eventos=tipos_dict,
             )
         )
 

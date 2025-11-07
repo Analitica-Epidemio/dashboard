@@ -129,6 +129,9 @@ class AntecedenteEpidemiologico(BaseModel, table=True):
     """Antecedentes epidemiológicos"""
 
     __tablename__ = "antecedente_epidemiologico"
+    __table_args__ = (
+        UniqueConstraint("descripcion", name="uq_antecedente_epidemiologico_descripcion"),
+    )
 
     # Campos propios
     id_snvs_antecedente_epidemio: Optional[int] = Field(

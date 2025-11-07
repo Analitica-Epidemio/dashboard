@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
 import { useDomiciliosMapa, type DomicilioMapaItem } from "@/lib/api/mapa";
 import "leaflet/dist/leaflet.css";
@@ -17,50 +16,167 @@ L.Icon.Default.mergeOptions({
 });
 
 interface MapaSimpleProps {
-  onFeatureClick?: (feature: DomicilioMapaItem) => void;
+  onMarkerClick?: (domicilio: DomicilioMapaItem) => void;
   domicilios?: DomicilioMapaItem[]; // Eventos filtrados desde el parent
   isLoading?: boolean;
 }
 
-// Colores por provincia (paleta distintiva)
-const COLORES_PROVINCIA: Record<number, string> = {
-  2: "#ef4444",   // Ciudad de Buenos Aires - rojo
-  6: "#3b82f6",   // Buenos Aires - azul
-  10: "#10b981",  // Catamarca - verde
-  14: "#f59e0b",  // Córdoba - naranja
-  18: "#8b5cf6",  // Corrientes - violeta
-  22: "#ec4899",  // Chaco - rosa
-  26: "#06b6d4",  // Chubut - cyan
-  30: "#84cc16",  // Entre Ríos - lima
-  34: "#f97316",  // Formosa - naranja oscuro
-  38: "#14b8a6",  // Jujuy - teal
-  42: "#a855f7",  // La Pampa - púrpura
-  46: "#0ea5e9",  // La Rioja - celeste
-  50: "#f43f5e",  // Mendoza - rojo rosado
-  54: "#22c55e",  // Misiones - verde claro
-  58: "#eab308",  // Neuquén - amarillo
-  62: "#6366f1",  // Río Negro - índigo
-  66: "#64748b",  // Salta - gris azulado
-  70: "#d946ef",  // San Juan - fucsia
-  74: "#10b981",  // San Luis - esmeralda
-  78: "#059669",  // Santa Cruz - verde azulado
-  82: "#0891b2",  // Santa Fe - azul verdoso
-  86: "#7c3aed",  // Santiago del Estero - violeta oscuro
-  90: "#fb923c",  // Tucumán - naranja medio
-  94: "#dc2626",  // Tierra del Fuego - rojo oscuro
+// Pool de 20 colores visualmente distintos para categorías epidemiológicas
+const COLOR_POOL = [
+  "#ef4444", // rojo brillante - Respiratorias agudas
+  "#10b981", // verde esmeralda - Vectoriales
+  "#f59e0b", // amarillo/naranja - Transmisión alimentaria
+  "#8b5cf6", // violeta - Transmisión sexual
+  "#14b8a6", // teal - Zoonóticas
+  "#ec4899", // rosa - Vacunables
+  "#64748b", // gris azulado - Tuberculosis
+  "#06b6d4", // cyan - Pediátricas/Congénitas
+  "#f97316", // naranja - Intoxicaciones
+  "#a855f7", // púrpura - Otras infecciones
+  "#84cc16", // lima - Chagas y vectoriales secundarias
+  "#fb923c", // naranja claro - Hepatitis
+  "#22d3ee", // cyan claro - Eventos especiales
+  "#fdba74", // melocotón - Brotes y clusters
+  "#d946ef", // fucsia - Salud mental
+  "#6366f1", // índigo - VIH
+  "#22c55e", // verde claro - Hantavirus
+  "#fbbf24", // amarillo dorado - Araneísmo/Ofidismo
+  "#f43f5e", // rosa rojo - Rabia
+  "#9ca3af", // gris - Sin clasificar
+];
+
+// Categorización inteligente por palabras clave
+const categorizarEvento = (nombreEvento: string | null | undefined): number => {
+  if (!nombreEvento) return 19; // Sin clasificar
+
+  const nombre = nombreEvento.toLowerCase();
+
+  // Respiratorias agudas (0)
+  if (nombre.includes("covid") || nombre.includes("influenza") || nombre.includes("irag") ||
+      nombre.includes("respiratoria") || nombre.includes("meningoencefalitis")) {
+    return 0;
+  }
+
+  // Vectoriales principales (1)
+  if (nombre.includes("dengue") || nombre.includes("zika") || nombre.includes("chikungunya") ||
+      nombre.includes("paludismo") || nombre.includes("malaria")) {
+    return 1;
+  }
+
+  // Transmisión alimentaria/fecal-oral (2)
+  if (nombre.includes("diarrea") || nombre.includes("eta") || nombre.includes("brote") ||
+      nombre.includes("suh") || nombre.includes("triquinelosis") || nombre.includes("fecal")) {
+    return 2;
+  }
+
+  // Transmisión sexual (3)
+  if (nombre.includes("vih") || nombre.includes("sífilis") || nombre.includes("gonorrea") ||
+      (nombre.includes("hepatitis") && (nombre.includes("b") || nombre.includes("c")))) {
+    return 3;
+  }
+
+  // Zoonóticas (4)
+  if (nombre.includes("rabia") || nombre.includes("leptospirosis") || nombre.includes("hidatidosis") ||
+      nombre.includes("brucelosis") || nombre.includes("araneísmo") || nombre.includes("ofidismo") ||
+      nombre.includes("latrodectus") || nombre.includes("loxosceles")) {
+    return 4;
+  }
+
+  // Vacunables (5)
+  if (nombre.includes("coqueluche") || nombre.includes("parotiditis") || nombre.includes("sarampión") ||
+      nombre.includes("rubéola") || nombre.includes("poliomielitis") || nombre.includes("varicela") ||
+      nombre.includes("exantemática") || nombre.includes("paf")) {
+    return 5;
+  }
+
+  // Tuberculosis (6)
+  if (nombre.includes("tuberculosis")) {
+    return 6;
+  }
+
+  // Pediátricas/Congénitas (7)
+  if (nombre.includes("congénito") || nombre.includes("lactante") || nombre.includes("hipotiroidismo") ||
+      nombre.includes("fibrosis") || nombre.includes("biotinidasa") || nombre.includes("expuesto perinatal") ||
+      nombre.includes("rn expuesto")) {
+    return 7;
+  }
+
+  // Intoxicaciones (8)
+  if (nombre.includes("intoxicación") || nombre.includes("intento de suicidio") ||
+      nombre.includes("monóxido") || nombre.includes("medicamentosa") || nombre.includes("tóxicos")) {
+    return 8;
+  }
+
+  // Otras infecciones (9)
+  if (nombre.includes("candidemia") || nombre.includes("candidiasis") || nombre.includes("bartonelosis") ||
+      nombre.includes("tifoidea") || nombre.includes("paratifoidea") || nombre.includes("invasivas")) {
+    return 9;
+  }
+
+  // Chagas y vectoriales secundarias (10)
+  if (nombre.includes("chagas") || nombre.includes("hantavirus")) {
+    return 10;
+  }
+
+  // Hepatitis (11)
+  if (nombre.includes("hepatitis")) {
+    return 11;
+  }
+
+  // Eventos especiales (12)
+  if (nombre.includes("emergente") || nombre.includes("genómica") || nombre.includes("vigilancia") ||
+      nombre.includes("centinela") || nombre.includes("seguimiento") || nombre.includes("especiales")) {
+    return 12;
+  }
+
+  // Brotes (13)
+  if (nombre.includes("brote")) {
+    return 13;
+  }
+
+  // Salud mental (14)
+  if (nombre.includes("suicidio")) {
+    return 14;
+  }
+
+  // VIH específico (15)
+  if (nombre.includes("vih")) {
+    return 15;
+  }
+
+  // Hantavirus (16)
+  if (nombre.includes("hantavirus")) {
+    return 16;
+  }
+
+  // Araneísmo/Ofidismo (17)
+  if (nombre.includes("araneísmo") || nombre.includes("ofidismo")) {
+    return 17;
+  }
+
+  // Rabia (18)
+  if (nombre.includes("rabia") || nombre.includes("rábico")) {
+    return 18;
+  }
+
+  // Default: Sin clasificar (19)
+  return 19;
 };
 
-// Color por defecto para provincias sin mapeo
-const COLOR_DEFAULT = "#9ca3af"; // gris
+// Obtener color según tipo de evento predominante
+const getColorPorTipoEvento = (tipoEventoPredominante?: string | null): string => {
+  const categoria = categorizarEvento(tipoEventoPredominante);
+  return COLOR_POOL[categoria];
+};
 
 export function MapaSimple({
-  onFeatureClick,
+  onMarkerClick,
   domicilios: domiciliosProp,
   isLoading: isLoadingProp,
 }: MapaSimpleProps) {
   // Usar datos del prop si están disponibles, si no, hacer query independiente
   const { data: dataFallback, isLoading: isLoadingFallback, error: errorFallback } = useDomiciliosMapa({
-    limit: 1000, // Mostrar a nivel de localidad por defecto
+    limit: 50000, // Cargar todos los domicilios geocodificados
   });
 
   const domicilios = domiciliosProp || dataFallback?.data?.items || [];
@@ -69,12 +185,6 @@ export function MapaSimple({
 
   // Todos los domicilios retornados ya tienen coordenadas válidas (filtrado en backend)
   const domiciliosConCoordenadas = domicilios;
-
-  // Obtener color según provincia
-  const getColorPorProvincia = (idProvinciaIndec?: number | null): string => {
-    if (!idProvinciaIndec) return COLOR_DEFAULT;
-    return COLORES_PROVINCIA[idProvinciaIndec] || COLOR_DEFAULT;
-  };
 
   return (
     <div className="relative w-full h-full">
@@ -118,27 +228,30 @@ export function MapaSimple({
         />
 
         {/* Mostrar puntos de domicilios geocodificados */}
-        {domiciliosConCoordenadas.map((evento: DomicilioMapaItem) => {
-          const color = getColorPorProvincia(evento.id_provincia_indec);
-          const lat = evento.latitud!;
-          const lng = evento.longitud!;
+        {domiciliosConCoordenadas.map((domicilio: DomicilioMapaItem) => {
+          const color = getColorPorTipoEvento(domicilio.tipo_evento_predominante);
+          const lat = domicilio.latitud!;
+          const lng = domicilio.longitud!;
+
+          // Tamaño según cantidad de eventos
+          const radius = Math.min(4 + (domicilio.total_eventos * 0.5), 12);
 
           return (
             <CircleMarker
-              key={evento.id}
+              key={domicilio.id}
               center={[lat, lng]}
-              radius={6}
+              radius={radius}
               pathOptions={{
                 fillColor: color,
                 color: "#fff",
-                weight: 1,
+                weight: 1.5,
                 opacity: 1,
-                fillOpacity: 0.7,
+                fillOpacity: 0.75,
               }}
               eventHandlers={{
                 click: () => {
-                  if (onFeatureClick) {
-                    onFeatureClick(evento);
+                  if (onMarkerClick) {
+                    onMarkerClick(domicilio);
                   }
                 },
                 mouseover: (e) => {
@@ -161,15 +274,21 @@ export function MapaSimple({
             >
               <Popup>
                 <div className="p-2 min-w-[200px]">
-                  <div className="font-semibold text-sm mb-1">{evento.nombre}</div>
+                  <div className="font-semibold text-sm mb-1">{domicilio.nombre}</div>
                   <div className="text-xs text-gray-600 mb-2">
-                    {evento.provincia_nombre}
-                    {evento.departamento_nombre && ` - ${evento.departamento_nombre}`}
+                    {domicilio.provincia_nombre}
+                    {domicilio.departamento_nombre && ` - ${domicilio.departamento_nombre}`}
                   </div>
                   <div className="text-sm">
                     <span className="text-gray-600">Eventos: </span>
-                    <span className="font-semibold">{evento.total_domicilios}</span>
+                    <span className="font-semibold">{domicilio.total_eventos}</span>
                   </div>
+                  {domicilio.tipo_evento_predominante && (
+                    <div className="text-sm mt-1">
+                      <span className="text-gray-600">Tipo: </span>
+                      <span className="font-semibold">{domicilio.tipo_evento_predominante}</span>
+                    </div>
+                  )}
                   <div className="text-xs text-gray-500 mt-2">
                     📍 {lat.toFixed(6)}, {lng.toFixed(6)}
                   </div>
@@ -180,26 +299,79 @@ export function MapaSimple({
         })}
       </MapContainer>
 
-      {/* Leyenda de colores por provincia */}
+      {/* Leyenda de colores por categoría de evento */}
       {!loading && domiciliosConCoordenadas.length > 0 && (
-        <div className="absolute bottom-6 right-6 z-[1000] bg-white shadow-lg rounded-lg p-4 max-h-[400px] overflow-y-auto">
-          <div className="font-semibold text-sm mb-3">Provincias</div>
-          <div className="space-y-1 text-xs">
-            {Array.from(new Set(domiciliosConCoordenadas.map(e => e.id_provincia_indec))).map(
-              (idProvincia) => {
-                const evento = domiciliosConCoordenadas.find(e => e.id_provincia_indec === idProvincia);
-                const color = getColorPorProvincia(idProvincia);
-                return (
-                  <div key={idProvincia} className="flex items-center gap-2">
-                    <div
-                      className="w-3 h-3 rounded-full border border-white"
-                      style={{ backgroundColor: color }}
-                    />
-                    <span className="text-gray-700">{evento?.provincia_nombre || `Provincia ${idProvincia}`}</span>
+        <div className="absolute bottom-6 right-6 z-[1000] bg-white shadow-lg rounded-lg p-4 max-h-[500px] overflow-y-auto">
+          <div className="font-semibold text-sm mb-3">Categorías de Eventos</div>
+          <div className="space-y-1.5 text-xs">
+            {(() => {
+              // Agrupar eventos por categoría
+              const categorias = new Map<number, Set<string>>();
+              domiciliosConCoordenadas.forEach((d) => {
+                if (d.tipo_evento_predominante) {
+                  const cat = categorizarEvento(d.tipo_evento_predominante);
+                  if (!categorias.has(cat)) {
+                    categorias.set(cat, new Set());
+                  }
+                  categorias.get(cat)!.add(d.tipo_evento_predominante);
+                }
+              });
+
+              const nombresCategorias = [
+                "Respiratorias",
+                "Vectoriales",
+                "Alimentarias",
+                "Transmisión Sexual",
+                "Zoonóticas",
+                "Vacunables",
+                "Tuberculosis",
+                "Congénitas",
+                "Intoxicaciones",
+                "Otras Infecciones",
+                "Chagas/Hantavirus",
+                "Hepatitis",
+                "Vigilancia",
+                "Brotes",
+                "Salud Mental",
+                "VIH",
+                "Hantavirus",
+                "Araneísmo/Ofidismo",
+                "Rabia",
+                "Sin Clasificar",
+              ];
+
+              return Array.from(categorias.entries())
+                .sort((a, b) => a[0] - b[0])
+                .map(([catIndex, eventos]) => (
+                  <div key={catIndex} className="mb-2">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div
+                        className="w-3 h-3 rounded-full border border-white shadow-sm flex-shrink-0"
+                        style={{ backgroundColor: COLOR_POOL[catIndex] }}
+                      />
+                      <span className="text-gray-900 font-medium">
+                        {nombresCategorias[catIndex]}
+                      </span>
+                      <span className="text-gray-500">({eventos.size})</span>
+                    </div>
+                    <div className="ml-5 text-gray-600 space-y-0.5">
+                      {Array.from(eventos)
+                        .sort()
+                        .slice(0, 3)
+                        .map((evento) => (
+                          <div key={evento} className="truncate text-[10px]">
+                            • {evento}
+                          </div>
+                        ))}
+                      {eventos.size > 3 && (
+                        <div className="text-[10px] text-gray-400">
+                          +{eventos.size - 3} más...
+                        </div>
+                      )}
+                    </div>
                   </div>
-                );
-              }
-            )}
+                ));
+            })()}
           </div>
         </div>
       )}

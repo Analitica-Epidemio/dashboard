@@ -165,7 +165,7 @@ def seed_hidrografia(conn: Connection) -> int:
 
         # Descargar y procesar en chunks desde WFS
         inserted = 0
-        batch_size = 500
+        batch_size = 2000  # 🚀 4x más grande = menos round-trips a DB
         chunk_num = 0
 
         for gdf_chunk in descargar_desde_wfs_chunked(capa_key, chunk_size=5000):
@@ -178,7 +178,9 @@ def seed_hidrografia(conn: Connection) -> int:
                 batch_num = (i // batch_size) + 1
                 total_batches = (len(gdf_chunk) + batch_size - 1) // batch_size
 
-                print(f"      → Batch {batch_num}/{total_batches} ({len(batch)} features)...", end=" ")
+                # 🚀 Print solo cada 5 batches (reduce I/O overhead)
+                if batch_num % 5 == 1 or batch_num == total_batches:
+                    print(f"      → Batch {batch_num}/{total_batches}...", end=" ", flush=True)
 
                 values_list = []
                 for idx, row in batch.iterrows():
@@ -218,13 +220,17 @@ def seed_hidrografia(conn: Connection) -> int:
 
                     try:
                         conn.execute(stmt)
-                        conn.commit()
+                        # 🚀 NO commit aquí - solo al final
                         inserted += len(values_list)
-                        print("✅")
+                        if batch_num % 5 == 1 or batch_num == total_batches:
+                            print("✅")
                     except Exception as e:
                         print(f"❌ Error: {e}")
+                        conn.rollback()
                         continue
 
+        # 🚀 Commit UNA VEZ al final de cada capa
+        conn.commit()
         print(f"\n✅ Insertados {inserted:,} {tipo_curso}")
         total_inserted += inserted
 
@@ -253,7 +259,7 @@ def seed_areas_urbanas(conn: Connection) -> int:
 
     # Descargar y procesar en chunks desde WFS
     inserted = 0
-    batch_size = 500
+    batch_size = 2000  # 🚀 4x más grande
     chunk_num = 0
 
     for gdf_chunk in descargar_desde_wfs_chunked('areas_urbanas', chunk_size=5000):
@@ -266,7 +272,9 @@ def seed_areas_urbanas(conn: Connection) -> int:
             batch_num = (i // batch_size) + 1
             total_batches = (len(gdf_chunk) + batch_size - 1) // batch_size
 
-            print(f"      → Batch {batch_num}/{total_batches} ({len(batch)} áreas urbanas)...", end=" ")
+            # 🚀 Print solo cada 5 batches
+            if batch_num % 5 == 1 or batch_num == total_batches:
+                print(f"      → Batch {batch_num}/{total_batches}...", end=" ", flush=True)
 
             values_list = []
             for idx, row in batch.iterrows():
@@ -317,12 +325,17 @@ def seed_areas_urbanas(conn: Connection) -> int:
 
                 try:
                     conn.execute(stmt)
-                    conn.commit()
+                    # 🚀 NO commit aquí
                     inserted += len(values_list)
-                    print("✅")
+                    if batch_num % 5 == 1 or batch_num == total_batches:
+                        print("✅")
                 except Exception as e:
                     print(f"❌ Error: {e}")
+                    conn.rollback()
                     continue
+
+    # 🚀 Commit UNA VEZ al final
+    conn.commit()
 
     print("\n" + "="*70)
     print(f"✅ ÁREAS URBANAS CARGADAS: {inserted:,}")

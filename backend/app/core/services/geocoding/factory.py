@@ -9,6 +9,7 @@ from typing import Optional
 
 from .base import GeocodingAdapter
 from .mapbox_adapter import MapboxAdapter
+from .google_maps_adapter import GoogleMapsAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -18,8 +19,8 @@ class GeocodingFactory:
 
     PROVIDERS = {
         "mapbox": MapboxAdapter,
+        "google": GoogleMapsAdapter,
         # Fácil agregar más en el futuro:
-        # "google": GoogleMapsAdapter,
         # "nominatim": NominatimAdapter,
     }
 
@@ -61,10 +62,8 @@ class GeocodingFactory:
         # Crear adapter con configuración
         if provider_lower == "mapbox":
             return adapter_class(access_token=api_key, **kwargs)
-
-        # Otros proveedores se agregarían aquí
-        # elif provider_lower == "google":
-        #     return adapter_class(api_key=api_key, **kwargs)
+        elif provider_lower == "google":
+            return adapter_class(api_key=api_key, **kwargs)
 
         raise ValueError(f"Configuración no implementada para '{provider}'")
 

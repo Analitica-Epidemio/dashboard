@@ -146,6 +146,9 @@ class Comorbilidad(BaseModel, table=True):
     """
 
     __tablename__ = "comorbilidad"
+    __table_args__ = (
+        UniqueConstraint("descripcion", name="uq_comorbilidad_descripcion"),
+    )
 
     # Campos propios
     descripcion: Optional[str] = Field(
@@ -167,6 +170,9 @@ class Muestra(BaseModel, table=True):
     """
 
     __tablename__ = "muestra"
+    __table_args__ = (
+        UniqueConstraint("descripcion", name="uq_muestra_descripcion"),
+    )
 
     # Campos propios
     descripcion: Optional[str] = Field(
@@ -186,6 +192,9 @@ class Vacuna(BaseModel, table=True):
     """
 
     __tablename__ = "vacuna"
+    __table_args__ = (
+        UniqueConstraint("nombre", name="uq_vacuna_nombre"),
+    )
 
     # Campos propios
     nombre: Optional[str] = Field(

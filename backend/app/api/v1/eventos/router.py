@@ -10,6 +10,7 @@ from app.core.schemas.response import ErrorResponse, SuccessResponse
 from .export import export_eventos
 from .get_detail import EventoDetailResponse, get_evento_detail
 from .get_domicilios_mapa import DomicilioMapaResponse, get_domicilios_mapa
+from .get_domicilio_detalle import DomicilioDetalleResponse, get_domicilio_detalle
 from .get_timeline import EventoTimelineResponse, get_evento_timeline
 from .list import EventoListResponse, list_eventos
 
@@ -35,6 +36,18 @@ router.add_api_route(
     response_model=SuccessResponse[DomicilioMapaResponse],
     responses={
         500: {"model": ErrorResponse, "description": "Error interno del servidor"}
+    },
+)
+
+# Registrar endpoint de detalle de domicilio con sus casos
+router.add_api_route(
+    "/domicilios/{id_domicilio}",
+    get_domicilio_detalle,
+    methods=["GET"],
+    response_model=SuccessResponse[DomicilioDetalleResponse],
+    responses={
+        404: {"model": ErrorResponse, "description": "Domicilio no encontrado"},
+        500: {"model": ErrorResponse, "description": "Error interno del servidor"},
     },
 )
 

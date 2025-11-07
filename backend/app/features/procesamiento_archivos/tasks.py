@@ -16,7 +16,7 @@ from sqlmodel import and_, select
 from app.core.celery_app import file_processing_task, maintenance_task
 from app.core.database import Session, engine
 from app.features.procesamiento_archivos.models import JobStatus, ProcessingJob
-from app.features.procesamiento_archivos.processors.simple_processor import create_processor
+from app.features.procesamiento_archivos.processor import create_processor
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +80,12 @@ def process_csv_file(self, job_id: str, file_path: str) -> Dict[str, Any]:
                 job.job_metadata.get("sheet_name") if job.job_metadata else None
             )
 
+            # Actualizar total_steps basado en las operaciones que se realizarán
+            # ~5 pasos iniciales + ~18 operaciones de BD
+            job.total_steps = 23
+            session.add(job)
+            session.commit()
+
             # Callback de progreso simple
             def update_progress(percentage: int, message: str):
                 try:
@@ -109,12 +115,11 @@ def process_csv_file(self, job_id: str, file_path: str) -> Dict[str, Any]:
                 else 0,
                 "total_rows": result["total_rows"],
                 "processed_rows": result["processed_rows"],
-                "entities_created": result.get("ciudadanos_created", 0)
-                + result.get("eventos_created", 0),
-                "ciudadanos_created": result.get("ciudadanos_created", 0),
-                "eventos_created": result.get("eventos_created", 0),
-                "diagnosticos_created": result.get("diagnosticos_created", 0),
-                "processing_time_seconds": 0,  # Se puede agregar timing si necesitas
+                "entities_created": result.get("entities_created", 0),
+                "ciudadanos_created": 0,
+                "eventos_created": 0,
+                "diagnosticos_created": 0,
+                "processing_time_seconds": 0,
                 "errors": result.get("errors", []),
             }
 
