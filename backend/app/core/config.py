@@ -91,8 +91,15 @@ class Settings(BaseSettings):
     # CONFIGURACIÓN DE GEOCODIFICACIÓN
     # =============================================================================
     ENABLE_GEOCODING: bool = False
-    MAPBOX_ACCESS_TOKEN: str = ""
-    GEOCODING_PROVIDER: str = "mapbox"
+
+    # Proveedor de geocodificación: "mapbox" o "google"
+    GEOCODING_PROVIDER: str = "google"  # Cambiar a "mapbox" para usar Mapbox
+
+    # API Keys (solo se usa la del proveedor activo)
+    MAPBOX_ACCESS_TOKEN: str = ""  # Para provider "mapbox"
+    GOOGLE_MAPS_API_KEY: str = ""  # Para provider "google"
+
+    # Configuración general
     GEOCODING_RATE_LIMIT: int = 600
     GEOCODING_TIMEOUT: int = 5
 

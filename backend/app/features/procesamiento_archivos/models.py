@@ -129,6 +129,11 @@ class ProcessingJob(BaseModel, table=True):
             self.current_step = step
         if increment_completed_steps:
             self.completed_steps += 1
+        else:
+            # Auto-calcular completed_steps basado en percentage y total_steps
+            # Esto asegura que siempre se muestre el paso correcto
+            if self.total_steps > 0:
+                self.completed_steps = int((percentage / 100) * self.total_steps)
         self.updated_at = datetime.now()
 
     def mark_started(self, celery_task_id: str):

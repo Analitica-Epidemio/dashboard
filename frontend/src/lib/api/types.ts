@@ -367,6 +367,61 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/geocoding/trigger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Trigger Geocoding
+         * @description Triggea manualmente la geocodificación de domicilios pendientes.
+         *
+         *     Args:
+         *         batch_size: Número de domicilios a procesar por batch (default: 500)
+         *         current_user: Usuario autenticado
+         *         session: Sesión de base de datos
+         *
+         *     Returns:
+         *         Estadísticas y task_id de la tarea encolada
+         */
+        post: operations["trigger_geocoding_api_v1_geocoding_trigger_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/geocoding/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Geocoding Stats
+         * @description Obtiene estadísticas de geocodificación de domicilios.
+         *
+         *     Args:
+         *         current_user: Usuario autenticado
+         *         session: Sesión de base de datos
+         *
+         *     Returns:
+         *         Estadísticas detalladas por estado
+         */
+        get: operations["get_geocoding_stats_api_v1_geocoding_stats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dashboard/resumen": {
         parameters: {
             query?: never;
@@ -384,6 +439,118 @@ export interface paths {
          *     - Territorios afectados (jerárquico)
          */
         get: operations["get_dashboard_resumen_api_v1_dashboard_resumen_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/mapa/topojson": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Topojson Data
+         * @description Servir datos TopoJSON optimizados para mapas interactivos.
+         *
+         *     Optimizaciones aplicadas:
+         *     - Compresión gzip: reduce ~89% del tamaño (3.9MB → ~400KB)
+         *     - Cuantización: reduce ~30-50% adicional sin impacto visual
+         *     - Caché HTTP: agresivo con ETag y Cache-Control
+         *     - Lazy loading: cargar solo el nivel geográfico necesario
+         *
+         *     ## Ejemplos de uso:
+         *     - `/api/v1/dashboard/mapa/topojson?nivel=departamentos` - Todos los departamentos
+         *     - `/api/v1/dashboard/mapa/topojson?nivel=buenos_aires` - Solo Buenos Aires
+         *     - `/api/v1/dashboard/mapa/topojson?nivel=departamentos&compress=false` - Sin comprimir
+         */
+        get: operations["get_topojson_data_api_v1_dashboard_mapa_topojson_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/mapa/topojson/info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Topojson Info
+         * @description Obtener información sobre archivos TopoJSON disponibles y estadísticas de compresión.
+         *
+         *     Útil para debugging y optimización.
+         */
+        get: operations["get_topojson_info_api_v1_dashboard_mapa_topojson_info_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/mapa/departamentos-mapping": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Departamentos Mapping
+         * @description Obtener mapeo de todos los departamentos con IDs INDEC.
+         *
+         *     Este mapeo es usado por el frontend para:
+         *     - Matchear features de TopoJSON con datos de la API
+         *     - Agregar IDs INDEC a features geográficas
+         *     - Colorear departamentos en el mapa según eventos
+         *
+         *     Format de retorno:
+         *     {
+         *       "PROVINCIA_DEPARTAMENTO": {
+         *         "provincia": "string",
+         *         "departamento": "string",
+         *         "id_provincia_indec": number,
+         *         "id_departamento_indec": number
+         *       }
+         *     }
+         *
+         *     Se carga desde el archivo JSON pre-generado que está sincronizado con el TopoJSON.
+         */
+        get: operations["get_departamentos_mapping_api_v1_dashboard_mapa_departamentos_mapping_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/domicilios": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar domicilios con eventos
+         * @description Lista domicilios con información de eventos y geocodificación.
+         *
+         *     Por defecto ordena por cantidad de eventos descendente (hotspots primero).
+         */
+        get: operations["list_domicilios_api_v1_domicilios_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -580,7 +747,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/eventos/mapa": {
+    "/api/v1/eventos/domicilios/mapa": {
         parameters: {
             query?: never;
             header?: never;
@@ -588,15 +755,39 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Eventos Mapa
-         * @description Obtiene eventos agrupados por ubicación geográfica para visualización en mapa.
+         * Get Domicilios Mapa
+         * @description Obtiene domicilios geocodificados con conteo de eventos.
          *
-         *     Permite visualización jerárquica:
-         *     - nivel=provincia: Muestra todas las provincias con conteo de eventos
-         *     - nivel=departamento: Requiere id_provincia_indec, muestra departamentos de esa provincia
-         *     - nivel=localidad: Requiere id_provincia_indec e id_departamento_indec, muestra localidades
+         *     Retorna solo domicilios que tienen:
+         *     - Coordenadas geocodificadas (latitud y longitud no NULL)
+         *     - Al menos un evento asociado
+         *
+         *     Útil para visualización de mapa de puntos coloreados por provincia.
          */
-        get: operations["get_eventos_mapa_api_v1_eventos_mapa_get"];
+        get: operations["get_domicilios_mapa_api_v1_eventos_domicilios_mapa_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/eventos/domicilios/{id_domicilio}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Domicilio Detalle
+         * @description Obtiene detalle completo de un domicilio con todos sus casos.
+         *
+         *     Útil para mostrar en un dialog/modal cuando el usuario hace click
+         *     en un punto del mapa.
+         */
+        get: operations["get_domicilio_detalle_api_v1_eventos_domicilios__id_domicilio__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1258,6 +1449,57 @@ export interface components {
             sheet_name: string;
         };
         /**
+         * CasoDetalle
+         * @description Detalle de un caso/evento en el domicilio
+         */
+        CasoDetalle: {
+            /**
+             * Id Evento
+             * @description ID del evento
+             */
+            id_evento: number;
+            /**
+             * Fecha Evento
+             * @description Fecha del evento
+             */
+            fecha_evento?: string | null;
+            /**
+             * Tipo Evento Nombre
+             * @description Nombre del tipo de evento
+             */
+            tipo_evento_nombre?: string | null;
+            /**
+             * Grupo Evento Nombre
+             * @description Nombre del grupo de evento
+             */
+            grupo_evento_nombre?: string | null;
+            /**
+             * Clasificacion Manual
+             * @description Clasificación manual
+             */
+            clasificacion_manual?: string | null;
+            /**
+             * Estado
+             * @description Estado del caso
+             */
+            estado?: string | null;
+            /**
+             * Codigo Ciudadano
+             * @description Código del ciudadano
+             */
+            codigo_ciudadano: number;
+            /**
+             * Edad
+             * @description Edad del ciudadano al momento del evento
+             */
+            edad?: number | null;
+            /**
+             * Sexo
+             * @description Sexo del ciudadano
+             */
+            sexo?: string | null;
+        };
+        /**
          * ChartDataItem
          * @description Modelo para un chart individual del dashboard
          */
@@ -1518,49 +1760,6 @@ export interface components {
             updated_at?: string | null;
         };
         /**
-         * CondicionEvaluada
-         * @description Detalle de una condición evaluada (estructura real del backend)
-         */
-        CondicionEvaluada: {
-            /**
-             * Condicion Id
-             * @description ID de la condición
-             */
-            condicion_id?: number | null;
-            /**
-             * Campo
-             * @description Campo evaluado
-             */
-            campo: string;
-            /**
-             * Tipo Filtro
-             * @description Tipo de filtro aplicado
-             */
-            tipo_filtro: string;
-            /**
-             * Operador Logico
-             * @description Operador lógico (AND/OR)
-             */
-            operador_logico?: string | null;
-            /**
-             * Resultado
-             * @description Si la condición se cumplió
-             */
-            resultado: boolean;
-            /**
-             * Config
-             * @description Configuración del filtro
-             */
-            config?: {
-                [key: string]: unknown;
-            };
-            /**
-             * Valor Campo
-             * @description Valor del campo evaluado
-             */
-            valor_campo?: string | null;
-        };
-        /**
          * ContactoInfo
          * @description Información de contactos
          */
@@ -1671,6 +1870,64 @@ export interface components {
             tasa_incidencia: number;
         };
         /**
+         * DomicilioDetalleResponse
+         * @description Respuesta con detalle completo del domicilio y sus casos
+         */
+        DomicilioDetalleResponse: {
+            /**
+             * Id Domicilio
+             * @description ID del domicilio
+             */
+            id_domicilio: number;
+            /**
+             * Direccion
+             * @description Dirección completa
+             */
+            direccion: string;
+            /**
+             * Latitud
+             * @description Latitud
+             */
+            latitud: number;
+            /**
+             * Longitud
+             * @description Longitud
+             */
+            longitud: number;
+            /**
+             * Localidad Nombre
+             * @description Nombre de la localidad
+             */
+            localidad_nombre: string;
+            /**
+             * Departamento Nombre
+             * @description Nombre del departamento
+             */
+            departamento_nombre?: string | null;
+            /**
+             * Provincia Nombre
+             * @description Nombre de la provincia
+             */
+            provincia_nombre: string;
+            /**
+             * Total Casos
+             * @description Total de casos en este domicilio
+             */
+            total_casos: number;
+            /**
+             * Casos
+             * @description Lista de casos
+             */
+            casos?: components["schemas"]["CasoDetalle"][];
+            /**
+             * Casos Por Tipo
+             * @description Conteo de casos por tipo de evento
+             */
+            casos_por_tipo?: {
+                [key: string]: unknown;
+            };
+        };
+        /**
          * DomicilioInfo
          * @description Información de domicilio actual
          */
@@ -1685,6 +1942,217 @@ export interface components {
             localidad?: string | null;
             /** Provincia */
             provincia?: string | null;
+        };
+        /**
+         * DomicilioListItem
+         * @description Item de domicilio en la lista
+         */
+        DomicilioListItem: {
+            /**
+             * Id
+             * @description ID del domicilio
+             */
+            id: number;
+            /**
+             * Calle
+             * @description Nombre de la calle
+             */
+            calle?: string | null;
+            /**
+             * Numero
+             * @description Número de calle
+             */
+            numero?: string | null;
+            /**
+             * Direccion Completa
+             * @description Dirección completa formateada
+             */
+            direccion_completa: string;
+            /**
+             * Id Localidad Indec
+             * @description ID INDEC de localidad
+             */
+            id_localidad_indec: number;
+            /**
+             * Localidad Nombre
+             * @description Nombre de la localidad
+             */
+            localidad_nombre: string;
+            /**
+             * Id Departamento Indec
+             * @description ID INDEC del departamento
+             */
+            id_departamento_indec?: number | null;
+            /**
+             * Departamento Nombre
+             * @description Nombre del departamento
+             */
+            departamento_nombre?: string | null;
+            /**
+             * Id Provincia Indec
+             * @description ID INDEC de provincia
+             */
+            id_provincia_indec: number;
+            /**
+             * Provincia Nombre
+             * @description Nombre de la provincia
+             */
+            provincia_nombre: string;
+            /**
+             * Latitud
+             * @description Latitud
+             */
+            latitud?: number | null;
+            /**
+             * Longitud
+             * @description Longitud
+             */
+            longitud?: number | null;
+            /**
+             * Estado Geocodificacion
+             * @description Estado de geocodificación
+             */
+            estado_geocodificacion: string;
+            /**
+             * Proveedor Geocoding
+             * @description Proveedor de geocodificación
+             */
+            proveedor_geocoding?: string | null;
+            /**
+             * Confidence Geocoding
+             * @description Confianza de geocodificación (0-1)
+             */
+            confidence_geocoding?: number | null;
+            /**
+             * Total Eventos
+             * @description Total de eventos en este domicilio
+             * @default 0
+             */
+            total_eventos: number;
+        };
+        /**
+         * DomicilioMapaItem
+         * @description Representa un domicilio geocodificado en el mapa
+         */
+        DomicilioMapaItem: {
+            /**
+             * Id
+             * @description ID único del domicilio
+             */
+            id: string;
+            /**
+             * Id Domicilio
+             * @description ID numérico del domicilio
+             */
+            id_domicilio: number;
+            /**
+             * Nombre
+             * @description Dirección legible (calle + número + localidad)
+             */
+            nombre: string;
+            /**
+             * Total Eventos
+             * @description Total de eventos en este domicilio
+             */
+            total_eventos: number;
+            /**
+             * Latitud
+             * @description Latitud del domicilio
+             */
+            latitud: number;
+            /**
+             * Longitud
+             * @description Longitud del domicilio
+             */
+            longitud: number;
+            /**
+             * Id Provincia Indec
+             * @description ID INDEC de provincia
+             */
+            id_provincia_indec: number;
+            /**
+             * Id Departamento Indec
+             * @description ID INDEC de departamento
+             */
+            id_departamento_indec?: number | null;
+            /**
+             * Id Localidad Indec
+             * @description ID INDEC de localidad
+             */
+            id_localidad_indec: number;
+            /**
+             * Provincia Nombre
+             * @description Nombre de provincia
+             */
+            provincia_nombre: string;
+            /**
+             * Departamento Nombre
+             * @description Nombre de departamento
+             */
+            departamento_nombre?: string | null;
+            /**
+             * Localidad Nombre
+             * @description Nombre de localidad
+             */
+            localidad_nombre: string;
+            /**
+             * Tipo Evento Predominante
+             * @description Tipo de evento más frecuente
+             */
+            tipo_evento_predominante?: string | null;
+            /**
+             * Tipos Eventos
+             * @description Conteo por tipo de evento
+             */
+            tipos_eventos?: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * DomicilioMapaResponse
+         * @description Respuesta del endpoint de domicilios geocodificados
+         */
+        DomicilioMapaResponse: {
+            /** Items */
+            items?: components["schemas"]["DomicilioMapaItem"][];
+            /**
+             * Total
+             * @description Total de domicilios geocodificados
+             */
+            total: number;
+            /**
+             * Total Eventos
+             * @description Total de eventos en todos los domicilios
+             */
+            total_eventos: number;
+        };
+        /**
+         * DomiciliosListResponse
+         * @description Respuesta paginada de domicilios
+         */
+        DomiciliosListResponse: {
+            /** Items */
+            items?: components["schemas"]["DomicilioListItem"][];
+            /**
+             * Total
+             * @description Total de domicilios
+             */
+            total: number;
+            /**
+             * Page
+             * @description Página actual
+             */
+            page: number;
+            /**
+             * Page Size
+             * @description Tamaño de página
+             */
+            page_size: number;
+            /**
+             * Total Pages
+             * @description Total de páginas
+             */
+            total_pages: number;
         };
         /**
          * ErrorDetail
@@ -1759,6 +2227,21 @@ export interface components {
              */
             localidad?: string | null;
         };
+        /**
+         * EstadoGeocodificacion
+         * @description Estado del proceso de geocodificación de un domicilio.
+         *
+         *     PENDIENTE: Domicilio recién creado, aún no procesado
+         *     EN_COLA: Marcado para geocodificación, esperando procesamiento
+         *     PROCESANDO: Actualmente siendo geocodificado por un worker
+         *     GEOCODIFICADO: Geocodificación exitosa, tiene coordenadas válidas
+         *     FALLO_TEMPORAL: Error temporal (rate limit, timeout), reintentar más tarde
+         *     FALLO_PERMANENTE: Error permanente (dirección inválida, sin resultados), no reintentar
+         *     NO_GEOCODIFICABLE: Datos insuficientes para geocodificar (ej: solo número sin calle)
+         *     DESHABILITADO: Geocodificación deshabilitada en settings
+         * @enum {string}
+         */
+        EstadoGeocodificacion: "pendiente" | "en_cola" | "procesando" | "geocodificado" | "fallo_temporal" | "fallo_permanente" | "no_geocodificable" | "deshabilitado";
         /**
          * EventStrategyCreate
          * @description Request DTO para crear estrategia.
@@ -2178,7 +2661,9 @@ export interface components {
              * Trazabilidad Clasificacion
              * @description Trazabilidad completa: reglas evaluadas, condiciones cumplidas, razón de clasificación
              */
-            trazabilidad_clasificacion?: components["schemas"]["TrazabilidadReglaAplicada"] | components["schemas"]["TrazabilidadEvaluando"] | components["schemas"]["TrazabilidadRequiereRevision"] | components["schemas"]["TrazabilidadSinEstrategia"] | components["schemas"]["TrazabilidadError"] | null;
+            trazabilidad_clasificacion?: {
+                [key: string]: unknown;
+            } | null;
             /**
              * Tipo Sujeto
              * @description Tipo de sujeto
@@ -2277,12 +2762,12 @@ export interface components {
              * Created At
              * @description Fecha de creación
              */
-            created_at?: string | null;
+            created_at?: unknown | null;
             /**
              * Updated At
              * @description Fecha de actualización
              */
-            updated_at?: string | null;
+            updated_at?: unknown | null;
             /**
              * Total Sintomas
              * @description Total de síntomas
@@ -2461,87 +2946,6 @@ export interface components {
             filters_applied: {
                 [key: string]: unknown;
             };
-        };
-        /**
-         * EventoMapaItem
-         * @description Representa un punto o área en el mapa con eventos agregados
-         */
-        EventoMapaItem: {
-            /**
-             * Id
-             * @description ID único del punto (provincia_id, departamento_id o localidad_id)
-             */
-            id: string;
-            /**
-             * Nombre
-             * @description Nombre de la ubicación
-             */
-            nombre: string;
-            /**
-             * Nivel
-             * @description Nivel geográfico
-             * @enum {string}
-             */
-            nivel: "provincia" | "departamento" | "localidad";
-            /**
-             * Total Eventos
-             * @description Total de eventos en esta ubicación
-             */
-            total_eventos: number;
-            /**
-             * Latitud
-             * @description Latitud del centroide o primera ubicación
-             */
-            latitud?: number | null;
-            /**
-             * Longitud
-             * @description Longitud del centroide o primera ubicación
-             */
-            longitud?: number | null;
-            /**
-             * Id Provincia Indec
-             * @description ID INDEC de provincia
-             */
-            id_provincia_indec?: number | null;
-            /**
-             * Id Departamento Indec
-             * @description ID INDEC de departamento
-             */
-            id_departamento_indec?: number | null;
-            /**
-             * Id Localidad Indec
-             * @description ID INDEC de localidad
-             */
-            id_localidad_indec?: number | null;
-            /**
-             * Provincia Nombre
-             * @description Nombre de provincia (para departamentos y localidades)
-             */
-            provincia_nombre?: string | null;
-            /**
-             * Departamento Nombre
-             * @description Nombre de departamento (para localidades)
-             */
-            departamento_nombre?: string | null;
-        };
-        /**
-         * EventoMapaResponse
-         * @description Respuesta del endpoint de mapa con eventos agrupados
-         */
-        EventoMapaResponse: {
-            /** Items */
-            items?: components["schemas"]["EventoMapaItem"][];
-            /**
-             * Total
-             * @description Total de puntos en el mapa
-             */
-            total: number;
-            /**
-             * Nivel
-             * @description Nivel de agregación aplicado
-             * @enum {string}
-             */
-            nivel: "provincia" | "departamento" | "localidad";
         };
         /**
          * EventoSortBy
@@ -3362,37 +3766,6 @@ export interface components {
             refresh_token: string;
         };
         /**
-         * ReglaEvaluada
-         * @description Información de una regla que fue evaluada pero no cumplió
-         */
-        ReglaEvaluada: {
-            /**
-             * Regla Id
-             * @description ID de la regla
-             */
-            regla_id: number;
-            /**
-             * Regla Nombre
-             * @description Nombre de la regla
-             */
-            regla_nombre?: string | null;
-            /**
-             * Regla Prioridad
-             * @description Prioridad de la regla
-             */
-            regla_prioridad: number;
-            /**
-             * Cumplida
-             * @description Si la regla se cumplió
-             */
-            cumplida: boolean;
-            /**
-             * Condiciones
-             * @description Condiciones evaluadas
-             */
-            condiciones?: components["schemas"]["CondicionEvaluada"][];
-        };
-        /**
          * ReportFiltersRequest
          * @description Request para generar URL firmada
          */
@@ -3587,6 +3960,42 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /** SuccessResponse[DomicilioDetalleResponse] */
+        SuccessResponse_DomicilioDetalleResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["DomicilioDetalleResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[DomicilioMapaResponse] */
+        SuccessResponse_DomicilioMapaResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["DomicilioMapaResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[DomiciliosListResponse] */
+        SuccessResponse_DomiciliosListResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["DomiciliosListResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
         /** SuccessResponse[EventStrategyResponse] */
         SuccessResponse_EventStrategyResponse_: {
             /** @description Datos de la respuesta */
@@ -3615,18 +4024,6 @@ export interface components {
         SuccessResponse_EventoListResponse_: {
             /** @description Datos de la respuesta */
             data: components["schemas"]["EventoListResponse"];
-            /**
-             * Meta
-             * @description Metadata opcional (paginación, etc)
-             */
-            meta?: {
-                [key: string]: unknown;
-            } | null;
-        };
-        /** SuccessResponse[EventoMapaResponse] */
-        SuccessResponse_EventoMapaResponse_: {
-            /** @description Datos de la respuesta */
-            data: components["schemas"]["EventoMapaResponse"];
             /**
              * Meta
              * @description Metadata opcional (paginación, etc)
@@ -3975,152 +4372,6 @@ export interface components {
             /** Apellido */
             apellido: string;
             role: components["schemas"]["UserRole"];
-        };
-        /**
-         * TrazabilidadError
-         * @description Trazabilidad cuando ocurre un error
-         */
-        TrazabilidadError: {
-            /**
-             * Razon
-             * @description Razón de clasificación
-             * @default error
-             */
-            razon: string;
-            /**
-             * Mensaje
-             * @description Mensaje de error
-             */
-            mensaje: string;
-        };
-        /**
-         * TrazabilidadEvaluando
-         * @description Trazabilidad cuando se está evaluando sin clasificar aún
-         */
-        TrazabilidadEvaluando: {
-            /**
-             * Razon
-             * @description Razón de clasificación
-             * @default evaluando
-             */
-            razon: string;
-            /**
-             * Estrategia Id
-             * @description ID de la estrategia
-             */
-            estrategia_id: number;
-            /**
-             * Estrategia Nombre
-             * @description Nombre de la estrategia
-             */
-            estrategia_nombre: string;
-            /**
-             * Reglas Evaluadas
-             * @description Reglas que se han evaluado
-             */
-            reglas_evaluadas?: components["schemas"]["ReglaEvaluada"][];
-        };
-        /**
-         * TrazabilidadReglaAplicada
-         * @description Trazabilidad cuando se aplicó una regla exitosamente
-         */
-        TrazabilidadReglaAplicada: {
-            /**
-             * Razon
-             * @description Razón de clasificación
-             * @default regla_aplicada
-             */
-            razon: string;
-            /**
-             * Estrategia Id
-             * @description ID de la estrategia aplicada
-             */
-            estrategia_id: number;
-            /**
-             * Estrategia Nombre
-             * @description Nombre de la estrategia
-             */
-            estrategia_nombre: string;
-            /**
-             * Regla Id
-             * @description ID de la regla aplicada
-             */
-            regla_id: number;
-            /**
-             * Regla Nombre
-             * @description Nombre de la regla
-             */
-            regla_nombre?: string | null;
-            /**
-             * Regla Prioridad
-             * @description Prioridad de la regla
-             */
-            regla_prioridad: number;
-            /**
-             * Clasificacion Aplicada
-             * @description Clasificación resultante
-             */
-            clasificacion_aplicada: string;
-            /**
-             * Condiciones Evaluadas
-             * @description Condiciones que se evaluaron
-             */
-            condiciones_evaluadas?: components["schemas"]["CondicionEvaluada"][];
-        };
-        /**
-         * TrazabilidadRequiereRevision
-         * @description Trazabilidad cuando ninguna regla cumplió y requiere revisión manual
-         */
-        TrazabilidadRequiereRevision: {
-            /**
-             * Razon
-             * @description Razón de clasificación
-             * @default requiere_revision
-             */
-            razon: string;
-            /**
-             * Mensaje
-             * @description Mensaje descriptivo
-             */
-            mensaje: string;
-            /**
-             * Estrategia Id
-             * @description ID de la estrategia evaluada
-             */
-            estrategia_id?: number | null;
-            /**
-             * Estrategia Nombre
-             * @description Nombre de la estrategia
-             */
-            estrategia_nombre?: string | null;
-            /**
-             * Reglas Evaluadas
-             * @description Reglas evaluadas que no cumplieron
-             */
-            reglas_evaluadas?: components["schemas"]["ReglaEvaluada"][] | null;
-        };
-        /**
-         * TrazabilidadSinEstrategia
-         * @description Trazabilidad cuando no existe estrategia definida
-         */
-        TrazabilidadSinEstrategia: {
-            /**
-             * Razon
-             * @description Razón de clasificación
-             * @default sin_estrategia
-             */
-            razon: string;
-            /**
-             * Mensaje
-             * @description Mensaje descriptivo
-             */
-            mensaje: string;
-            /**
-             * Estrategia Evaluada
-             * @description Si se evaluó estrategia
-             * @default false
-             */
-            estrategia_evaluada: boolean;
         };
         /**
          * UserChangePassword
@@ -5331,6 +5582,79 @@ export interface operations {
             };
         };
     };
+    trigger_geocoding_api_v1_geocoding_trigger_post: {
+        parameters: {
+            query?: {
+                batch_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Geocodificación triggeada exitosamente */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Geocodificación deshabilitada */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_geocoding_stats_api_v1_geocoding_stats_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Estadísticas de geocodificación */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
     get_dashboard_resumen_api_v1_dashboard_resumen_get: {
         parameters: {
             query?: {
@@ -5360,6 +5684,134 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SuccessResponse_DashboardResumenResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_topojson_data_api_v1_dashboard_mapa_topojson_get: {
+        parameters: {
+            query: {
+                /** @description Nivel geográfico: 'departamentos' (default), o nombre de provincia en minúsculas */
+                nivel: string;
+                /** @description Aplicar compresión gzip */
+                compress?: boolean;
+                /** @description Cuantizar coordenadas para reducir tamaño */
+                quantize?: boolean;
+                /** @description Decimal places for coordinate precision (4 = ~11m accuracy for Argentina) */
+                quantize_decimals?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Optimized TopoJSON geospatial data with compression and quantization */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_topojson_info_api_v1_dashboard_mapa_topojson_info_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Information about available TopoJSON files and compression ratios */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    get_departamentos_mapping_api_v1_dashboard_mapa_departamentos_mapping_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Mapping of departamentos to INDEC IDs for TopoJSON feature matching */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    list_domicilios_api_v1_domicilios_get: {
+        parameters: {
+            query?: {
+                /** @description Número de página */
+                page?: number;
+                /** @description Tamaño de página */
+                page_size?: number;
+                /** @description Filtrar por estado de geocodificación */
+                estado_geocodificacion?: components["schemas"]["EstadoGeocodificacion"] | null;
+                /** @description Filtrar por provincia */
+                id_provincia_indec?: number | null;
+                /** @description Filtrar por departamento */
+                id_departamento_indec?: number | null;
+                /** @description Filtrar por localidad */
+                id_localidad_indec?: number | null;
+                /** @description Filtrar solo domicilios con eventos (true) o sin eventos (false) */
+                con_eventos?: boolean | null;
+                /** @description Ordenamiento: eventos_desc, eventos_asc, calle_asc, localidad_asc */
+                order_by?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_DomiciliosListResponse_"];
                 };
             };
             /** @description Validation Error */
@@ -5885,19 +6337,23 @@ export interface operations {
             };
         };
     };
-    get_eventos_mapa_api_v1_eventos_mapa_get: {
+    get_domicilios_mapa_api_v1_eventos_domicilios_mapa_get: {
         parameters: {
             query?: {
-                /** @description Nivel de agregación geográfica */
-                nivel?: "provincia" | "departamento" | "localidad";
-                /** @description Filtrar por provincia (requerido para nivel departamento) */
+                /** @description Filtrar por provincia */
                 id_provincia_indec?: number | null;
-                /** @description Filtrar por departamento (requerido para nivel localidad) */
+                /** @description Filtrar por departamento */
                 id_departamento_indec?: number | null;
+                /** @description Filtrar por localidad */
+                id_localidad_indec?: number | null;
                 /** @description Filtrar por grupo ENO */
                 id_grupo_eno?: number | null;
                 /** @description Filtrar por tipo ENO */
                 id_tipo_eno?: number | null;
+                /** @description Filtrar eventos hasta esta fecha */
+                fecha_hasta?: string | null;
+                /** @description Máximo de domicilios a retornar */
+                limit?: number;
             };
             header?: never;
             path?: never;
@@ -5911,7 +6367,62 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SuccessResponse_EventoMapaResponse_"];
+                    "application/json": components["schemas"]["SuccessResponse_DomicilioMapaResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno del servidor */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_domicilio_detalle_api_v1_eventos_domicilios__id_domicilio__get: {
+        parameters: {
+            query?: {
+                /** @description Filtrar casos desde esta fecha */
+                fecha_desde?: string | null;
+                /** @description Filtrar casos hasta esta fecha */
+                fecha_hasta?: string | null;
+            };
+            header?: never;
+            path: {
+                /** @description ID del domicilio */
+                id_domicilio: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_DomicilioDetalleResponse_"];
+                };
+            };
+            /** @description Domicilio no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description Validation Error */

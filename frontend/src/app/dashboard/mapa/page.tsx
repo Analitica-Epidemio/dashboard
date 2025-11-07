@@ -4,6 +4,7 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import { MapaLayout } from "./_components/mapa-layout";
 import { MapaSidebar } from "./_components/mapa-sidebar-v2";
+import { DomicilioDetalleDialog } from "./_components/domicilio-detalle-dialog";
 import { useDomiciliosMapa, type DomicilioMapaItem } from "@/lib/api/mapa";
 
 // Cargar el mapa solo en el cliente (no SSR) porque Leaflet usa window
@@ -24,16 +25,26 @@ const MapaSimple = dynamic(
 );
 
 export default function MapaPage() {
-  // Cargar domicilios agrupados geográficamente
+  // State para el dialog de detalle
+  const [selectedDomicilioId, setSelectedDomicilioId] = useState<number | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  // Cargar todos los domicilios geocodificados
   const { data, isLoading } = useDomiciliosMapa({
-    limit: 1000,
+    limit: 50000,
   });
 
   const domicilios = data?.data?.items || [];
 
+  // Handler para cuando se hace click en un marker
+  const handleMarkerClick = (domicilio: DomicilioMapaItem) => {
+    setSelectedDomicilioId(domicilio.id_domicilio);
+    setDialogOpen(true);
+  };
+
   // Calcular estadísticas
-  const totalLocalidades = domicilios.length;
-  const totalEventos = domicilios.reduce((sum, e) => sum + e.total_domicilios, 0);
+  const totalDomicilios = domicilios.length;
+  const totalEventos = domicilios.reduce((sum, e) => sum + e.total_eventos, 0);
   const provinciasUnicas = new Set(domicilios.map(e => e.id_provincia_indec)).size;
 
   return (
@@ -55,7 +66,7 @@ export default function MapaPage() {
         {isLoading && (
           <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[999] bg-white shadow-lg rounded-lg px-4 py-3 flex items-center gap-3 border">
             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-            <span className="text-sm font-medium">Cargando {totalLocalidades} localidades...</span>
+            <span className="text-sm font-medium">Cargando domicilios...</span>
           </div>
         )}
 
@@ -64,8 +75,8 @@ export default function MapaPage() {
           <div className="absolute top-4 left-4 z-[999] bg-white shadow-lg rounded-lg p-4 border">
             <div className="text-sm space-y-1">
               <div>
-                <span className="text-gray-600">Localidades: </span>
-                <span className="font-semibold">{totalLocalidades}</span>
+                <span className="text-gray-600">Domicilios: </span>
+                <span className="font-semibold">{totalDomicilios}</span>
               </div>
               <div>
                 <span className="text-gray-600">Total Eventos: </span>
@@ -82,6 +93,14 @@ export default function MapaPage() {
         <MapaSimple
           domicilios={domicilios}
           isLoading={isLoading}
+          onMarkerClick={handleMarkerClick}
+        />
+
+        {/* Dialog de detalle */}
+        <DomicilioDetalleDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          idDomicilio={selectedDomicilioId}
         />
       </div>
     </MapaLayout>

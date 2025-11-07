@@ -8,6 +8,7 @@ import { env } from '@/env';
 
 export interface DomicilioMapaItem {
   id: string;
+  id_domicilio: number;
   nombre: string;
   total_eventos: number;
   latitud: number;
@@ -18,6 +19,33 @@ export interface DomicilioMapaItem {
   provincia_nombre: string;
   departamento_nombre?: string | null;
   localidad_nombre: string;
+  tipo_evento_predominante?: string | null;
+  tipos_eventos: Record<string, number>;
+}
+
+export interface CasoDetalle {
+  id_evento: number;
+  fecha_evento?: string | null;
+  tipo_evento_nombre?: string | null;
+  grupo_evento_nombre?: string | null;
+  clasificacion_manual?: string | null;
+  estado?: string | null;
+  codigo_ciudadano: number;
+  edad?: number | null;
+  sexo?: string | null;
+}
+
+export interface DomicilioDetalleData {
+  id_domicilio: number;
+  direccion: string;
+  latitud: number;
+  longitud: number;
+  localidad_nombre: string;
+  departamento_nombre?: string | null;
+  provincia_nombre: string;
+  total_casos: number;
+  casos: CasoDetalle[];
+  casos_por_tipo: Record<string, number>;
 }
 
 export interface DomicilioMapaResponse {
@@ -33,6 +61,39 @@ export interface MapaFilters {
   id_grupo_eno?: number | null;
   id_tipo_eno?: number | null;
   limit?: number;
+}
+
+/**
+ * Hook to fetch detalle de casos de un domicilio específico
+ */
+export function useDomicilioDetalle(idDomicilio: number | null, enabled: boolean = true) {
+  return useQuery({
+    queryKey: ['domicilio-detalle', idDomicilio],
+    queryFn: async () => {
+      if (!idDomicilio) return null;
+
+      const session = await getSession();
+
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+
+      if (session?.accessToken) {
+        headers['Authorization'] = `Bearer ${session.accessToken}`;
+      }
+
+      const url = `${env.NEXT_PUBLIC_API_HOST}/api/v1/eventos/domicilios/${idDomicilio}`;
+      const response = await fetch(url, { headers });
+
+      if (!response.ok) {
+        throw new Error('Error fetching domicilio detalle');
+      }
+
+      const data = await response.json();
+      return data.data as DomicilioDetalleData;
+    },
+    enabled: enabled && !!idDomicilio,
+  });
 }
 
 /**

@@ -7,6 +7,7 @@ import {
   IconUsers,
   IconMap,
   IconFileText,
+  IconHome,
 } from "@tabler/icons-react";
 
 export interface NavItem {
@@ -42,6 +43,12 @@ export const navigationConfig = {
       title: "Personas",
       icon: IconUsers,
       url: "/dashboard/personas",
+    },
+    {
+      id: "domicilios",
+      title: "Domicilios",
+      icon: IconHome,
+      url: "/dashboard/domicilios",
     },
     {
       id: "mapa",
