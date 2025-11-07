@@ -10,9 +10,12 @@ import L from "leaflet";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
-  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
-  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+  iconRetinaUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+  iconUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+  shadowUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
 
 interface MapaSimpleProps {
@@ -52,40 +55,75 @@ const categorizarEvento = (nombreEvento: string | null | undefined): number => {
   const nombre = nombreEvento.toLowerCase();
 
   // Respiratorias agudas (0)
-  if (nombre.includes("covid") || nombre.includes("influenza") || nombre.includes("irag") ||
-      nombre.includes("respiratoria") || nombre.includes("meningoencefalitis")) {
+  if (
+    nombre.includes("covid") ||
+    nombre.includes("influenza") ||
+    nombre.includes("irag") ||
+    nombre.includes("respiratoria") ||
+    nombre.includes("meningoencefalitis")
+  ) {
     return 0;
   }
 
   // Vectoriales principales (1)
-  if (nombre.includes("dengue") || nombre.includes("zika") || nombre.includes("chikungunya") ||
-      nombre.includes("paludismo") || nombre.includes("malaria")) {
+  if (
+    nombre.includes("dengue") ||
+    nombre.includes("zika") ||
+    nombre.includes("chikungunya") ||
+    nombre.includes("paludismo") ||
+    nombre.includes("malaria")
+  ) {
     return 1;
   }
 
   // Transmisión alimentaria/fecal-oral (2)
-  if (nombre.includes("diarrea") || nombre.includes("eta") || nombre.includes("brote") ||
-      nombre.includes("suh") || nombre.includes("triquinelosis") || nombre.includes("fecal")) {
+  if (
+    nombre.includes("diarrea") ||
+    nombre.includes("eta") ||
+    nombre.includes("brote") ||
+    nombre.includes("suh") ||
+    nombre.includes("triquinelosis") ||
+    nombre.includes("fecal")
+  ) {
     return 2;
   }
 
   // Transmisión sexual (3)
-  if (nombre.includes("vih") || nombre.includes("sífilis") || nombre.includes("gonorrea") ||
-      (nombre.includes("hepatitis") && (nombre.includes("b") || nombre.includes("c")))) {
+  if (
+    nombre.includes("vih") ||
+    nombre.includes("sífilis") ||
+    nombre.includes("gonorrea") ||
+    (nombre.includes("hepatitis") &&
+      (nombre.includes("b") || nombre.includes("c")))
+  ) {
     return 3;
   }
 
   // Zoonóticas (4)
-  if (nombre.includes("rabia") || nombre.includes("leptospirosis") || nombre.includes("hidatidosis") ||
-      nombre.includes("brucelosis") || nombre.includes("araneísmo") || nombre.includes("ofidismo") ||
-      nombre.includes("latrodectus") || nombre.includes("loxosceles")) {
+  if (
+    nombre.includes("rabia") ||
+    nombre.includes("leptospirosis") ||
+    nombre.includes("hidatidosis") ||
+    nombre.includes("brucelosis") ||
+    nombre.includes("araneísmo") ||
+    nombre.includes("ofidismo") ||
+    nombre.includes("latrodectus") ||
+    nombre.includes("loxosceles")
+  ) {
     return 4;
   }
 
   // Vacunables (5)
-  if (nombre.includes("coqueluche") || nombre.includes("parotiditis") || nombre.includes("sarampión") ||
-      nombre.includes("rubéola") || nombre.includes("poliomielitis") || nombre.includes("varicela") ||
-      nombre.includes("exantemática") || nombre.includes("paf")) {
+  if (
+    nombre.includes("coqueluche") ||
+    nombre.includes("parotiditis") ||
+    nombre.includes("sarampión") ||
+    nombre.includes("rubéola") ||
+    nombre.includes("poliomielitis") ||
+    nombre.includes("varicela") ||
+    nombre.includes("exantemática") ||
+    nombre.includes("paf")
+  ) {
     return 5;
   }
 
@@ -95,21 +133,38 @@ const categorizarEvento = (nombreEvento: string | null | undefined): number => {
   }
 
   // Pediátricas/Congénitas (7)
-  if (nombre.includes("congénito") || nombre.includes("lactante") || nombre.includes("hipotiroidismo") ||
-      nombre.includes("fibrosis") || nombre.includes("biotinidasa") || nombre.includes("expuesto perinatal") ||
-      nombre.includes("rn expuesto")) {
+  if (
+    nombre.includes("congénito") ||
+    nombre.includes("lactante") ||
+    nombre.includes("hipotiroidismo") ||
+    nombre.includes("fibrosis") ||
+    nombre.includes("biotinidasa") ||
+    nombre.includes("expuesto perinatal") ||
+    nombre.includes("rn expuesto")
+  ) {
     return 7;
   }
 
   // Intoxicaciones (8)
-  if (nombre.includes("intoxicación") || nombre.includes("intento de suicidio") ||
-      nombre.includes("monóxido") || nombre.includes("medicamentosa") || nombre.includes("tóxicos")) {
+  if (
+    nombre.includes("intoxicación") ||
+    nombre.includes("intento de suicidio") ||
+    nombre.includes("monóxido") ||
+    nombre.includes("medicamentosa") ||
+    nombre.includes("tóxicos")
+  ) {
     return 8;
   }
 
   // Otras infecciones (9)
-  if (nombre.includes("candidemia") || nombre.includes("candidiasis") || nombre.includes("bartonelosis") ||
-      nombre.includes("tifoidea") || nombre.includes("paratifoidea") || nombre.includes("invasivas")) {
+  if (
+    nombre.includes("candidemia") ||
+    nombre.includes("candidiasis") ||
+    nombre.includes("bartonelosis") ||
+    nombre.includes("tifoidea") ||
+    nombre.includes("paratifoidea") ||
+    nombre.includes("invasivas")
+  ) {
     return 9;
   }
 
@@ -124,8 +179,14 @@ const categorizarEvento = (nombreEvento: string | null | undefined): number => {
   }
 
   // Eventos especiales (12)
-  if (nombre.includes("emergente") || nombre.includes("genómica") || nombre.includes("vigilancia") ||
-      nombre.includes("centinela") || nombre.includes("seguimiento") || nombre.includes("especiales")) {
+  if (
+    nombre.includes("emergente") ||
+    nombre.includes("genómica") ||
+    nombre.includes("vigilancia") ||
+    nombre.includes("centinela") ||
+    nombre.includes("seguimiento") ||
+    nombre.includes("especiales")
+  ) {
     return 12;
   }
 
@@ -164,7 +225,9 @@ const categorizarEvento = (nombreEvento: string | null | undefined): number => {
 };
 
 // Obtener color según tipo de evento predominante
-const getColorPorTipoEvento = (tipoEventoPredominante?: string | null): string => {
+const getColorPorTipoEvento = (
+  tipoEventoPredominante?: string | null
+): string => {
   const categoria = categorizarEvento(tipoEventoPredominante);
   return COLOR_POOL[categoria];
 };
@@ -175,12 +238,17 @@ export function MapaSimple({
   isLoading: isLoadingProp,
 }: MapaSimpleProps) {
   // Usar datos del prop si están disponibles, si no, hacer query independiente
-  const { data: dataFallback, isLoading: isLoadingFallback, error: errorFallback } = useDomiciliosMapa({
+  const {
+    data: dataFallback,
+    isLoading: isLoadingFallback,
+    error: errorFallback,
+  } = useDomiciliosMapa({
     limit: 50000, // Cargar todos los domicilios geocodificados
   });
 
   const domicilios = domiciliosProp || dataFallback?.data?.items || [];
-  const loading = isLoadingProp !== undefined ? isLoadingProp : isLoadingFallback;
+  const loading =
+    isLoadingProp !== undefined ? isLoadingProp : isLoadingFallback;
   const error = domiciliosProp ? undefined : errorFallback;
 
   // Todos los domicilios retornados ya tienen coordenadas válidas (filtrado en backend)
@@ -229,12 +297,14 @@ export function MapaSimple({
 
         {/* Mostrar puntos de domicilios geocodificados */}
         {domiciliosConCoordenadas.map((domicilio: DomicilioMapaItem) => {
-          const color = getColorPorTipoEvento(domicilio.tipo_evento_predominante);
+          const color = getColorPorTipoEvento(
+            domicilio.tipo_evento_predominante
+          );
           const lat = domicilio.latitud!;
           const lng = domicilio.longitud!;
 
           // Tamaño según cantidad de eventos
-          const radius = Math.min(4 + (domicilio.total_eventos * 0.5), 12);
+          const radius = Math.min(4 + domicilio.total_eventos * 0.5, 12);
 
           return (
             <CircleMarker
@@ -275,7 +345,10 @@ export function MapaSimple({
               <Tooltip direction="top" opacity={0.9} permanent={false}>
                 <div className="text-sm">
                   <div className="font-semibold">{domicilio.nombre}</div>
-                  <div className="text-xs text-gray-600">{domicilio.total_eventos} evento{domicilio.total_eventos !== 1 ? 's' : ''}</div>
+                  <div className="text-xs text-gray-600">
+                    {domicilio.total_eventos} evento
+                    {domicilio.total_eventos !== 1 ? "s" : ""}
+                  </div>
                 </div>
               </Tooltip>
             </CircleMarker>
@@ -286,7 +359,9 @@ export function MapaSimple({
       {/* Leyenda de colores por categoría de evento */}
       {!loading && domiciliosConCoordenadas.length > 0 && (
         <div className="absolute bottom-6 right-6 z-[1000] bg-white shadow-lg rounded-lg p-4 max-h-[500px] overflow-y-auto">
-          <div className="font-semibold text-sm mb-3">Categorías de Eventos</div>
+          <div className="font-semibold text-sm mb-3">
+            Categorías de Eventos
+          </div>
           <div className="space-y-1.5 text-xs">
             {(() => {
               // Agrupar eventos por categoría

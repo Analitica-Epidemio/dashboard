@@ -1,6 +1,11 @@
 "use client";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDomicilioDetalle, type CasoDetalle } from "@/lib/api/mapa";
@@ -62,7 +67,9 @@ export function DomicilioDetalleDialog({
               <StatCard
                 icon={<Activity className="h-4 w-4" />}
                 label="Coordenadas"
-                value={`${data.latitud.toFixed(4)}, ${data.longitud.toFixed(4)}`}
+                value={`${data.latitud.toFixed(4)}, ${data.longitud.toFixed(
+                  4
+                )}`}
                 variant="secondary"
               />
             </div>
@@ -128,14 +135,19 @@ function StatCard({
   return (
     <div
       className={`p-4 rounded-lg border ${
-        variant === "default" ? "bg-blue-50 border-blue-200" : "bg-gray-50 border-gray-200"
+        variant === "default"
+          ? "bg-blue-50 border-blue-200"
+          : "bg-gray-50 border-gray-200"
       }`}
     >
       <div className="flex items-center gap-2 text-gray-600 mb-1">
         {icon}
         <span className="text-xs font-medium">{label}</span>
       </div>
-      <div className="text-lg font-bold text-gray-900 truncate" title={String(value)}>
+      <div
+        className="text-lg font-bold text-gray-900 truncate"
+        title={String(value)}
+      >
         {value}
       </div>
     </div>
@@ -171,7 +183,9 @@ function CasoCard({ caso }: { caso: CasoDetalle }) {
           <div className="space-y-2">
             {caso.nombre_completo && (
               <div className="text-sm">
-                <span className="font-semibold text-gray-900">{caso.nombre_completo}</span>
+                <span className="font-semibold text-gray-900">
+                  {caso.nombre_completo}
+                </span>
               </div>
             )}
             <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
@@ -215,7 +229,9 @@ function CasoCard({ caso }: { caso: CasoDetalle }) {
         {/* ID del evento */}
         <div className="text-right">
           <div className="text-xs text-gray-500">ID Evento</div>
-          <div className="text-sm font-mono text-gray-700">{caso.id_evento}</div>
+          <div className="text-sm font-mono text-gray-700">
+            {caso.id_evento}
+          </div>
         </div>
       </div>
     </div>

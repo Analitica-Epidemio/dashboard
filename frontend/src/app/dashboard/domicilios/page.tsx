@@ -1,13 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { MapPin, Building2, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import {
+  MapPin,
+  Building2,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
 import { AppSidebar } from "@/features/layout/components";
 import {
   Select,
@@ -23,7 +33,9 @@ import { DomicilioDetalleSheet } from "./_components/domicilio-detalle-sheet";
 
 export default function DomiciliosPage() {
   const [detailSheetOpen, setDetailSheetOpen] = useState(false);
-  const [selectedDomicilioId, setSelectedDomicilioId] = useState<number | null>(null);
+  const [selectedDomicilioId, setSelectedDomicilioId] = useState<number | null>(
+    null
+  );
 
   const [filters, setFilters] = useState({
     page: 1,
@@ -140,21 +152,29 @@ export default function DomiciliosPage() {
               </div>
               <div className="bg-green-50 rounded-lg border border-green-200 p-3">
                 <div className="text-xs text-green-700">Geocodificados</div>
-                <div className="text-2xl font-bold text-green-700">{geocodificados}</div>
+                <div className="text-2xl font-bold text-green-700">
+                  {geocodificados}
+                </div>
               </div>
               <div className="bg-blue-50 rounded-lg border border-blue-200 p-3">
                 <div className="text-xs text-blue-700">Con eventos</div>
-                <div className="text-2xl font-bold text-blue-700">{conEventos}</div>
+                <div className="text-2xl font-bold text-blue-700">
+                  {conEventos}
+                </div>
               </div>
               <div className="bg-yellow-50 rounded-lg border border-yellow-200 p-3">
                 <div className="text-xs text-yellow-700">Pendientes</div>
-                <div className="text-2xl font-bold text-yellow-700">{pendientes}</div>
+                <div className="text-2xl font-bold text-yellow-700">
+                  {pendientes}
+                </div>
               </div>
             </div>
 
             {/* Ordenar */}
             <div className="flex items-center gap-4">
-              <label className="text-sm text-muted-foreground">Ordenar por:</label>
+              <label className="text-sm text-muted-foreground">
+                Ordenar por:
+              </label>
               <Select
                 value={filters.order_by}
                 onValueChange={(value) => handleFilterChange("order_by", value)}
@@ -163,17 +183,27 @@ export default function DomiciliosPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="eventos_desc">Más eventos primero</SelectItem>
-                  <SelectItem value="eventos_asc">Menos eventos primero</SelectItem>
+                  <SelectItem value="eventos_desc">
+                    Más eventos primero
+                  </SelectItem>
+                  <SelectItem value="eventos_asc">
+                    Menos eventos primero
+                  </SelectItem>
                   <SelectItem value="calle_asc">Por calle (A-Z)</SelectItem>
-                  <SelectItem value="localidad_asc">Por localidad (A-Z)</SelectItem>
+                  <SelectItem value="localidad_asc">
+                    Por localidad (A-Z)
+                  </SelectItem>
                 </SelectContent>
               </Select>
 
-              <label className="text-sm text-muted-foreground ml-auto">Mostrar:</label>
+              <label className="text-sm text-muted-foreground ml-auto">
+                Mostrar:
+              </label>
               <Select
                 value={filters.page_size.toString()}
-                onValueChange={(value) => handleFilterChange("page_size", parseInt(value))}
+                onValueChange={(value) =>
+                  handleFilterChange("page_size", parseInt(value))
+                }
               >
                 <SelectTrigger className="w-[100px]">
                   <SelectValue />
@@ -200,8 +230,12 @@ export default function DomiciliosPage() {
               <div className="p-12">
                 <div className="text-center">
                   <Building2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                  <h3 className="text-lg font-medium mb-2">No se encontraron domicilios</h3>
-                  <p className="text-sm text-muted-foreground">Intenta ajustar los filtros</p>
+                  <h3 className="text-lg font-medium mb-2">
+                    No se encontraron domicilios
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Intenta ajustar los filtros
+                  </p>
                 </div>
               </div>
             ) : (
@@ -209,11 +243,21 @@ export default function DomiciliosPage() {
                 <table className="w-full">
                   <thead className="border-b border-border bg-muted/50">
                     <tr>
-                      <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3 col-span-5">Dirección</th>
-                      <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3 col-span-2">Localidad</th>
-                      <th className="text-center text-xs font-medium text-muted-foreground px-4 py-3 col-span-1">Eventos</th>
-                      <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3 col-span-2">Estado</th>
-                      <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3 col-span-2">Coordenadas</th>
+                      <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3 col-span-5">
+                        Dirección
+                      </th>
+                      <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3 col-span-2">
+                        Localidad
+                      </th>
+                      <th className="text-center text-xs font-medium text-muted-foreground px-4 py-3 col-span-1">
+                        Eventos
+                      </th>
+                      <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3 col-span-2">
+                        Estado
+                      </th>
+                      <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3 col-span-2">
+                        Coordenadas
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -248,9 +292,13 @@ export default function DomiciliosPage() {
                         {/* Eventos */}
                         <td className="px-4 py-3 text-center">
                           {domicilio.total_eventos > 0 ? (
-                            <Badge variant="default">{domicilio.total_eventos}</Badge>
+                            <Badge variant="default">
+                              {domicilio.total_eventos}
+                            </Badge>
                           ) : (
-                            <span className="text-xs text-muted-foreground">0</span>
+                            <span className="text-xs text-muted-foreground">
+                              0
+                            </span>
                           )}
                         </td>
 
@@ -258,7 +306,9 @@ export default function DomiciliosPage() {
                         <td className="px-4 py-3">
                           <Badge
                             variant="outline"
-                            className={`gap-1 ${getEstadoBadgeClasses(domicilio.estado_geocodificacion)}`}
+                            className={`gap-1 ${getEstadoBadgeClasses(
+                              domicilio.estado_geocodificacion
+                            )}`}
                           >
                             {getEstadoIcon(domicilio.estado_geocodificacion)}
                             {getEstadoLabel(domicilio.estado_geocodificacion)}
@@ -268,7 +318,9 @@ export default function DomiciliosPage() {
                         {/* Coordenadas */}
                         <td className="px-4 py-3 text-xs text-muted-foreground font-mono">
                           {domicilio.latitud && domicilio.longitud
-                            ? `${domicilio.latitud.toFixed(4)}, ${domicilio.longitud.toFixed(4)}`
+                            ? `${domicilio.latitud.toFixed(
+                                4
+                              )}, ${domicilio.longitud.toFixed(4)}`
                             : "N/A"}
                         </td>
                       </tr>
@@ -279,32 +331,43 @@ export default function DomiciliosPage() {
             )}
 
             {/* Pagination */}
-            {!isLoading && domiciliosData?.data && domiciliosData.data.total_pages > 1 && (
-              <div className="flex items-center justify-between border-t border-border px-4 py-3 bg-muted/30">
-                <p className="text-xs text-muted-foreground">
-                  Mostrando {(domiciliosData.data.page - 1) * filters.page_size + 1}-
-                  {Math.min(domiciliosData.data.page * filters.page_size, domiciliosData.data.total)} de {domiciliosData.data.total}
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleFilterChange("page", filters.page - 1)}
-                    disabled={filters.page === 1}
-                  >
-                    Anterior
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleFilterChange("page", filters.page + 1)}
-                    disabled={filters.page >= domiciliosData.data.total_pages}
-                  >
-                    Siguiente
-                  </Button>
+            {!isLoading &&
+              domiciliosData?.data &&
+              domiciliosData.data.total_pages > 1 && (
+                <div className="flex items-center justify-between border-t border-border px-4 py-3 bg-muted/30">
+                  <p className="text-xs text-muted-foreground">
+                    Mostrando{" "}
+                    {(domiciliosData.data.page - 1) * filters.page_size + 1}-
+                    {Math.min(
+                      domiciliosData.data.page * filters.page_size,
+                      domiciliosData.data.total
+                    )}{" "}
+                    de {domiciliosData.data.total}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        handleFilterChange("page", filters.page - 1)
+                      }
+                      disabled={filters.page === 1}
+                    >
+                      Anterior
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        handleFilterChange("page", filters.page + 1)
+                      }
+                      disabled={filters.page >= domiciliosData.data.total_pages}
+                    >
+                      Siguiente
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
           </div>
         </main>
 
