@@ -17,7 +17,7 @@ from datetime import datetime
 from functools import cache
 from typing import Dict, List, Set, Tuple
 
-import pandas as pd
+import polars as pl
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import Session
@@ -49,7 +49,7 @@ class GeografiaBootstrapService:
     def __init__(self, session: Session):
         self.session = session
 
-    def ensure_geografia_exists(self, df: pd.DataFrame) -> None:
+    def ensure_geografia_exists(self, df: pl.DataFrame) -> None:
         """
         Asegura que toda la jerarquía geográfica del CSV existe en BD.
 
@@ -75,7 +75,7 @@ class GeografiaBootstrapService:
 
     # ===== EXTRACCIÓN DE IDs DESDE CSV =====
 
-    def _extract_provincia_ids(self, df: pd.DataFrame) -> Set[int]:
+    def _extract_provincia_ids(self, df: pl.DataFrame) -> Set[int]:
         """Extrae todos los IDs de provincia únicos del CSV."""
         provincia_ids = set()
 
@@ -85,12 +85,12 @@ class GeografiaBootstrapService:
 
         for col in prov_columns:
             if col in df.columns:
-                ids = df[col].dropna().astype('Int64').unique()
-                provincia_ids.update(int(x) for x in ids if pd.notna(x))
+                ids = df[col].drop_nulls().cast(pl.Int64).unique()
+                provincia_ids.update(int(x) for x in ids.to_list() if x is not None)
 
         return provincia_ids
 
-    def _extract_departamento_mappings(self, df: pd.DataFrame) -> Dict[int, int]:
+    def _extract_departamento_mappings(self, df: pl.DataFrame) -> Dict[int, int]:
         """
         Extrae mapeo: departamento_id → provincia_id
 
@@ -102,9 +102,9 @@ class GeografiaBootstrapService:
         for loc_col, dep_col, prov_col in GEO_COLUMN_GROUPS:
             if dep_col in df.columns and prov_col in df.columns:
                 # Obtener pares únicos (departamento, provincia)
-                pairs = df[[dep_col, prov_col]].dropna().drop_duplicates()
+                pairs = df.select([dep_col, prov_col]).drop_nulls().unique()
 
-                for _, row in pairs.iterrows():
+                for row in pairs.iter_rows(named=True):
                     dep_id = self._safe_int(row[dep_col])
                     prov_id = self._safe_int(row[prov_col])
 
@@ -113,7 +113,7 @@ class GeografiaBootstrapService:
 
         return mappings
 
-    def _extract_localidad_mappings(self, df: pd.DataFrame) -> Dict[int, int]:
+    def _extract_localidad_mappings(self, df: pl.DataFrame) -> Dict[int, int]:
         """
         Extrae mapeo: localidad_id → departamento_id
 
@@ -125,9 +125,9 @@ class GeografiaBootstrapService:
         for loc_col, dep_col, _ in GEO_COLUMN_GROUPS:
             if loc_col in df.columns and dep_col in df.columns:
                 # Obtener pares únicos (localidad, departamento)
-                pairs = df[[loc_col, dep_col]].dropna().drop_duplicates()
+                pairs = df.select([loc_col, dep_col]).drop_nulls().unique()
 
-                for _, row in pairs.iterrows():
+                for row in pairs.iter_rows(named=True):
                     loc_id = self._safe_int(row[loc_col])
                     dep_id = self._safe_int(row[dep_col])
 
@@ -136,7 +136,7 @@ class GeografiaBootstrapService:
 
         return mappings
 
-    def _extract_localidad_viaje_ids(self, df: pd.DataFrame) -> Set[int]:
+    def _extract_localidad_viaje_ids(self, df: pl.DataFrame) -> Set[int]:
         """
         Extrae IDs de localidades de viaje (sin departamento conocido).
 
@@ -145,8 +145,8 @@ class GeografiaBootstrapService:
         if 'ID_LOC_INDEC_VIAJE' not in df.columns:
             return set()
 
-        ids = df['ID_LOC_INDEC_VIAJE'].dropna().astype('Int64').unique()
-        return set(int(x) for x in ids if pd.notna(x))
+        ids = df['ID_LOC_INDEC_VIAJE'].drop_nulls().cast(pl.Int64).unique()
+        return set(int(x) for x in ids.to_list() if x is not None)
 
     # ===== CREACIÓN DE ENTIDADES =====
 
@@ -309,7 +309,7 @@ class GeografiaBootstrapService:
     @staticmethod
     def _safe_int(value) -> int | None:
         """Conversión segura a int."""
-        if pd.isna(value):
+        if value is None:
             return None
         try:
             return int(float(value))

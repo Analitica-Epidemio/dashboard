@@ -88,3 +88,4 @@ temp/
 
 # Incluir explícitamente el dominio uploads (código fuente)
 !/app/domains/uploads/
+celerybeat-schedule

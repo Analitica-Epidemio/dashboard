@@ -73,6 +73,7 @@ services:
       - .:/app:cached  # cached mejora rendimiento en macOS
       - /app/.venv      # Preservar dependencias
       - ./uploads:/app/uploads
+      - temp_uploads:/tmp/epidemio_uploads  # Archivos temporales de preview
       - playwright-cache:/ms-playwright  # Cache de browsers de Playwright
     depends_on:
       db:
@@ -127,6 +128,7 @@ services:
       - .:/app:cached
       - /app/.venv
       - ./uploads:/app/uploads
+      - temp_uploads:/tmp/epidemio_uploads  # Archivos temporales compartidos con API
     depends_on:
       db:
         condition: service_healthy
@@ -134,6 +136,36 @@ services:
         condition: service_healthy
     restart: unless-stopped
     command: ["uv", "run", "celery", "-A", "app.core.celery_app:celery_app", "worker", "--loglevel=info", "--concurrency=2", "--queues=default,file_processing,geocoding,maintenance"]
+
+  # =============================================================================
+  # Celery Beat (Scheduler para tareas periódicas)
+  # =============================================================================
+  celery_beat:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: ${COMPOSE_PROJECT_NAME:-epi}_celery_beat_dev
+    environment:
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql+asyncpg://${DB_USER:-epidemiologia_user}:${DB_PASSWORD:-epidemiologia_password}@db:5432/${DB_NAME:-epidemiologia_db}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-development_secret_key_change_in_production}
+      PYTHONPATH: /app
+      PYTHONDONTWRITEBYTECODE: 1
+      PYTHONUNBUFFERED: 1
+    volumes:
+      - .:/app:cached
+      - /app/.venv
+      - temp_uploads:/tmp/epidemio_uploads  # Para ejecutar cleanup
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    command: ["uv", "run", "celery", "-A", "app.core.celery_app:celery_app", "beat", "--loglevel=info"]
 
 # =============================================================================
 # Volúmenes con nombres descriptivos
@@ -143,6 +175,8 @@ volumes:
     name: ${COMPOSE_PROJECT_NAME:-epi}_postgres_data_dev
   redis_data:
     name: ${COMPOSE_PROJECT_NAME:-epi}_redis_data_dev
+  temp_uploads:
+    name: ${COMPOSE_PROJECT_NAME:-epi}_temp_uploads_dev
   playwright-cache:
     name: ${COMPOSE_PROJECT_NAME:-epi}_playwright_cache
 

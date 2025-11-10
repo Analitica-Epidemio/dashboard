@@ -96,6 +96,11 @@ def create_celery_app() -> Celery:
                 "schedule": 7200.0,  # Cada 2 horas
                 "options": {"queue": "maintenance"},
             },
+            "cleanup-temp-uploads": {
+                "task": "app.features.procesamiento_archivos.tasks.cleanup_temp_uploads",
+                "schedule": 3600.0,  # Cada hora
+                "options": {"queue": "maintenance"},
+            },
         },
     )
     
