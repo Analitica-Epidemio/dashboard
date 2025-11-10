@@ -1,8 +1,6 @@
 """Bulk processor for health-related data (samples, vaccines, treatments)."""
 
-from typing import Dict
-
-import pandas as pd
+import polars as pl
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.domains.atencion_medica.salud_models import (
@@ -11,7 +9,14 @@ from app.domains.atencion_medica.salud_models import (
 )
 
 from ...config.columns import Columns
-from ..shared import BulkProcessorBase, BulkOperationResult
+from ..shared import (
+    BulkOperationResult,
+    BulkProcessorBase,
+    get_or_create_catalog,
+    pl_clean_string,
+    pl_safe_date,
+    pl_safe_int,
+)
 
 
 class SaludProcessor(BulkProcessorBase):
@@ -22,77 +27,100 @@ class VacunasProcessor(BulkProcessorBase):
     """Handles vaccine operations."""
 
     def upsert_vacunas_ciudadanos(
-        self, df: pd.DataFrame, evento_mapping: Dict[int, int]
+        self, df: pl.DataFrame
     ) -> BulkOperationResult:
-        """Bulk upsert de vacunas de ciudadanos."""
+        """Bulk upsert de vacunas de ciudadanos - POLARS PURO."""
         start_time = self._get_current_timestamp()
 
-        # Filtrar registros con información de vacunas
-        vacunas_df = df[
-            df[Columns.VACUNA.name].notna()
-            | df[Columns.FECHA_APLICACION.name].notna()
-            | df[Columns.DOSIS.name].notna()
-        ]
+        # Filtrar registros con información de vacunas - POLARS LAZY
+        has_dosis = Columns.DOSIS.name in df.columns
 
-        if vacunas_df.empty:
+        vacunas_df = (
+            df.lazy()
+            .filter(
+                pl.col(Columns.VACUNA.name).is_not_null()
+                | pl.col(Columns.FECHA_APLICACION.name).is_not_null()
+                | (pl.col(Columns.DOSIS.name).is_not_null() if has_dosis else pl.lit(False))
+            )
+            .collect()
+        )
+
+        if vacunas_df.height == 0:
             return BulkOperationResult(0, 0, 0, [], 0.0)
 
-        self.logger.info(f"Bulk upserting {len(vacunas_df)} vacunas ciudadanos")
+        self.logger.info(f"Bulk upserting {vacunas_df.height} vacunas ciudadanos")
 
         # Crear catálogo de vacunas
         vacuna_mapping = self._get_or_create_vacunas(vacunas_df)
 
-        # OPTIMIZACIÓN: Procesamiento vectorizado de vacunas (80% más rápido)
-        vacunas_ciudadanos_data = []
-        errors = []
+        # POLARS PURO: Prepare data with lazy evaluation
+        timestamp = self._get_current_timestamp()
 
-        if not vacunas_df.empty:
-            vacunas_df = vacunas_df.copy()
+        # Crear mapping de vacunas para join: {vacuna_clean -> id_vacuna}
+        vacuna_df = pl.DataFrame({
+            "vacuna_clean": list(vacuna_mapping.keys()),
+            "id_vacuna": list(vacuna_mapping.values())
+        })
 
-            # Mapear IDs usando vectorización
-            vacunas_df["id_evento"] = vacunas_df[Columns.IDEVENTOCASO.name].map(
-                evento_mapping
+        # Pipeline completo con Polars
+        vacunas_prepared = (
+            vacunas_df.lazy()
+            # 1. Transformaciones básicas
+            .select([
+                pl_safe_int(Columns.CODIGO_CIUDADANO.name).alias("codigo_ciudadano"),
+                pl.col("id_evento"),
+                pl_clean_string(Columns.VACUNA.name).str.to_uppercase().alias("vacuna_clean"),
+                pl_safe_date(Columns.FECHA_APLICACION.name).alias("fecha_aplicacion"),
+                (
+                    pl.col(Columns.DOSIS.name).cast(pl.Utf8).str.strip_chars()
+                    if has_dosis
+                    else pl.lit(None, dtype=pl.Utf8)
+                ).alias("dosis"),
+                pl.lit(timestamp).alias("created_at"),
+                pl.lit(timestamp).alias("updated_at"),
+            ])
+            # 2. Join con vacuna_mapping
+            .join(
+                vacuna_df.lazy(),
+                on="vacuna_clean",
+                how="left"
             )
-            vacunas_df["vacuna_clean"] = (
-                vacunas_df[Columns.VACUNA.name].str.strip().str.upper()
+            # 4. Filtrar registros válidos (must have ciudadano, vacuna, and fecha)
+            .filter(
+                pl.col("codigo_ciudadano").is_not_null()
+                & pl.col("id_vacuna").is_not_null()
+                & pl.col("fecha_aplicacion").is_not_null()
             )
-            vacunas_df["id_vacuna"] = vacunas_df["vacuna_clean"].map(vacuna_mapping)
-            vacunas_df["dosis_clean"] = (
-                vacunas_df[Columns.DOSIS.name].astype(str).str.strip()
-            )
+            # 5. Limpiar dosis: convertir valores vacíos/nan a None
+            .with_columns([
+                pl.when(
+                    pl.col("dosis").is_null()
+                    | (pl.col("dosis") == "")
+                    | (pl.col("dosis").str.to_lowercase() == "nan")
+                    | (pl.col("dosis").str.to_lowercase() == "none")
+                )
+                .then(None)
+                .otherwise(pl.col("dosis"))
+                .alias("dosis")
+            ])
+            # 6. Seleccionar solo columnas finales
+            .select([
+                "codigo_ciudadano",
+                "id_evento",
+                "id_vacuna",
+                "fecha_aplicacion",
+                "dosis",
+                "created_at",
+                "updated_at",
+            ])
+            .collect()
+        )
 
-            # Filtrar solo vacunas válidas (debe tener codigo_ciudadano e id_vacuna)
-            valid_vacunas = vacunas_df[
-                vacunas_df[Columns.CODIGO_CIUDADANO.name].notna()
-                & vacunas_df["id_vacuna"].notna()
-                & vacunas_df[Columns.FECHA_APLICACION.name].notna()
-            ]
+        # UNA SOLA conversión to_dicts al final
+        valid_records = vacunas_prepared.to_dicts()
 
-            if not valid_vacunas.empty:
-                timestamp = self._get_current_timestamp()
-
-                # VECTORIZACIÓN COMPLETA: Aprovechar tipos ya correctos desde read_csv()
-                # - Números: YA son Int64 desde read_csv(dtype={'col': 'Int64'})
-                # - Fechas: YA son datetime64[ns] desde read_csv(parse_dates=...)
-                # ✅ NO necesitamos .astype(int) - los Int64 permiten NaN y se insertan directamente
-                from ..shared import safe_date
-
-                vacunas_ciudadanos_df = pd.DataFrame({
-                    "codigo_ciudadano": valid_vacunas[Columns.CODIGO_CIUDADANO.name],  # Ya Int64
-                    "id_vacuna": valid_vacunas["id_vacuna"],  # Ya int (mapeado desde dict)
-                    "id_evento": valid_vacunas["id_evento"],  # Ya Int64 o NaN (mapeado desde dict)
-                    # Fecha: Usar safe_date para manejar NaT correctamente
-                    "fecha_aplicacion": valid_vacunas[Columns.FECHA_APLICACION.name].apply(safe_date),
-                    "dosis": valid_vacunas["dosis_clean"].replace('nan', None).replace('', None),
-                    "created_at": timestamp,
-                    "updated_at": timestamp,
-                })
-
-                # Convertir a lista de dicts
-                vacunas_ciudadanos_data = vacunas_ciudadanos_df.to_dict('records')
-
-        if vacunas_ciudadanos_data:
-            stmt = pg_insert(VacunasCiudadano.__table__).values(vacunas_ciudadanos_data)
+        if valid_records:
+            stmt = pg_insert(VacunasCiudadano.__table__).values(valid_records)
             upsert_stmt = stmt.on_conflict_do_nothing(
                 index_elements=[
                     "codigo_ciudadano",
@@ -106,26 +134,28 @@ class VacunasProcessor(BulkProcessorBase):
         duration = (self._get_current_timestamp() - start_time).total_seconds()
 
         return BulkOperationResult(
-            inserted_count=len(vacunas_ciudadanos_data),
+            inserted_count=len(valid_records),
             updated_count=0,
             skipped_count=0,
-            errors=errors,
+            errors=[],
             duration_seconds=duration,
         )
 
     # === PRIVATE HELPER METHODS ===
 
-    def _get_or_create_vacunas(self, df: pd.DataFrame) -> Dict[str, int]:
-        """Get or create vaccine catalog entries."""
-        from ..shared import get_or_create_catalog, get_current_timestamp
+    def _get_or_create_vacunas(self, df: pl.DataFrame) -> dict[str, int]:
+        """Get or create vaccine catalog entries - POLARS PURO."""
+        # Extraer y limpiar nombres con POLARS PURO
+        df_clean = (
+            df.lazy()
+            .filter(pl.col(Columns.VACUNA.name).is_not_null())
+            .select(pl_clean_string(Columns.VACUNA.name).str.to_uppercase().alias(Columns.VACUNA.name))
+            .unique()
+            .filter(pl.col(Columns.VACUNA.name).is_not_null())  # Filtrar strings vacíos convertidos a null
+            .collect()
+        )
 
-        # Limpiar nombres primero
-        nombres_vacuna = df[Columns.VACUNA.name].dropna().unique()
-        df_clean = pd.DataFrame({
-            Columns.VACUNA.name: [self._clean_string(n) for n in nombres_vacuna if self._clean_string(n)]
-        })
-
-        if df_clean.empty:
+        if df_clean.height == 0:
             return {}
 
         return get_or_create_catalog(
@@ -136,4 +166,3 @@ class VacunasProcessor(BulkProcessorBase):
             key_field="nombre",
             name_field="nombre",
         )
-

@@ -41,8 +41,8 @@ class AsyncFileProcessingService:
         self.upload_dir.mkdir(exist_ok=True)
         self.max_file_size = 50 * 1024 * 1024  # 50MB
 
-    def validate_csv_file(self, file: UploadFile) -> None:
-        """Validar archivo CSV con límites estrictos."""
+    def validate_file(self, file: UploadFile) -> None:
+        """Validar archivo Excel o CSV con límites estrictos."""
 
         if hasattr(file, "size") and file.size and file.size > self.max_file_size:
             raise HTTPException(
@@ -50,29 +50,44 @@ class AsyncFileProcessingService:
                 detail=f"Archivo demasiado grande. Máximo: {self.max_file_size / (1024 * 1024):.0f}MB",
             )
 
-        if not file.filename or not file.filename.lower().endswith(".csv"):
-            raise HTTPException(status_code=400, detail="Solo archivos CSV permitidos")
+        if not file.filename:
+            raise HTTPException(status_code=400, detail="Nombre de archivo inválido")
 
-    async def start_csv_processing(
+        # Validar extensión (CSV o Excel)
+        ext = file.filename.lower()
+        if not (ext.endswith(".csv") or ext.endswith(".xlsx") or ext.endswith(".xls")):
+            raise HTTPException(
+                status_code=400,
+                detail="Solo archivos CSV (.csv) o Excel (.xlsx, .xls) permitidos"
+            )
+
+    async def start_file_processing(
         self,
         file: UploadFile,
         original_filename: str,
-        sheet_name: str,
+        sheet_name: Optional[str] = None,
         priority: JobPriority = JobPriority.NORMAL,
     ) -> ProcessingJob:
         """
-        Iniciar procesamiento asíncrono de CSV.
+        Iniciar procesamiento asíncrono de archivo (CSV o Excel).
+
+        Args:
+            file: Archivo a procesar (CSV o Excel)
+            original_filename: Nombre original del archivo
+            sheet_name: Nombre de la hoja (solo para Excel, None para CSV)
+            priority: Prioridad del job
 
         Returns:
             ProcessingJob: Job creado para tracking
         """
 
         file_size_mb = getattr(file, "size", 0) / 1024 / 1024
-        logger.info(f"Starting CSV processing: {original_filename} ({file_size_mb:.1f} MB)")
+        file_type = "Excel" if file.filename and file.filename.endswith(('.xlsx', '.xls')) else "CSV"
+        logger.info(f"Starting {file_type} processing: {original_filename} ({file_size_mb:.1f} MB)")
 
         try:
             # Validaciones previas
-            self.validate_csv_file(file)
+            self.validate_file(file)
 
             # Crear y persistir job
             job = ProcessingJob(
@@ -106,8 +121,26 @@ class AsyncFileProcessingService:
             return created_job
 
         except Exception as e:
-            logger.error(f"Error in start_csv_processing: {str(e)}", exc_info=True)
+            logger.error(f"Error in start_file_processing: {str(e)}", exc_info=True)
             raise
+
+    async def start_csv_processing(
+        self,
+        file: UploadFile,
+        original_filename: str,
+        sheet_name: str,
+        priority: JobPriority = JobPriority.NORMAL,
+    ) -> ProcessingJob:
+        """
+        LEGACY: Mantener por backward compatibility.
+        Usa start_file_processing internamente.
+        """
+        return await self.start_file_processing(
+            file=file,
+            original_filename=original_filename,
+            sheet_name=sheet_name,
+            priority=priority
+        )
 
     async def get_job_status(self, job_id: str) -> Optional[JobStatusResponse]:
         """
@@ -169,15 +202,22 @@ class AsyncFileProcessingService:
         return True
 
     async def _save_temp_file(
-        self, file: UploadFile, job_id: str, sheet_name: str
+        self, file: UploadFile, job_id: str, sheet_name: Optional[str]
     ) -> Path:
-        """Guardar archivo temporal para procesamiento."""
+        """Guardar archivo temporal con la extensión correcta (CSV o Excel)."""
+
+        # Detectar extensión del archivo original
+        original_ext = Path(file.filename).suffix.lower() if file.filename else '.csv'
 
         # Nombre único para el archivo
-        clean_sheet = "".join(
-            c for c in sheet_name if c.isalnum() or c in (" ", "-", "_")
-        ).strip()
-        filename = f"{job_id}_{clean_sheet}.csv"
+        if sheet_name:
+            clean_sheet = "".join(
+                c for c in sheet_name if c.isalnum() or c in (" ", "-", "_")
+            ).strip()
+            filename = f"{job_id}_{clean_sheet}{original_ext}"
+        else:
+            filename = f"{job_id}{original_ext}"
+
         file_path = self.upload_dir / filename
 
         try:
@@ -185,7 +225,7 @@ class AsyncFileProcessingService:
                 content = await file.read()
                 buffer.write(content)
 
-            logger.debug(f"Archivo temporal guardado: {file_path}")
+            logger.debug(f"Archivo guardado: {file_path} (formato: {original_ext})")
             return file_path
 
         except Exception as e:

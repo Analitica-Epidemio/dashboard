@@ -1,104 +1,109 @@
-"""Bulk processor for hospitalization events."""
+"""Bulk processor for hospitalization events - POLARS PURO."""
 
-from typing import Dict
-
-import pandas as pd
+import polars as pl
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.domains.atencion_medica.diagnosticos_models import InternacionEvento
 
 from ...config.columns import Columns
-from ..shared import BulkProcessorBase, BulkOperationResult
+from ..shared import (
+    BulkProcessorBase,
+    BulkOperationResult,
+    pl_safe_int,
+    pl_safe_date,
+    pl_map_boolean,
+    pl_clean_string,
+)
 
 
 class InternacionesProcessor(BulkProcessorBase):
     """Handles hospitalization event operations."""
 
     def upsert_internaciones_eventos(
-        self, df: pd.DataFrame, evento_mapping: Dict[int, int]
+        self, df: pl.DataFrame
     ) -> BulkOperationResult:
-        """Bulk upsert de internaciones de eventos."""
+        """Bulk upsert de internaciones de eventos - POLARS PURO con lazy evaluation."""
         start_time = self._get_current_timestamp()
 
-        # Filtrar registros con información de internaciones
-        internaciones_df = df[
-            df[Columns.FECHA_INTERNACION.name].notna()
-            | df[Columns.FECHA_ALTA_MEDICA.name].notna()
-            | df[Columns.CUIDADO_INTENSIVO.name].notna()
-            | df[Columns.FECHA_CUI_INTENSIVOS.name].notna()
-        ]
+        # Construir filtro de columnas existentes
+        filter_conditions = []
+        if Columns.FECHA_INTERNACION.name in df.columns:
+            filter_conditions.append(pl.col(Columns.FECHA_INTERNACION.name).is_not_null())
+        if Columns.FECHA_ALTA_MEDICA.name in df.columns:
+            filter_conditions.append(pl.col(Columns.FECHA_ALTA_MEDICA.name).is_not_null())
+        if Columns.CUIDADO_INTENSIVO.name in df.columns:
+            filter_conditions.append(pl.col(Columns.CUIDADO_INTENSIVO.name).is_not_null())
+        if Columns.FECHA_CUI_INTENSIVOS.name in df.columns:
+            filter_conditions.append(pl.col(Columns.FECHA_CUI_INTENSIVOS.name).is_not_null())
 
-        if internaciones_df.empty:
+        # Si no hay columnas de internaciones, retornar vacío
+        if not filter_conditions:
             return BulkOperationResult(0, 0, 0, [], 0.0)
 
-        self.logger.info(f"Bulk upserting {len(internaciones_df)} internaciones")
+        # Combinar condiciones con OR
+        combined_filter = filter_conditions[0]
+        for condition in filter_conditions[1:]:
+            combined_filter = combined_filter | condition
 
-        # OPTIMIZACIÓN: Procesamiento vectorizado de internaciones (80% más rápido)
-        internaciones_data = []
-        errors = []
+        # POLARS LAZY: Filtrar y preparar datos en una sola pipeline
+        timestamp = self._get_current_timestamp()
 
-        if not internaciones_df.empty:
-            internaciones_df = internaciones_df.copy()
-
-            # Mapear IDs usando vectorización
-            internaciones_df["id_evento"] = internaciones_df[Columns.IDEVENTOCASO.name].map(
-                evento_mapping
+        # Pipeline completa con lazy evaluation
+        # NOTA: id_evento ya viene del JOIN en main.py, no necesitamos crearlo aquí
+        internaciones_prepared = (
+            df.lazy()
+            .filter(combined_filter)
+            # Filtrar solo registros con id_evento válido (ya viene del JOIN en main.py)
+            .filter(pl.col("id_evento").is_not_null())
+            # Seleccionar y transformar todas las columnas en una sola operación
+            .select([
+                pl.col("id_evento"),
+                # Booleans: usar pl_map_boolean helper
+                (pl_map_boolean(Columns.INTERNADO.name) if Columns.INTERNADO.name in df.columns else pl.lit(None)).alias("fue_internado"),
+                (pl_map_boolean(Columns.CURADO.name) if Columns.CURADO.name in df.columns else pl.lit(None)).alias("fue_curado"),
+                (pl_map_boolean(Columns.CUIDADO_INTENSIVO.name) if Columns.CUIDADO_INTENSIVO.name in df.columns else pl.lit(None)).alias("requirio_cuidado_intensivo"),
+                (pl_map_boolean(Columns.FALLECIDO.name) if Columns.FALLECIDO.name in df.columns else pl.lit(None)).alias("es_fallecido"),
+                # Fechas: usar pl_safe_date helper
+                (pl_safe_date(Columns.FECHA_INTERNACION.name) if Columns.FECHA_INTERNACION.name in df.columns else pl.lit(None)).alias("fecha_internacion"),
+                (pl_safe_date(Columns.FECHA_ALTA_MEDICA.name) if Columns.FECHA_ALTA_MEDICA.name in df.columns else pl.lit(None)).alias("fecha_alta_medica"),
+                (pl_safe_date(Columns.FECHA_CUI_INTENSIVOS.name) if Columns.FECHA_CUI_INTENSIVOS.name in df.columns else pl.lit(None)).alias("fecha_cuidados_intensivos"),
+                (pl_safe_date(Columns.FECHA_FALLECIMIENTO.name) if Columns.FECHA_FALLECIMIENTO.name in df.columns else pl.lit(None)).alias("fecha_fallecimiento"),
+                # String: usar pl_clean_string helper
+                (pl_clean_string(Columns.ESTABLECIMIENTO_INTERNACION.name) if Columns.ESTABLECIMIENTO_INTERNACION.name in df.columns else pl.lit(None)).alias("establecimiento_internacion"),
+                # Timestamps
+                pl.lit(timestamp).alias("created_at"),
+                pl.lit(timestamp).alias("updated_at"),
+            ])
+            # Filtrar registros que tienen al menos un dato relevante
+            .filter(
+                pl.col("fecha_internacion").is_not_null()
+                | pl.col("fecha_alta_medica").is_not_null()
+                | pl.col("requirio_cuidado_intensivo").is_not_null()
+                | pl.col("fecha_cuidados_intensivos").is_not_null()
             )
+            .collect()  # Ejecutar la pipeline lazy
+        )
 
-            # Filtrar solo internaciones válidas (tienen id_evento y al menos un campo relevante)
-            valid_internaciones = internaciones_df[
-                internaciones_df["id_evento"].notna()
-                & (
-                    internaciones_df[Columns.FECHA_INTERNACION.name].notna()
-                    | internaciones_df[Columns.FECHA_ALTA_MEDICA.name].notna()
-                    | internaciones_df[Columns.CUIDADO_INTENSIVO.name].notna()
-                    | internaciones_df[Columns.FECHA_CUI_INTENSIVOS.name].notna()
-                )
-            ]
+        if internaciones_prepared.height == 0:
+            return BulkOperationResult(0, 0, 0, [], 0.0)
 
-            if not valid_internaciones.empty:
-                timestamp = self._get_current_timestamp()
-                internaciones_data = valid_internaciones.apply(
-                    lambda row: {
-                        "id_evento": int(row["id_evento"]),
-                        "fue_internado": self._safe_bool(row.get(Columns.INTERNADO.name)),
-                        "fue_curado": self._safe_bool(row.get(Columns.CURADO.name)),
-                        "fecha_internacion": self._safe_date(
-                            row.get(Columns.FECHA_INTERNACION.name)
-                        ),
-                        "fecha_alta_medica": self._safe_date(
-                            row.get(Columns.FECHA_ALTA_MEDICA.name)
-                        ),
-                        "requirio_cuidado_intensivo": self._safe_bool(
-                            row.get(Columns.CUIDADO_INTENSIVO.name)
-                        ),
-                        "fecha_cuidados_intensivos": self._safe_date(
-                            row.get(Columns.FECHA_CUI_INTENSIVOS.name)
-                        ),
-                        "establecimiento_internacion": self._clean_string(
-                            row.get(Columns.ESTABLECIMIENTO_INTERNACION.name)
-                        ),
-                        "es_fallecido": self._safe_bool(row.get(Columns.FALLECIDO.name)),
-                        "fecha_fallecimiento": self._safe_date(
-                            row.get(Columns.FECHA_FALLECIMIENTO.name)
-                        ),
-                        "created_at": timestamp,
-                        "updated_at": timestamp,
-                    },
-                    axis=1,
-                ).tolist()
+        self.logger.info(f"Bulk upserting {internaciones_prepared.height} internaciones")
 
-        if internaciones_data:
-            stmt = pg_insert(InternacionEvento.__table__).values(internaciones_data)
+        # Convertir a dicts para inserción
+        valid_records = internaciones_prepared.to_dicts()
+
+        # Insertar en BD
+        if valid_records:
+            stmt = pg_insert(InternacionEvento.__table__).values(valid_records)
             upsert_stmt = stmt.on_conflict_do_nothing(index_elements=["id_evento"])
             self.context.session.execute(upsert_stmt)
 
         duration = (self._get_current_timestamp() - start_time).total_seconds()
 
         return BulkOperationResult(
-            inserted_count=len(internaciones_data),
+            inserted_count=len(valid_records),
             updated_count=0,
             skipped_count=0,
-            errors=errors,
+            errors=[],
             duration_seconds=duration,
         )

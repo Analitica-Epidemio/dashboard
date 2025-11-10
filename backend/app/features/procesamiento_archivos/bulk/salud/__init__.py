@@ -15,7 +15,7 @@ USAGE:
 
 from typing import Dict
 
-import pandas as pd
+import polars as pl
 
 from ..shared import BulkOperationResult
 
@@ -39,16 +39,16 @@ class SaludManager:
 
     # Delegate methods to sub-processors
     def upsert_muestras_eventos(
-        self, df: pd.DataFrame, establecimiento_mapping: Dict[str, int], evento_mapping: Dict[int, int]
+        self, df: pl.DataFrame, establecimiento_mapping: Dict[str, int], evento_mapping: Dict[int, int]
     ) -> BulkOperationResult:
         """Bulk upsert event samples."""
         return self.muestras.upsert_muestras_eventos(df, establecimiento_mapping, evento_mapping)
 
     def upsert_vacunas_ciudadanos(
-        self, df: pd.DataFrame, evento_mapping: Dict[int, int]
+        self, df: pl.DataFrame
     ) -> BulkOperationResult:
         """Bulk upsert citizen vaccines."""
-        return self.vacunas.upsert_vacunas_ciudadanos(df, evento_mapping)
+        return self.vacunas.upsert_vacunas_ciudadanos(df)
 
 
 __all__ = [

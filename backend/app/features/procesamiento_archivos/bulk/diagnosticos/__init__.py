@@ -11,15 +11,13 @@ USAGE:
   from bulk.diagnosticos import DiagnosticosProcessor
 
   processor = DiagnosticosProcessor(context, logger)
-  processor.upsert_diagnosticos_eventos(df, evento_mapping)
-  processor.upsert_estudios_eventos(df, evento_mapping)
-  processor.upsert_tratamientos_eventos(df, evento_mapping)
-  processor.upsert_internaciones_eventos(df, evento_mapping)
+  processor.upsert_diagnosticos_eventos(df)
+  processor.upsert_estudios_eventos(df)
+  processor.upsert_tratamientos_eventos(df)
+  processor.upsert_internaciones_eventos(df)
 """
 
-from typing import Dict
-
-import pandas as pd
+import polars as pl
 
 from ..shared import BulkOperationResult
 
@@ -47,28 +45,28 @@ class DiagnosticosProcessor:
 
     # Delegate methods to sub-processors
     def upsert_diagnosticos_eventos(
-        self, df: pd.DataFrame, evento_mapping: Dict[int, int]
+        self, df: pl.DataFrame
     ) -> BulkOperationResult:
         """Bulk upsert diagnostic events."""
-        return self.diagnosticos.upsert_diagnosticos_eventos(df, evento_mapping)
+        return self.diagnosticos.upsert_diagnosticos_eventos(df)
 
     def upsert_estudios_eventos(
-        self, df: pd.DataFrame, evento_mapping: Dict[int, int]
+        self, df: pl.DataFrame
     ) -> BulkOperationResult:
         """Bulk upsert study events."""
-        return self.estudios.upsert_estudios_eventos(df, evento_mapping)
+        return self.estudios.upsert_estudios_eventos(df)
 
     def upsert_tratamientos_eventos(
-        self, df: pd.DataFrame, evento_mapping: Dict[int, int]
+        self, df: pl.DataFrame
     ) -> BulkOperationResult:
         """Bulk upsert treatment events."""
-        return self.tratamientos.upsert_tratamientos_eventos(df, evento_mapping)
+        return self.tratamientos.upsert_tratamientos_eventos(df)
 
     def upsert_internaciones_eventos(
-        self, df: pd.DataFrame, evento_mapping: Dict[int, int]
+        self, df: pl.DataFrame
     ) -> BulkOperationResult:
         """Bulk upsert hospitalization events."""
-        return self.internaciones.upsert_internaciones_eventos(df, evento_mapping)
+        return self.internaciones.upsert_internaciones_eventos(df)
 
 
 __all__ = [

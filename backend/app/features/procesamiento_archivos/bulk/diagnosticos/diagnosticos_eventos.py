@@ -1,125 +1,172 @@
-"""Bulk processor for diagnostic events."""
+"""Bulk processor for diagnostic events - POLARS PURO."""
 
-from typing import Dict
-
-import pandas as pd
+import polars as pl
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.domains.atencion_medica.diagnosticos_models import DiagnosticoEvento
 
 from ...config.columns import Columns
-from ..shared import BulkProcessorBase, BulkOperationResult
+from ..shared import BulkOperationResult, BulkProcessorBase
 
 
 class DiagnosticosEventosProcessor(BulkProcessorBase):
     """Handles diagnostic event operations."""
 
     def upsert_diagnosticos_eventos(
-        self, df: pd.DataFrame, evento_mapping: Dict[int, int]
+        self, df: pl.DataFrame
     ) -> BulkOperationResult:
-        """Bulk upsert de diagnósticos de eventos."""
+        """Bulk upsert de diagnósticos de eventos - POLARS PURO."""
         start_time = self._get_current_timestamp()
 
-        # Filtrar registros con información de diagnóstico
-        diagnosticos_df = df[
-            df[Columns.CLASIFICACION_MANUAL.name].notna()
-            | df[Columns.CLASIFICACION_AUTOMATICA.name].notna()
-            | df[Columns.DIAG_REFERIDO.name].notna()
-        ]
+        # Filtrar registros con información de diagnóstico - POLARS
+        has_clasif_manual = Columns.CLASIFICACION_MANUAL.name in df.columns
+        has_clasif_auto = Columns.CLASIFICACION_AUTOMATICA.name in df.columns
+        has_diag_referido = Columns.DIAG_REFERIDO.name in df.columns
 
-        if diagnosticos_df.empty:
+        filter_expr = pl.lit(False)
+        if has_clasif_manual:
+            filter_expr = filter_expr | pl.col(Columns.CLASIFICACION_MANUAL.name).is_not_null()
+        if has_clasif_auto:
+            filter_expr = filter_expr | pl.col(Columns.CLASIFICACION_AUTOMATICA.name).is_not_null()
+        if has_diag_referido:
+            filter_expr = filter_expr | pl.col(Columns.DIAG_REFERIDO.name).is_not_null()
+
+        diagnosticos_df = df.filter(filter_expr)
+
+        if diagnosticos_df.height == 0:
             return BulkOperationResult(0, 0, 0, [], 0.0)
 
-        self.logger.info(f"Bulk upserting {len(diagnosticos_df)} diagnósticos")
+        self.logger.info(f"Bulk upserting {diagnosticos_df.height} diagnósticos")
 
-        # OPTIMIZACIÓN: Procesamiento vectorizado de diagnósticos (80% más rápido)
-        diagnosticos_data = []
-        errors = []
+        # POLARS: Preparar data con lazy evaluation
+        timestamp = self._get_current_timestamp()
 
-        if not diagnosticos_df.empty:
-            diagnosticos_df = diagnosticos_df.copy()
+        # Construir selección dinámica basada en columnas disponibles
+        # NOTE: id_evento already added by main.py via JOIN, use it directly
+        select_exprs = [
+            pl.col("id_evento"),
+        ]
 
-            # Mapear IDs usando vectorización
-            diagnosticos_df["id_evento"] = diagnosticos_df[Columns.IDEVENTOCASO.name].map(
-                evento_mapping
+        # Clasificación manual
+        if has_clasif_manual:
+            select_exprs.append(
+                pl.col(Columns.CLASIFICACION_MANUAL.name)
+                .cast(pl.Utf8)
+                .str.strip_chars()
+                .replace("", None)
+                .replace("nan", None)
+                .replace("None", None)
+                .alias("clasificacion_manual")
             )
+        else:
+            select_exprs.append(pl.lit(None).alias("clasificacion_manual"))
 
-            # Limpiar strings con operaciones vectorizadas
-            diagnosticos_df["clasif_manual_clean"] = (
-                diagnosticos_df[Columns.CLASIFICACION_MANUAL.name].astype(str).str.strip()
+        # Clasificación automática
+        if has_clasif_auto:
+            select_exprs.append(
+                pl.col(Columns.CLASIFICACION_AUTOMATICA.name)
+                .cast(pl.Utf8)
+                .str.strip_chars()
+                .replace("", None)
+                .replace("nan", None)
+                .replace("None", None)
+                .alias("clasificacion_automatica")
             )
-            diagnosticos_df["clasif_auto_clean"] = (
-                diagnosticos_df[Columns.CLASIFICACION_AUTOMATICA.name]
-                .astype(str)
-                .str.strip()
+        else:
+            select_exprs.append(pl.lit(None).alias("clasificacion_automatica"))
+
+        # Diagnóstico referido
+        if has_diag_referido:
+            select_exprs.append(
+                pl.col(Columns.DIAG_REFERIDO.name)
+                .cast(pl.Utf8)
+                .str.strip_chars()
+                .replace("", None)
+                .replace("nan", None)
+                .replace("None", None)
+                .alias("diagnostico_referido")
             )
-            diagnosticos_df["diag_referido_clean"] = (
-                diagnosticos_df[Columns.DIAG_REFERIDO.name].astype(str).str.strip()
+        else:
+            select_exprs.append(pl.lit(None).alias("diagnostico_referido"))
+
+        # Clasificación algoritmo (opcional)
+        if Columns.CLASIFICACION_ALGORITMO.name in diagnosticos_df.columns:
+            select_exprs.append(
+                pl.col(Columns.CLASIFICACION_ALGORITMO.name)
+                .str.strip_chars()
+                .replace("", None)
+                .alias("clasificacion_algoritmo")
             )
+        else:
+            select_exprs.append(pl.lit(None).alias("clasificacion_algoritmo"))
 
-            # Filtrar solo diagnósticos válidos (tienen id_evento y al menos un campo relevante)
-            valid_diagnosticos = diagnosticos_df[
-                diagnosticos_df["id_evento"].notna()
-                & (
-                    (
-                        diagnosticos_df["clasif_manual_clean"].notna()
-                        & (diagnosticos_df["clasif_manual_clean"] != "nan")
-                    )
-                    | (
-                        diagnosticos_df["clasif_auto_clean"].notna()
-                        & (diagnosticos_df["clasif_auto_clean"] != "nan")
-                    )
-                    | (
-                        diagnosticos_df["diag_referido_clean"].notna()
-                        & (diagnosticos_df["diag_referido_clean"] != "nan")
-                    )
-                )
-            ]
+        # Validación (opcional)
+        if Columns.VALIDACION.name in diagnosticos_df.columns:
+            select_exprs.append(
+                pl.col(Columns.VALIDACION.name)
+                .str.strip_chars()
+                .replace("", None)
+                .alias("validacion")
+            )
+        else:
+            select_exprs.append(pl.lit(None).alias("validacion"))
 
-            if not valid_diagnosticos.empty:
-                timestamp = self._get_current_timestamp()
-                diagnosticos_data = valid_diagnosticos.apply(
-                    lambda row: {
-                        "id_evento": int(row["id_evento"]),
-                        "clasificacion_manual": (
-                            row["clasif_manual_clean"]
-                            if row["clasif_manual_clean"] not in ["nan", "", None]
-                            else "Sin clasificar"
-                        ),
-                        "clasificacion_automatica": (
-                            row["clasif_auto_clean"]
-                            if row["clasif_auto_clean"] not in ["nan", "", None]
-                            else None
-                        ),
-                        "clasificacion_algoritmo": self._clean_string(
-                            row.get(Columns.CLASIFICACION_ALGORITMO.name)
-                        ),
-                        "validacion": self._clean_string(row.get(Columns.VALIDACION.name)),
-                        "diagnostico_referido": (
-                            row["diag_referido_clean"]
-                            if row["diag_referido_clean"] not in ["nan", "", None]
-                            else None
-                        ),
-                        "fecha_diagnostico_referido": self._safe_date(
-                            row.get(Columns.FECHA_DIAG_REFERIDO.name)
-                        ),
-                        "created_at": timestamp,
-                        "updated_at": timestamp,
-                    },
-                    axis=1,
-                ).tolist()
+        # Timestamps
+        select_exprs.extend([
+            pl.lit(timestamp).alias("created_at"),
+            pl.lit(timestamp).alias("updated_at"),
+        ])
 
-        if diagnosticos_data:
-            stmt = pg_insert(DiagnosticoEvento.__table__).values(diagnosticos_data)
-            upsert_stmt = stmt.on_conflict_do_nothing(index_elements=["id_evento"])
+        # Aplicar selección
+        diagnosticos_prepared = diagnosticos_df.select(select_exprs)
+
+        # Filtrar registros que tienen al menos un campo de diagnóstico válido - POLARS PURO
+        # Also filter out records without id_evento (left join nulls from main.py)
+        diagnosticos_valid = diagnosticos_prepared.filter(
+            (pl.col("id_evento").is_not_null())
+            & (
+                pl.col("clasificacion_manual").is_not_null()
+                | pl.col("clasificacion_automatica").is_not_null()
+                | pl.col("diagnostico_referido").is_not_null()
+            )
+        )
+
+        # Aplicar default "Sin clasificar" para clasificacion_manual si es null
+        diagnosticos_final = diagnosticos_valid.with_columns(
+            pl.when(pl.col("clasificacion_manual").is_null())
+            .then(pl.lit("Sin clasificar"))
+            .otherwise(pl.col("clasificacion_manual"))
+            .alias("clasificacion_manual")
+        )
+
+        # IMPORTANTE: Remover duplicados por id_evento (relación 1:1 con evento)
+        # Si hay múltiples filas por evento, quedarse con la última
+        diagnosticos_insert = diagnosticos_final.unique(subset=["id_evento"], keep="last")
+
+        # Convertir a dicts para insert
+        valid_records = diagnosticos_insert.to_dicts()
+
+        if valid_records:
+            stmt = pg_insert(DiagnosticoEvento.__table__).values(valid_records)
+            upsert_stmt = stmt.on_conflict_do_update(
+                index_elements=["id_evento"],
+                set_={
+                    "clasificacion_manual": stmt.excluded.clasificacion_manual,
+                    "clasificacion_automatica": stmt.excluded.clasificacion_automatica,
+                    "clasificacion_algoritmo": stmt.excluded.clasificacion_algoritmo,
+                    "validacion": stmt.excluded.validacion,
+                    "diagnostico_referido": stmt.excluded.diagnostico_referido,
+                    "updated_at": self._get_current_timestamp(),
+                },
+            )
             self.context.session.execute(upsert_stmt)
 
         duration = (self._get_current_timestamp() - start_time).total_seconds()
 
         return BulkOperationResult(
-            inserted_count=len(diagnosticos_data),
+            inserted_count=len(valid_records),
             updated_count=0,
             skipped_count=0,
-            errors=errors,
+            errors=[],
             duration_seconds=duration,
         )

@@ -1,85 +1,94 @@
-"""Main processor for citizen operations."""
+"""Main processor for citizen operations - Polars puro optimizado."""
 
-from typing import Dict
-
-import pandas as pd
+import polars as pl
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.domains.sujetos_epidemiologicos.ciudadanos_models import Ciudadano
 
 from ...config.columns import Columns
-from ..shared import BulkProcessorBase, BulkOperationResult
+from ..shared import (
+    BulkProcessorBase,
+    BulkOperationResult,
+    pl_safe_int,
+    pl_clean_string,
+    pl_safe_date,
+    pl_map_sexo,
+    pl_map_tipo_documento,
+    pl_map_boolean,
+)
 
 
 class CiudadanosProcessor(BulkProcessorBase):
     """Handles core citizen bulk operations."""
 
-    def upsert_ciudadanos(self, df: pd.DataFrame) -> BulkOperationResult:
-        """Bulk upsert citizens using PostgreSQL ON CONFLICT."""
+    def upsert_ciudadanos(self, df: pl.DataFrame) -> BulkOperationResult:
+        """
+        Bulk upsert citizens usando Polars puro + lazy evaluation.
+
+        OPTIMIZACIONES:
+        - Lazy evaluation para query optimization
+        - Sin casts redundantes (Polars infiere tipos)
+        - Sin loops Python (todo en expresiones Polars)
+        - Conversiones en una sola pasada
+        """
         start_time = self._get_current_timestamp()
-
-        # Filter unique records
-        ciudadanos_df = df.dropna(
-            subset=[Columns.CODIGO_CIUDADANO.name]
-        ).drop_duplicates(subset=[Columns.CODIGO_CIUDADANO.name])
-
-        if ciudadanos_df.empty:
-            return BulkOperationResult(0, 0, 0, [], 0.0)
-
-        # VECTORIZED PROCESSING (10-50x faster than .apply())
-        # Convert entire columns at once instead of row-by-row
         timestamp = self._get_current_timestamp()
 
-        # Build dict using pure vectorization (no .apply!)
-        from ..shared import safe_date
+        # LAZY EVALUATION - Polars optimiza todo el query plan
+        ciudadanos_prepared = (
+            df.lazy()
+            .filter(pl.col(Columns.CODIGO_CIUDADANO.name).is_not_null())
+            .unique(subset=[Columns.CODIGO_CIUDADANO.name])
+            .select([
+                # IDs y campos numéricos - solo cast si es necesario
+                pl_safe_int(Columns.CODIGO_CIUDADANO.name).alias("codigo_ciudadano"),
+                pl_safe_int(Columns.NRO_DOC.name).alias("numero_documento"),
 
-        ciudadanos_data = {
-            "codigo_ciudadano": pd.to_numeric(
-                ciudadanos_df[Columns.CODIGO_CIUDADANO.name], errors="coerce"
-            ).astype("Int64"),
-            "nombre": ciudadanos_df[Columns.NOMBRE.name].str.strip().replace("", None),
-            "apellido": ciudadanos_df[Columns.APELLIDO.name]
-            .str.strip()
-            .replace("", None),
-            "tipo_documento": ciudadanos_df[Columns.TIPO_DOC.name].map(
-                lambda x: self._map_tipo_documento(x) if pd.notna(x) else None
-            ),
-            "numero_documento": pd.to_numeric(
-                ciudadanos_df[Columns.NRO_DOC.name], errors="coerce"
-            ).astype("Int64"),
-            "fecha_nacimiento": ciudadanos_df[Columns.FECHA_NACIMIENTO.name].apply(
-                safe_date
-            ),
-            "sexo_biologico": ciudadanos_df[Columns.SEXO.name].map(
-                lambda x: self._map_sexo(x) if pd.notna(x) else None
-            ),
-            "sexo_biologico_al_nacer": ciudadanos_df[Columns.SEXO_AL_NACER.name].map(
-                lambda x: self._map_sexo(x) if pd.notna(x) else None
-            ),
-            "genero_autopercibido": (
-                ciudadanos_df[Columns.GENERO.name].str.strip()
-                if Columns.GENERO in ciudadanos_df
-                else None
-            ),
-            "etnia": (
-                ciudadanos_df[Columns.ETNIA.name].str.strip()
-                if Columns.ETNIA in ciudadanos_df
-                else None
-            ),
-            "created_at": timestamp,
-            "updated_at": timestamp,
-        }
+                # Strings - solo strip, sin cast innecesario
+                pl_clean_string(Columns.NOMBRE.name).alias("nombre"),
+                pl_clean_string(Columns.APELLIDO.name).alias("apellido"),
 
-        # Fallback: use sexo_biologico if sexo_al_nacer is missing
-        mask_missing = ciudadanos_data["sexo_biologico_al_nacer"].isna()
-        ciudadanos_data["sexo_biologico_al_nacer"] = ciudadanos_data[
-            "sexo_biologico_al_nacer"
-        ].where(~mask_missing, ciudadanos_data["sexo_biologico"])
+                # Enums - mapeo directo en Polars (sin loops Python)
+                pl_map_tipo_documento(Columns.TIPO_DOC.name).alias("tipo_documento"),
+                pl_map_sexo(Columns.SEXO.name).alias("sexo_biologico"),
+                pl_map_sexo(Columns.SEXO_AL_NACER.name).alias("sexo_biologico_al_nacer"),
 
-        # Convert to list of dicts for PostgreSQL bulk insert
-        ciudadanos_data = pd.DataFrame(ciudadanos_data).to_dict("records")
+                # Fechas
+                pl_safe_date(Columns.FECHA_NACIMIENTO.name).alias("fecha_nacimiento"),
 
-        # PostgreSQL UPSERT with conflict resolution
+                # Opcionales con coalesce
+                (
+                    pl_clean_string(Columns.GENERO.name)
+                    if Columns.GENERO.name in df.columns
+                    else pl.lit(None)
+                ).alias("genero_autopercibido"),
+                (
+                    pl_clean_string(Columns.ETNIA.name)
+                    if Columns.ETNIA.name in df.columns
+                    else pl.lit(None)
+                ).alias("etnia"),
+
+                # Timestamps
+                pl.lit(timestamp).alias("created_at"),
+                pl.lit(timestamp).alias("updated_at"),
+            ])
+            .with_columns([
+                # Coalesce: si sexo_al_nacer es null, usar sexo_biologico
+                pl.when(pl.col("sexo_biologico_al_nacer").is_null())
+                  .then(pl.col("sexo_biologico"))
+                  .otherwise(pl.col("sexo_biologico_al_nacer"))
+                  .alias("sexo_biologico_al_nacer")
+            ])
+            .collect()  # Aquí se ejecuta todo el query plan optimizado
+        )
+
+        if ciudadanos_prepared.height == 0:
+            return BulkOperationResult(0, 0, 0, [], 0.0)
+
+        # Convertir a dicts para SQL insert (única conversión necesaria)
+        ciudadanos_data = ciudadanos_prepared.to_dicts()
+
+        # PostgreSQL UPSERT
         stmt = pg_insert(Ciudadano.__table__).values(ciudadanos_data)
         upsert_stmt = stmt.on_conflict_do_update(
             index_elements=["codigo_ciudadano"],
@@ -110,78 +119,80 @@ class CiudadanosProcessor(BulkProcessorBase):
         )
 
     def upsert_ciudadanos_datos(
-        self, df: pd.DataFrame, evento_mapping: Dict[int, int]
+        self, df: pl.DataFrame
     ) -> BulkOperationResult:
-        """Bulk upsert of CiudadanoDatos with foreign key to Evento."""
+        """
+        Bulk upsert of CiudadanoDatos - OPTIMIZADO con Polars puro.
+
+        OPTIMIZACIONES:
+        - Lazy evaluation
+        - Mapeo de booleans en Polars (no en Python)
+        - Usa id_evento directamente desde df (ya viene del JOIN en main.py)
+        """
         from app.domains.sujetos_epidemiologicos.ciudadanos_models import CiudadanoDatos
 
         start_time = self._get_current_timestamp()
 
-        datos_df = df.dropna(
-            subset=[Columns.CODIGO_CIUDADANO.name, Columns.IDEVENTOCASO.name]
+        # LAZY EVALUATION - id_evento ya existe en df desde main.py
+        datos_prepared = (
+            df.lazy()
+            .filter(
+                pl.col(Columns.CODIGO_CIUDADANO.name).is_not_null()
+                & pl.col("id_evento").is_not_null()
+            )
+            .select([
+                pl_safe_int(Columns.CODIGO_CIUDADANO.name).alias("codigo_ciudadano"),
+                pl.col("id_evento"),  # Ya existe desde el JOIN en main.py
+
+                # Strings opcionales
+                (
+                    pl_clean_string(Columns.COBERTURA_SOCIAL.name)
+                    if Columns.COBERTURA_SOCIAL.name in df.columns
+                    else pl.lit(None)
+                ).alias("cobertura_social_obra_social"),
+                (
+                    pl_clean_string(Columns.OCUPACION.name)
+                    if Columns.OCUPACION.name in df.columns
+                    else pl.lit(None)
+                ).alias("ocupacion_laboral"),
+                (
+                    pl_clean_string(Columns.INFO_CONTACTO.name)
+                    if Columns.INFO_CONTACTO.name in df.columns
+                    else pl.lit(None)
+                ).alias("informacion_contacto"),
+
+                # Numéricos opcionales
+                (
+                    pl_safe_int(Columns.EDAD_ACTUAL.name)
+                    if Columns.EDAD_ACTUAL.name in df.columns
+                    else pl.lit(None)
+                ).alias("edad_anos_actual"),
+
+                # Booleans - mapeo en Polars (sin loops)
+                (
+                    pl_map_boolean(Columns.SE_DECLARA_PUEBLO_INDIGENA.name)
+                    if Columns.SE_DECLARA_PUEBLO_INDIGENA.name in df.columns
+                    else pl.lit(None)
+                ).alias("es_declarado_pueblo_indigena"),
+                (
+                    pl_map_boolean(Columns.EMBARAZADA.name)
+                    if Columns.EMBARAZADA.name in df.columns
+                    else pl.lit(None)
+                ).alias("es_embarazada"),
+
+                pl.lit(self._get_current_timestamp()).alias("created_at"),
+                pl.lit(self._get_current_timestamp()).alias("updated_at"),
+            ])
+            .collect()
         )
 
-        if datos_df.empty:
+        if datos_prepared.height == 0:
             return BulkOperationResult(0, 0, 0, [], 0.0)
 
-        # VECTORIZED: Process citizen data (10-50x faster than .apply())
-        datos_df = datos_df.copy()
+        # Convertir a dicts para SQL
+        datos_data = datos_prepared.to_dicts()
 
-        # Map event IDs vectorially
-        datos_df["id_evento"] = datos_df[Columns.IDEVENTOCASO.name].map(evento_mapping)
-
-        # Filter only records with valid event
-        valid_datos = datos_df[datos_df["id_evento"].notna()]
-
-        if valid_datos.empty:
-            return BulkOperationResult(0, 0, 0, [], 0.0)
-
-        # VECTORIZED: Build data dict using pure column operations
-        timestamp = self._get_current_timestamp()
-        datos_data = {
-            "codigo_ciudadano": pd.to_numeric(
-                valid_datos[Columns.CODIGO_CIUDADANO.name], errors="coerce"
-            ).astype("Int64"),
-            "id_evento": valid_datos["id_evento"].astype(int),
-            "cobertura_social_obra_social": valid_datos[Columns.COBERTURA_SOCIAL.name]
-            .str.strip()
-            .replace("", None),
-            "edad_anos_actual": pd.to_numeric(
-                valid_datos[Columns.EDAD_ACTUAL.name], errors="coerce"
-            ).astype("Int64"),
-            "ocupacion_laboral": (
-                valid_datos[Columns.OCUPACION.name].str.strip().replace("", None)
-                if Columns.OCUPACION in valid_datos
-                else None
-            ),
-            "informacion_contacto": (
-                valid_datos[Columns.INFO_CONTACTO.name].str.strip().replace("", None)
-                if Columns.INFO_CONTACTO in valid_datos
-                else None
-            ),
-            "es_declarado_pueblo_indigena": (
-                valid_datos[Columns.SE_DECLARA_PUEBLO_INDIGENA.name].map(
-                    lambda x: self._safe_bool(x) if pd.notna(x) else None
-                )
-                if Columns.SE_DECLARA_PUEBLO_INDIGENA in valid_datos
-                else None
-            ),
-            "es_embarazada": (
-                valid_datos[Columns.EMBARAZADA.name].map(
-                    lambda x: self._safe_bool(x) if pd.notna(x) else None
-                )
-                if Columns.EMBARAZADA in valid_datos
-                else None
-            ),
-            "created_at": timestamp,
-            "updated_at": timestamp,
-        }
-        datos_data = pd.DataFrame(datos_data).to_dict("records")
-
-        if not datos_data:
-            return BulkOperationResult(0, 0, 0, [], 0.0)
-
-        # Bulk insert using the actual model
+        # Bulk insert
         stmt = pg_insert(CiudadanoDatos.__table__).values(datos_data)
         upsert_stmt = stmt.on_conflict_do_nothing()
         self.context.session.execute(upsert_stmt)

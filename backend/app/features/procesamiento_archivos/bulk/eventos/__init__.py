@@ -16,7 +16,7 @@ USAGE:
   manager.upsert_sintomas_eventos(df, sintoma_mapping)
 """
 
-import pandas as pd
+import polars as pl
 from typing import Dict
 
 from ..shared import BulkOperationResult
@@ -47,31 +47,31 @@ class EventosManager:
 
     # Delegate methods to sub-processors
     def upsert_eventos(
-        self, df: pd.DataFrame, establecimiento_mapping: Dict
+        self, df: pl.DataFrame, establecimiento_mapping: Dict
     ) -> Dict[int, int]:
         """Bulk upsert events."""
         return self.eventos.upsert_eventos(df, establecimiento_mapping)
 
     def upsert_sintomas_eventos(
-        self, df: pd.DataFrame, sintoma_mapping: Dict[str, int], evento_mapping: Dict[int, int]
+        self, df: pl.DataFrame, sintoma_mapping: Dict[str, int]
     ) -> BulkOperationResult:
         """Bulk upsert event symptoms."""
-        return self.sintomas.upsert_sintomas_eventos(df, sintoma_mapping, evento_mapping)
+        return self.sintomas.upsert_sintomas_eventos(df, sintoma_mapping)
 
     def upsert_antecedentes_epidemiologicos(
-        self, df: pd.DataFrame, evento_mapping: Dict[int, int]
+        self, df: pl.DataFrame
     ) -> BulkOperationResult:
         """Bulk upsert epidemiological backgrounds."""
-        return self.antecedentes.upsert_antecedentes_epidemiologicos(df, evento_mapping)
+        return self.antecedentes.upsert_antecedentes_epidemiologicos(df)
 
     def upsert_ambitos_concurrencia(
-        self, df: pd.DataFrame, evento_mapping: Dict[int, int]
+        self, df: pl.DataFrame
     ) -> BulkOperationResult:
         """Bulk upsert places of occurrence."""
-        return self.ambitos.upsert_ambitos_concurrencia(df, evento_mapping)
+        return self.ambitos.upsert_ambitos_concurrencia(df)
 
     # Helper methods exposed publicly
-    def _get_or_create_sintomas(self, df: pd.DataFrame) -> Dict[str, int]:
+    def _get_or_create_sintomas(self, df: pl.DataFrame) -> Dict[str, int]:
         """Get or create symptom catalog entries."""
         return self.sintomas._get_or_create_sintomas(df)
 

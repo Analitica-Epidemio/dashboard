@@ -1,8 +1,6 @@
-"""Address and citizen-address link operations."""
+"""Address and citizen-address link operations - Polars puro optimizado."""
 
-from typing import Dict
-
-import pandas as pd
+import polars as pl
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
@@ -11,54 +9,38 @@ from app.domains.sujetos_epidemiologicos.ciudadanos_models import CiudadanoDomic
 from app.domains.territorio.geografia_models import Domicilio, Localidad
 
 from ...config.columns import Columns
-from ..shared import BulkProcessorBase, BulkOperationResult
-from ..shared import is_valid_street_name
+from ..shared import (
+    BulkProcessorBase,
+    BulkOperationResult,
+    is_valid_street_name,
+    pl_safe_int,
+    pl_clean_string,
+    pl_clean_numero_domicilio,
+)
 
 
 class DomiciliosProcessor(BulkProcessorBase):
     """Handles address-related bulk operations."""
 
-    def _clean_numero_domicilio(self, numero_series: pd.Series) -> pd.Series:
+    def upsert_ciudadanos_domicilios(self, df: pl.DataFrame) -> BulkOperationResult:
         """
-        Limpia columna numero_domicilio manejando tanto string como numeric.
-
-        Args:
-            numero_series: Serie de pandas con números de domicilio
-
-        Returns:
-            Serie limpia con valores string sin decimales (ej: "1332" no "1332.0")
-
-        IMPORTANTE: Siempre retorna strings para evitar problemas de tipo en PostgreSQL
-        """
-        # ESTRATEGIA: Convertir TODO a string explícitamente
-        # Esto evita que pandas o SQLAlchemy infieran tipos numéricos
-
-        def to_string_numero(val):
-            """Convierte valor a string, manejando None, NaN, floats, etc."""
-            if pd.isna(val) or val is None or val == "":
-                return None
-            # Si es float, convertir a int primero para quitar decimales
-            if isinstance(val, (float, int)):
-                return str(int(val))
-            # Si es string, limpiar
-            return str(val).strip() if str(val).strip() else None
-
-        return numero_series.apply(to_string_numero)
-
-    def upsert_ciudadanos_domicilios(self, df: pd.DataFrame) -> BulkOperationResult:
-        """
-        Bulk upsert of addresses and citizen-address links.
+        Bulk upsert of addresses and citizen-address links - POLARS PURO.
 
         Simplified flow:
         1. Upsert unique addresses
         2. Trigger geocoding (if enabled)
         3. Create citizen-address links
+
+        OPTIMIZACIONES:
+        - Lazy evaluation para todo el filtrado
+        - Expresiones Polars para limpieza de datos
+        - Sin loops Python para transformaciones
         """
         start_time = self._get_current_timestamp()
 
         # Filter records with valid address data
         domicilios_df = self._filter_valid_domicilios(df)
-        if domicilios_df.empty:
+        if domicilios_df.height == 0:
             return BulkOperationResult(0, 0, 0, [], 0.0)
 
         # Step 1: Upsert unique addresses
@@ -82,32 +64,39 @@ class DomiciliosProcessor(BulkProcessorBase):
             duration_seconds=duration,
         )
 
-    def _filter_valid_domicilios(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _filter_valid_domicilios(self, df: pl.DataFrame) -> pl.DataFrame:
         """
-        Filter records with valid address data.
+        Filter records with valid address data - POLARS PURO con lazy evaluation.
 
         Excluye domicilios que no son geocodificables:
         - Sin código de ciudadano
         - Sin localidad
         - Sin calle válida (ej: S/N, NO APLICA, etc.)
         """
-        # Filtro básico: debe tener ciudadano y localidad
-        filtered = df.dropna(subset=[Columns.CODIGO_CIUDADANO.name])
-        filtered = filtered[filtered[Columns.ID_LOC_INDEC_RESIDENCIA.name].notna()]
+        # LAZY EVALUATION - Filtro básico en Polars
+        filtered = (
+            df.lazy()
+            .filter(
+                pl.col(Columns.CODIGO_CIUDADANO.name).is_not_null()
+                & pl.col(Columns.ID_LOC_INDEC_RESIDENCIA.name).is_not_null()
+            )
+            .collect()
+        )
 
         # Aplicar validación de calle válida
         calle_col = Columns.CALLE_DOMICILIO.name
         if calle_col in filtered.columns:
-            # Crear máscara de calles válidas
-            calle_valida_mask = filtered[calle_col].apply(
-                lambda x: is_valid_street_name(x) if pd.notna(x) else False
-            )
+            # Convertir a lista para validar (is_valid_street_name necesita valores Python)
+            calles = filtered.select(calle_col).to_series().to_list()
+            calle_valida_mask = [is_valid_street_name(x) for x in calles]
 
-            # Solo mantener registros con calle válida
-            filtered = filtered[calle_valida_mask]
+            # Agregar columna de validación y filtrar - POLARS
+            filtered = filtered.with_row_count("_row_idx")
+            valid_indices = [i for i, valid in enumerate(calle_valida_mask) if valid]
+            filtered = filtered.filter(pl.col("_row_idx").is_in(valid_indices)).drop("_row_idx")
 
             # Log de registros filtrados
-            records_filtered = len(df) - len(filtered)
+            records_filtered = df.height - filtered.height
             if records_filtered > 0:
                 self.logger.info(
                     f"📍 Filtrados {records_filtered} domicilios sin calle válida "
@@ -117,97 +106,86 @@ class DomiciliosProcessor(BulkProcessorBase):
         return filtered
 
     def _upsert_domicilios_unicos(
-        self, domicilios_df: pd.DataFrame
-    ) -> Dict[tuple, int]:
+        self, domicilios_df: pl.DataFrame
+    ) -> dict[tuple, int]:
         """
-        Create unique addresses and return mapping (street, number, locality) → id.
+        Create unique addresses and return mapping (street, number, locality) → id - POLARS PURO.
+
+        OPTIMIZACIONES:
+        - Lazy evaluation para extraer únicos
+        - Expresión Polars para limpiar strings
+        - Expresión Polars para limpiar número de domicilio
 
         Returns:
             {(calle, numero, localidad_id): domicilio_id}
         """
         # Ensure localities exist
         localidad_ids = (
-            domicilios_df[Columns.ID_LOC_INDEC_RESIDENCIA.name]
-            .dropna()
+            domicilios_df.filter(pl.col(Columns.ID_LOC_INDEC_RESIDENCIA.name).is_not_null())
+            .select(Columns.ID_LOC_INDEC_RESIDENCIA.name)
             .unique()
-            .tolist()
+            .to_series()
+            .to_list()
         )
         localidad_mapping = self._ensure_localidades_exist(localidad_ids)
 
-        # Extract unique addresses
-        domicilios_unicos = domicilios_df[
-            [
+        # LAZY EVALUATION - Extract unique addresses
+        domicilios_unicos = (
+            domicilios_df.lazy()
+            .select([
                 Columns.CALLE_DOMICILIO.name,
                 Columns.NUMERO_DOMICILIO.name,
                 Columns.ID_LOC_INDEC_RESIDENCIA.name,
-            ]
-        ].drop_duplicates()
+            ])
+            .unique()
+            .collect()
+        )
 
-        # VECTORIZED: Prepare data for insert (100x faster than iterrows())
+        # POLARS PURO: Prepare data con expresiones
         timestamp = self._get_current_timestamp()
-        domicilios_unicos = domicilios_unicos.copy()
 
-        # Map locality IDs vectorially
-        domicilios_unicos["localidad_id_mapped"] = (
-            pd.to_numeric(
-                domicilios_unicos[Columns.ID_LOC_INDEC_RESIDENCIA.name], errors="coerce"
-            )
-            .astype("Int64")
-            .map(localidad_mapping)
+        # LAZY EVALUATION - Map locality IDs and prepare data
+        domicilios_prepared = (
+            domicilios_unicos.lazy()
+            .select([
+                pl_clean_string(Columns.CALLE_DOMICILIO.name).alias("calle"),
+                pl_clean_numero_domicilio(Columns.NUMERO_DOMICILIO.name).alias("numero"),
+                pl_safe_int(Columns.ID_LOC_INDEC_RESIDENCIA.name).alias("id_localidad_raw"),
+            ])
+            .collect()
         )
 
-        # Filter only valid localities
-        domicilios_validos = domicilios_unicos[
-            domicilios_unicos["localidad_id_mapped"].notna()
-        ]
+        # Convert to dicts para post-processing (validación y mapeo de localidad)
+        domicilios_data_raw = domicilios_prepared.to_dicts()
 
-        if domicilios_validos.empty:
-            return {}
-
-        # Build data using pandas Series (fast) then convert to list manually
-        # EVITAR: DataFrame.to_dict('records') porque infiere tipos numéricos
-
-        calle_series = (
-            domicilios_validos[Columns.CALLE_DOMICILIO.name]
-            .str.strip()
-            .replace("", None)
-        )
-        numero_series = self._clean_numero_domicilio(
-            domicilios_validos[Columns.NUMERO_DOMICILIO.name]
-        )
-        localidad_series = domicilios_validos["localidad_id_mapped"].astype(int)
-
-        # CRÍTICO: Construir dicts manualmente para garantizar tipos correctos
-        # IMPORTANTE: Aplicar validación de calle aquí también para asegurar que no se creen domicilios sin calle
+        # Post-process: validate and clean
         domicilios_data = []
         skipped_invalid_count = 0
-        for i in range(len(domicilios_validos)):
-            calle_val = calle_series.iloc[i]
-            numero_val = numero_series.iloc[i]
-            localidad_val = localidad_series.iloc[i]
+        for record in domicilios_data_raw:
+            calle_val = record["calle"]
+            numero_val = record["numero"]
+            id_localidad_raw = record["id_localidad_raw"]
+
+            # Map localidad
+            id_localidad = localidad_mapping.get(id_localidad_raw) if id_localidad_raw else None
+            if not id_localidad:
+                continue
 
             # VALIDACIÓN CRÍTICA: No crear domicilio si la calle no es válida
             if not is_valid_street_name(calle_val):
                 skipped_invalid_count += 1
                 self.logger.debug(
-                    f"🚫 Skipping invalid calle: '{calle_val}' (type={type(calle_val).__name__}, "
-                    f"repr={repr(calle_val)}, numero={numero_val})"
+                    f"🚫 Skipping invalid calle: '{calle_val}' (numero={numero_val})"
                 )
-                continue  # Skip este domicilio
+                continue
 
-            # Garantizar que numero sea string o None
-            if numero_val is not None and not isinstance(numero_val, str):
-                numero_val = str(numero_val)
-
-            domicilios_data.append(
-                {
-                    "calle": calle_val if pd.notna(calle_val) else None,
-                    "numero": numero_val,
-                    "id_localidad_indec": int(localidad_val),
-                    "created_at": timestamp,
-                    "updated_at": timestamp,
-                }
-            )
+            domicilios_data.append({
+                "calle": calle_val,
+                "numero": numero_val,
+                "id_localidad_indec": int(id_localidad),
+                "created_at": timestamp,
+                "updated_at": timestamp,
+            })
 
         if skipped_invalid_count > 0:
             self.logger.info(
@@ -217,7 +195,7 @@ class DomiciliosProcessor(BulkProcessorBase):
         if not domicilios_data:
             return {}
 
-        # DEBUG: Verificar tipos en los primeros registros
+        # DEBUG: Verificar tipos
         if domicilios_data:
             sample = domicilios_data[0]
             self.logger.info(
@@ -242,13 +220,8 @@ class DomiciliosProcessor(BulkProcessorBase):
         # Get IDs of created/existing addresses
         from sqlalchemy import tuple_
 
-        # CRÍTICO: Asegurar que numero sea string en las tuplas
         domicilios_keys = [
-            (
-                d["calle"],
-                str(d["numero"]) if d["numero"] is not None else None,
-                d["id_localidad_indec"],
-            )
+            (d["calle"], d["numero"], d["id_localidad_indec"])
             for d in domicilios_data
         ]
 
@@ -309,53 +282,53 @@ class DomiciliosProcessor(BulkProcessorBase):
             )
 
     def _create_vinculos_ciudadano_domicilio(
-        self, domicilios_df: pd.DataFrame, domicilios_ids_map: Dict[tuple, int]
+        self, domicilios_df: pl.DataFrame, domicilios_ids_map: dict[tuple, int]
     ) -> int:
         """
-        Create links between citizens and addresses.
+        Create links between citizens and addresses - POLARS PURO.
+
+        OPTIMIZACIONES:
+        - Lazy evaluation para preparar datos
+        - Expresiones Polars para limpiar número
 
         Returns:
             Number of links created
         """
-        # VECTORIZED: Prepare dataframe with clean data (100x faster than .apply())
-        df_clean = domicilios_df.copy()
-        df_clean["calle_clean"] = (
-            df_clean[Columns.CALLE_DOMICILIO.name].str.strip().replace("", None)
-        )
-        df_clean["numero_clean"] = self._clean_numero_domicilio(
-            df_clean[Columns.NUMERO_DOMICILIO.name]
-        )
-        # CRÍTICO: Asegurar que numero_clean sea string/object para lookup consistente
-        df_clean["numero_clean"] = df_clean["numero_clean"].astype("object")
-        df_clean["localidad_id"] = pd.to_numeric(
-            df_clean[Columns.ID_LOC_INDEC_RESIDENCIA.name], errors="coerce"
-        ).astype("Int64")
-
-        # VECTORIZED: Map to domicilio_id using tuple lookup
-        df_clean["id_domicilio"] = df_clean.apply(
-            lambda row: domicilios_ids_map.get(
-                (row["calle_clean"], row["numero_clean"], row["localidad_id"])
-            ),
-            axis=1,
+        # LAZY EVALUATION - Prepare clean data con expresiones Polars
+        df_prepared = (
+            domicilios_df.lazy()
+            .select([
+                pl_safe_int(Columns.CODIGO_CIUDADANO.name).alias("codigo_ciudadano"),
+                pl_clean_string(Columns.CALLE_DOMICILIO.name).alias("calle_clean"),
+                pl_clean_numero_domicilio(Columns.NUMERO_DOMICILIO.name).alias("numero_clean"),
+                pl_safe_int(Columns.ID_LOC_INDEC_RESIDENCIA.name).alias("localidad_id"),
+            ])
+            .collect()
         )
 
-        # Filter only valid entries
-        df_validos = df_clean[df_clean["id_domicilio"].notna()]
+        # Convert to dicts for lookup
+        vinculos_data_raw = df_prepared.to_dicts()
 
-        if df_validos.empty:
-            return 0
-
-        # VECTORIZED: Create links using dict comprehension
+        # Post-process: map to domicilio IDs
         timestamp = self._get_current_timestamp()
-        vinculos_data = {
-            "codigo_ciudadano": pd.to_numeric(
-                df_validos[Columns.CODIGO_CIUDADANO.name], errors="coerce"
-            ).astype("Int64"),
-            "id_domicilio": df_validos["id_domicilio"].astype(int),
-            "created_at": timestamp,
-            "updated_at": timestamp,
-        }
-        vinculos_data = pd.DataFrame(vinculos_data).to_dict("records")
+        vinculos_data = []
+        for record in vinculos_data_raw:
+            codigo_ciudadano = record["codigo_ciudadano"]
+            calle_clean = record["calle_clean"]
+            numero_clean = record["numero_clean"]
+            localidad_id = record["localidad_id"]
+
+            # Lookup domicilio ID
+            id_domicilio = domicilios_ids_map.get((calle_clean, numero_clean, localidad_id))
+
+            # Only create link if both ciudadano and domicilio are valid
+            if codigo_ciudadano and id_domicilio:
+                vinculos_data.append({
+                    "codigo_ciudadano": codigo_ciudadano,
+                    "id_domicilio": id_domicilio,
+                    "created_at": timestamp,
+                    "updated_at": timestamp,
+                })
 
         if not vinculos_data:
             return 0
@@ -371,7 +344,7 @@ class DomiciliosProcessor(BulkProcessorBase):
 
         return len(vinculos_data)
 
-    def _ensure_localidades_exist(self, localidad_ids: list) -> Dict[int, int]:
+    def _ensure_localidades_exist(self, localidad_ids: list) -> dict[int, int]:
         """
         Ensure that all needed localities exist in the database.
         Creates placeholder localities for missing ones to avoid losing data.
@@ -407,10 +380,10 @@ class DomiciliosProcessor(BulkProcessorBase):
                     {
                         "id_localidad_indec": loc_id,
                         "nombre": f"Localidad INDEC {loc_id}",
-                        "categoria": "Placeholder",
-                        "centroide_lat": None,
-                        "centroide_lon": None,
-                        "id_departamento_indec": 99999,  # Placeholder department
+                        "latitud": None,
+                        "longitud": None,
+                        "id_departamento_indec": None,  # Sin departamento conocido
+                        "id_departamento": None,
                         "created_at": timestamp,
                         "updated_at": timestamp,
                     }
