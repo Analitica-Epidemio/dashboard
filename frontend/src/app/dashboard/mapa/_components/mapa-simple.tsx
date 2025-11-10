@@ -1,7 +1,9 @@
 "use client";
 
-import { MapContainer, TileLayer, CircleMarker, Tooltip } from "react-leaflet";
+import { useState } from "react";
+import { MapContainer, TileLayer, CircleMarker, Marker, Tooltip, Popup } from "react-leaflet";
 import { useDomiciliosMapa, type DomicilioMapaItem } from "@/lib/api/mapa";
+import { useEstablecimientosMapa, type EstablecimientoMapaItem } from "@/lib/api/establecimientos";
 import "leaflet/dist/leaflet.css";
 import "./mapa-styles.css";
 import L from "leaflet";
@@ -18,8 +20,22 @@ L.Icon.Default.mergeOptions({
     "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
 
+// Ícono personalizado para establecimientos de salud
+const hospitalIcon = new L.Icon({
+  iconUrl: "data:image/svg+xml;base64," + btoa(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#dc2626" width="32" height="32">
+      <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5zm0 18c-4.52 0-8-3.48-8-8V8.3l8-4.44 8 4.44V12c0 4.52-3.48 8-8 8zm1-13h-2v3H8v2h3v3h2v-3h3v-2h-3V7z"/>
+    </svg>
+  `),
+  iconSize: [32, 32],
+  iconAnchor: [16, 32],
+  popupAnchor: [0, -32],
+  tooltipAnchor: [16, -16],
+});
+
 interface MapaSimpleProps {
   onMarkerClick?: (domicilio: DomicilioMapaItem) => void;
+  onEstablecimientoClick?: (establecimiento: EstablecimientoMapaItem) => void;
   domicilios?: DomicilioMapaItem[]; // Eventos filtrados desde el parent
   isLoading?: boolean;
 }
@@ -234,9 +250,13 @@ const getColorPorTipoEvento = (
 
 export function MapaSimple({
   onMarkerClick,
+  onEstablecimientoClick,
   domicilios: domiciliosProp,
   isLoading: isLoadingProp,
 }: MapaSimpleProps) {
+  // Estado para mostrar/ocultar establecimientos
+  const [mostrarEstablecimientos, setMostrarEstablecimientos] = useState(false);
+
   // Usar datos del prop si están disponibles, si no, hacer query independiente
   const {
     data: dataFallback,
@@ -246,7 +266,16 @@ export function MapaSimple({
     limit: 50000, // Cargar todos los domicilios geocodificados
   });
 
+  // Cargar establecimientos solo si el toggle está activado
+  const {
+    data: establecimientosData,
+    isLoading: isLoadingEstablecimientos,
+  } = useEstablecimientosMapa({
+    limit: 10000,
+  });
+
   const domicilios = domiciliosProp || dataFallback?.data?.items || [];
+  const establecimientos = establecimientosData?.items || [];
   const loading =
     isLoadingProp !== undefined ? isLoadingProp : isLoadingFallback;
   const error = domiciliosProp ? undefined : errorFallback;
@@ -354,7 +383,85 @@ export function MapaSimple({
             </CircleMarker>
           );
         })}
+
+        {/* Mostrar establecimientos si el toggle está activado */}
+        {mostrarEstablecimientos && establecimientos.map((establecimiento: EstablecimientoMapaItem) => (
+          <Marker
+            key={establecimiento.id}
+            position={[establecimiento.latitud, establecimiento.longitud]}
+            icon={hospitalIcon}
+            eventHandlers={{
+              click: () => {
+                if (onEstablecimientoClick) {
+                  onEstablecimientoClick(establecimiento);
+                }
+              },
+            }}
+          >
+            <Tooltip direction="top" opacity={0.9} permanent={false}>
+              <div className="text-sm">
+                <div className="font-semibold">{establecimiento.nombre}</div>
+                {establecimiento.localidad_nombre && (
+                  <div className="text-xs text-gray-600">{establecimiento.localidad_nombre}</div>
+                )}
+                <div className="text-xs text-blue-600 mt-1 cursor-pointer">
+                  Click para ver detalles
+                </div>
+              </div>
+            </Tooltip>
+            <Popup>
+              <div className="p-2 min-w-[200px]">
+                <div className="font-semibold text-sm mb-1">{establecimiento.nombre}</div>
+                {establecimiento.codigo_refes && (
+                  <div className="text-xs text-gray-500 mb-2">
+                    Código: {establecimiento.codigo_refes}
+                  </div>
+                )}
+                {establecimiento.localidad_nombre && (
+                  <div className="text-xs text-gray-600 mb-1">
+                    {establecimiento.localidad_nombre}
+                    {establecimiento.departamento_nombre && `, ${establecimiento.departamento_nombre}`}
+                  </div>
+                )}
+                {establecimiento.provincia_nombre && (
+                  <div className="text-xs text-gray-600 mb-2">
+                    {establecimiento.provincia_nombre}
+                  </div>
+                )}
+                <div className="text-xs text-gray-500 mt-2">
+                  📍 {establecimiento.latitud.toFixed(6)}, {establecimiento.longitud.toFixed(6)}
+                </div>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
       </MapContainer>
+
+      {/* Toggle para mostrar/ocultar establecimientos */}
+      <div className="absolute top-4 right-4 z-[1000]">
+        <button
+          onClick={() => setMostrarEstablecimientos(!mostrarEstablecimientos)}
+          className={`px-4 py-2 rounded-lg shadow-lg font-medium text-sm transition-colors flex items-center gap-2 ${
+            mostrarEstablecimientos
+              ? "bg-red-600 text-white hover:bg-red-700"
+              : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+          }`}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            className="w-5 h-5"
+          >
+            <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5zm0 18c-4.52 0-8-3.48-8-8V8.3l8-4.44 8 4.44V12c0 4.52-3.48 8-8 8zm1-13h-2v3H8v2h3v3h2v-3h3v-2h-3V7z" />
+          </svg>
+          {mostrarEstablecimientos ? "Ocultar" : "Mostrar"} Establecimientos
+          {mostrarEstablecimientos && ` (${establecimientos.length})`}
+          {isLoadingEstablecimientos && mostrarEstablecimientos && (
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+          )}
+        </button>
+      </div>
 
       {/* Leyenda de colores por categoría de evento */}
       {!loading && domiciliosConCoordenadas.length > 0 && (

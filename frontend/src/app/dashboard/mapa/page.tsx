@@ -5,7 +5,9 @@ import dynamic from "next/dynamic";
 import { MapaLayout } from "./_components/mapa-layout";
 import { MapaSidebar } from "./_components/mapa-sidebar-v2";
 import { DomicilioDetalleDialog } from "./_components/domicilio-detalle-dialog";
+import { EstablecimientoDetalleDialog } from "./_components/establecimiento-detalle-dialog";
 import { useDomiciliosMapa, type DomicilioMapaItem } from "@/lib/api/mapa";
+import { type EstablecimientoMapaItem } from "@/lib/api/establecimientos";
 
 // Cargar el mapa solo en el cliente (no SSR) porque Leaflet usa window
 const MapaSimple = dynamic(
@@ -25,9 +27,13 @@ const MapaSimple = dynamic(
 );
 
 export default function MapaPage() {
-  // State para el dialog de detalle
+  // State para el dialog de detalle de domicilios
   const [selectedDomicilioId, setSelectedDomicilioId] = useState<number | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  // State para el dialog de detalle de establecimientos
+  const [selectedEstablecimientoId, setSelectedEstablecimientoId] = useState<number | null>(null);
+  const [establecimientoDialogOpen, setEstablecimientoDialogOpen] = useState(false);
 
   // Cargar todos los domicilios geocodificados
   const { data, isLoading } = useDomiciliosMapa({
@@ -36,10 +42,16 @@ export default function MapaPage() {
 
   const domicilios = data?.data?.items || [];
 
-  // Handler para cuando se hace click en un marker
+  // Handler para cuando se hace click en un marker de domicilio
   const handleMarkerClick = (domicilio: DomicilioMapaItem) => {
     setSelectedDomicilioId(domicilio.id_domicilio);
     setDialogOpen(true);
+  };
+
+  // Handler para cuando se hace click en un marker de establecimiento
+  const handleEstablecimientoClick = (establecimiento: EstablecimientoMapaItem) => {
+    setSelectedEstablecimientoId(establecimiento.id);
+    setEstablecimientoDialogOpen(true);
   };
 
   // Calcular estadísticas
@@ -94,13 +106,21 @@ export default function MapaPage() {
           domicilios={domicilios}
           isLoading={isLoading}
           onMarkerClick={handleMarkerClick}
+          onEstablecimientoClick={handleEstablecimientoClick}
         />
 
-        {/* Dialog de detalle */}
+        {/* Dialog de detalle de domicilios */}
         <DomicilioDetalleDialog
           open={dialogOpen}
           onOpenChange={setDialogOpen}
           idDomicilio={selectedDomicilioId}
+        />
+
+        {/* Dialog de detalle de establecimientos */}
+        <EstablecimientoDetalleDialog
+          open={establecimientoDialogOpen}
+          onOpenChange={setEstablecimientoDialogOpen}
+          idEstablecimiento={selectedEstablecimientoId}
         />
       </div>
     </MapaLayout>

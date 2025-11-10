@@ -63,6 +63,52 @@ export interface MapaFilters {
   id_grupo_eno?: number | null;
   id_tipo_eno?: number | null;
   limit?: number;
+  fecha_hasta?: string;
+}
+
+// === TIPOS PARA ESTABLECIMIENTOS ===
+
+export interface PersonaRelacionada {
+  // Datos del ciudadano
+  codigo_ciudadano: number;
+  dni?: string | null;
+  nombre_completo?: string | null;
+  edad?: number | null;
+  sexo?: string | null;
+
+  // Datos del evento
+  id_evento: number;
+  fecha_evento?: string | null;
+  tipo_evento_nombre?: string | null;
+  grupo_evento_nombre?: string | null;
+  clasificacion_manual?: string | null;
+  estado?: string | null;
+
+  // Tipo de relación con el establecimiento
+  tipo_relacion: 'consulta' | 'notificacion' | 'carga' | 'muestra' | 'diagnostico' | 'tratamiento';
+}
+
+export interface EstablecimientoDetalleData {
+  // Datos del establecimiento
+  id_establecimiento: number;
+  nombre: string;
+  codigo_refes?: string | null;
+  codigo_snvs?: string | null;
+  latitud: number;
+  longitud: number;
+
+  // Datos geográficos
+  localidad_nombre?: string | null;
+  departamento_nombre?: string | null;
+  provincia_nombre?: string | null;
+
+  // Personas y eventos relacionados
+  total_personas: number;
+  personas: PersonaRelacionada[];
+
+  // Resúmenes
+  relaciones_por_tipo: Record<string, number>;
+  eventos_por_tipo: Record<string, number>;
 }
 
 /**
@@ -95,6 +141,39 @@ export function useDomicilioDetalle(idDomicilio: number | null, enabled: boolean
       return data.data as DomicilioDetalleData;
     },
     enabled: enabled && !!idDomicilio,
+  });
+}
+
+/**
+ * Hook to fetch detalle de personas/eventos relacionados con un establecimiento
+ */
+export function useEstablecimientoDetalle(idEstablecimiento: number | null, enabled: boolean = true) {
+  return useQuery({
+    queryKey: ['establecimiento-detalle', idEstablecimiento],
+    queryFn: async () => {
+      if (!idEstablecimiento) return null;
+
+      const session = await getSession();
+
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+
+      if (session?.accessToken) {
+        headers['Authorization'] = `Bearer ${session.accessToken}`;
+      }
+
+      const url = `${env.NEXT_PUBLIC_API_HOST}/api/v1/establecimientos/${idEstablecimiento}`;
+      const response = await fetch(url, { headers });
+
+      if (!response.ok) {
+        throw new Error('Error fetching establecimiento detalle');
+      }
+
+      const data = await response.json();
+      return data.data as EstablecimientoDetalleData;
+    },
+    enabled: enabled && !!idEstablecimiento,
   });
 }
 
