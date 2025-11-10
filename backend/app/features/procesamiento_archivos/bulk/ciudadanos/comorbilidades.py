@@ -1,8 +1,6 @@
-"""Comorbidity operations for citizens."""
+"""Comorbidity operations for citizens - Polars puro optimizado."""
 
-from typing import Dict
-
-import pandas as pd
+import polars as pl
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
@@ -13,28 +11,43 @@ from app.domains.sujetos_epidemiologicos.ciudadanos_models import (
 )
 
 from ...config.columns import Columns
-from ..shared import BulkProcessorBase, BulkOperationResult
+from ..shared import BulkProcessorBase, BulkOperationResult, pl_safe_int, pl_clean_string
 
 
 class ComorbilidadesProcessor(BulkProcessorBase):
     """Handles comorbidity-related bulk operations."""
 
-    def upsert_comorbilidades(self, df: pd.DataFrame) -> BulkOperationResult:
-        """Bulk upsert of citizen comorbidities."""
+    def upsert_comorbilidades(self, df: pl.DataFrame) -> BulkOperationResult:
+        """
+        Bulk upsert of citizen comorbidities - OPTIMIZADO con Polars puro.
+
+        OPTIMIZACIONES:
+        - Lazy evaluation para query optimization
+        - Join en Polars para mapear IDs (sin loop Python)
+        - Filtro de ciudadanos existentes en Polars
+        - Una sola conversión to_dicts() al final
+        """
         start_time = self._get_current_timestamp()
 
-        # Filter records with comorbidities
-        comorbilidades_df = df[df[Columns.COMORBILIDAD.name].notna()]
+        # Filter records with comorbidities - POLARS
+        comorbilidades_df = df.filter(pl.col(Columns.COMORBILIDAD.name).is_not_null())
 
-        if comorbilidades_df.empty:
+        if comorbilidades_df.height == 0:
             return BulkOperationResult(0, 0, 0, [], 0.0)
 
         # Create comorbidity mapping
         comorbilidad_mapping = self._get_or_create_comorbilidades(comorbilidades_df)
 
+        if not comorbilidad_mapping:
+            return BulkOperationResult(0, 0, 0, [], 0.0)
+
         # Get existing citizens
         codigos_ciudadanos = (
-            comorbilidades_df[Columns.CODIGO_CIUDADANO.name].dropna().unique().tolist()
+            comorbilidades_df.filter(pl.col(Columns.CODIGO_CIUDADANO.name).is_not_null())
+            .select(Columns.CODIGO_CIUDADANO.name)
+            .unique()
+            .to_series()
+            .to_list()
         )
 
         stmt = select(Ciudadano.codigo_ciudadano).where(
@@ -44,52 +57,66 @@ class ComorbilidadesProcessor(BulkProcessorBase):
             codigo for (codigo,) in self.context.session.execute(stmt).all()
         )
 
-        # VECTORIZED: Process comorbidities (10-50x faster than .apply())
-        comorbilidades_df = comorbilidades_df.copy()
+        # Crear DataFrame de mapeo para hacer join en Polars
+        mapping_df = pl.DataFrame({
+            "comorbilidad_clean": list(comorbilidad_mapping.keys()),
+            "id_comorbilidad": list(comorbilidad_mapping.values()),
+        })
 
-        # Clean and map comorbidities vectorially
-        comorbilidades_df['comorbilidad_clean'] = comorbilidades_df[Columns.COMORBILIDAD.name].astype(str).str.strip().str.upper()
-        comorbilidades_df['id_comorbilidad'] = comorbilidades_df['comorbilidad_clean'].map(comorbilidad_mapping)
+        # LAZY EVALUATION con join - TODO en expresiones Polars
+        timestamp = self._get_current_timestamp()
 
-        # Filter only comorbidities with existing citizen and valid ID
-        valid_comorbilidades = comorbilidades_df[
-            comorbilidades_df[Columns.CODIGO_CIUDADANO.name].isin(ciudadanos_existentes) &
-            comorbilidades_df['id_comorbilidad'].notna()
-        ]
+        comorbilidades_prepared = (
+            comorbilidades_df.lazy()
+            .filter(
+                pl.col(Columns.CODIGO_CIUDADANO.name).is_not_null()
+                & pl.col(Columns.COMORBILIDAD.name).is_not_null()
+                & pl.col(Columns.CODIGO_CIUDADANO.name).is_in(list(ciudadanos_existentes))
+            )
+            .select([
+                # Usar helper functions - sin casts redundantes
+                pl_safe_int(Columns.CODIGO_CIUDADANO.name).alias("codigo_ciudadano"),
+                # Limpiar comorbilidad para join
+                (
+                    pl.col(Columns.COMORBILIDAD.name)
+                    .str.strip_chars()
+                    .str.to_uppercase()
+                ).alias("comorbilidad_clean"),
+            ])
+            # JOIN en Polars para mapear IDs - mucho más rápido que loop Python
+            .join(mapping_df.lazy(), on="comorbilidad_clean", how="inner")
+            .drop("comorbilidad_clean")  # Ya no necesitamos este campo
+            .with_columns([
+                pl.lit(timestamp).alias("created_at"),
+                pl.lit(timestamp).alias("updated_at"),
+            ])
+            .collect()  # Ejecutar todo el query plan optimizado
+        )
 
-        if valid_comorbilidades.empty:
+        if comorbilidades_prepared.height == 0:
             return BulkOperationResult(0, 0, 0, [], 0.0)
 
-        # VECTORIZED: Build data dict using pure column operations
-        timestamp = self._get_current_timestamp()
-        comorbilidades_ciudadano_data = {
-            "codigo_ciudadano": pd.to_numeric(valid_comorbilidades[Columns.CODIGO_CIUDADANO.name], errors='coerce').astype('Int64'),
-            "id_comorbilidad": valid_comorbilidades['id_comorbilidad'].astype(int),
-            "created_at": timestamp,
-            "updated_at": timestamp,
-        }
-        comorbilidades_ciudadano_data = pd.DataFrame(comorbilidades_ciudadano_data).to_dict('records')
+        # Convertir a dicts para SQL (única conversión necesaria)
+        valid_records = comorbilidades_prepared.to_dicts()
 
-        if comorbilidades_ciudadano_data:
-            stmt = pg_insert(CiudadanoComorbilidades.__table__).values(
-                comorbilidades_ciudadano_data
-            )
-            upsert_stmt = stmt.on_conflict_do_nothing()
-            self.context.session.execute(upsert_stmt)
+        # Insert
+        stmt = pg_insert(CiudadanoComorbilidades.__table__).values(valid_records)
+        upsert_stmt = stmt.on_conflict_do_nothing()
+        self.context.session.execute(upsert_stmt)
 
         duration = (self._get_current_timestamp() - start_time).total_seconds()
 
         return BulkOperationResult(
-            inserted_count=len(comorbilidades_ciudadano_data),
+            inserted_count=len(valid_records),
             updated_count=0,
             skipped_count=0,
             errors=[],
             duration_seconds=duration,
         )
 
-    def _get_or_create_comorbilidades(self, df: pd.DataFrame) -> Dict[str, int]:
+    def _get_or_create_comorbilidades(self, df: pl.DataFrame) -> dict[str, int]:
         """
-        Get or create comorbidity catalog entries.
+        Get or create comorbidity catalog entries - POLARS PURO.
 
         OPTIMIZACIÓN: Usa get_or_create_catalog() para hacer:
         - 1 query para traer existentes (en vez de N queries)
@@ -100,17 +127,27 @@ class ComorbilidadesProcessor(BulkProcessorBase):
         """
         from ..shared import get_or_create_catalog
 
-        # Limpiar descripciones primero
-        tipos_comorbilidad = df[Columns.COMORBILIDAD.name].dropna().unique()
-        df_clean = pd.DataFrame({
-            Columns.COMORBILIDAD.name: [
-                self._clean_string(desc)
-                for desc in tipos_comorbilidad
-                if self._clean_string(desc)
-            ]
-        })
+        # LAZY EVALUATION - limpiar y obtener valores únicos
+        df_clean = (
+            df.lazy()
+            .filter(pl.col(Columns.COMORBILIDAD.name).is_not_null())
+            .select([
+                # Limpiar descripciones con expresiones Polars
+                (
+                    pl.col(Columns.COMORBILIDAD.name)
+                    .str.strip_chars()
+                    .str.to_uppercase()
+                ).alias(Columns.COMORBILIDAD.name)
+            ])
+            .unique()
+            .filter(
+                # Filtrar strings vacíos
+                pl.col(Columns.COMORBILIDAD.name).str.len_chars() > 0
+            )
+            .collect()
+        )
 
-        if df_clean.empty:
+        if df_clean.height == 0:
             return {}
 
         return get_or_create_catalog(

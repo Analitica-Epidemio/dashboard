@@ -1,18 +1,19 @@
 """
-Shared utilities for bulk processors.
+Shared utilities for bulk processors - POLARS PURO.
 
 Consolidates:
 - BulkOperationResult (result dataclass)
-- Data conversion functions (safe_int, clean_string, etc.)
-- BulkProcessorBase (base class with delegation)
-- Pandas vectorization helpers
+- Polars expression builders (para mapeos, conversiones, etc.)
+- BulkProcessorBase (base class con helpers Polars)
+- Catalog get-or-create patterns
 """
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, date
 from typing import Any, Callable, Dict, List, Optional, Type, TypeVar
 
-import pandas as pd
+import polars as pl
+import re
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import Session
@@ -25,9 +26,6 @@ from app.core.shared.enums import (
 )
 
 from ..config.constants import BOOLEAN_MAPPING, DOCUMENTO_MAPPING, SEXO_MAPPING
-
-import re
-import pandas as pd
 
 
 # Patrones de calles inválidas
@@ -75,8 +73,8 @@ def is_valid_street_name(calle: str) -> bool:
     Returns:
         True si es válida, False si no
     """
-    # Validar None, NaN, vacío o solo espacios
-    if pd.isna(calle) or calle is None or not str(calle).strip():
+    # Validar None, vacío o solo espacios
+    if calle is None or not str(calle).strip():
         return False
 
     calle_clean = str(calle).strip().upper()
@@ -116,112 +114,169 @@ class BulkOperationResult:
     duration_seconds: float
 
 
-# ===== DATA CONVERSION FUNCTIONS =====
+# ===== POLARS EXPRESSION BUILDERS =====
+# Estas funciones retornan expresiones Polars para usar en .select() / .with_columns()
 
 
-def safe_int(value: Any) -> Optional[int]:
-    """Conversión segura a int."""
-    if pd.isna(value) or value is None:
-        return None
-    try:
-        return int(float(value))
-    except (ValueError, TypeError):
-        return None
-
-
-def safe_date(value: Any):
+def pl_safe_int(col_name: str) -> pl.Expr:
     """
-    Conversión segura de datetime a date.
+    Expresión Polars para conversión segura a Int64.
 
-    Las fechas ya vienen parseadas por read_csv(parse_dates=..., dayfirst=True),
-    este método solo convierte datetime → date y maneja edge cases.
-
-    IMPORTANTE: pd.NaT.date() devuelve NaT (no None), lo que causa errores en PostgreSQL.
-    Debemos verificar pd.isna() ANTES de llamar .date().
+    Usage:
+        df.select(pl_safe_int("edad").alias("edad"))
     """
-    if pd.isna(value) or value is None:
-        return None
-    try:
-        # Caso más común: ya es datetime (viene de parse_dates)
-        if hasattr(value, "date"):
-            result = value.date()
-            # CRÍTICO: verificar si el resultado es NaT
-            if pd.isna(result):
-                return None
-            return result
-        # Fallback: parsear string si es necesario
-        if isinstance(value, str):
-            return pd.to_datetime(value, dayfirst=True).date()
-        return pd.to_datetime(value).date()
-    except (ValueError, TypeError):
-        return None
+    return pl.col(col_name).cast(pl.Int64, strict=False)
 
 
-def safe_bool(value: Any) -> Optional[bool]:
-    """Mapea a boolean usando BOOLEAN_MAPPING."""
-    if pd.isna(value) or value is None:
-        return None
-    try:
-        str_value = str(value).upper().strip()
-        return BOOLEAN_MAPPING.get(str_value)
-    except (ValueError, TypeError):
-        return None
+def pl_safe_date(col_name: str) -> pl.Expr:
+    """
+    Expresión Polars para conversión segura a Date.
+
+    Maneja múltiples formatos de fecha comunes en archivos CSV.
+
+    Usage:
+        df.select(pl_safe_date("fecha_nacimiento").alias("fecha_nacimiento"))
+    """
+    return pl.col(col_name).cast(pl.Date, strict=False)
 
 
-def clean_string(value: Any) -> Optional[str]:
-    """Limpieza de strings - strip y convierte vacíos a None."""
-    if pd.isna(value) or value is None:
-        return None
-    cleaned = str(value).strip()
-    return cleaned if cleaned else None
+def pl_clean_string(col_name: str) -> pl.Expr:
+    """
+    Expresión Polars para limpieza de strings.
+
+    - Strip espacios
+    - Convierte strings vacíos a null
+
+    Usage:
+        df.select(pl_clean_string("nombre").alias("nombre"))
+    """
+    return (
+        pl.col(col_name)
+        .str.strip_chars()
+        .replace("", None)
+    )
 
 
-# ===== ENUM MAPPING =====
+def pl_map_sexo(col_name: str) -> pl.Expr:
+    """
+    Expresión Polars para mapear sexo a enum.
+
+    Mapea: M -> MASCULINO, F -> FEMENINO, X -> OTRO
+
+    Usage:
+        df.select(pl_map_sexo("sexo").alias("sexo_biologico"))
+    """
+    return (
+        pl.when(pl.col(col_name).str.to_uppercase().str.strip_chars() == "M")
+        .then(pl.lit(SexoBiologico.MASCULINO.value))
+        .when(pl.col(col_name).str.to_uppercase().str.strip_chars() == "F")
+        .then(pl.lit(SexoBiologico.FEMENINO.value))
+        .when(pl.col(col_name).str.to_uppercase().str.strip_chars() == "X")
+        .then(pl.lit(SexoBiologico.NO_ESPECIFICADO.value))
+        .otherwise(None)
+    )
 
 
-def map_tipo_documento(value: Any) -> Optional[TipoDocumento]:
-    """Mapea a enum TipoDocumento."""
-    if pd.isna(value) or value is None:
-        return None
-    return DOCUMENTO_MAPPING.get(str(value).upper())
+def pl_map_tipo_documento(col_name: str) -> pl.Expr:
+    """
+    Expresión Polars para mapear tipo de documento a enum.
+
+    Usage:
+        df.select(pl_map_tipo_documento("tipo_doc").alias("tipo_documento"))
+    """
+    expr = pl.col(col_name).str.to_uppercase().str.strip_chars()
+
+    # Construir mapeo usando when/then
+    result = pl.lit(None)  # Default
+    for key, value in DOCUMENTO_MAPPING.items():
+        result = pl.when(expr == key).then(pl.lit(value.value)).otherwise(result)
+
+    return result
 
 
-def map_sexo(value: Any) -> Optional[SexoBiologico]:
-    """Mapea a enum SexoBiologico."""
-    if pd.isna(value) or value is None:
-        return None
-    return SEXO_MAPPING.get(str(value).upper())
+def pl_map_boolean(col_name: str) -> pl.Expr:
+    """
+    Expresión Polars para mapear valores a boolean.
+
+    Usa BOOLEAN_MAPPING definido en constants.py
+
+    Usage:
+        df.select(pl_map_boolean("internado").alias("internado"))
+    """
+    expr = pl.col(col_name).str.to_uppercase().str.strip_chars()
+
+    # Construir mapeo usando when/then
+    result = pl.lit(None)  # Default
+    for key, value in BOOLEAN_MAPPING.items():
+        if value is not None:  # Solo mapear valores definidos
+            result = pl.when(expr == key).then(pl.lit(value)).otherwise(result)
+
+    return result
 
 
-def map_origen_financiamiento(value: Any) -> Optional[OrigenFinanciamiento]:
-    """Mapea a enum OrigenFinanciamiento."""
-    if pd.isna(value) or value is None:
-        return None
-    try:
-        str_value = str(value).upper().strip()
-        # Remover acentos comunes
-        str_value = (
-            str_value.replace("Ú", "U")
-            .replace("Í", "I")
-            .replace("Ó", "O")
-            .replace("Á", "A")
-            .replace("É", "E")
+def pl_clean_numero_domicilio(col_name: str) -> pl.Expr:
+    """
+    Expresión Polars para limpiar número de domicilio.
+
+    Maneja:
+    - null/None -> None
+    - floats -> convierte a int primero (1332.0 -> "1332")
+    - ints -> convierte a string ("1332")
+    - strings -> strip
+    - strings vacíos -> None
+
+    Usage:
+        df.select(pl_clean_numero_domicilio("numero").alias("numero_clean"))
+    """
+    return (
+        pl.when(pl.col(col_name).is_null())
+        .then(None)
+        .when(pl.col(col_name).cast(pl.Utf8).str.strip_chars() == "")
+        .then(None)
+        .otherwise(
+            # Si es float/int, convertir a int primero para quitar decimales
+            pl.when(pl.col(col_name).cast(pl.Float64, strict=False).is_not_null())
+            .then(
+                pl.col(col_name)
+                .cast(pl.Float64, strict=False)
+                .cast(pl.Int64, strict=False)
+                .cast(pl.Utf8)
+            )
+            .otherwise(
+                # Si no es numeric, usar como string
+                pl.col(col_name).cast(pl.Utf8).str.strip_chars()
+            )
         )
-        return OrigenFinanciamiento(str_value)
-    except ValueError:
-        return None
+    )
 
 
-def map_frecuencia_ocurrencia(value: Any) -> Optional[FrecuenciaOcurrencia]:
-    """Mapea a enum FrecuenciaOcurrencia."""
-    if pd.isna(value) or value is None:
-        return None
-    try:
-        # Normalizar a formato del enum
-        frecuencia_normalizada = str(value).upper().strip().replace(" ", "_")
-        return FrecuenciaOcurrencia(frecuencia_normalizada)
-    except ValueError:
-        return None
+def pl_col_or_null(df: pl.DataFrame, col_name: str, transform_fn=None) -> pl.Expr:
+    """
+    Helper para columnas opcionales - retorna expresión o null.
+
+    Si la columna existe en el DataFrame, aplica transform_fn (o limpieza por defecto).
+    Si no existe, retorna pl.lit(None).
+
+    Args:
+        df: DataFrame a verificar
+        col_name: Nombre de la columna
+        transform_fn: Función que toma col_name y retorna pl.Expr (ej: pl_clean_string, pl_safe_date)
+
+    Usage:
+        df.select([
+            pl_col_or_null(df, "nombre").alias("nombre"),  # Limpieza por defecto
+            pl_col_or_null(df, "fecha", pl_safe_date).alias("fecha"),  # Con transformación
+        ])
+    """
+    if col_name in df.columns:
+        if transform_fn is None:
+            # Por defecto: limpiar strings
+            return pl_clean_string(col_name)
+        else:
+            # Aplicar transformación personalizada
+            return transform_fn(col_name)
+    else:
+        return pl.lit(None)
 
 
 # ===== GENERAL UTILITIES =====
@@ -247,7 +302,7 @@ def has_any_value(values: list) -> bool:
 def get_or_create_catalog(
     session: Any,  # Session type
     model: Type[T],
-    df: pd.DataFrame,
+    df,  # Accept both pandas and Polars DataFrames
     column: str,
     key_field: str = "codigo",
     name_field: str = "nombre",
@@ -285,8 +340,14 @@ def get_or_create_catalog(
         ...     }
         ... )
     """
-    # 1. Extraer valores únicos del CSV
-    valores = df[column].dropna().unique()
+    # 1. Extraer valores únicos del CSV - POLARS PURO
+    if isinstance(df, pl.DataFrame):
+        # Polars operations
+        valores = df.filter(pl.col(column).is_not_null()).select(column).unique().to_series().to_list()
+    else:
+        # Pandas fallback (legacy, should not be used)
+        valores = df[column].dropna().unique()
+
     valores_clean = [str(v).strip() for v in valores if str(v).strip()]
 
     if not valores_clean:
@@ -381,149 +442,23 @@ def get_or_create_catalog(
     return existing_mapping
 
 
-# ===== PANDAS VECTORIZATION HELPERS =====
-
-
-def vectorized_dict_builder(
-    df: pd.DataFrame,
-    column_mappings: Dict[str, str | Callable],
-    timestamp: datetime | None = None,
-) -> List[Dict[str, Any]]:
-    """
-    Construye lista de dicts usando operaciones vectorizadas.
-
-    MUCHO más rápido que df.apply(lambda row: {...}).
-
-    Args:
-        df: DataFrame source
-        column_mappings: {
-            "output_key": "column_name",  # Copia directa
-            "output_key": callable,        # Función sobre columna
-        }
-        timestamp: Timestamp para created_at/updated_at
-
-    Returns:
-        List[Dict] listo para bulk insert
-
-    Example:
-        >>> mappings = {
-        ...     "nombre": "NOMBRE_COL",
-        ...     "edad": lambda df: df["EDAD_COL"].astype('Int64'),
-        ...     "created_at": lambda df: timestamp,
-        ... }
-        >>> records = vectorized_dict_builder(df, mappings, timestamp)
-    """
-    result_dict = {}
-
-    for output_key, source in column_mappings.items():
-        if callable(source):
-            # Función custom sobre el DataFrame
-            result_dict[output_key] = source(df)
-        else:
-            # Columna directa
-            result_dict[output_key] = df[source]
-
-    # Convertir a records (más rápido que apply)
-    return pd.DataFrame(result_dict).to_dict("records")
-
-
-def clean_string_column(series: pd.Series) -> pd.Series:
-    """
-    Limpia columna de strings vectorialmente.
-
-    - Strip espacios
-    - Convierte vacíos a None
-    - Maneja NaN correctamente
-    """
-    return series.str.strip().replace("", None).replace("nan", None)
-
-
-def safe_int_column(series: pd.Series) -> pd.Series:
-    """Convierte columna a Int64 (nullable)."""
-    return pd.to_numeric(series, errors="coerce").astype("Int64")
-
-
-def safe_bool_column(series: pd.Series, true_values: List[str] = None) -> pd.Series:
-    """
-    Convierte columna a boolean.
-
-    Args:
-        series: Serie a convertir
-        true_values: Valores que se consideran True
-    """
-    if true_values is None:
-        true_values = ["SI", "S", "TRUE", "1", "YES", "Y"]
-
-    return series.astype(str).str.upper().str.strip().isin(true_values)
-
-
-def has_valid_value(series: pd.Series) -> pd.Series:
-    """
-    Verifica si la serie tiene valores válidos (no NaN, no '', no 'nan').
-
-    Returns:
-        Serie booleana
-    """
-    return (
-        series.notna()
-        & (series.astype(str) != "nan")
-        & (series.astype(str).str.strip() != "")
-    )
-
-
 # ===== BASE CLASS =====
 
 
 class BulkProcessorBase:
     """
-    Clase base con helpers comunes.
+    Clase base para bulk processors con Polars puro.
 
-    TODOS los métodos delegan a funciones puras.
-    Esto permite:
-    1. Testear funciones sin instanciar clases
-    2. Usar funciones directamente si no necesitas herencia
-    3. Mantener compatibilidad con código existente
+    Proporciona acceso a:
+    - context: Contexto de procesamiento con session, logger, etc.
+    - logger: Logger para debugging
+    - timestamp helper
     """
 
     def __init__(self, context, logger):
         self.context = context
         self.logger = logger
 
-    # ===== DELEGATES A FUNCIONES PURAS =====
-    # Mantiene compatibilidad con código existente que llama self._safe_int()
-
-    def _safe_int(self, value):
-        """Delegate to safe_int()"""
-        return safe_int(value)
-
-    def _safe_date(self, value):
-        """Delegate to safe_date()"""
-        return safe_date(value)
-
-    def _safe_bool(self, value):
-        """Delegate to safe_bool()"""
-        return safe_bool(value)
-
-    def _clean_string(self, value):
-        """Delegate to clean_string()"""
-        return clean_string(value)
-
-    def _map_tipo_documento(self, value):
-        """Delegate to map_tipo_documento()"""
-        return map_tipo_documento(value)
-
-    def _map_sexo(self, value):
-        """Delegate to map_sexo()"""
-        return map_sexo(value)
-
-    def _map_origen_financiamiento(self, value):
-        """Delegate to map_origen_financiamiento()"""
-        return map_origen_financiamiento(value)
-
-    def _map_frecuencia_ocurrencia(self, value):
-        """Delegate to map_frecuencia_ocurrencia()"""
-        return map_frecuencia_ocurrencia(value)
-
-    def _get_current_timestamp(self):
-        """Delegate to get_current_timestamp()"""
+    def _get_current_timestamp(self) -> datetime:
+        """Get current timestamp for created_at/updated_at."""
         return get_current_timestamp()

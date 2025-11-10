@@ -4,10 +4,12 @@ from typing import Any, Dict
 
 from fastapi import APIRouter, Depends
 
+from app.api.v1.analytics.router import router as analytics_router
 from app.api.v1.auth.router import router as auth_router
 from app.api.v1.charts.router import router as charts_router
 from app.api.v1.dashboard.router import router as dashboard_router
 from app.api.v1.domicilios.router import router as domicilios_router
+from app.api.v1.establecimientos.router import router as establecimientos_router
 from app.api.v1.estrategias.router import router as estrategias_router
 from app.api.v1.eventos.router import router as eventos_router
 from app.api.v1.geocoding.router import router as geocoding_router
@@ -27,6 +29,7 @@ api_router.include_router(uploads_router)
 api_router.include_router(geocoding_router)  # Router de geocodificación
 api_router.include_router(dashboard_router)
 api_router.include_router(domicilios_router)  # Router de domicilios
+api_router.include_router(establecimientos_router)  # Router de establecimientos
 api_router.include_router(estrategias_router)
 api_router.include_router(eventos_router)
 api_router.include_router(personas_router)  # Nuevo router de personas
@@ -34,6 +37,7 @@ api_router.include_router(tipos_router)
 api_router.include_router(grupos_router)
 api_router.include_router(charts_router)
 api_router.include_router(reports_router)
+api_router.include_router(analytics_router)  # Router de analytics
 
 
 # Endpoint raíz de la API

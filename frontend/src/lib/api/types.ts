@@ -559,6 +559,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/establecimientos/mapa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Obtener establecimientos para mapa
+         * @description Obtiene establecimientos de salud geocodificados para visualización en mapa
+         */
+        get: operations["get_establecimientos_mapa_api_v1_establecimientos_mapa_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/estrategias/": {
         parameters: {
             query?: never;
@@ -1195,6 +1215,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/analytics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Analytics
+         * @description Obtiene métricas de analytics comparando dos períodos
+         */
+        get: operations["get_analytics_api_v1_analytics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analytics/top-winners-losers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Top Winners Losers
+         * @description Obtiene las entidades con mayor cambio (winners/losers)
+         */
+        get: operations["get_top_winners_losers_api_v1_analytics_top_winners_losers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/": {
         parameters: {
             query?: never;
@@ -1283,6 +1343,29 @@ export interface components {
              * @description Frecuencia de concurrencia
              */
             frecuencia_concurrencia?: string | null;
+        };
+        /**
+         * AnalyticsResponse
+         * @description Response completo del endpoint de analytics
+         */
+        AnalyticsResponse: {
+            /** @description Información del período actual */
+            periodo_actual: components["schemas"]["PeriodInfo"];
+            /** @description Información del período de comparación */
+            periodo_comparacion?: components["schemas"]["PeriodInfo"] | null;
+            /** @description Tipo de comparación realizada */
+            tipo_comparacion: components["schemas"]["ComparisonType"];
+            casos: components["schemas"]["CasosMetrics"];
+            cobertura: components["schemas"]["CoberturaMetrics"];
+            /** @description Métricas de performance */
+            performance: components["schemas"]["PerformanceMetrics"];
+            /**
+             * Filtros Aplicados
+             * @description Filtros aplicados a la consulta
+             */
+            filtros_aplicados: {
+                [key: string]: unknown;
+            };
         };
         /**
          * AnimalInfo
@@ -1489,6 +1572,16 @@ export interface components {
              */
             codigo_ciudadano: number;
             /**
+             * Dni
+             * @description DNI del ciudadano
+             */
+            dni?: string | null;
+            /**
+             * Nombre Completo
+             * @description Nombre completo
+             */
+            nombre_completo?: string | null;
+            /**
              * Edad
              * @description Edad del ciudadano al momento del evento
              */
@@ -1498,6 +1591,25 @@ export interface components {
              * @description Sexo del ciudadano
              */
             sexo?: string | null;
+        };
+        /**
+         * CasosMetrics
+         * @description Métricas de casos confirmados
+         */
+        CasosMetrics: {
+            /** @description Total de casos confirmados */
+            total_casos: components["schemas"]["MetricValue"];
+            /** @description Tasa de incidencia por 100k habitantes */
+            incidencia_100k: components["schemas"]["MetricValue"];
+            /** @description Promedio de casos por semana */
+            promedio_semanal: components["schemas"]["MetricValue"];
+            /**
+             * Casos Por Semana
+             * @description Serie temporal de casos por semana
+             */
+            casos_por_semana: {
+                [key: string]: unknown;
+            }[];
         };
         /**
          * ChartDataItem
@@ -1759,6 +1871,37 @@ export interface components {
              */
             updated_at?: string | null;
         };
+        /**
+         * CoberturaMetrics
+         * @description Métricas de cobertura geográfica
+         */
+        CoberturaMetrics: {
+            /** @description Número de departamentos con casos */
+            areas_afectadas: components["schemas"]["MetricValue"];
+            /**
+             * Nuevas Areas
+             * @description Departamentos que reportaron casos por primera vez
+             */
+            nuevas_areas: number;
+            /**
+             * Areas Sin Casos
+             * @description Departamentos que dejaron de reportar casos
+             */
+            areas_sin_casos: number;
+            /**
+             * Top Departamentos
+             * @description Top departamentos por casos
+             */
+            top_departamentos: {
+                [key: string]: unknown;
+            }[];
+        };
+        /**
+         * ComparisonType
+         * @description Tipo de comparación a realizar
+         * @enum {string}
+         */
+        ComparisonType: "rolling" | "year_over_year" | "both";
         /**
          * ContactoInfo
          * @description Información de contactos
@@ -2226,6 +2369,73 @@ export interface components {
              * @description Localidad
              */
             localidad?: string | null;
+        };
+        /**
+         * EstablecimientoMapaItem
+         * @description Item de establecimiento para mostrar en el mapa
+         */
+        EstablecimientoMapaItem: {
+            /**
+             * Id
+             * @description ID del establecimiento
+             */
+            id: number;
+            /**
+             * Codigo Refes
+             * @description Código REFES/IGN
+             */
+            codigo_refes?: string | null;
+            /**
+             * Nombre
+             * @description Nombre del establecimiento
+             */
+            nombre: string;
+            /**
+             * Latitud
+             * @description Latitud
+             */
+            latitud: number;
+            /**
+             * Longitud
+             * @description Longitud
+             */
+            longitud: number;
+            /**
+             * Id Localidad Indec
+             * @description ID INDEC localidad
+             */
+            id_localidad_indec?: number | null;
+            /**
+             * Localidad Nombre
+             * @description Nombre de la localidad
+             */
+            localidad_nombre?: string | null;
+            /**
+             * Departamento Nombre
+             * @description Nombre del departamento
+             */
+            departamento_nombre?: string | null;
+            /**
+             * Provincia Nombre
+             * @description Nombre de la provincia
+             */
+            provincia_nombre?: string | null;
+        };
+        /**
+         * EstablecimientosMapaResponse
+         * @description Respuesta con lista de establecimientos para mapa
+         */
+        EstablecimientosMapaResponse: {
+            /**
+             * Items
+             * @description Lista de establecimientos
+             */
+            items?: components["schemas"]["EstablecimientoMapaItem"][];
+            /**
+             * Total
+             * @description Total de establecimientos
+             */
+            total: number;
         };
         /**
          * EstadoGeocodificacion
@@ -3378,6 +3588,37 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /**
+         * MetricValue
+         * @description Valor de una métrica con su comparación
+         */
+        MetricValue: {
+            /**
+             * Valor Actual
+             * @description Valor en el período actual
+             */
+            valor_actual: number;
+            /**
+             * Valor Anterior
+             * @description Valor en el período de comparación
+             */
+            valor_anterior?: number | null;
+            /**
+             * Diferencia Absoluta
+             * @description Diferencia absoluta (actual - anterior)
+             */
+            diferencia_absoluta?: number | null;
+            /**
+             * Diferencia Porcentual
+             * @description Diferencia porcentual ((actual - anterior) / anterior * 100)
+             */
+            diferencia_porcentual?: number | null;
+            /**
+             * Tendencia
+             * @description up, down o stable
+             */
+            tendencia?: string | null;
+        };
         /** PaginatedResponse[GrupoEnoInfo] */
         PaginatedResponse_GrupoEnoInfo_: {
             /**
@@ -3480,6 +3721,64 @@ export interface components {
              */
             has_prev: boolean;
         };
+        /**
+         * PerformanceMetrics
+         * @description Métricas de performance de clasificación
+         */
+        PerformanceMetrics: {
+            /** @description % de casos confirmados vs total */
+            tasa_confirmacion: components["schemas"]["MetricValue"];
+            /** @description Días promedio entre consulta y clasificación */
+            tiempo_promedio_clasificacion?: components["schemas"]["MetricValue"] | null;
+            /** @description Casos aún en proceso de clasificación */
+            casos_en_estudio: components["schemas"]["MetricValue"];
+            /** @description Score de confianza promedio de clasificación */
+            confianza_promedio: components["schemas"]["MetricValue"];
+        };
+        /**
+         * PeriodInfo
+         * @description Información de un período de tiempo
+         */
+        PeriodInfo: {
+            /**
+             * Fecha Desde
+             * Format: date
+             * @description Fecha de inicio del período
+             */
+            fecha_desde: string;
+            /**
+             * Fecha Hasta
+             * Format: date
+             * @description Fecha de fin del período
+             */
+            fecha_hasta: string;
+            /**
+             * Semana Epi Desde
+             * @description Semana epidemiológica de inicio
+             */
+            semana_epi_desde?: number | null;
+            /**
+             * Semana Epi Hasta
+             * @description Semana epidemiológica de fin
+             */
+            semana_epi_hasta?: number | null;
+            /**
+             * Anio Epi
+             * @description Año epidemiológico
+             */
+            anio_epi?: number | null;
+            /**
+             * Descripcion
+             * @description Descripción legible del período
+             */
+            descripcion: string;
+        };
+        /**
+         * PeriodType
+         * @description Tipos de períodos predefinidos
+         * @enum {string}
+         */
+        PeriodType: "ultima_semana_epi" | "ultimas_4_semanas_epi" | "ultimas_12_semanas_epi" | "mes_hasta_fecha" | "mes_pasado" | "ultimos_3_meses" | "trimestre_actual" | "trimestre_pasado" | "ultimos_6_meses" | "anio_hasta_fecha" | "anio_pasado" | "personalizado";
         /**
          * PersonaDetailResponse
          * @description Respuesta detallada de una persona (PERSON-CENTERED)
@@ -3912,6 +4211,18 @@ export interface components {
              */
             processing_time_seconds?: number | null;
         };
+        /** SuccessResponse[AnalyticsResponse] */
+        SuccessResponse_AnalyticsResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["AnalyticsResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
         /** SuccessResponse[AsyncJobResponse] */
         SuccessResponse_AsyncJobResponse_: {
             /** @description Datos de la respuesta */
@@ -3988,6 +4299,18 @@ export interface components {
         SuccessResponse_DomiciliosListResponse_: {
             /** @description Datos de la respuesta */
             data: components["schemas"]["DomiciliosListResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[EstablecimientosMapaResponse] */
+        SuccessResponse_EstablecimientosMapaResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["EstablecimientosMapaResponse"];
             /**
              * Meta
              * @description Metadata opcional (paginación, etc)
@@ -4162,6 +4485,18 @@ export interface components {
         SuccessResponse_StrategyTestResponse_: {
             /** @description Datos de la respuesta */
             data: components["schemas"]["StrategyTestResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[TopWinnersLosersResponse] */
+        SuccessResponse_TopWinnersLosersResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["TopWinnersLosersResponse"];
             /**
              * Meta
              * @description Metadata opcional (paginación, etc)
@@ -4372,6 +4707,65 @@ export interface components {
             /** Apellido */
             apellido: string;
             role: components["schemas"]["UserRole"];
+        };
+        /**
+         * TopWinnerLoser
+         * @description Item en lista de top winners/losers
+         */
+        TopWinnerLoser: {
+            /**
+             * Entidad Id
+             * @description ID de la entidad (departamento, tipo_eno, etc)
+             */
+            entidad_id: number;
+            /**
+             * Entidad Nombre
+             * @description Nombre de la entidad
+             */
+            entidad_nombre: string;
+            /**
+             * Valor Actual
+             * @description Valor en período actual
+             */
+            valor_actual: number;
+            /**
+             * Valor Anterior
+             * @description Valor en período anterior
+             */
+            valor_anterior: number;
+            /**
+             * Diferencia Porcentual
+             * @description % de cambio
+             */
+            diferencia_porcentual: number;
+            /**
+             * Diferencia Absoluta
+             * @description Cambio absoluto
+             */
+            diferencia_absoluta: number;
+        };
+        /**
+         * TopWinnersLosersResponse
+         * @description Response de top winners y losers
+         */
+        TopWinnersLosersResponse: {
+            /**
+             * Top Winners
+             * @description Entidades con mayor mejora
+             */
+            top_winners: components["schemas"]["TopWinnerLoser"][];
+            /**
+             * Top Losers
+             * @description Entidades con mayor deterioro
+             */
+            top_losers: components["schemas"]["TopWinnerLoser"][];
+            /**
+             * Metric Type
+             * @description Tipo de métrica analizada
+             */
+            metric_type: string;
+            periodo_actual: components["schemas"]["PeriodInfo"];
+            periodo_comparacion: components["schemas"]["PeriodInfo"];
         };
         /**
          * UserChangePassword
@@ -5825,6 +6219,44 @@ export interface operations {
             };
         };
     };
+    get_establecimientos_mapa_api_v1_establecimientos_mapa_get: {
+        parameters: {
+            query?: {
+                /** @description Filtrar por provincia */
+                id_provincia_indec?: number | null;
+                /** @description Filtrar por departamento */
+                id_departamento_indec?: number | null;
+                /** @description Filtrar por localidad */
+                id_localidad_indec?: number | null;
+                /** @description Límite de resultados */
+                limit?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_EstablecimientosMapaResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_strategies_api_v1_estrategias__get: {
         parameters: {
             query?: {
@@ -7152,6 +7584,100 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SuccessResponse_VerifySignedUrlResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_analytics_api_v1_analytics_get: {
+        parameters: {
+            query?: {
+                /** @description Tipo de período predefinido */
+                period_type?: components["schemas"]["PeriodType"];
+                /** @description Fecha desde (solo si period_type=personalizado) */
+                fecha_desde?: string | null;
+                /** @description Fecha hasta (solo si period_type=personalizado) */
+                fecha_hasta?: string | null;
+                /** @description Tipo de comparación */
+                comparison_type?: components["schemas"]["ComparisonType"];
+                /** @description ID del grupo seleccionado */
+                grupo_id?: number | null;
+                /** @description IDs de los eventos a filtrar */
+                tipo_eno_ids?: number[] | null;
+                /** @description Filtrar por clasificaciones estratégicas */
+                clasificaciones?: string[] | null;
+                /** @description Código INDEC de provincia */
+                provincia_id?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_AnalyticsResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_top_winners_losers_api_v1_analytics_top_winners_losers_get: {
+        parameters: {
+            query?: {
+                /** @description Tipo de métrica: departamentos, tipo_eno, provincias */
+                metric_type?: string;
+                /** @description Tipo de período predefinido */
+                period_type?: components["schemas"]["PeriodType"];
+                /** @description Fecha desde (solo si period_type=personalizado) */
+                fecha_desde?: string | null;
+                /** @description Fecha hasta (solo si period_type=personalizado) */
+                fecha_hasta?: string | null;
+                /** @description ID del grupo seleccionado */
+                grupo_id?: number | null;
+                /** @description IDs de los eventos a filtrar */
+                tipo_eno_ids?: number[] | null;
+                /** @description Filtrar por clasificaciones estratégicas */
+                clasificaciones?: string[] | null;
+                /** @description Código INDEC de provincia (solo para metric_type=departamentos) */
+                provincia_id?: number | null;
+                /** @description Número de winners/losers a retornar */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_TopWinnersLosersResponse_"];
                 };
             };
             /** @description Validation Error */

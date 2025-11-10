@@ -94,6 +94,7 @@ def main():
     print("  🗺️  Capas GIS (~77,000 features desde IGN WFS)")
     print("  🎯 Estrategias epidemiológicas")
     print("  📈 Configuración de gráficos")
+    print("  🔐 Usuario superadmin (admin@admin.com)")
     print("\n⏱️  Tiempo estimado: 8-12 minutos (incluye descargas WFS)")
     print("=" * 70)
 
@@ -112,7 +113,7 @@ def main():
 
         # Paso 1: Geografía desde API Georef
         print("\n" + "=" * 70)
-        print("PASO 1/6: GEOGRAFÍA (API Georef)")
+        print("PASO 1/7: GEOGRAFÍA (API Georef)")
         print("=" * 70)
         from app.scripts.seeds.seed_from_georef_api import (
             seed_provincias_desde_georef,
@@ -127,7 +128,7 @@ def main():
 
         # Paso 2: Población del Censo 2022
         print("\n" + "=" * 70)
-        print("PASO 2/5: POBLACIÓN (Censo 2022)")
+        print("PASO 2/7: POBLACIÓN (Censo 2022)")
         print("=" * 70)
         from app.scripts.seeds.seed_poblacion_censo2022 import (
             seed_poblacion_provincias,
@@ -146,7 +147,7 @@ def main():
 
         # Paso 3: Establecimientos REFES
         print("\n" + "=" * 70)
-        print("PASO 3/6: ESTABLECIMIENTOS DE SALUD (REFES)")
+        print("PASO 3/7: ESTABLECIMIENTOS DE SALUD (REFES)")
         print("=" * 70)
         estab_count = 0
         try:
@@ -184,7 +185,7 @@ def main():
 
         # Paso 5: Estrategias
         print("\n" + "=" * 70)
-        print("PASO 5/6: ESTRATEGIAS")
+        print("PASO 5/7: ESTRATEGIAS")
         print("=" * 70)
         try:
             from app.scripts.seeds.strategies import seed_all_strategies
@@ -200,7 +201,7 @@ def main():
 
         # Paso 6: Charts
         print("\n" + "=" * 70)
-        print("PASO 6/6: GRÁFICOS")
+        print("PASO 6/7: GRÁFICOS")
         print("=" * 70)
         try:
             from app.scripts.seeds.charts import seed_charts
@@ -210,6 +211,21 @@ def main():
                 print("✅ Gráficos configurados")
         except Exception as e:
             print(f"⚠️  Error cargando charts: {e}")
+            import traceback
+
+            traceback.print_exc()
+
+        # Paso 7: Usuarios
+        print("\n" + "=" * 70)
+        print("PASO 7/7: USUARIOS")
+        print("=" * 70)
+        try:
+            from app.scripts.seeds.seed_users import seed_superadmin
+
+            with Session(engine) as session:
+                seed_superadmin(session)
+        except Exception as e:
+            print(f"⚠️  Error creando usuarios: {e}")
             import traceback
 
             traceback.print_exc()
@@ -230,6 +246,7 @@ def main():
         #     print(f"  ⚠️  Capas GIS no cargadas (archivos no disponibles)")
         print(f"  ✅ Estrategias epidemiológicas")
         print(f"  ✅ Configuración de gráficos")
+        print(f"  ✅ Usuario superadmin (admin@admin.com)")
         print("=" * 70)
 
     except Exception as e:

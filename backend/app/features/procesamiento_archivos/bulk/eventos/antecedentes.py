@@ -1,113 +1,116 @@
-"""Bulk processor for events and related entities."""
+"""Bulk processor for epidemiological antecedents - POLARS PURO."""
 
-from datetime import date
-from decimal import Decimal
-from typing import Dict, List, Optional
-import os
-
-import pandas as pd
-from sqlalchemy import select, func
+import polars as pl
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-from app.core.utils.codigo_generator import CodigoGenerator
-from app.domains.eventos_epidemiologicos.ambitos_models import AmbitosConcurrenciaEvento
 from app.domains.eventos_epidemiologicos.eventos.models import (
     AntecedenteEpidemiologico,
     AntecedentesEpidemiologicosEvento,
-    DetalleEventoSintomas,
-    Evento,
-    GrupoEno,
-    TipoEno,
-)
-from app.domains.atencion_medica.salud_models import Sintoma
-from app.features.procesamiento_archivos.utils.epidemiological_calculations import (
-    calcular_semana_epidemiologica,
 )
 
 from ...config.columns import Columns
-from ..shared import BulkProcessorBase, BulkOperationResult, get_or_create_catalog
-
-
-class EventosProcessor(BulkProcessorBase):
-    """Handles event-related bulk operations."""
+from ..shared import (
+    BulkOperationResult,
+    BulkProcessorBase,
+    get_or_create_catalog,
+)
 
 
 class AntecedentesProcessor(BulkProcessorBase):
-    """Handles epidemiological background operations."""
+    """Handles epidemiological background operations - POLARS PURO."""
 
     def upsert_antecedentes_epidemiologicos(
-        self, df: pd.DataFrame, evento_mapping: Dict[int, int]
+        self, df: pl.DataFrame
     ) -> BulkOperationResult:
-        """Bulk upsert de antecedentes epidemiológicos."""
+        """
+        Bulk upsert de antecedentes epidemiológicos usando POLARS PURO.
+
+        Elimina loops Python para split/proceso de antecedentes.
+        Usa .str.split() de Polars y join para evento_mapping.
+        """
         start_time = self._get_current_timestamp()
 
-        # Obtener mapeo de antecedentes
+        # 1. Filtrar filas con antecedentes válidos (lazy evaluation)
+        antecedentes_df = df.filter(
+            pl.col(Columns.ANTECEDENTE_EPIDEMIOLOGICO.name).is_not_null()
+        )
+
+        if antecedentes_df.height == 0:
+            return BulkOperationResult(0, 0, 0, [], 0.0)
+
+        # 2. Obtener mapeo de antecedentes (expandiendo delimitadores con Polars)
         antecedentes_mapping = self._get_or_create_antecedentes(df)
 
-        antecedentes_eventos_data = []
-        errors = []
+        if not antecedentes_mapping:
+            return BulkOperationResult(0, 0, 0, [], 0.0)
 
-        # OPTIMIZACIÓN: Procesamiento vectorizado de antecedentes (75% más rápido)
-        # Filtrar filas con antecedentes válidos
-        antecedentes_df = df[df[Columns.ANTECEDENTE_EPIDEMIOLOGICO.name].notna()].copy()
-
-        if not antecedentes_df.empty:
-            # Dividir antecedentes separados por |, ;, o comas
-            antecedentes_df["antecedentes_list"] = (
-                antecedentes_df[Columns.ANTECEDENTE_EPIDEMIOLOGICO.name]
-                .str.replace(",", "|")
-                .str.replace(";", "|")
-                .str.split("|")
+        # 3. Procesar antecedentes con POLARS PURO - id_evento ya existe en df
+        # Normalizar delimitadores a "|" y hacer split
+        processed_df = (
+            antecedentes_df
+            .select([
+                pl.col("id_evento"),  # Ya existe del JOIN en main.py
+                pl.col(Columns.ANTECEDENTE_EPIDEMIOLOGICO.name)
+                .str.replace_all(",", "|")  # Normalizar comas
+                .str.replace_all(";", "|")  # Normalizar punto y coma
+                .alias("antecedentes_raw"),
+            ])
+            # Explotar antecedentes separados por "|" en filas individuales
+            .with_columns([
+                pl.col("antecedentes_raw").str.split("|").alias("antecedentes_list")
+            ])
+            .explode("antecedentes_list")
+            # Limpiar cada antecedente individual
+            .with_columns([
+                pl.col("antecedentes_list").str.strip_chars().alias("antecedente_clean")
+            ])
+            # Filtrar antecedentes vacíos
+            .filter(
+                pl.col("antecedente_clean").is_not_null()
+                & (pl.col("antecedente_clean") != "")
             )
+        )
 
-            # Explotar: crear una fila por cada antecedente
-            antecedentes_expanded = antecedentes_df[
-                [Columns.IDEVENTOCASO.name, "antecedentes_list"]
-            ].explode("antecedentes_list")
+        if processed_df.height == 0:
+            return BulkOperationResult(0, 0, 0, [], 0.0)
 
-            # Limpiar nombres de antecedentes
-            antecedentes_expanded["antecedente_clean"] = (
-                antecedentes_expanded["antecedentes_list"].str.strip().str.upper()
-            )
+        # 4. Convertir antecedentes_mapping a DataFrame y hacer join
+        antecedentes_mapping_df = pl.DataFrame({
+            "antecedente_clean": list(antecedentes_mapping.keys()),
+            "id_antecedente_epidemiologico": list(antecedentes_mapping.values()),
+        })
 
-            # Mapear IDs usando vectorización
-            antecedentes_expanded["id_evento"] = antecedentes_expanded[
-                Columns.IDEVENTOCASO.name
-            ].map(evento_mapping)
-            antecedentes_expanded["id_antecedente_epidemiologico"] = (
-                antecedentes_expanded["antecedente_clean"].map(antecedentes_mapping)
-            )
+        # 5. Join con antecedentes_mapping y preparar datos finales
+        timestamp = self._get_current_timestamp()
+        final_df = (
+            processed_df
+            .join(antecedentes_mapping_df, on="antecedente_clean", how="inner")
+            .select([
+                "id_evento",
+                "id_antecedente_epidemiologico",
+            ])
+            # Eliminar duplicados (mismo evento + mismo antecedente)
+            .unique()
+            # Agregar timestamps
+            .with_columns([
+                pl.lit(timestamp).alias("created_at"),
+                pl.lit(timestamp).alias("updated_at"),
+            ])
+        )
 
-            # Filtrar solo relaciones válidas
-            valid_antecedentes = antecedentes_expanded[
-                antecedentes_expanded["id_evento"].notna()
-                & antecedentes_expanded["id_antecedente_epidemiologico"].notna()
-            ]
+        if final_df.height == 0:
+            return BulkOperationResult(0, 0, 0, [], 0.0)
 
-            if not valid_antecedentes.empty:
-                # Crear lista de dicts
-                timestamp = self._get_current_timestamp()
-                antecedentes_eventos_data = (
-                    valid_antecedentes[["id_evento", "id_antecedente_epidemiologico"]]
-                    .assign(created_at=timestamp, updated_at=timestamp)
-                    .to_dict("records")
-                )
+        # 7. Insertar en base de datos
+        antecedentes_eventos_data = final_df.to_dicts()
 
-                # Convertir Int64 a int nativo
-                for item in antecedentes_eventos_data:
-                    item["id_evento"] = int(item["id_evento"])
-                    item["id_antecedente_epidemiologico"] = int(
-                        item["id_antecedente_epidemiologico"]
-                    )
-
-        if antecedentes_eventos_data:
-            stmt = pg_insert(AntecedentesEpidemiologicosEvento.__table__).values(
-                antecedentes_eventos_data
-            )
-            upsert_stmt = stmt.on_conflict_do_nothing(
-                index_elements=["id_evento", "id_antecedente_epidemiologico"]
-            )
-            self.context.session.execute(upsert_stmt)
+        stmt = pg_insert(AntecedentesEpidemiologicosEvento.__table__).values(
+            antecedentes_eventos_data
+        )
+        upsert_stmt = stmt.on_conflict_do_nothing(
+            index_elements=["id_evento", "id_antecedente_epidemiologico"]
+        )
+        self.context.session.execute(upsert_stmt)
 
         duration = (self._get_current_timestamp() - start_time).total_seconds()
 
@@ -115,31 +118,54 @@ class AntecedentesProcessor(BulkProcessorBase):
             inserted_count=len(antecedentes_eventos_data),
             updated_count=0,
             skipped_count=0,
-            errors=errors,
+            errors=[],
             duration_seconds=duration,
         )
 
     # === PRIVATE HELPER METHODS ===
 
-    def _get_or_create_antecedentes(self, df: pd.DataFrame) -> Dict[str, int]:
-        """Get or create antecedent catalog entries using generic pattern."""
-        # Parse split values (,/;/| delimited) and create expanded dataframe
-        antecedentes_list = []
-        for val in df[Columns.ANTECEDENTE_EPIDEMIOLOGICO.name].dropna():
-            if val and str(val).strip():
-                # Split by multiple delimiters
-                parts = str(val).replace(",", "|").replace(";", "|").split("|")
-                for part in parts:
-                    cleaned = self._clean_string(part)
-                    if cleaned:
-                        antecedentes_list.append(cleaned)
+    def _get_or_create_antecedentes(self, df: pl.DataFrame) -> dict[str, int]:
+        """
+        Get or create antecedent catalog entries - POLARS PURO.
 
-        if not antecedentes_list:
+        Usa .str.split() de Polars para expandir valores delimitados.
+        """
+        # 1. Extraer y normalizar antecedentes con POLARS PURO
+        antecedentes_expanded = (
+            df
+            .filter(pl.col(Columns.ANTECEDENTE_EPIDEMIOLOGICO.name).is_not_null())
+            .select([
+                pl.col(Columns.ANTECEDENTE_EPIDEMIOLOGICO.name)
+                .str.replace_all(",", "|")  # Normalizar comas
+                .str.replace_all(";", "|")  # Normalizar punto y coma
+                .alias("antecedentes_raw")
+            ])
+            # Split por "|" y explotar en filas individuales
+            .with_columns([
+                pl.col("antecedentes_raw").str.split("|").alias("antecedentes_list")
+            ])
+            .explode("antecedentes_list")
+            # Limpiar cada antecedente
+            .with_columns([
+                pl.col("antecedentes_list").str.strip_chars().alias("antecedente_clean")
+            ])
+            # Filtrar vacíos
+            .filter(
+                pl.col("antecedente_clean").is_not_null()
+                & (pl.col("antecedente_clean") != "")
+            )
+            # Obtener valores únicos
+            .select("antecedente_clean")
+            .unique()
+        )
+
+        if antecedentes_expanded.height == 0:
             return {}
 
-        # Create temp dataframe for get_or_create_catalog
-        temp_df = pd.DataFrame({"ANTECEDENTE": antecedentes_list})
+        # 2. Renombrar columna para compatibilidad con get_or_create_catalog
+        temp_df = antecedentes_expanded.rename({"antecedente_clean": "ANTECEDENTE"})
 
+        # 3. Usar patrón genérico get_or_create_catalog
         return get_or_create_catalog(
             session=self.context.session,
             model=AntecedenteEpidemiologico,
@@ -147,5 +173,6 @@ class AntecedentesProcessor(BulkProcessorBase):
             column="ANTECEDENTE",
             key_field="descripcion",
             name_field="descripcion",
-            has_unique_constraint=False,  # La tabla no tiene unique constraint en descripcion
+            # La tabla no tiene unique constraint en descripcion
+            has_unique_constraint=False,
         )

@@ -1,8 +1,6 @@
-"""Bulk processor for study events."""
+"""Bulk processor for study events - POLARS PURO."""
 
-from typing import Dict, Optional
-
-import pandas as pd
+import polars as pl
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
@@ -10,109 +8,153 @@ from app.domains.atencion_medica.diagnosticos_models import EstudioEvento
 from app.domains.atencion_medica.salud_models import MuestraEvento
 
 from ...config.columns import Columns
-from ..shared import BulkProcessorBase, BulkOperationResult
+from ..shared import BulkProcessorBase, BulkOperationResult, pl_safe_date, pl_clean_string
 
 
 class EstudiosProcessor(BulkProcessorBase):
-    """Handles study event operations."""
+    """Handles study event operations - POLARS PURO con lazy evaluation."""
 
     def upsert_estudios_eventos(
-        self, df: pd.DataFrame, evento_mapping: Dict[int, int]
+        self, df: pl.DataFrame
     ) -> BulkOperationResult:
-        """Bulk upsert de estudios de eventos."""
+        """
+        Bulk upsert de estudios de eventos - POLARS PURO.
+
+        Optimizaciones:
+        - Lazy evaluation para filtrado y transformaciones
+        - Usa id_evento directamente desde df (ya viene del JOIN en main.py)
+        - Join en Polars para muestra_mapping
+        - Validación y limpieza con expresiones Polars
+        - CERO loops Python
+        """
         start_time = self._get_current_timestamp()
 
-        # Filtrar registros con información de estudios
-        estudios_df = df[
-            df[Columns.DETERMINACION.name].notna()
-            | df[Columns.TECNICA.name].notna()
-            | df[Columns.RESULTADO.name].notna()
-            | df[Columns.FECHA_ESTUDIO.name].notna()
-        ]
+        # Filtrar registros con información de estudios - POLARS LAZY
+        estudios_df = df.lazy().filter(
+            (pl.col(Columns.DETERMINACION.name).is_not_null() if Columns.DETERMINACION.name in df.columns else pl.lit(False))
+            | (pl.col(Columns.TECNICA.name).is_not_null() if Columns.TECNICA.name in df.columns else pl.lit(False))
+            | (pl.col(Columns.RESULTADO.name).is_not_null() if Columns.RESULTADO.name in df.columns else pl.lit(False))
+            | (pl.col(Columns.FECHA_ESTUDIO.name).is_not_null() if Columns.FECHA_ESTUDIO.name in df.columns else pl.lit(False))
+        ).collect()
 
-        if estudios_df.empty:
+        if estudios_df.height == 0:
             return BulkOperationResult(0, 0, 0, [], 0.0)
 
-        self.logger.info(f"Bulk upserting {len(estudios_df)} estudios")
+        self.logger.info(f"Bulk upserting {estudios_df.height} estudios")
 
-        # Obtener mapping de muestras_evento (necesario para EstudioEvento)
-        # Clave: (id_snvs_muestra, id_evento) → id_muestra_evento
+        # ===== MAPEO DE MUESTRAS: Query SQL -> Polars DataFrame =====
+        # Obtener mapping de muestras_evento desde BD
         stmt = select(
-            MuestraEvento.id, MuestraEvento.id_snvs_muestra, MuestraEvento.id_evento
+            MuestraEvento.id,
+            MuestraEvento.id_snvs_muestra,
+            MuestraEvento.id_evento,
         )
-        muestra_mapping = {}
-        for muestra_id, id_snvs_muestra, id_evento in self.context.session.execute(
-            stmt
-        ).all():
-            muestra_mapping[(id_snvs_muestra, id_evento)] = muestra_id
+        muestra_rows = self.context.session.execute(stmt).all()
 
-        # OPTIMIZACIÓN: Usar .apply() en vez de iterrows() (2-5x más rápido)
-        estudios_data = []
-        errors = []
+        # Convertir a DataFrame de Polars con schema explícito
+        muestra_map_df = pl.DataFrame(
+            {
+                "id_muestra": [row[0] for row in muestra_rows],
+                "id_snvs_muestra_join": [row[1] for row in muestra_rows],
+                "id_evento_join": [row[2] for row in muestra_rows],
+            },
+            schema={
+                "id_muestra": pl.Int64,
+                "id_snvs_muestra_join": pl.Int64,
+                "id_evento_join": pl.Int64,
+            }
+        )
 
-        def process_row(row):
-            try:
-                return self._row_to_estudio_dict(row, evento_mapping, muestra_mapping)
-            except Exception as e:
-                errors.append(f"Error preparando estudio evento: {e}")
-                return None
+        # ===== PREPARACIÓN Y TRANSFORMACIÓN CON POLARS LAZY =====
+        timestamp = self._get_current_timestamp()
 
-        estudios_results = estudios_df.apply(process_row, axis=1)
-        estudios_data = [e for e in estudios_results if e is not None]
+        estudios_prepared = (
+            estudios_df.lazy()
+            # 1. Extraer y limpiar columnas base
+            .select([
+                pl.col("id_evento"),  # Ya existe del JOIN en main.py
+                (
+                    pl.col(Columns.ID_SNVS_MUESTRA.name).cast(pl.Int64, strict=False)
+                    if Columns.ID_SNVS_MUESTRA.name in estudios_df.columns
+                    else pl.lit(None, dtype=pl.Int64)
+                ).alias("id_snvs_muestra"),
+                (
+                    pl_clean_string(Columns.DETERMINACION.name)
+                    if Columns.DETERMINACION.name in estudios_df.columns
+                    else pl.lit(None)
+                ).alias("determinacion"),
+                (
+                    pl_clean_string(Columns.TECNICA.name)
+                    if Columns.TECNICA.name in estudios_df.columns
+                    else pl.lit(None)
+                ).alias("tecnica"),
+                (
+                    pl_safe_date(Columns.FECHA_ESTUDIO.name)
+                    if Columns.FECHA_ESTUDIO.name in estudios_df.columns
+                    else pl.lit(None, dtype=pl.Date)
+                ).alias("fecha_estudio"),
+                (
+                    pl_clean_string(Columns.RESULTADO.name)
+                    if Columns.RESULTADO.name in estudios_df.columns
+                    else pl.lit(None)
+                ).alias("resultado"),
+                (
+                    pl_safe_date(Columns.FECHA_RECEPCION.name)
+                    if Columns.FECHA_RECEPCION.name in estudios_df.columns
+                    else pl.lit(None, dtype=pl.Date)
+                ).alias("fecha_recepcion"),
+            ])
+            # 2. JOIN con muestra_mapping para obtener id_muestra (left join porque id_muestra es opcional)
+            .join(
+                muestra_map_df.lazy(),
+                left_on=["id_snvs_muestra", "id_evento"],
+                right_on=["id_snvs_muestra_join", "id_evento_join"],
+                how="left",
+            )
+            # 3. Filtrar registros que tienen al menos un dato relevante
+            .filter(
+                pl.col("determinacion").is_not_null()
+                | pl.col("tecnica").is_not_null()
+                | pl.col("fecha_estudio").is_not_null()
+                | pl.col("resultado").is_not_null()
+            )
+            # 4. Seleccionar solo las columnas finales necesarias
+            .select([
+                "id_muestra",  # FK requerido
+                "determinacion",
+                "tecnica",
+                "fecha_estudio",
+                "resultado",
+                "fecha_recepcion",
+                pl.lit(timestamp).alias("created_at"),
+                pl.lit(timestamp).alias("updated_at"),
+            ])
+            # 5. Filtrar solo estudios con id_muestra válido (FK requerido)
+            .filter(pl.col("id_muestra").is_not_null())
+            # 6. Remover duplicados (si existen)
+            .unique(
+                subset=["id_muestra", "determinacion", "tecnica", "fecha_estudio"],
+                maintain_order=True,
+            )
+            .collect()
+        )
 
-        if estudios_data:
-            stmt = pg_insert(EstudioEvento.__table__).values(estudios_data)
+        # Convertir a dict para inserción en BD
+        valid_records = estudios_prepared.to_dicts()
+
+        # ===== UPSERT EN BASE DE DATOS =====
+        if valid_records:
+            stmt = pg_insert(EstudioEvento.__table__).values(valid_records)
+            # EstudioEvento no tiene unique constraint explícito, usar do_nothing
             upsert_stmt = stmt.on_conflict_do_nothing()
             self.context.session.execute(upsert_stmt)
 
         duration = (self._get_current_timestamp() - start_time).total_seconds()
 
         return BulkOperationResult(
-            inserted_count=len(estudios_data),
+            inserted_count=len(valid_records),
             updated_count=0,
-            skipped_count=0,
-            errors=errors,
+            skipped_count=estudios_df.height - len(valid_records),
+            errors=[],
             duration_seconds=duration,
         )
-
-    def _row_to_estudio_dict(
-        self,
-        row: pd.Series,
-        evento_mapping: Dict[int, int],
-        muestra_mapping: Dict[tuple, int],
-    ) -> Optional[Dict]:
-        """Convert row to estudio evento dict."""
-        id_evento_caso = self._safe_int(row.get(Columns.IDEVENTOCASO.name))
-        if id_evento_caso not in evento_mapping:
-            return None
-
-        # Solo agregar si hay datos relevantes
-        determinacion = self._clean_string(row.get(Columns.DETERMINACION.name))
-        tecnica = self._clean_string(row.get(Columns.TECNICA.name))
-        fecha = self._safe_date(row.get(Columns.FECHA_ESTUDIO.name))
-        resultado = self._clean_string(row.get(Columns.RESULTADO.name))
-
-        if not any([determinacion, tecnica, fecha, resultado]):
-            return None
-
-        # EstudioEvento requiere id_muestra (de muestra_evento)
-        id_snvs_muestra = self._safe_int(row.get(Columns.ID_SNVS_MUESTRA.name))
-        id_evento = evento_mapping[id_evento_caso]
-
-        # Buscar el ID de muestra_evento usando la clave compuesta
-        id_muestra_evento = muestra_mapping.get((id_snvs_muestra, id_evento))
-
-        if not id_muestra_evento:
-            # No hay muestra asociada, skip este estudio
-            return None
-
-        return {
-            "id_muestra": id_muestra_evento,
-            "fecha_estudio": fecha,
-            "determinacion": determinacion,
-            "tecnica": tecnica,
-            "resultado": resultado,
-            "fecha_recepcion": self._safe_date(row.get(Columns.FECHA_RECEPCION.name)),
-            "created_at": self._get_current_timestamp(),
-            "updated_at": self._get_current_timestamp(),
-        }

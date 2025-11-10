@@ -26,6 +26,20 @@ export function getCancelJobUrl(jobId: string): string {
 }
 
 /**
+ * Get the URL for uploading file for preview (new modern flow)
+ */
+export function getUploadPreviewUrl(): string {
+  return `${env.NEXT_PUBLIC_API_HOST}/api/v1/uploads/preview`;
+}
+
+/**
+ * Get the URL for processing from preview (new modern flow)
+ */
+export function getUploadProcessUrl(): string {
+  return `${env.NEXT_PUBLIC_API_HOST}/api/v1/uploads/process`;
+}
+
+/**
  * Get the base API URL
  */
 export function getApiBaseUrl(): string {

@@ -13,6 +13,8 @@ from app.features.procesamiento_archivos.schemas import (
 from .cancel_job import cancel_job
 from .get_job_status import get_job_status
 from .upload_csv import upload_csv_async
+from .preview_file import preview_uploaded_file
+from .process_from_preview import process_file_from_preview, ProcessFromPreviewRequest
 
 router = APIRouter(prefix="/uploads", tags=["Uploads Async"])
 
@@ -51,5 +53,32 @@ router.add_api_route(
             "model": ErrorResponse,
             "description": "Job no encontrado o ya terminado",
         },
+    },
+)
+
+# Preview file endpoint (new modern flow)
+router.add_api_route(
+    "/preview",
+    preview_uploaded_file,
+    methods=["POST"],
+    responses={
+        200: {
+            "description": "Preview generado exitosamente",
+        },
+        400: {"model": ErrorResponse, "description": "Formato de archivo no válido"},
+    },
+)
+
+# Process from preview endpoint (new modern flow)
+router.add_api_route(
+    "/process",
+    process_file_from_preview,
+    methods=["POST"],
+    responses={
+        200: {
+            "model": SuccessResponse[AsyncJobResponse],
+            "description": "Procesamiento iniciado",
+        },
+        404: {"model": ErrorResponse, "description": "Upload ID no encontrado"},
     },
 )

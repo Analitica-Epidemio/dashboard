@@ -1,11 +1,11 @@
-"""Bulk processor for events and related entities."""
+"""Bulk processor for events and related entities - Optimizado con Polars puro."""
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
-from typing import Dict, List, Optional
+from typing import List, Optional
 import os
 
-import pandas as pd
+import polars as pl
 from sqlalchemy import select, func
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
@@ -25,12 +25,19 @@ from app.features.procesamiento_archivos.utils.epidemiological_calculations impo
 )
 
 from ...config.columns import Columns
-from ..shared import BulkProcessorBase, BulkOperationResult, get_or_create_catalog
-from ..shared import is_valid_street_name
+from ..shared import (
+    BulkProcessorBase,
+    BulkOperationResult,
+    get_or_create_catalog,
+    is_valid_street_name,
+    pl_safe_int,
+    pl_safe_date,
+    pl_clean_string,
+)
 
 
 class EventosProcessor(BulkProcessorBase):
-    """Handles event-related bulk operations."""
+    """Handles event-related bulk operations with Polars optimization."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -53,16 +60,16 @@ class EventosProcessor(BulkProcessorBase):
                 self.logger.warning(f"No se pudo inicializar geocodificación: {e}")
                 self.geocoding_enabled = False
 
-    def _get_or_create_grupos_eno(self, df: pd.DataFrame) -> Dict[str, int]:
+    def _get_or_create_grupos_eno(self, df: pl.DataFrame) -> dict[str, int]:
         """Get or create grupo ENO entries using generic pattern with CodigoGenerator."""
 
         # DEBUG: Ver qué grupos tenemos en el CSV
-        grupos_unicos = df[Columns.GRUPO_EVENTO.name].dropna().unique()
+        grupos_unicos = df[Columns.GRUPO_EVENTO.name].drop_nulls().unique().to_list()
         self.logger.info(
-            f"🔍 DEBUG: Grupos únicos en CSV ({len(grupos_unicos)}): {list(grupos_unicos)[:10]}"
+            f"🔍 DEBUG: Grupos únicos en CSV ({len(grupos_unicos)}): {grupos_unicos[:10]}"
         )
 
-        def transform_grupo(valor: str) -> Dict:
+        def transform_grupo(valor: str) -> dict:
             """Transform CSV value to GrupoEno record."""
             grupo_data = CodigoGenerator.generar_par_grupo(
                 valor,
@@ -90,27 +97,48 @@ class EventosProcessor(BulkProcessorBase):
         return result
 
     def _get_or_create_tipos_eno(
-        self, df: pd.DataFrame, grupo_mapping: Dict[str, int]
-    ) -> tuple[Dict[str, int], Dict[int, set]]:
-        """Get or create tipo ENO entries from DataFrame.
+        self, df: pl.DataFrame, grupo_mapping: dict[str, int]
+    ) -> tuple[dict[str, int], dict[int, set]]:
+        """
+        Get or create tipo ENO entries from DataFrame - OPTIMIZADO con Polars.
 
         Returns:
             Tuple of:
             - Dict mapping tipo_codigo -> tipo_id
             - Dict mapping tipo_id -> set of grupo_ids
         """
-        tipos_set = set()
+        # OPTIMIZACIÓN: Extraer tipos únicos usando Polars lazy
+        tipos_df = (
+            df.lazy()
+            .select([
+                pl_clean_string(Columns.EVENTO.name).alias("evento_clean")
+            ])
+            .filter(pl.col("evento_clean").is_not_null())
+            .unique()
+            .collect()
+        )
 
-        # Extraer tipos únicos de la columna EVENTO
-        for tipo in df[Columns.EVENTO.name].dropna().unique():
-            tipo_str = str(tipo).strip()
-            if tipo_str:
-                # Generar código kebab-case estable
-                codigo = CodigoGenerator.generar_codigo_kebab(tipo_str)
-                tipos_set.add(codigo)
-
-        if not tipos_set:
+        if tipos_df.height == 0:
             return {}, {}
+
+        tipos_unicos = tipos_df["evento_clean"].to_list()
+
+        # Generar códigos usando vectorización de Polars
+        tipo_data_list = []
+        for tipo_str in tipos_unicos:
+            if tipo_str:
+                codigo = CodigoGenerator.generar_codigo_kebab(tipo_str)
+                tipo_data_list.append({
+                    "tipo_str": tipo_str,
+                    "codigo": codigo
+                })
+
+        if not tipo_data_list:
+            return {}, {}
+
+        # Crear DataFrame de tipos para procesamiento
+        tipos_codes_df = pl.DataFrame(tipo_data_list)
+        tipos_set = set(tipos_codes_df["codigo"].to_list())
 
         # Verificar existentes por código
         stmt = select(TipoEno.id, TipoEno.codigo).where(
@@ -121,19 +149,12 @@ class EventosProcessor(BulkProcessorBase):
             for tipo_id, codigo in self.context.session.execute(stmt).all()
         }
 
-        # Mapear códigos a nombres originales para crear tipos
-        codigo_to_original = {}
-        for tipo in df[Columns.EVENTO.name].dropna().unique():
-            tipo_str = str(tipo).strip()
-            if tipo_str:
-                codigo = CodigoGenerator.generar_codigo_kebab(tipo_str)
-                codigo_to_original[codigo] = tipo_str
-
-        # Crear nuevos tipos (sin id_grupo_eno, ya que ahora es many-to-many)
+        # Identificar nuevos tipos
         nuevos_tipos = []
-        for tipo_codigo in tipos_set:
+        for row in tipo_data_list:
+            tipo_codigo = row["codigo"]
             if tipo_codigo not in existing_mapping:
-                nombre_original = codigo_to_original.get(tipo_codigo, tipo_codigo)
+                nombre_original = row["tipo_str"]
                 tipo_data = CodigoGenerator.generar_par_tipo(
                     nombre_original,
                     f"Tipo {CodigoGenerator.capitalizar_nombre(nombre_original)}",
@@ -162,82 +183,239 @@ class EventosProcessor(BulkProcessorBase):
                 for tipo_id, codigo in self.context.session.execute(stmt).all()
             }
 
-        # OPTIMIZACIÓN: Construir mapping vectorizado (10-50x más rápido que iterrows)
-        tipo_grupos_mapping: Dict[int, set] = {}
+        # OPTIMIZACIÓN: Construir mapping tipo-grupo usando Polars puro
+        tipo_grupos_mapping: dict[int, set] = {}
 
-        # Vectorizado: preparar datos
-        df_mapping = (
-            df[[Columns.EVENTO.name, Columns.GRUPO_EVENTO.name]].dropna().copy()
+        # Preparar DataFrame con tipos y grupos limpios
+        tipo_grupo_df = (
+            df.lazy()
+            .select([
+                pl_clean_string(Columns.EVENTO.name).alias("evento_clean"),
+                pl_clean_string(Columns.GRUPO_EVENTO.name).alias("grupo_clean")
+            ])
+            .filter(
+                pl.col("evento_clean").is_not_null() &
+                pl.col("grupo_clean").is_not_null()
+            )
+            .unique()
+            .collect()
         )
 
-        if not df_mapping.empty:
-            df_mapping["tipo_limpio"] = df_mapping[Columns.EVENTO.name].apply(
-                self._clean_string
-            )
-            df_mapping["grupo_limpio"] = df_mapping[Columns.GRUPO_EVENTO.name].apply(
-                self._clean_string
-            )
-            df_mapping = df_mapping[
-                df_mapping["tipo_limpio"].notna() & df_mapping["grupo_limpio"].notna()
-            ]
+        if tipo_grupo_df.height > 0:
+            # Convertir a lista de dicts para procesamiento
+            from collections import defaultdict
+            tipo_grupos_temp = defaultdict(set)
 
-            df_mapping["tipo_codigo"] = df_mapping["tipo_limpio"].apply(
-                CodigoGenerator.generar_codigo_kebab
-            )
-            df_mapping["grupo_codigo"] = df_mapping["grupo_limpio"].apply(
-                CodigoGenerator.generar_codigo_kebab
-            )
+            for row_dict in tipo_grupo_df.to_dicts():
+                evento_clean = row_dict["evento_clean"]
+                grupo_clean = row_dict["grupo_clean"]
 
-            df_mapping["tipo_id"] = df_mapping["tipo_codigo"].map(existing_mapping)
-            df_mapping["grupo_id"] = df_mapping["grupo_codigo"].map(grupo_mapping)
+                tipo_codigo = CodigoGenerator.generar_codigo_kebab(evento_clean)
+                grupo_codigo = CodigoGenerator.generar_codigo_kebab(grupo_clean)
 
-            # Filtrar solo los que tienen ambos IDs válidos
-            df_valido = df_mapping[
-                df_mapping["tipo_id"].notna() & df_mapping["grupo_id"].notna()
-            ]
+                tipo_id = existing_mapping.get(tipo_codigo)
+                grupo_id = grupo_mapping.get(grupo_codigo)
 
-            # Agrupar para construir sets
-            for tipo_id, group_df in df_valido.groupby("tipo_id"):
-                tipo_grupos_mapping[int(tipo_id)] = set(
-                    group_df["grupo_id"].astype(int).unique()
+                if tipo_id and grupo_id:
+                    tipo_grupos_temp[tipo_id].add(grupo_id)
+
+            tipo_grupos_mapping = dict(tipo_grupos_temp)
+
+            # Crear relaciones tipo-grupo en la tabla de unión
+            from app.domains.eventos_epidemiologicos.eventos.models import TipoEnoGrupoEno
+
+            timestamp = self._get_current_timestamp()
+            relaciones_tipo_grupo = []
+            for tipo_id, grupos_ids in tipo_grupos_mapping.items():
+                for grupo_id in grupos_ids:
+                    relaciones_tipo_grupo.append(
+                        {
+                            "id_tipo_eno": int(tipo_id),
+                            "id_grupo_eno": int(grupo_id),
+                            "created_at": timestamp,
+                            "updated_at": timestamp,
+                        }
+                    )
+
+            if relaciones_tipo_grupo:
+                stmt = pg_insert(TipoEnoGrupoEno.__table__).values(relaciones_tipo_grupo)
+                upsert_stmt = stmt.on_conflict_do_nothing(
+                    index_elements=["id_tipo_eno", "id_grupo_eno"]
                 )
-
-        # Crear relaciones tipo-grupo en la tabla de unión
-        from app.domains.eventos_epidemiologicos.eventos.models import TipoEnoGrupoEno
-
-        relaciones_tipo_grupo = []
-        for tipo_id, grupos_ids in tipo_grupos_mapping.items():
-            for grupo_id in grupos_ids:
-                relaciones_tipo_grupo.append(
-                    {
-                        "id_tipo_eno": int(tipo_id),  # Convertir numpy.int64 → int
-                        "id_grupo_eno": int(grupo_id),  # Convertir numpy.int64 → int
-                        "created_at": self._get_current_timestamp(),
-                        "updated_at": self._get_current_timestamp(),
-                    }
+                self.context.session.execute(upsert_stmt)
+                self.logger.info(
+                    f"{len(relaciones_tipo_grupo)} relaciones tipo-grupo creadas "
+                    f"({len(tipo_grupos_mapping)} tipos con uno o más grupos)"
                 )
-
-        if relaciones_tipo_grupo:
-            stmt = pg_insert(TipoEnoGrupoEno.__table__).values(relaciones_tipo_grupo)
-            upsert_stmt = stmt.on_conflict_do_nothing(
-                index_elements=["id_tipo_eno", "id_grupo_eno"]
-            )
-            self.context.session.execute(upsert_stmt)
-            self.logger.info(
-                f"{len(relaciones_tipo_grupo)} relaciones tipo-grupo creadas "
-                f"({len(tipo_grupos_mapping)} tipos con uno o más grupos)"
-            )
 
         return existing_mapping, tipo_grupos_mapping
 
+    def _bulk_load_domicilios(self, agg_results: pl.DataFrame) -> dict[int, Optional[int]]:
+        """
+        Bulk load de domicilios - elimina N+1 queries.
+
+        OPTIMIZACIÓN: En lugar de hacer 1 SELECT por evento (N+1 problem),
+        hace 1 SELECT para todos los domicilios necesarios.
+
+        Args:
+            agg_results: DataFrame agregado con datos de eventos
+
+        Returns:
+            Dict mapping id_evento_caso -> id_domicilio
+        """
+        from app.domains.territorio.geografia_models import Domicilio
+
+        # 1. Extraer domicilios únicos del DataFrame agregado
+        domicilios_df = (
+            agg_results.lazy()
+            .select([
+                pl.col(Columns.IDEVENTOCASO.name),
+                pl.col("calle_domicilio"),
+                pl.col("numero_domicilio"),
+                pl.col("id_localidad_indec"),
+                pl.col("localidad_residencia"),
+                pl.col("provincia_residencia"),
+            ])
+            # Limpiar y validar
+            .with_columns([
+                pl.col("calle_domicilio").cast(pl.Utf8).str.strip_chars(),
+                pl.col("numero_domicilio").cast(pl.Utf8).str.strip_chars(),
+            ])
+            .collect()
+        )
+
+        # 2. Validar calles y filtrar inválidas
+        domicilios_validos = []
+        evento_to_domicilio = {}  # id_evento_caso -> (calle, numero, id_localidad)
+
+        for row_dict in domicilios_df.to_dicts():
+            id_evento_caso = row_dict[Columns.IDEVENTOCASO.name]
+            calle = row_dict.get("calle_domicilio")
+            numero = row_dict.get("numero_domicilio")
+            id_localidad = row_dict.get("id_localidad_indec")
+
+            # Validar
+            if not is_valid_street_name(calle) or not id_localidad:
+                evento_to_domicilio[id_evento_caso] = None
+                continue
+
+            domicilio_key = (calle, numero, id_localidad)
+            evento_to_domicilio[id_evento_caso] = domicilio_key
+            domicilios_validos.append(domicilio_key)
+
+        if not domicilios_validos:
+            return evento_to_domicilio
+
+        # 3. Bulk SELECT de domicilios existentes (1 query para todos)
+        domicilios_unicos = list(set(domicilios_validos))
+        localidades_ids = list(set(d[2] for d in domicilios_unicos))
+
+        # Query todos los domicilios de estas localidades
+        stmt = select(
+            Domicilio.id,
+            Domicilio.calle,
+            Domicilio.numero,
+            Domicilio.id_localidad_indec
+        ).where(
+            Domicilio.id_localidad_indec.in_(localidades_ids)
+        )
+
+        existing_domicilios = {}
+        for dom_id, calle, numero, id_loc in self.context.session.execute(stmt).all():
+            key = (calle, numero, id_loc)
+            existing_domicilios[key] = dom_id
+
+        # 4. Identificar nuevos domicilios a crear
+        nuevos_domicilios = []
+        timestamp = self._get_current_timestamp()
+
+        for domicilio_key in domicilios_unicos:
+            if domicilio_key not in existing_domicilios:
+                calle, numero, id_localidad = domicilio_key
+                nuevos_domicilios.append({
+                    "calle": calle,
+                    "numero": numero,
+                    "id_localidad_indec": id_localidad,
+                    # estado_geocodificacion usa el default (PENDIENTE) del modelo
+                    "created_at": timestamp,
+                    "updated_at": timestamp,
+                })
+
+        # 5. Batch insert de nuevos domicilios
+        if nuevos_domicilios:
+            from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+            stmt = pg_insert(Domicilio.__table__).values(nuevos_domicilios)
+            upsert_stmt = stmt.on_conflict_do_nothing(
+                index_elements=["calle", "numero", "id_localidad_indec"]
+            )
+            self.context.session.execute(upsert_stmt)
+            self.context.session.flush()
+
+            # Re-query para obtener los IDs de los recién insertados
+            stmt = select(
+                Domicilio.id,
+                Domicilio.calle,
+                Domicilio.numero,
+                Domicilio.id_localidad_indec
+            ).where(
+                Domicilio.id_localidad_indec.in_(localidades_ids)
+            )
+
+            existing_domicilios = {}
+            for dom_id, calle, numero, id_loc in self.context.session.execute(stmt).all():
+                key = (calle, numero, id_loc)
+                existing_domicilios[key] = dom_id
+
+        # 6. Mapear id_evento_caso -> id_domicilio
+        result = {}
+        for id_evento_caso, domicilio_key in evento_to_domicilio.items():
+            if domicilio_key is None:
+                result[id_evento_caso] = None
+            else:
+                result[id_evento_caso] = existing_domicilios.get(domicilio_key)
+
+        return result
+
+    def _build_establecimiento_mapping_expr(
+        self, establecimiento_mapping: dict[str, int], col_name: str
+    ) -> pl.Expr:
+        """
+        Build Polars expression to map establecimiento names to IDs.
+
+        Args:
+            establecimiento_mapping: Dict of establecimiento_clean -> id
+            col_name: Column name to map
+
+        Returns:
+            Polars expression that maps the column to establecimiento IDs
+        """
+        # Create when/then chain for mapping
+        expr = pl.lit(None, dtype=pl.Int64)
+        for estab_name, estab_id in establecimiento_mapping.items():
+            expr = pl.when(pl.col(col_name) == estab_name).then(pl.lit(estab_id)).otherwise(expr)
+        return expr
+
     def upsert_eventos(
-        self, df: pd.DataFrame, establecimiento_mapping: Dict[str, int]
-    ) -> Dict[int, int]:
-        """Bulk upsert de eventos principales."""
-        if df.empty:
+        self, df: pl.DataFrame, establecimiento_mapping: dict[str, int]
+    ) -> dict[int, int]:
+        """
+        Bulk upsert de eventos principales - OPTIMIZADO con Polars lazy evaluation.
+
+        OPTIMIZACIONES PRINCIPALES:
+        - Lazy evaluation para todo el procesamiento
+        - Agregaciones vectorizadas con group_by
+        - JOINs en lugar de loops para mapeo de IDs
+        - Expresiones Polars para transformaciones
+        """
+        self.logger.info(f"🏥 Recibido mapping de establecimientos: {len(establecimiento_mapping)} establecimientos")
+        if establecimiento_mapping and len(establecimiento_mapping) <= 5:
+            self.logger.info(f"   Ejemplos: {list(establecimiento_mapping.keys())[:5]}")
+
+        if df.height == 0:
             return {}
 
-        self.logger.info(f"Procesando {len(df)} filas de eventos")
+        self.logger.info(f"Procesando {df.height} filas de eventos")
 
         # Primero crear grupos y tipos ENO
         grupo_mapping = self._get_or_create_grupos_eno(df)
@@ -249,229 +427,290 @@ class EventosProcessor(BulkProcessorBase):
             f"Creados/verificados {len(grupo_mapping)} grupos ENO y {len(tipo_mapping)} tipos ENO"
         )
 
-        # Agrupar eventos por id_evento_caso para calcular agregaciones correctamente
-        eventos_data = []
-        eventos_agrupados = df.groupby(Columns.IDEVENTOCASO.name)
-
+        # Contar eventos únicos
+        grupos_unicos = df[Columns.IDEVENTOCASO.name].drop_nulls().n_unique()
         self.logger.info(
-            f"Procesando {len(eventos_agrupados)} eventos únicos de {len(df)} filas totales"
+            f"Procesando {grupos_unicos} eventos únicos de {df.height} filas totales"
         )
 
-        # OPTIMIZACIÓN: Vectorizado - agregación de eventos usando groupby (50-100x más rápido)
-        # Preparar datos para agregación
-        df_for_agg = df.copy()
+        # OPTIMIZACIÓN CLAVE: Usar lazy evaluation para todas las transformaciones
+        # Crear mappings como DataFrames para hacer JOINs
 
-        # Limpiar columnas de establecimientos y grupos de una vez
-        df_for_agg["estab_consulta_clean"] = df_for_agg[
-            Columns.ESTAB_CLINICA.name
-        ].apply(lambda x: self._clean_string(x) if pd.notna(x) else None)
-        df_for_agg["estab_notif_clean"] = df_for_agg[
-            Columns.ESTABLECIMIENTO_EPI.name
-        ].apply(lambda x: self._clean_string(x) if pd.notna(x) else None)
-        df_for_agg["estab_carga_clean"] = df_for_agg[
-            Columns.ESTABLECIMIENTO_CARGA.name
-        ].apply(lambda x: self._clean_string(x) if pd.notna(x) else None)
+        # 1. Crear DataFrame de mapping de grupos
+        grupo_mapping_df = pl.DataFrame({
+            "grupo_nombre_clean": list(grupo_mapping.keys()),
+            "grupo_id": list(grupo_mapping.values())
+        })
 
-        # Mapear grupos ENO de una vez
-        df_for_agg["grupo_nombre_clean"] = df_for_agg[Columns.GRUPO_EVENTO.name].apply(
-            lambda x: self._clean_string(x) if pd.notna(x) else None
+        # 2. Crear DataFrame de mapping de tipos
+        tipo_mapping_df = pl.DataFrame({
+            "tipo_codigo": list(tipo_mapping.keys()),
+            "tipo_id": list(tipo_mapping.values())
+        })
+
+        # 3. OPTIMIZACIÓN: Pre-calcular códigos kebab UNA SOLA VEZ (elimina map_elements)
+        # Crear DataFrame con valores limpios
+        df_cleaned = (
+            df.lazy()
+            .with_columns([
+                # Limpiar strings de establecimientos
+                pl_clean_string(Columns.ESTAB_CLINICA.name).alias("estab_consulta_clean"),
+                pl_clean_string(Columns.ESTABLECIMIENTO_EPI.name).alias("estab_notif_clean"),
+                pl_clean_string(Columns.ESTABLECIMIENTO_CARGA.name).alias("estab_carga_clean"),
+
+                # Limpiar grupo y evento
+                pl_clean_string(Columns.GRUPO_EVENTO.name).alias("grupo_nombre_clean"),
+                pl_clean_string(Columns.EVENTO.name).alias("evento_nombre_clean"),
+            ])
+            .collect()
         )
-        df_for_agg["grupo_id"] = df_for_agg["grupo_nombre_clean"].apply(
-            lambda x: (
-                grupo_mapping.get(CodigoGenerator.generar_codigo_kebab(x))
-                if x
-                else None
+
+        # Extraer valores únicos LIMPIOS y generar códigos (solo para valores únicos)
+        grupos_unicos = df_cleaned["grupo_nombre_clean"].drop_nulls().unique().to_list()
+        eventos_unicos = df_cleaned["evento_nombre_clean"].drop_nulls().unique().to_list()
+
+        # Generar códigos solo para valores únicos (no para cada fila)
+        # Ahora el mapping usa los valores limpios como keys
+        grupo_kebab_map = {g: CodigoGenerator.generar_codigo_kebab(g)
+                           for g in grupos_unicos if g}
+        evento_kebab_map = {e: CodigoGenerator.generar_codigo_kebab(e)
+                            for e in eventos_unicos if e}
+
+        # Aplicar mapping vectorizado
+        df_prepared = (
+            df_cleaned.lazy()
+            .with_columns([
+                # Mapear a códigos usando replace (VECTORIZADO en Rust, no Python loop)
+                pl.col("grupo_nombre_clean").replace(grupo_kebab_map, default=None).alias("grupo_codigo"),
+                pl.col("evento_nombre_clean").replace(evento_kebab_map, default=None).alias("tipo_codigo"),
+            ])
+            .collect()
+        )
+
+        # 4. JOIN con mappings para obtener IDs
+        df_with_ids = (
+            df_prepared.lazy()
+            # Join grupo
+            .join(
+                grupo_mapping_df.lazy(),
+                left_on="grupo_codigo",
+                right_on="grupo_nombre_clean",
+                how="left"
             )
+            # Join tipo
+            .join(
+                tipo_mapping_df.lazy(),
+                on="tipo_codigo",
+                how="left"
+            )
+            .collect()
         )
 
-        # Agregar por IDEVENTOCASO
-        agg_results = df_for_agg.groupby(Columns.IDEVENTOCASO.name).agg(
-            {
-                # Fechas: tomar la mínima de cada columna (pd.NaT es ignorado por min())
-                Columns.FECHA_APERTURA.name: "min",
-                Columns.FECHA_INICIO_SINTOMA.name: "min",
-                Columns.FECHA_CONSULTA.name: "min",
-                Columns.FTM.name: "min",
+        # 5. AGREGACIÓN VECTORIZADA: Calcular valores por id_evento_caso
+        # OPTIMIZACIÓN: Incluir datos de domicilio en agregación para evitar filtros posteriores
+        agg_results = (
+            df_with_ids.lazy()
+            .group_by(Columns.IDEVENTOCASO.name)
+            .agg([
+                # Fechas: tomar la mínima de cada columna
+                pl.col(Columns.FECHA_APERTURA.name).min().alias("fecha_apertura_min"),
+                pl.col(Columns.FECHA_INICIO_SINTOMA.name).min().alias("fecha_inicio_sintoma_min"),
+                pl.col(Columns.FECHA_CONSULTA.name).min().alias("fecha_consulta_min"),
+                pl.col(Columns.FTM.name).min().alias("ftm_min"),
+
                 # Establecimientos: tomar el primer valor no nulo
-                "estab_consulta_clean": lambda x: (
-                    x.dropna().iloc[0] if len(x.dropna()) > 0 else None
-                ),
-                "estab_notif_clean": lambda x: (
-                    x.dropna().iloc[0] if len(x.dropna()) > 0 else None
-                ),
-                "estab_carga_clean": lambda x: (
-                    x.dropna().iloc[0] if len(x.dropna()) > 0 else None
-                ),
+                pl.col("estab_consulta_clean").drop_nulls().first().alias("estab_consulta_final"),
+                pl.col("estab_notif_clean").drop_nulls().first().alias("estab_notif_final"),
+                pl.col("estab_carga_clean").drop_nulls().first().alias("estab_carga_final"),
+
                 # Grupos ENO: recolectar TODOS los IDs únicos
-                "grupo_id": lambda x: set(x.dropna().unique()),
-            }
+                pl.col("grupo_id").drop_nulls().unique().alias("grupos_ids"),
+
+                # Tipo ENO: tomar el primero (debería ser único por evento)
+                pl.col("tipo_id").drop_nulls().first().alias("tipo_id"),
+
+                # Tomar primera fila de datos base para campos que no se agregan
+                pl.col(Columns.CODIGO_CIUDADANO.name).first().alias("codigo_ciudadano_first"),
+                pl.col(Columns.FECHA_NACIMIENTO.name).first().alias("fecha_nacimiento_first"),
+
+                # Campos de clasificación
+                pl.col("clasificacion_estrategia").first().alias("clasificacion_estrategia_first"),
+                pl.col("id_estrategia_aplicada").first().alias("id_estrategia_aplicada_first"),
+                pl.col("trazabilidad_clasificacion").first().alias("trazabilidad_clasificacion_first"),
+
+                # OPTIMIZACIÓN: Incluir datos de domicilio en la agregación
+                pl.col(Columns.CALLE_DOMICILIO.name).first().alias("calle_domicilio"),
+                pl.col(Columns.NUMERO_DOMICILIO.name).first().alias("numero_domicilio"),
+                pl.col(Columns.ID_LOC_INDEC_RESIDENCIA.name).first().alias("id_localidad_indec"),
+                pl.col(Columns.LOCALIDAD_RESIDENCIA.name).first().alias("localidad_residencia"),
+                pl.col(Columns.PROVINCIA_RESIDENCIA.name).first().alias("provincia_residencia"),
+
+                # Contar filas para debug
+                pl.count().alias("num_filas"),
+            ])
+            .collect()
         )
 
-        for id_evento_caso, grupo_df in eventos_agrupados:
-            if not id_evento_caso or id_evento_caso not in agg_results.index:
-                continue
+        # 6. OPTIMIZACIÓN: Bulk load de domicilios (elimina N+1 queries)
+        # Pre-cargar todos los domicilios existentes que necesitamos
+        domicilios_map = self._bulk_load_domicilios(agg_results)
 
-            # Obtener datos agregados
-            agg_data = agg_results.loc[id_evento_caso]
+        # 7. Procesar eventos y construir eventos_data
+        timestamp = self._get_current_timestamp()
+        eventos_data = []
+        eventos_grupos_data = []
+
+        for agg_row in agg_results.to_dicts():
+            id_evento_caso = agg_row[Columns.IDEVENTOCASO.name]
+            if not id_evento_caso:
+                continue
 
             # Calcular fecha_minima_evento: la mínima de las 4 columnas
             fechas_candidatas = [
-                agg_data[Columns.FECHA_APERTURA.name],
-                agg_data[Columns.FECHA_INICIO_SINTOMA.name],
-                agg_data[Columns.FECHA_CONSULTA.name],
-                agg_data[Columns.FTM.name],
+                agg_row.get("fecha_apertura_min"),
+                agg_row.get("fecha_inicio_sintoma_min"),
+                agg_row.get("fecha_consulta_min"),
+                agg_row.get("ftm_min"),
             ]
-            # Filtrar NaT/None
-            fechas_validas = [f for f in fechas_candidatas if pd.notna(f)]
+            fechas_validas = [f for f in fechas_candidatas if f is not None]
 
             if not fechas_validas:
-                # Mostrar los valores RAW del CSV para debugging
-                primera_fila = grupo_df.iloc[0]
-                fecha_apertura_raw = primera_fila.get(Columns.FECHA_APERTURA.name)
-                fecha_sintoma_raw = primera_fila.get(Columns.FECHA_INICIO_SINTOMA.name)
-                fecha_consulta_raw = primera_fila.get(Columns.FECHA_CONSULTA.name)
-                fecha_muestra_raw = primera_fila.get(Columns.FTM.name)
-
+                # Log warning para eventos sin fecha
                 self.logger.warning(
-                    f"⚠️  Evento {id_evento_caso}: no tiene ninguna fecha válida.\n"
-                    f"   Valores RAW del CSV (primera fila, columnas usadas para fecha_minima):\n"
-                    f"   - FECHA_APERTURA: '{fecha_apertura_raw}' (tipo: {type(fecha_apertura_raw).__name__})\n"
-                    f"   - FECHA_INICIO_SINTOMA: '{fecha_sintoma_raw}' (tipo: {type(fecha_sintoma_raw).__name__})\n"
-                    f"   - FECHA_CONSULTA: '{fecha_consulta_raw}' (tipo: {type(fecha_consulta_raw).__name__})\n"
-                    f"   - FTM: '{fecha_muestra_raw}' (tipo: {type(fecha_muestra_raw).__name__})\n"
-                    f"   → Se insertará con fecha_minima_evento = NULL (requiere revisión manual)."
+                    f"⚠️  Evento {id_evento_caso}: no tiene ninguna fecha válida. "
+                    f"Se insertará con fecha_minima_evento = NULL (requiere revisión manual)."
                 )
-                fecha_minima_evento = None  # NULL en la base de datos
+                fecha_minima_evento = None
             else:
                 fecha_minima_evento = min(fechas_validas)
 
-            # Fecha de inicio de síntomas más temprana (ya calculada por min())
-            fecha_inicio_sintomas_mas_temprana = agg_data[
-                Columns.FECHA_INICIO_SINTOMA.name
-            ]
-            if pd.isna(fecha_inicio_sintomas_mas_temprana):
-                fecha_inicio_sintomas_mas_temprana = None
+            # Fecha de inicio de síntomas más temprana
+            fecha_inicio_sintomas_mas_temprana = agg_row.get("fecha_inicio_sintoma_min")
 
-            # Usar la primera fila para datos básicos
-            primera_fila = grupo_df.iloc[0]
+            # Obtener tipo_id
+            id_tipo_eno = agg_row.get("tipo_id")
+            if not id_tipo_eno:
+                # Sin tipo, skip este evento
+                continue
 
-            # Obtener establecimientos agregados
-            estab_consulta_final = agg_data["estab_consulta_clean"]
-            estab_notif_final = agg_data["estab_notif_clean"]
-            estab_carga_final = agg_data["estab_carga_clean"]
+            # Obtener grupos
+            grupos_ids = agg_row.get("grupos_ids", [])
+            if not grupos_ids:
+                self.logger.warning(f"⚠️  Evento {id_evento_caso}: sin grupo ENO. Se omitirá.")
+                continue
 
-            # Obtener grupos ENO agregados
-            todos_grupos_eno = agg_data["grupo_id"]
+            # OPTIMIZACIÓN: Lookup de domicilio en dict (O(1) en lugar de query)
+            id_domicilio = domicilios_map.get(id_evento_caso)
 
-            evento_dict = self._row_to_evento_dict(
-                primera_fila, establecimiento_mapping, tipo_mapping, grupo_mapping
-            )
+            # Mapear establecimientos usando el mapping
+            id_estab_consulta = None
+            id_estab_notif = None
+            id_estab_carga = None
 
-            if evento_dict:
-                # Guardar los grupos para crear relaciones many-to-many
-                evento_dict["_grupos_eno_ids"] = list(todos_grupos_eno)
+            estab_consulta_final = agg_row.get("estab_consulta_final")
+            estab_notif_final = agg_row.get("estab_notif_final")
+            estab_carga_final = agg_row.get("estab_carga_final")
 
-                # Sobrescribir con los valores agregados correctos
-                evento_dict["fecha_minima_evento"] = fecha_minima_evento
-                evento_dict["fecha_inicio_sintomas"] = (
-                    fecha_inicio_sintomas_mas_temprana
-                )
+            if estab_consulta_final:
+                id_estab_consulta = establecimiento_mapping.get(estab_consulta_final)
+            if estab_notif_final:
+                id_estab_notif = establecimiento_mapping.get(estab_notif_final)
+            if estab_carga_final:
+                id_estab_carga = establecimiento_mapping.get(estab_carga_final)
 
-                # Calcular campos epidemiológicos solo si hay fecha válida
-                if fecha_minima_evento:
-                    # Convertir pd.Timestamp a datetime.date para calcular_semana_epidemiologica
-                    fecha_minima_date = (
-                        fecha_minima_evento.date()
-                        if hasattr(fecha_minima_evento, "date")
-                        else fecha_minima_evento
-                    )
+            # Procesar clasificación
+            clasificacion_estrategia = agg_row.get("clasificacion_estrategia_first")
+            if clasificacion_estrategia is None or not str(clasificacion_estrategia).strip():
+                from app.domains.eventos_epidemiologicos.clasificacion.models import TipoClasificacion
+                clasificacion_estrategia = TipoClasificacion.REQUIERE_REVISION
 
-                    # Semana epidemiológica basada en fecha_minima_evento
-                    semana_epi, anio_epi = calcular_semana_epidemiologica(
-                        fecha_minima_date
-                    )
-                    evento_dict["semana_epidemiologica_apertura"] = semana_epi
-                    evento_dict["anio_epidemiologico_apertura"] = anio_epi
+            # Calcular semanas epidemiológicas
+            semana_epidemiologica_apertura = None
+            anio_epidemiologico_apertura = None
+            semana_epidemiologica_sintomas = None
+
+            if fecha_minima_evento:
+                # Convertir a date si es datetime
+                if hasattr(fecha_minima_evento, "date"):
+                    fecha_minima_date = fecha_minima_evento.date()
+                elif isinstance(fecha_minima_evento, date):
+                    fecha_minima_date = fecha_minima_evento
                 else:
-                    # Sin fecha válida, no podemos calcular semana epidemiológica
-                    evento_dict["semana_epidemiologica_apertura"] = None
-                    evento_dict["anio_epidemiologico_apertura"] = None
+                    fecha_minima_date = fecha_minima_evento
 
-                # Si hay fecha de inicio de síntomas, calcular también esa semana
-                # IMPORTANTE: Siempre incluir el campo (aunque sea None) para evitar errores de SQLAlchemy
-                if fecha_inicio_sintomas_mas_temprana:
-                    # Convertir pd.Timestamp a datetime.date
-                    fecha_sintomas_date = (
-                        fecha_inicio_sintomas_mas_temprana.date()
-                        if hasattr(fecha_inicio_sintomas_mas_temprana, "date")
-                        else fecha_inicio_sintomas_mas_temprana
-                    )
+                semana_epi, anio_epi = calcular_semana_epidemiologica(fecha_minima_date)
+                semana_epidemiologica_apertura = semana_epi
+                anio_epidemiologico_apertura = anio_epi
 
-                    semana_sintomas, _ = calcular_semana_epidemiologica(
-                        fecha_sintomas_date
-                    )
-                    evento_dict["semana_epidemiologica_sintomas"] = semana_sintomas
+            if fecha_inicio_sintomas_mas_temprana:
+                if hasattr(fecha_inicio_sintomas_mas_temprana, "date"):
+                    fecha_sintomas_date = fecha_inicio_sintomas_mas_temprana.date()
+                elif isinstance(fecha_inicio_sintomas_mas_temprana, date):
+                    fecha_sintomas_date = fecha_inicio_sintomas_mas_temprana
                 else:
-                    evento_dict["semana_epidemiologica_sintomas"] = None
+                    fecha_sintomas_date = fecha_inicio_sintomas_mas_temprana
 
-                # Guardar fecha de nacimiento directamente (más preciso que edad calculada)
-                fecha_nac = self._safe_date(
-                    primera_fila.get(Columns.FECHA_NACIMIENTO.name)
+                semana_sintomas, _ = calcular_semana_epidemiologica(fecha_sintomas_date)
+                semana_epidemiologica_sintomas = semana_sintomas
+
+            # Construir evento dict
+            evento_dict = {
+                "id_evento_caso": id_evento_caso,
+                "codigo_ciudadano": agg_row.get("codigo_ciudadano_first"),
+                "fecha_inicio_sintomas": fecha_inicio_sintomas_mas_temprana,
+                "clasificacion_estrategia": clasificacion_estrategia,
+                "id_estrategia_aplicada": agg_row.get("id_estrategia_aplicada_first"),
+                "trazabilidad_clasificacion": agg_row.get("trazabilidad_clasificacion_first"),
+                "fecha_minima_evento": fecha_minima_evento,
+                "semana_epidemiologica_apertura": semana_epidemiologica_apertura,
+                "anio_epidemiologico_apertura": anio_epidemiologico_apertura,
+                "semana_epidemiologica_sintomas": semana_epidemiologica_sintomas,
+                "fecha_nacimiento": agg_row.get("fecha_nacimiento_first"),
+                "id_tipo_eno": id_tipo_eno,
+                "id_establecimiento_consulta": id_estab_consulta,
+                "id_establecimiento_notificacion": id_estab_notif,
+                "id_establecimiento_carga": id_estab_carga,
+                "id_domicilio": id_domicilio,
+                "created_at": timestamp,
+                "updated_at": timestamp,
+            }
+
+            eventos_data.append(evento_dict)
+
+            # Preparar relaciones evento-grupo
+            for id_grupo in grupos_ids:
+                eventos_grupos_data.append({
+                    "id_evento_caso": id_evento_caso,
+                    "id_grupo_eno": id_grupo
+                })
+
+            # Log para casos con muchas filas
+            num_filas = agg_row.get("num_filas", 1)
+            if num_filas > 10:
+                self.logger.info(
+                    f"Evento {id_evento_caso}: {num_filas} filas agregadas "
+                    f"(fecha_minima: {fecha_minima_evento})"
                 )
-                evento_dict["fecha_nacimiento"] = fecha_nac
-
-                # Actualizar establecimientos con los valores priorizados
-                if estab_consulta_final:
-                    evento_dict["id_establecimiento_consulta"] = (
-                        establecimiento_mapping.get(estab_consulta_final)
-                    )
-                if estab_notif_final:
-                    evento_dict["id_establecimiento_notificacion"] = (
-                        establecimiento_mapping.get(estab_notif_final)
-                    )
-                if estab_carga_final:
-                    evento_dict["id_establecimiento_carga"] = (
-                        establecimiento_mapping.get(estab_carga_final)
-                    )
-
-                # Log solo para casos extremos (más de 10 filas es inusual)
-                if len(grupo_df) > 10:
-                    self.logger.info(
-                        f"Evento {id_evento_caso}: {len(grupo_df)} filas agregadas "
-                        f"(fecha_minima: {fecha_minima_evento})"
-                    )
-
-                eventos_data.append(evento_dict)
 
         if not eventos_data:
             return {}
 
+        # Estadísticas de establecimientos asignados
+        eventos_con_consulta = sum(1 for e in eventos_data if e.get("id_establecimiento_consulta") is not None)
+        eventos_con_notif = sum(1 for e in eventos_data if e.get("id_establecimiento_notificacion") is not None)
+        eventos_con_carga = sum(1 for e in eventos_data if e.get("id_establecimiento_carga") is not None)
+
         self.logger.info(
-            f"Bulk upserting {len(eventos_data)} eventos únicos (de {len(df)} filas totales)"
+            f"Bulk upserting {len(eventos_data)} eventos únicos (de {df.height} filas totales)"
+        )
+        self.logger.info(
+            f"📊 Establecimientos asignados: consulta={eventos_con_consulta}, "
+            f"notificación={eventos_con_notif}, carga={eventos_con_carga}"
         )
 
-        # Extraer los grupos (pueden ser múltiples) antes de hacer el upsert
-        eventos_grupos_data = []
-        for e in eventos_data:
-            id_evento_caso = e["id_evento_caso"]
-            grupos_ids = e.pop("_grupos_eno_ids", [])  # Extraer lista de grupos
-            # IMPORTANTE: También eliminar el id_grupo_eno individual si existe (compatibilidad)
-            if "id_grupo_eno" in e:
-                grupo_individual = e.pop("id_grupo_eno")
-                if grupo_individual and grupo_individual not in grupos_ids:
-                    grupos_ids.append(grupo_individual)
-
-            # Crear entrada para cada grupo
-            for id_grupo in grupos_ids:
-                eventos_grupos_data.append(
-                    {"id_evento_caso": id_evento_caso, "id_grupo_eno": id_grupo}
-                )
-
         # PostgreSQL UPSERT
-        # Primero crear el INSERT statement
         stmt = pg_insert(Evento.__table__).values(eventos_data)
 
-        # Luego preparar los campos para actualizar (sin id_grupo_eno)
         update_fields = {
             "fecha_inicio_sintomas": stmt.excluded.fecha_inicio_sintomas,
             "clasificacion_estrategia": stmt.excluded.clasificacion_estrategia,
@@ -486,12 +725,10 @@ class EventosProcessor(BulkProcessorBase):
             "id_establecimiento_consulta": stmt.excluded.id_establecimiento_consulta,
             "id_establecimiento_notificacion": stmt.excluded.id_establecimiento_notificacion,
             "id_establecimiento_carga": stmt.excluded.id_establecimiento_carga,
-            # FK to normalized domicilio
             "id_domicilio": stmt.excluded.id_domicilio,
             "updated_at": self._get_current_timestamp(),
         }
 
-        # Finalmente crear el UPSERT statement
         upsert_stmt = stmt.on_conflict_do_update(
             index_elements=["id_evento_caso"],
             set_=update_fields,
@@ -513,6 +750,7 @@ class EventosProcessor(BulkProcessorBase):
         # Insertar relaciones many-to-many en evento_grupo_eno
         from app.domains.eventos_epidemiologicos.eventos.models import EventoGrupoEno
 
+        timestamp_relaciones = self._get_current_timestamp()
         relaciones_eventos_grupos = []
         for eg_data in eventos_grupos_data:
             id_evento_caso = eg_data["id_evento_caso"]
@@ -522,12 +760,10 @@ class EventosProcessor(BulkProcessorBase):
             if id_evento and id_grupo_eno:
                 relaciones_eventos_grupos.append(
                     {
-                        "id_evento": int(id_evento),  # Convertir numpy.int64 → int
-                        "id_grupo_eno": int(
-                            id_grupo_eno
-                        ),  # Convertir numpy.int64 → int
-                        "created_at": self._get_current_timestamp(),
-                        "updated_at": self._get_current_timestamp(),
+                        "id_evento": int(id_evento),
+                        "id_grupo_eno": int(id_grupo_eno),
+                        "created_at": timestamp_relaciones,
+                        "updated_at": timestamp_relaciones,
                     }
                 )
 
@@ -545,7 +781,7 @@ class EventosProcessor(BulkProcessorBase):
 
         return evento_mapping
 
-    def _get_or_create_domicilio(self, row: pd.Series) -> Optional[int]:
+    def _get_or_create_domicilio(self, row: dict) -> Optional[int]:
         """
         Get or create an immutable domicilio record.
 
@@ -553,14 +789,18 @@ class EventosProcessor(BulkProcessorBase):
             ID of the domicilio, or None if no valid address data
         """
         from app.domains.territorio.geografia_models import Domicilio
-        from decimal import Decimal
 
-        # Extraer datos de dirección del CSV
-        calle = self._clean_string(row.get(Columns.CALLE_DOMICILIO.name))
-        numero = self._clean_string(row.get(Columns.NUMERO_DOMICILIO.name))
-        id_localidad_indec = self._safe_int(
-            row.get(Columns.ID_LOC_INDEC_RESIDENCIA.name)
-        )
+        # Extraer datos de dirección del CSV usando helpers Polars si es posible
+        # Nota: row es un dict de primera_fila_df, ya procesado
+        calle = row.get(Columns.CALLE_DOMICILIO.name)
+        numero = row.get(Columns.NUMERO_DOMICILIO.name)
+        id_localidad_indec = row.get(Columns.ID_LOC_INDEC_RESIDENCIA.name)
+
+        # Limpiar strings
+        if calle is not None:
+            calle = str(calle).strip() if str(calle).strip() else None
+        if numero is not None:
+            numero = str(numero).strip() if str(numero).strip() else None
 
         # VALIDACIÓN CRÍTICA: Verificar que la calle sea válida
         if not is_valid_street_name(calle):
@@ -576,8 +816,6 @@ class EventosProcessor(BulkProcessorBase):
 
         try:
             # Buscar domicilio existente (UNIQUE constraint: calle, numero, id_localidad_indec)
-            # NOTA: Usar .first() en lugar de .scalar_one_or_none() para manejar duplicados
-            # (pueden existir duplicados legacy antes del UNIQUE constraint)
             stmt = select(Domicilio.id).where(
                 Domicilio.calle == calle,
                 Domicilio.numero == numero,
@@ -586,11 +824,9 @@ class EventosProcessor(BulkProcessorBase):
             existing_domicilio = self.context.session.execute(stmt).scalars().first()
 
             if existing_domicilio:
-                # Domicilio ya existe, retornar ID del primero encontrado
                 return existing_domicilio
 
             # No existe, crear nuevo domicilio
-            # Geocodificar si está habilitado
             latitud = None
             longitud = None
             proveedor_geocoding = None
@@ -599,12 +835,13 @@ class EventosProcessor(BulkProcessorBase):
 
             if self.geocoding_enabled and self.geocoding_service:
                 try:
-                    localidad = self._clean_string(
-                        row.get(Columns.LOCALIDAD_RESIDENCIA.name)
-                    )
-                    provincia = self._clean_string(
-                        row.get(Columns.PROVINCIA_RESIDENCIA.name)
-                    )
+                    localidad = row.get(Columns.LOCALIDAD_RESIDENCIA.name)
+                    provincia = row.get(Columns.PROVINCIA_RESIDENCIA.name)
+
+                    if localidad is not None:
+                        localidad = str(localidad).strip() if str(localidad).strip() else None
+                    if provincia is not None:
+                        provincia = str(provincia).strip() if str(provincia).strip() else None
 
                     geocoding_result = self.geocoding_service.geocode_address(
                         calle=calle,
@@ -655,124 +892,4 @@ class EventosProcessor(BulkProcessorBase):
 
         except Exception as e:
             self.logger.warning(f"Error creando domicilio: {e}")
-            return None
-
-    def _row_to_evento_dict(
-        self,
-        row: pd.Series,
-        establecimiento_mapping: Dict[str, int],
-        tipo_mapping: Dict[str, int],
-        grupo_mapping: Dict[str, int],
-    ) -> Optional[Dict]:
-        """Convert row to evento dict."""
-        try:
-            # Resolver establecimientos
-            estab_consulta = self._clean_string(row.get(Columns.ESTAB_CLINICA.name))
-            estab_notificacion = self._clean_string(
-                row.get(Columns.ESTABLECIMIENTO_EPI.name)
-            )
-            estab_carga = self._clean_string(
-                row.get(Columns.ESTABLECIMIENTO_CARGA.name)
-            )
-
-            # Obtener tipo ENO desde el nombre del evento
-            evento_nombre = self._clean_string(row.get(Columns.EVENTO.name))
-            # Convertir nombre a código kebab-case para buscar en el mapping
-            evento_codigo = (
-                CodigoGenerator.generar_codigo_kebab(evento_nombre)
-                if evento_nombre
-                else None
-            )
-            id_tipo_eno = tipo_mapping.get(evento_codigo)
-
-            # No debería fallar ya que creamos todos los tipos dinámicamente
-            if not id_tipo_eno:
-                # Esto solo podría pasar si el evento es None/vacío
-                return None
-
-            # Obtener grupo ENO desde el nombre del grupo
-            grupo_nombre = self._clean_string(row.get(Columns.GRUPO_EVENTO.name))
-            grupo_codigo = (
-                CodigoGenerator.generar_codigo_kebab(grupo_nombre)
-                if grupo_nombre
-                else None
-            )
-            id_grupo_eno = grupo_mapping.get(grupo_codigo)
-
-            if not id_grupo_eno:
-                # Log para debugging - esto no debería ocurrir pero hay que investigar
-                self.logger.warning(
-                    f"⚠️  No se encontró grupo ENO para código '{grupo_codigo}' (nombre: '{grupo_nombre}'). "
-                    f"Grupos disponibles: {list(grupo_mapping.keys())[:5]}... "
-                    f"Este evento NO se insertará."
-                )
-                return None
-
-            # Usar resultado del clasificador - siempre debe haber uno
-            clasificacion_estrategia = row.get("clasificacion_estrategia")
-            if (
-                pd.isna(clasificacion_estrategia)
-                or not str(clasificacion_estrategia).strip()
-            ):
-                # Si no hay clasificación del classifier, marcar como requiere revisión
-                from app.domains.eventos_epidemiologicos.clasificacion.models import (
-                    TipoClasificacion,
-                )
-
-                clasificacion_estrategia = TipoClasificacion.REQUIERE_REVISION
-
-            # IMPORTANTE: fecha_minima_evento se calculará en bulk_upsert_eventos
-            # usando la fecha mínima de TODAS las filas del evento.
-            # Usar una fecha ficticia temporal que SIEMPRE será sobrescrita.
-            from datetime import datetime
-
-            fecha_temporal = datetime(1900, 1, 1).date()
-
-            # Obtener campos de trazabilidad
-            id_estrategia_aplicada = row.get("id_estrategia_aplicada")
-            trazabilidad_clasificacion = row.get("trazabilidad_clasificacion")
-
-            # Get or create domicilio (normalized, immutable)
-            id_domicilio = self._get_or_create_domicilio(row)
-
-            evento_dict = {
-                "id_evento_caso": self._safe_int(row.get(Columns.IDEVENTOCASO.name)),
-                "codigo_ciudadano": self._safe_int(
-                    row.get(Columns.CODIGO_CIUDADANO.name)
-                ),
-                "fecha_inicio_sintomas": self._safe_date(
-                    row.get(Columns.FECHA_INICIO_SINTOMA.name)
-                ),
-                "clasificacion_estrategia": clasificacion_estrategia,
-                "id_estrategia_aplicada": (
-                    self._safe_int(id_estrategia_aplicada)
-                    if pd.notna(id_estrategia_aplicada)
-                    else None
-                ),
-                "trazabilidad_clasificacion": (
-                    trazabilidad_clasificacion
-                    if pd.notna(trazabilidad_clasificacion)
-                    else None
-                ),
-                "fecha_minima_evento": fecha_temporal,  # Valor temporal, será sobrescrito
-                "id_tipo_eno": id_tipo_eno,
-                "id_grupo_eno": id_grupo_eno,
-                # Foreign keys a establecimientos
-                "id_establecimiento_consulta": establecimiento_mapping.get(
-                    estab_consulta
-                ),
-                "id_establecimiento_notificacion": establecimiento_mapping.get(
-                    estab_notificacion
-                ),
-                "id_establecimiento_carga": establecimiento_mapping.get(estab_carga),
-                # FK to normalized domicilio
-                "id_domicilio": id_domicilio,
-                "created_at": self._get_current_timestamp(),
-                "updated_at": self._get_current_timestamp(),
-            }
-
-            return evento_dict
-
-        except Exception as e:
-            self.logger.warning(f"Error convirtiendo evento: {e}")
             return None

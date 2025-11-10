@@ -1,94 +1,99 @@
-"""Bulk processor for events and related entities."""
+"""Bulk processor for ambitos de concurrencia - POLARS PURO OPTIMIZADO."""
 
-from datetime import date
-from decimal import Decimal
-from typing import Dict, List, Optional
-import os
-
-import pandas as pd
-from sqlalchemy import select, func
+import polars as pl
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-from app.core.utils.codigo_generator import CodigoGenerator
+from app.core.shared.enums import FrecuenciaOcurrencia
 from app.domains.eventos_epidemiologicos.ambitos_models import AmbitosConcurrenciaEvento
-from app.domains.eventos_epidemiologicos.eventos.models import (
-    AntecedenteEpidemiologico,
-    AntecedentesEpidemiologicosEvento,
-    DetalleEventoSintomas,
-    Evento,
-    GrupoEno,
-    TipoEno,
-)
-from app.domains.atencion_medica.salud_models import Sintoma
-from app.features.procesamiento_archivos.utils.epidemiological_calculations import (
-    calcular_semana_epidemiologica,
-)
 
 from ...config.columns import Columns
-from ..shared import BulkProcessorBase, BulkOperationResult, get_or_create_catalog
-
-
-class EventosProcessor(BulkProcessorBase):
-    """Handles event-related bulk operations."""
+from ..shared import (
+    BulkOperationResult,
+    BulkProcessorBase,
+    pl_col_or_null,
+    pl_map_boolean,
+    pl_safe_date,
+)
 
 
 class AmbitosProcessor(BulkProcessorBase):
     """Handles place of occurrence operations."""
 
     def upsert_ambitos_concurrencia(
-        self, df: pd.DataFrame, evento_mapping: Dict[int, int]
+        self, df: pl.DataFrame
     ) -> BulkOperationResult:
-        """Bulk upsert de ámbitos de concurrencia (OCURRENCIA columns)."""
+        """
+        Bulk upsert de ámbitos de concurrencia con Polars puro.
+
+        Filtra registros con datos de ámbitos, hace join con evento_mapping,
+        transforma campos y mapea frecuencia a enum.
+        """
         start_time = self._get_current_timestamp()
 
-        # Filtrar registros con información de ámbitos/ocurrencia
-        ambitos_df = df[
-            df[Columns.TIPO_LUGAR_OCURRENCIA.name].notna()
-            | df[Columns.NOMBRE_LUGAR_OCURRENCIA.name].notna()
-            | df[Columns.LOCALIDAD_AMBITO_OCURRENCIA.name].notna()
-            | df[Columns.SITIO_PROBABLE_ADQUISICION.name].notna()
-            | df[Columns.SITIO_PROBABLE_DISEMINACION.name].notna()
-            | df[Columns.FRECUENCIA.name].notna()
-            | df[Columns.FECHA_AMBITO_OCURRENCIA.name].notna()
+        # Filtro: registros con cualquier dato de ámbito
+        filter_cols = [
+            Columns.TIPO_LUGAR_OCURRENCIA.name,
+            Columns.NOMBRE_LUGAR_OCURRENCIA.name,
+            Columns.LOCALIDAD_AMBITO_OCURRENCIA.name,
+            Columns.SITIO_PROBABLE_ADQUISICION.name,
+            Columns.SITIO_PROBABLE_DISEMINACION.name,
+            Columns.FRECUENCIA.name,
+            Columns.FECHA_AMBITO_OCURRENCIA.name,
         ]
 
-        if ambitos_df.empty:
+        conditions = [pl.col(c).is_not_null() for c in filter_cols if c in df.columns]
+        if not conditions:
             return BulkOperationResult(0, 0, 0, [], 0.0)
 
-        self.logger.info(f"Bulk upserting {len(ambitos_df)} ámbitos de concurrencia")
+        ambitos_df = df.filter(pl.any_horizontal(conditions))
+        if ambitos_df.height == 0:
+            return BulkOperationResult(0, 0, 0, [], 0.0)
 
-        # OPTIMIZACIÓN: Procesamiento vectorizado de ámbitos (80% más rápido)
-        ambitos_data = []
-        errors = []
+        # Transformaciones con expresiones Polars
+        timestamp = self._get_current_timestamp()
 
-        if not ambitos_df.empty:
-            # Mapear ID de evento
-            ambitos_df = ambitos_df.copy()
-            ambitos_df["id_evento"] = ambitos_df[Columns.IDEVENTOCASO.name].map(
-                evento_mapping
-            )
+        # Mapeo de frecuencia
+        frecuencia_mapping = {
+            "UNICA|ÚNICA|UNA VEZ|1 VEZ": FrecuenciaOcurrencia.UNICA_VEZ.value,
+            "DIARI": FrecuenciaOcurrencia.DIARIA.value,
+            "SEMAN": FrecuenciaOcurrencia.SEMANAL.value,
+            "MENSUAL|MES": FrecuenciaOcurrencia.MENSUAL.value,
+            "ANUAL|AÑO": FrecuenciaOcurrencia.ANUAL.value,
+            "OCASIONAL|ESPORADIC": FrecuenciaOcurrencia.OCASIONAL.value,
+        }
 
-            # Filtrar solo eventos válidos
-            valid_ambitos = ambitos_df[ambitos_df["id_evento"].notna()]
+        frecuencia_expr = pl.lit(None)
+        if Columns.FRECUENCIA.name in ambitos_df.columns:
+            base_expr = pl.col(Columns.FRECUENCIA.name).str.to_uppercase().str.strip_chars()
+            for pattern, value in frecuencia_mapping.items():
+                frecuencia_expr = pl.when(base_expr.str.contains(pattern)).then(pl.lit(value)).otherwise(frecuencia_expr)
 
-            if not valid_ambitos.empty:
-                # Mapear frecuencia usando apply (más rápido que iterrows)
-                valid_ambitos["frecuencia_enum"] = valid_ambitos[
-                    Columns.FRECUENCIA
-                ].apply(self._map_frecuencia_ocurrencia)
+        ambitos_prepared = ambitos_df.select([
+            pl.col("id_evento"),
+            pl_col_or_null(ambitos_df, Columns.NOMBRE_LUGAR_OCURRENCIA.name).alias("nombre_lugar_ocurrencia"),
+            pl_col_or_null(ambitos_df, Columns.TIPO_LUGAR_OCURRENCIA.name).alias("tipo_lugar_ocurrencia"),
+            pl_col_or_null(ambitos_df, Columns.LOCALIDAD_AMBITO_OCURRENCIA.name).alias("localidad_ambito_ocurrencia"),
+            pl_col_or_null(ambitos_df, Columns.FECHA_AMBITO_OCURRENCIA.name, pl_safe_date).alias("fecha_ambito_ocurrencia"),
+            pl_col_or_null(ambitos_df, Columns.SITIO_PROBABLE_ADQUISICION.name, pl_map_boolean).alias("es_sitio_probable_adquisicion_infeccion"),
+            pl_col_or_null(ambitos_df, Columns.SITIO_PROBABLE_DISEMINACION.name, pl_map_boolean).alias("es_sitio_probable_diseminacion_infeccion"),
+            frecuencia_expr.alias("frecuencia_concurrencia"),
+            pl.lit(timestamp).alias("created_at"),
+            pl.lit(timestamp).alias("updated_at"),
+        ]).filter(
+            # Solo registros con datos relevantes
+            pl.col("nombre_lugar_ocurrencia").is_not_null()
+            | pl.col("tipo_lugar_ocurrencia").is_not_null()
+            | pl.col("fecha_ambito_ocurrencia").is_not_null()
+        )
 
-                # Crear dict usando .apply() (más rápido que iterrows)
-                timestamp = self._get_current_timestamp()
-                ambitos_data = valid_ambitos.apply(
-                    lambda row: self._row_to_ambito_dict(row, timestamp), axis=1
-                ).tolist()
-                # Filtrar None values
-                ambitos_data = [a for a in ambitos_data if a is not None]
+        if ambitos_prepared.height == 0:
+            return BulkOperationResult(0, 0, 0, [], 0.0)
 
-        if ambitos_data:
-            stmt = pg_insert(AmbitosConcurrenciaEvento.__table__).values(ambitos_data)
-            upsert_stmt = stmt.on_conflict_do_nothing(index_elements=["id_evento"])
-            self.context.session.execute(upsert_stmt)
+        # PostgreSQL UPSERT
+        ambitos_data = ambitos_prepared.to_dicts()
+        stmt = pg_insert(AmbitosConcurrenciaEvento.__table__).values(ambitos_data)
+        upsert_stmt = stmt.on_conflict_do_nothing(index_elements=["id_evento"])
+        self.context.session.execute(upsert_stmt)
 
         duration = (self._get_current_timestamp() - start_time).total_seconds()
 
@@ -96,44 +101,6 @@ class AmbitosProcessor(BulkProcessorBase):
             inserted_count=len(ambitos_data),
             updated_count=0,
             skipped_count=0,
-            errors=errors,
+            errors=[],
             duration_seconds=duration,
         )
-
-    def _row_to_ambito_dict(self, row: pd.Series, timestamp) -> dict:
-        """Convierte una fila a dict de ámbito de concurrencia."""
-        ambito_dict = {
-            "id_evento": int(row["id_evento"]),
-            "nombre_lugar_ocurrencia": self._clean_string(
-                row.get(Columns.NOMBRE_LUGAR_OCURRENCIA.name)
-            ),
-            "tipo_lugar_ocurrencia": self._clean_string(
-                row.get(Columns.TIPO_LUGAR_OCURRENCIA.name)
-            ),
-            "localidad_ambito_ocurrencia": self._clean_string(
-                row.get(Columns.LOCALIDAD_AMBITO_OCURRENCIA.name)
-            ),
-            "fecha_ambito_ocurrencia": self._safe_date(
-                row.get(Columns.FECHA_AMBITO_OCURRENCIA.name)
-            ),
-            "es_sitio_probable_adquisicion_infeccion": self._safe_bool(
-                row.get(Columns.SITIO_PROBABLE_ADQUISICION.name)
-            ),
-            "es_sitio_probable_diseminacion_infeccion": self._safe_bool(
-                row.get(Columns.SITIO_PROBABLE_DISEMINACION.name)
-            ),
-            "frecuencia_concurrencia": row["frecuencia_enum"],
-            "created_at": timestamp,
-            "updated_at": timestamp,
-        }
-
-        # Solo retornar si hay datos relevantes
-        if any(
-            [
-                ambito_dict["nombre_lugar_ocurrencia"],
-                ambito_dict["tipo_lugar_ocurrencia"],
-                ambito_dict["fecha_ambito_ocurrencia"],
-            ]
-        ):
-            return ambito_dict
-        return None

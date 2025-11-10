@@ -1,8 +1,8 @@
-"""initial migration with all tables
+""".
 
-Revision ID: 7f74d379f63f
+Revision ID: cee395b9bdf2
 Revises: 
-Create Date: 2025-10-28 16:26:35.184969
+Create Date: 2025-11-07 18:47:49.763133
 
 """
 from typing import Sequence, Union
@@ -14,7 +14,7 @@ import geoalchemy2  # Required for Geometry types
 
 
 # revision identifiers, used by Alembic.
-revision: str = '7f74d379f63f'
+revision: str = 'cee395b9bdf2'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -29,7 +29,8 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('id_snvs_antecedente_epidemio', sa.Integer(), nullable=True),
     sa.Column('descripcion', sqlmodel.sql.sqltypes.AutoString(length=150), nullable=True),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('descripcion', name='uq_antecedente_epidemiologico_descripcion')
     )
     op.create_table('capa_hidrografia',
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
@@ -70,7 +71,8 @@ def upgrade() -> None:
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('descripcion', sqlmodel.sql.sqltypes.AutoString(length=150), nullable=True),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('descripcion', name='uq_comorbilidad_descripcion')
     )
     op.create_table('dashboard_charts',
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
@@ -170,7 +172,8 @@ def upgrade() -> None:
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('descripcion', sqlmodel.sql.sqltypes.AutoString(length=150), nullable=True),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('descripcion', name='uq_muestra_descripcion')
     )
     op.create_table('processing_jobs',
     sa.Column('id', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
@@ -257,7 +260,8 @@ def upgrade() -> None:
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('nombre', sqlmodel.sql.sqltypes.AutoString(length=150), nullable=True),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('nombre', name='uq_vacuna_nombre')
     )
     op.create_table('ciudadano_comorbilidades',
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
@@ -476,9 +480,11 @@ def upgrade() -> None:
     sa.Column('id_localidad_indec', sa.BigInteger(), nullable=False),
     sa.Column('latitud', sa.Numeric(precision=10, scale=8), nullable=True),
     sa.Column('longitud', sa.Numeric(precision=11, scale=8), nullable=True),
-    sa.Column('geocodificado', sa.Boolean(), nullable=False),
+    sa.Column('estado_geocodificacion', sa.Enum('PENDIENTE', 'EN_COLA', 'PROCESANDO', 'GEOCODIFICADO', 'FALLO_TEMPORAL', 'FALLO_PERMANENTE', 'NO_GEOCODIFICABLE', 'DESHABILITADO', name='estadogeocodificacion'), nullable=False),
     sa.Column('proveedor_geocoding', sqlmodel.sql.sqltypes.AutoString(length=50), nullable=True),
     sa.Column('confidence_geocoding', sa.Float(), nullable=True),
+    sa.Column('intentos_geocodificacion', sa.Integer(), nullable=False),
+    sa.Column('ultimo_error_geocodificacion', sqlmodel.sql.sqltypes.AutoString(length=500), nullable=True),
     sa.ForeignKeyConstraint(['id_localidad_indec'], ['localidad.id_localidad_indec'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('calle', 'numero', 'id_localidad_indec', name='uq_domicilio_direccion')
@@ -490,7 +496,9 @@ def upgrade() -> None:
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('nombre', sqlmodel.sql.sqltypes.AutoString(length=150), nullable=True),
+    sa.Column('source', sqlmodel.sql.sqltypes.AutoString(length=20), nullable=True),
     sa.Column('codigo_refes', sqlmodel.sql.sqltypes.AutoString(length=50), nullable=True),
+    sa.Column('codigo_snvs', sqlmodel.sql.sqltypes.AutoString(length=20), nullable=True),
     sa.Column('latitud', sa.Float(), nullable=True),
     sa.Column('longitud', sa.Float(), nullable=True),
     sa.Column('id_localidad_indec', sa.BigInteger(), nullable=True),

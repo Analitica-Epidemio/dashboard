@@ -22,16 +22,16 @@ logger = logging.getLogger(__name__)
 
 
 def convert_numpy_types(obj):
-    """Convierte tipos numpy/pandas a tipos nativos de Python."""
+    """Convierte tipos numpy/polars a tipos nativos de Python."""
     import numpy as np
-    import pandas as pd
+    import polars as pl
 
     if isinstance(obj, (np.integer, np.floating)):
         return obj.item()
     elif isinstance(obj, np.ndarray):
         return obj.tolist()
-    elif isinstance(obj, pd.Series):
-        return obj.tolist()
+    elif isinstance(obj, pl.Series):
+        return obj.to_list()
     elif isinstance(obj, dict):
         return {k: convert_numpy_types(v) for k, v in obj.items()}
     elif isinstance(obj, list):
@@ -76,9 +76,8 @@ def process_csv_file(self, job_id: str, file_path: str) -> Dict[str, Any]:
             if not job:
                 raise Exception(f"Job {job_id} no encontrado")
 
-            sheet_name = (
-                job.job_metadata.get("sheet_name") if job.job_metadata else None
-            )
+            # El sheet_name está en el campo directo del job
+            sheet_name = job.sheet_name
 
             # Actualizar total_steps basado en las operaciones que se realizarán
             # ~5 pasos iniciales + ~18 operaciones de BD
@@ -240,4 +239,32 @@ def cleanup_old_jobs() -> Dict[str, Any]:
 
     except Exception as e:
         logger.error(f"Error limpiando jobs: {e}")
+        return {"status": "failed", "error": str(e)}
+
+
+@maintenance_task(name="app.features.procesamiento_archivos.tasks.cleanup_temp_uploads")
+def cleanup_temp_uploads() -> Dict[str, Any]:
+    """
+    Limpia archivos temporales de preview con más de 1 hora de antigüedad.
+
+    Los archivos temporales en /tmp/epidemio_uploads son creados durante
+    el proceso de preview de archivos Excel/CSV. Esta tarea los limpia para
+    prevenir acumulación de archivos huérfanos.
+    """
+    from app.scripts.cleanup_temp_uploads import cleanup_old_temp_files
+
+    logger.info("🧹 Iniciando limpieza de archivos temporales de preview")
+
+    try:
+        result = cleanup_old_temp_files(max_age_hours=1)
+
+        return {
+            "status": "completed",
+            "files_cleaned": result["deleted_count"],
+            "size_freed_mb": result["deleted_size_mb"],
+            "errors": result["errors"]
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Error limpiando archivos temporales: {e}")
         return {"status": "failed", "error": str(e)}

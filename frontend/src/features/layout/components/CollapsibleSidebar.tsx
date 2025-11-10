@@ -88,8 +88,27 @@ export const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
   };
 
   const renderNavItem = (item: typeof navItems[0], showLabel: boolean) => {
+    // Headers en la vista expandida
+    if (item.type === "header" && showLabel) {
+      return (
+        <div
+          key={item.id}
+          className="px-3 pt-4 pb-1 first:pt-0"
+        >
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            {item.title}
+          </h3>
+        </div>
+      );
+    }
+
+    // Skip headers en la vista colapsada (no tienen icon)
+    if (item.type === "header" || !item.icon) {
+      return null;
+    }
+
     const Icon = item.icon;
-    const isActive = isActiveRoute(item.url);
+    const isActive = isActiveRoute(item.url || "#");
 
     if (showLabel) {
       return (

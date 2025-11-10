@@ -7,9 +7,7 @@ Cada columna se define UNA SOLA VEZ con nombre + tipo + si es requerida.
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List
-
-import pandas as pd
+from typing import List
 
 
 # === TIPOS DE DATOS ===
@@ -75,6 +73,8 @@ class Columns:
     ID_SNVS_INTERPRET_USR = Column("ID_SNVS_INTERPRET_USR", ColumnType.NUMERIC)
     ID_SNVS_VIAJE_EPIDEMIO = Column("ID_SNVS_VIAJE_EPIDEMIO", ColumnType.NUMERIC)
     ID_SNVS_SIGNO_SINTOMA = Column("ID_SNVS_SIGNO_SINTOMA", ColumnType.NUMERIC)
+    ID_SNVS_ANTECEDENTE_EPIDEMIO = Column("ID_SNVS_ANTECEDENTE_EPIDEMIO", ColumnType.NUMERIC)
+    ID_SNVS_VACUNA = Column("ID_SNVS_VACUNA", ColumnType.NUMERIC)
 
     # === Clasificación (crítico) ===
     EVENTO = Column("EVENTO", ColumnType.CATEGORICAL, required=True)
@@ -207,18 +207,32 @@ class Columns:
 
     # === Establecimiento Epidemiología ===
     ESTABLECIMIENTO_EPI = Column("ESTABLECIMIENTO_EPI", ColumnType.TEXT)
+    ID_PROV_INDEC_EPI = Column("ID_PROV_INDEC_EPI", ColumnType.NUMERIC)
+    PROVINCIA_EPI = Column("PROVINCIA_EPI", ColumnType.TEXT)
+    ID_DEPTO_INDEC_EPI = Column("ID_DEPTO_INDEC_EPI", ColumnType.NUMERIC)
+    DEPARTAMENTO_EPI = Column("DEPARTAMENTO_EPI", ColumnType.TEXT)
     ID_LOC_INDEC_EPI = Column("ID_LOC_INDEC_EPI", ColumnType.NUMERIC)
+    LOCALIDAD_EPI = Column("LOCALIDAD_EPI", ColumnType.TEXT)
+    ID_ORIGEN = Column("ID_ORIGEN", ColumnType.NUMERIC)  # ID del establecimiento de epidemiología/origen
 
     # === Establecimiento Carga ===
     ESTABLECIMIENTO_CARGA = Column("ESTABLECIMIENTO_CARGA", ColumnType.TEXT)
+    ID_ESTABLECIMIENTO_CARGA = Column("ID_ESTABLECIMIENTO_CARGA", ColumnType.NUMERIC)
+    ID_PROV_INDEC_CARGA = Column("ID_PROV_INDEC_CARGA", ColumnType.NUMERIC)
+    ID_DEPTO_INDEC_CARGA = Column("ID_DEPTO_INDEC_CARGA", ColumnType.NUMERIC)
+    DEPARTAMENTO_CARGA = Column("DEPARTAMENTO_CARGA", ColumnType.TEXT)
     ID_LOC_INDEC_CARGA = Column("ID_LOC_INDEC_CARGA", ColumnType.NUMERIC)
+    LOCALIDAD_CARGA = Column("LOCALIDAD_CARGA", ColumnType.TEXT)
 
     # === Viajes ===
     FECHA_INICIO_VIAJE = Column("FECHA_INICIO_VIAJE", ColumnType.DATE)
     FECHA_FIN_VIAJE = Column("FECHA_FIN_VIAJE", ColumnType.DATE)
     ID_PAIS_VIAJE = Column("ID_PAIS_VIAJE", ColumnType.NUMERIC)
+    ID_PROV_INDEC_VIAJE = Column("ID_PROV_INDEC_VIAJE", ColumnType.NUMERIC)
     ID_PROVINCIA_VIAJE = Column("ID_PROVINCIA_VIAJE", ColumnType.NUMERIC)
+    PROV_VIAJE = Column("PROV_VIAJE", ColumnType.TEXT)
     PAIS_VIAJE = Column("PAIS_VIAJE", ColumnType.TEXT)
+    ID_LOC_INDEC_VIAJE = Column("ID_LOC_INDEC_VIAJE", ColumnType.NUMERIC)
     LOC_VIAJE = Column("LOC_VIAJE", ColumnType.TEXT)
 
     # === Investigación ===
@@ -298,77 +312,30 @@ def get_columns_by_type(column_type: ColumnType) -> List[str]:
     return [col.name for col in _get_all_columns() if col.type == column_type]
 
 
-def get_pandas_dtypes() -> Dict[str, str]:
+def validate_dataframe(df) -> dict:
     """
-    Genera diccionario de dtypes para pandas.read_csv() usando C engine (rápido).
-
-    ESTRATEGIA DE 2 PASOS (mejor rendimiento):
-    1. read_csv() con C engine: Solo especifica dtypes para TEXT/CATEGORICAL/BOOLEAN
-    2. Después de cargar: Convertir NUMERIC a Int64 con get_numeric_columns_to_convert()
-
-    ¿Por qué? C engine no puede parsear Int64 cuando hay strings vacíos en CSV.
-    Solución: Dejar que pandas infiera numeric (float64) y convertir después.
-
-    Mapeo en este paso:
-    - NUMERIC → NO incluir (se infiere como float64, convertir después)
-    - TEXT → 'str'
-    - BOOLEAN → 'str' (se convierte después con mapping)
-    - CATEGORICAL → 'str'
-    - DATE → NO incluir (usar parse_dates= en su lugar)
+    Valida que el DataFrame tenga las columnas requeridas.
 
     Returns:
-        Dict con {columna: dtype_pandas} solo para strings
+        Dict con:
+        - is_valid: bool
+        - missing_required: list de columnas requeridas faltantes
+        - matched_columns: int cantidad de columnas mapeadas presentes
+        - coverage_percentage: float porcentaje de cobertura
     """
-    dtype_map = {}
+    df_columns = set(df.columns)
+    required = set(get_required_columns())
+    all_mapped = set(get_column_names())
 
-    for col in _get_all_columns():
-        if col.type == ColumnType.TEXT:
-            dtype_map[col.name] = 'str'
-        elif col.type == ColumnType.BOOLEAN:
-            dtype_map[col.name] = 'str'
-        elif col.type == ColumnType.CATEGORICAL:
-            dtype_map[col.name] = 'str'
-        # NUMERIC: NO incluir - pandas lo infiere como float64
-        # DATE: NO incluir - se usa parse_dates= en read_csv()
-
-    return dtype_map
-
-
-def get_numeric_columns_to_convert() -> list[str]:
-    """
-    Devuelve lista de columnas numéricas para convertir a Int64 DESPUÉS de read_csv().
-
-    Paso 2 de la estrategia de carga rápida:
-    - read_csv() las infirió como float64
-    - Ahora las convertimos a Int64 (nullable) para manejar NaN correctamente
-
-    Returns:
-        Lista de nombres de columnas numéricas
-    """
-    return [col.name for col in _get_all_columns() if col.type == ColumnType.NUMERIC]
-
-
-def validate_dataframe(df: pd.DataFrame) -> Dict[str, any]:
-    """Valida estructura del DataFrame."""
-    all_column_names = get_column_names()
-    required_column_names = get_required_columns()
-
-    missing_required = [col for col in required_column_names if col not in df.columns]
-    missing_all = [col for col in all_column_names if col not in df.columns]
-    extra_columns = [col for col in df.columns if col not in all_column_names]
-
-    coverage_pct = ((len(all_column_names) - len(missing_all)) / len(all_column_names)) * 100
-
-    is_valid = len(missing_required) == 0
+    missing_required = list(required - df_columns)
+    matched = len(df_columns & all_mapped)
+    coverage = (matched / len(df_columns) * 100) if df_columns else 0
 
     return {
-        "is_valid": is_valid,
+        "is_valid": len(missing_required) == 0,
         "missing_required": missing_required,
-        "missing_optional": [col for col in missing_all if col not in missing_required],
-        "extra_columns": extra_columns,
-        "coverage_percentage": round(coverage_pct, 1),
-        "total_columns": len(df.columns),
-        "matched_columns": len(all_column_names) - len(missing_all),
+        "matched_columns": matched,
+        "coverage_percentage": coverage,
     }
 
 

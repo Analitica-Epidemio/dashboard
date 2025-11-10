@@ -19,7 +19,7 @@ USAGE:
 
 from typing import Dict
 
-import pandas as pd
+import polars as pl
 
 from .comorbilidades import ComorbilidadesProcessor
 from .domicilios import DomiciliosProcessor
@@ -46,25 +46,25 @@ class CiudadanosManager:
         self.comorbilidades = ComorbilidadesProcessor(context, logger)
 
     # Delegate methods to sub-processors
-    def upsert_ciudadanos(self, df: pd.DataFrame) -> BulkOperationResult:
+    def upsert_ciudadanos(self, df: pl.DataFrame) -> BulkOperationResult:
         """Bulk upsert citizens."""
         return self.ciudadanos.upsert_ciudadanos(df)
 
-    def upsert_ciudadanos_domicilios(self, df: pd.DataFrame) -> BulkOperationResult:
+    def upsert_ciudadanos_domicilios(self, df: pl.DataFrame) -> BulkOperationResult:
         """Bulk upsert addresses and citizen-address links."""
         return self.domicilios.upsert_ciudadanos_domicilios(df)
 
     def upsert_ciudadanos_datos(
-        self, df: pd.DataFrame, evento_mapping: Dict[int, int]
+        self, df: pl.DataFrame
     ) -> BulkOperationResult:
         """Bulk upsert citizen data linked to events."""
-        return self.ciudadanos.upsert_ciudadanos_datos(df, evento_mapping)
+        return self.ciudadanos.upsert_ciudadanos_datos(df)
 
-    def upsert_viajes(self, df: pd.DataFrame) -> BulkOperationResult:
+    def upsert_viajes(self, df: pl.DataFrame) -> BulkOperationResult:
         """Bulk upsert citizen trips."""
         return self.viajes.upsert_viajes(df)
 
-    def upsert_comorbilidades(self, df: pd.DataFrame) -> BulkOperationResult:
+    def upsert_comorbilidades(self, df: pl.DataFrame) -> BulkOperationResult:
         """Bulk upsert citizen comorbidities."""
         return self.comorbilidades.upsert_comorbilidades(df)
 

@@ -8,7 +8,7 @@ Unified manager for:
 
 from typing import Dict
 
-import pandas as pd
+import polars as pl
 
 from ..shared import BulkOperationResult
 
@@ -24,13 +24,13 @@ class InvestigacionesProcessor:
         self.contactos = ContactosProcessor(context, logger)
 
     def upsert_investigaciones_eventos(
-        self, df: pd.DataFrame, evento_mapping: Dict[int, int]
+        self, df: pl.DataFrame
     ) -> BulkOperationResult:
         """Bulk upsert de investigaciones de eventos."""
-        return self.investigaciones.upsert_investigaciones_eventos(df, evento_mapping)
+        return self.investigaciones.upsert_investigaciones_eventos(df)
 
     def upsert_contactos_notificaciones(
-        self, df: pd.DataFrame
+        self, df: pl.DataFrame
     ) -> BulkOperationResult:
         """Bulk upsert de contactos y notificaciones."""
         return self.contactos.upsert_contactos_notificaciones(df)
