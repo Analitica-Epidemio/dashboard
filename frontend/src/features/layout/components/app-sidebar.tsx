@@ -1,12 +1,14 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import { IconInnerShadowTop } from "@tabler/icons-react"
 import { navigationConfig, getNavigationItems } from "../navigation-config"
 import { useAuth } from "@/features/auth/hooks"
 
 import { NavMain } from "./nav-main"
 import { NavUser } from "./nav-user"
+import { Button } from "@/components/ui/button"
 import {
   Sidebar,
   SidebarContent,
@@ -27,7 +29,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     email: user?.email || "usuario@epidemio.com",
     avatar: user?.image || "/avatars/default.jpg",
   };
-  
+
+  const primaryAction = navigationConfig.primaryAction;
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -44,6 +48,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+
+        {/* Botón primario: Subir Archivo */}
+        <div className="px-2 py-2">
+          <Button asChild className="w-full" size="sm">
+            <Link href={primaryAction.url}>
+              <primaryAction.icon className="h-4 w-4 mr-2" />
+              {primaryAction.title}
+            </Link>
+          </Button>
+        </div>
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={navItems} />

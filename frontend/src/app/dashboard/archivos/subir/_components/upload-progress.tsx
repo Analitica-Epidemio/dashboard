@@ -50,7 +50,7 @@ export function UploadProgress({
         // stopPolling se llama automáticamente en useJobProgress cleanup
       }
     };
-  }, [jobId]); // Removemos isPolling para evitar re-iniciar después de fallar
+  }, [jobId, startPolling]);
 
   // Callbacks cuando cambia el estado
   React.useEffect(() => {
@@ -79,12 +79,14 @@ export function UploadProgress({
   // Estado de carga inicial
   if (isLoading && !jobStatus) {
     return (
-      <div className={`space-y-3 ${className}`}>
-        <div className="flex items-center space-x-2">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <span className="text-sm text-muted-foreground">
-            Iniciando procesamiento...
-          </span>
+      <div className={`max-w-2xl mx-auto ${className}`}>
+        <div className="border rounded-lg bg-card p-6 space-y-4">
+          <div className="flex items-center space-x-3">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span className="text-sm text-muted-foreground">
+              Iniciando procesamiento...
+            </span>
+          </div>
         </div>
       </div>
     );
@@ -93,20 +95,22 @@ export function UploadProgress({
   // Error en el polling
   if (error && !jobStatus) {
     return (
-      <div className={`space-y-3 ${className}`}>
-        <div className="flex items-center space-x-2 text-destructive">
-          <AlertCircle className="h-4 w-4" />
-          <span className="text-sm font-medium">Error de conexión</span>
+      <div className={`max-w-2xl mx-auto ${className}`}>
+        <div className="border rounded-lg bg-card p-6 space-y-4">
+          <div className="flex items-center space-x-2 text-destructive">
+            <AlertCircle className="h-4 w-4" />
+            <span className="text-sm font-medium">Error de conexión</span>
+          </div>
+          <p className="text-sm text-muted-foreground">{error}</p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={reset}
+            className="w-full"
+          >
+            Reintentar
+          </Button>
         </div>
-        <p className="text-sm text-muted-foreground">{error}</p>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={reset}
-          className="w-full"
-        >
-          Reintentar
-        </Button>
       </div>
     );
   }
@@ -156,7 +160,8 @@ export function UploadProgress({
   const isFailed = jobStatus.status === "failed";
 
   return (
-    <div className={`space-y-4 p-4 border rounded-lg bg-card ${className}`}>
+    <div className={`max-w-2xl mx-auto ${className}`}>
+      <div className="space-y-4 p-6 border rounded-lg bg-card">
       {/* Header con estado */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
@@ -291,6 +296,7 @@ export function UploadProgress({
             </div>
           </div>
         )}
+      </div>
       </div>
     </div>
   );
