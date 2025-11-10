@@ -97,9 +97,9 @@ async def get_top_winners_losers(
 
     where_sql_base = " AND ".join(where_clauses_base) if where_clauses_base else "1=1"
 
-    # Construir query según metric_type
+    # Construir base query según metric_type (CTE compartido)
     if metric_type == "departamentos":
-        query = f"""
+        base_cte = f"""
         WITH casos_actual AS (
             SELECT
                 d.id_departamento_indec as entidad_id,
@@ -128,25 +128,26 @@ async def get_top_winners_losers(
                 AND d.id_departamento_indec IS NOT NULL
                 AND {where_sql_base}
             GROUP BY d.id_departamento_indec
+        ),
+        cambios AS (
+            SELECT
+                a.entidad_id,
+                a.entidad_nombre,
+                a.casos as valor_actual,
+                COALESCE(b.casos, 0) as valor_anterior,
+                (a.casos - COALESCE(b.casos, 0)) as diferencia_absoluta,
+                CASE
+                    WHEN COALESCE(b.casos, 0) = 0 THEN NULL
+                    ELSE ((a.casos - COALESCE(b.casos, 0))::float / b.casos * 100)
+                END as diferencia_porcentual
+            FROM casos_actual a
+            LEFT JOIN casos_anterior b ON a.entidad_id = b.entidad_id
+            WHERE COALESCE(b.casos, 0) > 0
         )
-        SELECT
-            a.entidad_id,
-            a.entidad_nombre,
-            a.casos as valor_actual,
-            COALESCE(b.casos, 0) as valor_anterior,
-            (a.casos - COALESCE(b.casos, 0)) as diferencia_absoluta,
-            CASE
-                WHEN COALESCE(b.casos, 0) = 0 THEN NULL
-                ELSE ((a.casos - COALESCE(b.casos, 0))::float / b.casos * 100)
-            END as diferencia_porcentual
-        FROM casos_actual a
-        LEFT JOIN casos_anterior b ON a.entidad_id = b.entidad_id
-        WHERE COALESCE(b.casos, 0) > 0  -- Solo incluir entidades con casos en ambos períodos
-        ORDER BY diferencia_porcentual DESC NULLS LAST
         """
 
     elif metric_type == "tipo_eno":
-        query = f"""
+        base_cte = f"""
         WITH casos_actual AS (
             SELECT
                 te.id as entidad_id,
@@ -175,25 +176,26 @@ async def get_top_winners_losers(
                 AND e.fecha_minima_evento <= :fecha_hasta_comp
                 AND {where_sql_base}
             GROUP BY te.id
+        ),
+        cambios AS (
+            SELECT
+                a.entidad_id,
+                a.entidad_nombre,
+                a.casos as valor_actual,
+                COALESCE(b.casos, 0) as valor_anterior,
+                (a.casos - COALESCE(b.casos, 0)) as diferencia_absoluta,
+                CASE
+                    WHEN COALESCE(b.casos, 0) = 0 THEN NULL
+                    ELSE ((a.casos - COALESCE(b.casos, 0))::float / b.casos * 100)
+                END as diferencia_porcentual
+            FROM casos_actual a
+            LEFT JOIN casos_anterior b ON a.entidad_id = b.entidad_id
+            WHERE COALESCE(b.casos, 0) > 0
         )
-        SELECT
-            a.entidad_id,
-            a.entidad_nombre,
-            a.casos as valor_actual,
-            COALESCE(b.casos, 0) as valor_anterior,
-            (a.casos - COALESCE(b.casos, 0)) as diferencia_absoluta,
-            CASE
-                WHEN COALESCE(b.casos, 0) = 0 THEN NULL
-                ELSE ((a.casos - COALESCE(b.casos, 0))::float / b.casos * 100)
-            END as diferencia_porcentual
-        FROM casos_actual a
-        LEFT JOIN casos_anterior b ON a.entidad_id = b.entidad_id
-        WHERE COALESCE(b.casos, 0) > 0
-        ORDER BY diferencia_porcentual DESC NULLS LAST
         """
 
     elif metric_type == "provincias":
-        query = f"""
+        base_cte = f"""
         WITH casos_actual AS (
             SELECT
                 p.id_provincia_indec as entidad_id,
@@ -224,41 +226,78 @@ async def get_top_winners_losers(
                 AND p.id_provincia_indec IS NOT NULL
                 AND {where_sql_base}
             GROUP BY p.id_provincia_indec
+        ),
+        cambios AS (
+            SELECT
+                a.entidad_id,
+                a.entidad_nombre,
+                a.casos as valor_actual,
+                COALESCE(b.casos, 0) as valor_anterior,
+                (a.casos - COALESCE(b.casos, 0)) as diferencia_absoluta,
+                CASE
+                    WHEN COALESCE(b.casos, 0) = 0 THEN NULL
+                    ELSE ((a.casos - COALESCE(b.casos, 0))::float / b.casos * 100)
+                END as diferencia_porcentual
+            FROM casos_actual a
+            LEFT JOIN casos_anterior b ON a.entidad_id = b.entidad_id
+            WHERE COALESCE(b.casos, 0) > 0
         )
-        SELECT
-            a.entidad_id,
-            a.entidad_nombre,
-            a.casos as valor_actual,
-            COALESCE(b.casos, 0) as valor_anterior,
-            (a.casos - COALESCE(b.casos, 0)) as diferencia_absoluta,
-            CASE
-                WHEN COALESCE(b.casos, 0) = 0 THEN NULL
-                ELSE ((a.casos - COALESCE(b.casos, 0))::float / b.casos * 100)
-            END as diferencia_porcentual
-        FROM casos_actual a
-        LEFT JOIN casos_anterior b ON a.entidad_id = b.entidad_id
-        WHERE COALESCE(b.casos, 0) > 0
-        ORDER BY diferencia_porcentual DESC NULLS LAST
         """
     else:
         raise ValueError(f"metric_type inválido: {metric_type}")
 
-    # Ejecutar query
+    # Query para winners (aumentos > 0)
+    query_winners = base_cte + """
+        SELECT
+            entidad_id,
+            entidad_nombre,
+            valor_actual,
+            valor_anterior,
+            diferencia_absoluta,
+            diferencia_porcentual
+        FROM cambios
+        WHERE diferencia_porcentual > 0
+        ORDER BY diferencia_porcentual DESC
+        LIMIT :limit
+    """
+
+    # Query para losers (disminuciones < 0)
+    query_losers = base_cte + """
+        SELECT
+            entidad_id,
+            entidad_nombre,
+            valor_actual,
+            valor_anterior,
+            diferencia_absoluta,
+            diferencia_porcentual
+        FROM cambios
+        WHERE diferencia_porcentual < 0
+        ORDER BY diferencia_porcentual ASC
+        LIMIT :limit
+    """
+
+    # Preparar parámetros
     params.update({
         "fecha_desde_actual": periodo_desde,
         "fecha_hasta_actual": periodo_hasta,
         "fecha_desde_comp": comp_desde,
-        "fecha_hasta_comp": comp_hasta
+        "fecha_hasta_comp": comp_hasta,
+        "limit": limit
     })
 
-    result = await db.execute(text(query), params)
-    rows = result.fetchall()
+    # Ejecutar query para winners
+    result_winners = await db.execute(text(query_winners), params)
+    rows_winners = result_winners.fetchall()
 
-    # Separar winners y losers
-    all_items = []
-    for row in rows:
+    # Ejecutar query para losers
+    result_losers = await db.execute(text(query_losers), params)
+    rows_losers = result_losers.fetchall()
+
+    # Procesar winners
+    winners = []
+    for row in rows_winners:
         if row.diferencia_porcentual is not None:
-            all_items.append(TopWinnerLoser(
+            winners.append(TopWinnerLoser(
                 entidad_id=row.entidad_id,
                 entidad_nombre=row.entidad_nombre,
                 valor_actual=float(row.valor_actual),
@@ -267,11 +306,18 @@ async def get_top_winners_losers(
                 diferencia_absoluta=float(row.diferencia_absoluta)
             ))
 
-    # Top winners (mayor aumento porcentual)
-    winners = sorted(all_items, key=lambda x: x.diferencia_porcentual, reverse=True)[:limit]
-
-    # Top losers (mayor disminución porcentual)
-    losers = sorted(all_items, key=lambda x: x.diferencia_porcentual)[:limit]
+    # Procesar losers
+    losers = []
+    for row in rows_losers:
+        if row.diferencia_porcentual is not None:
+            losers.append(TopWinnerLoser(
+                entidad_id=row.entidad_id,
+                entidad_nombre=row.entidad_nombre,
+                valor_actual=float(row.valor_actual),
+                valor_anterior=float(row.valor_anterior),
+                diferencia_porcentual=round(float(row.diferencia_porcentual), 2),
+                diferencia_absoluta=float(row.diferencia_absoluta)
+            ))
 
     response = TopWinnersLosersResponse(
         top_winners=winners,

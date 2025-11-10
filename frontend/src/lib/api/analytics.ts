@@ -34,6 +34,12 @@ export interface TopWinnersLosersFilters extends AnalyticsFilters {
   limit?: number;
 }
 
+export interface DateRangeResponse {
+  fecha_minima: string;
+  fecha_maxima: string;
+  total_eventos: number;
+}
+
 /**
  * Obtiene las métricas de analytics comparando dos períodos
  */
@@ -92,4 +98,25 @@ export async function getTopWinnersLosers(
   }
 
   return responseData as TopWinnersLosersResponse;
+}
+
+/**
+ * Obtiene el rango de fechas con datos disponibles
+ */
+export async function getDateRange(): Promise<DateRangeResponse> {
+  const response = await apiClient.GET("/api/v1/analytics/date-range");
+
+  if (response.error) {
+    console.error("Error from API:", response.error);
+    throw new Error(JSON.stringify(response.error));
+  }
+
+  const responseData = response.data as any;
+
+  // Si viene envuelto en SuccessResponse, extraer data
+  if (responseData && typeof responseData === "object" && "data" in responseData) {
+    return responseData.data;
+  }
+
+  return responseData as DateRangeResponse;
 }
