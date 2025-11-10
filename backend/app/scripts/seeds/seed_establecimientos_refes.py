@@ -26,6 +26,12 @@ DATOS NO DISPONIBLES EN IGN:
 - ID de localidad INDEC
 (Estos campos se dejan en NULL)
 
+MAPPING SNVS → IGN:
+-------------------
+Después de cargar los establecimientos IGN, se carga el mapping de códigos SNVS
+desde establecimientos_mapping_final.json para relacionar establecimientos del
+Sistema Nacional de Vigilancia con los del IGN.
+
 REQUISITOS:
 -----------
 - Tablas provincia, departamento, localidad deben existir
@@ -40,6 +46,7 @@ TIEMPO ESTIMADO: 2-3 minutos (~8,300 registros + descarga WFS)
 """
 
 import io
+import json
 import sys
 from pathlib import Path
 import warnings
@@ -120,6 +127,82 @@ def limpiar_coordenada(val) -> float | None:
         return None
 
 
+def asignar_localidad_por_coordenadas(conn: Connection, lat: float, lng: float) -> int | None:
+    """
+    Asigna localidad INDEC usando reverse geocoding mejorado.
+
+    Estrategia v2 (mejorada):
+    1. Buscar departamento más cercano al punto (lat, lng)
+    2. Dentro de ese departamento, buscar la localidad MÁS CERCANA al punto
+    3. Si no hay localidades con coordenadas, usar la primera del departamento
+
+    Mejoras respecto a v1:
+    - Busca localidad más cercana (antes solo tomaba la primera)
+    - Considera localidades con coordenadas válidas
+    - Fallback a primera localidad si ninguna tiene coords
+
+    Args:
+        conn: Conexión SQLAlchemy
+        lat: Latitud del punto
+        lng: Longitud del punto
+
+    Returns:
+        id_localidad_indec o None si no se encuentra
+    """
+    # Paso 1: Encontrar departamento más cercano
+    # Buffer de 0.5 grados (~55km) para limitar búsqueda
+    dept_result = conn.execute(text("""
+        SELECT id_departamento_indec
+        FROM departamento
+        WHERE latitud BETWEEN :lat - 0.5 AND :lat + 0.5
+          AND longitud BETWEEN :lng - 0.5 AND :lng + 0.5
+        ORDER BY
+            (latitud - :lat) * (latitud - :lat) +
+            (longitud - :lng) * (longitud - :lng)
+        LIMIT 1
+    """), {"lat": lat, "lng": lng})
+
+    dept_row = dept_result.first()
+    if not dept_row:
+        return None
+
+    id_departamento = dept_row[0]
+
+    # Paso 2: Dentro de ese departamento, buscar localidad más cercana
+    # Priorizar localidades con coordenadas válidas
+    loc_result = conn.execute(text("""
+        SELECT
+            id_localidad_indec,
+            latitud,
+            longitud,
+            (latitud - :lat) * (latitud - :lat) +
+            (longitud - :lng) * (longitud - :lng) as distancia
+        FROM localidad
+        WHERE id_departamento_indec = :dept_id
+          AND latitud IS NOT NULL
+          AND longitud IS NOT NULL
+        ORDER BY distancia
+        LIMIT 1
+    """), {"lat": lat, "lng": lng, "dept_id": id_departamento})
+
+    loc_row = loc_result.first()
+
+    # Si encontramos localidad con coordenadas, usarla
+    if loc_row:
+        return loc_row[0]
+
+    # Fallback: Si ninguna localidad tiene coordenadas, usar la primera del departamento
+    fallback_result = conn.execute(text("""
+        SELECT id_localidad_indec
+        FROM localidad
+        WHERE id_departamento_indec = :dept_id
+        LIMIT 1
+    """), {"dept_id": id_departamento})
+
+    fallback_row = fallback_result.first()
+    return fallback_row[0] if fallback_row else None
+
+
 def seed_refes(conn: Connection) -> int:
     """
     Carga establecimientos de salud desde WFS del IGN en la tabla 'establecimiento'.
@@ -165,7 +248,13 @@ def seed_refes(conn: Connection) -> int:
     # 4. Limpiar y preparar datos
     establecimientos = []
 
+    print(f"\n🗺️  Asignando localidades con reverse geocoding...")
+    localidades_asignadas = 0
+
     for idx, row in df_renamed.iterrows():
+        if idx % 1000 == 0 and idx > 0:
+            print(f"   Procesados: {idx}/{len(df_renamed)} ({localidades_asignadas} con localidad)")
+
         # Datos básicos de IGN
         codigo_refes = limpiar_string(row.get('codigo_refes'))
         nombre = limpiar_string(row.get('nombre'))
@@ -177,12 +266,25 @@ def seed_refes(conn: Connection) -> int:
         latitud = limpiar_coordenada(row.get('latitud'))
         longitud = limpiar_coordenada(row.get('longitud'))
 
-        # IGN solo provee: código, nombre y coordenadas
+        # Asignar localidad por reverse geocoding
+        id_localidad = None
+        if latitud and longitud:
+            try:
+                id_localidad = asignar_localidad_por_coordenadas(conn, latitud, longitud)
+                if id_localidad:
+                    localidades_asignadas += 1
+            except Exception as e:
+                # Si falla el reverse geocoding, seguir sin localidad
+                pass
+
+        # IGN provee: código, nombre, coordenadas + reverse geocoding de localidad
         establecimientos.append({
             'codigo_refes': str(codigo_refes) if codigo_refes else None,
             'nombre': nombre,
             'latitud': latitud,
             'longitud': longitud,
+            'id_localidad_indec': id_localidad,
+            'source': 'IGN',
         })
 
     if not establecimientos:
@@ -202,7 +304,7 @@ def seed_refes(conn: Connection) -> int:
 
         print(f"📦 Insertando batch {batch_num}/{total_batches} ({len(batch)} establecimientos)...", end=" ")
 
-        # Construir valores para INSERT (solo campos disponibles del IGN)
+        # Construir valores para INSERT (incluye localidad y source)
         values_list = []
         for est in batch:
             values = f"""(
@@ -210,6 +312,8 @@ def seed_refes(conn: Connection) -> int:
                 {f"'{est['nombre']}'" if est['nombre'] else 'NULL'},
                 {est['latitud'] if est['latitud'] is not None else 'NULL'},
                 {est['longitud'] if est['longitud'] is not None else 'NULL'},
+                {est['id_localidad_indec'] if est.get('id_localidad_indec') else 'NULL'},
+                {f"'{est['source']}'" if est.get('source') else 'NULL'},
                 CURRENT_TIMESTAMP,
                 CURRENT_TIMESTAMP
             )"""
@@ -218,7 +322,7 @@ def seed_refes(conn: Connection) -> int:
         stmt = text(f"""
             INSERT INTO establecimiento (
                 codigo_refes, nombre,
-                latitud, longitud,
+                latitud, longitud, id_localidad_indec, source,
                 created_at, updated_at
             ) VALUES {','.join(values_list)}
         """)
@@ -234,9 +338,106 @@ def seed_refes(conn: Connection) -> int:
 
     print("\n" + "="*70)
     print(f"✅ ESTABLECIMIENTOS REFES CARGADOS: {inserted_count:,}")
+    print(f"🗺️  Con localidad asignada: {localidades_asignadas:,} ({localidades_asignadas/inserted_count*100:.1f}%)")
     print("="*70)
 
+    # Cargar mapping SNVS → IGN
+    mapping_count = cargar_mapping_snvs(conn)
+
     return inserted_count
+
+
+def cargar_mapping_snvs(conn: Connection) -> int:
+    """
+    Carga el mapping de códigos SNVS a establecimientos IGN.
+
+    Lee el archivo establecimientos_mapping_final.json y actualiza
+    el campo codigo_snvs de los establecimientos IGN que tienen match
+    con establecimientos del SNVS.
+
+    Args:
+        conn: Conexión SQLAlchemy
+
+    Returns:
+        Número de establecimientos actualizados con código SNVS
+    """
+    print("\n" + "="*70)
+    print("🔗 CARGANDO MAPPING SNVS → IGN")
+    print("="*70)
+
+    # Cargar archivo de mapping
+    mapping_path = Path(__file__).parent / "data" / "establecimientos_mapping_final.json"
+
+    if not mapping_path.exists():
+        print(f"⚠️  Archivo de mapping no encontrado: {mapping_path}")
+        return 0
+
+    with open(mapping_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+
+    mapping = data.get('mapping', {})
+
+    if not mapping:
+        print("⚠️  No se encontró mapping en el archivo")
+        return 0
+
+    print(f"📋 Mappings encontrados: {len(mapping):,}")
+
+    # Actualizar establecimientos con código SNVS
+    updated_count = 0
+    batch_size = 100
+
+    mapping_items = list(mapping.items())
+    total_batches = (len(mapping_items) + batch_size - 1) // batch_size
+
+    for i in range(0, len(mapping_items), batch_size):
+        batch = mapping_items[i:i + batch_size]
+        batch_num = (i // batch_size) + 1
+
+        print(f"📦 Actualizando batch {batch_num}/{total_batches} ({len(batch)} mappings)...", end=" ")
+
+        # Construir CASE para UPDATE masivo
+        case_parts = []
+        codigo_refes_list = []
+
+        for codigo_snvs, ign_data in batch:
+            codigo_refes = ign_data.get('codigo_refes')
+
+            if not codigo_refes or not codigo_snvs:
+                continue
+
+            # Guardar el código SNVS del CSV en el establecimiento IGN
+            case_parts.append(f"WHEN codigo_refes = '{codigo_refes}' THEN '{codigo_snvs}'")
+            codigo_refes_list.append(f"'{codigo_refes}'")
+
+        if not case_parts:
+            print("⏭️  (sin mappings válidos)")
+            continue
+
+        # UPDATE usando CASE para actualizar múltiples registros
+        stmt = text(f"""
+            UPDATE establecimiento
+            SET codigo_snvs = CASE
+                {' '.join(case_parts)}
+            END,
+            updated_at = CURRENT_TIMESTAMP
+            WHERE codigo_refes IN ({','.join(codigo_refes_list)})
+        """)
+
+        try:
+            result = conn.execute(stmt)
+            conn.commit()
+            updated_count += result.rowcount
+            print(f"✅ ({result.rowcount} actualizados)")
+        except Exception as e:
+            print(f"❌ Error: {e}")
+            continue
+
+    print("\n" + "="*70)
+    print(f"✅ MAPPING SNVS CARGADO: {updated_count:,} establecimientos actualizados")
+    print("="*70)
+
+    return updated_count
 
 
 if __name__ == "__main__":
