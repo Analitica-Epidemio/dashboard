@@ -1,12 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { MapContainer, TileLayer, CircleMarker, Marker, Tooltip, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, CircleMarker, Tooltip } from "react-leaflet";
 import { useDomiciliosMapa, type DomicilioMapaItem } from "@/lib/api/mapa";
 import { useEstablecimientosMapa, type EstablecimientoMapaItem } from "@/lib/api/establecimientos";
 import "leaflet/dist/leaflet.css";
+import "leaflet.markercluster/dist/MarkerCluster.css";
+import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import "./mapa-styles.css";
 import L from "leaflet";
+import { MarkerClusterGroup } from "./MarkerClusterGroup";
 
 // Fix Leaflet default icon issue with Next.js
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -20,8 +23,8 @@ L.Icon.Default.mergeOptions({
     "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
 
-// Ícono personalizado para establecimientos de salud
-const hospitalIcon = new L.Icon({
+// OPTIMIZACIÓN: Ícono creado una sola vez fuera del componente (singleton)
+const HOSPITAL_ICON = new L.Icon({
   iconUrl: "data:image/svg+xml;base64," + btoa(`
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#dc2626" width="32" height="32">
       <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5zm0 18c-4.52 0-8-3.48-8-8V8.3l8-4.44 8 4.44V12c0 4.52-3.48 8-8 8zm1-13h-2v3H8v2h3v3h2v-3h3v-2h-3V7z"/>
@@ -266,13 +269,18 @@ export function MapaSimple({
     limit: 50000, // Cargar todos los domicilios geocodificados
   });
 
-  // Cargar establecimientos solo si el toggle está activado
+  // OPTIMIZACIÓN: Solo cargar establecimientos cuando el toggle está activado
   const {
     data: establecimientosData,
     isLoading: isLoadingEstablecimientos,
-  } = useEstablecimientosMapa({
-    limit: 10000,
-  });
+  } = useEstablecimientosMapa(
+    {
+      limit: 10000,
+    },
+    {
+      enabled: mostrarEstablecimientos, // Solo hacer query cuando sea necesario
+    }
+  );
 
   const domicilios = domiciliosProp || dataFallback?.data?.items || [];
   const establecimientos = establecimientosData?.items || [];
@@ -384,57 +392,14 @@ export function MapaSimple({
           );
         })}
 
-        {/* Mostrar establecimientos si el toggle está activado */}
-        {mostrarEstablecimientos && establecimientos.map((establecimiento: EstablecimientoMapaItem) => (
-          <Marker
-            key={establecimiento.id}
-            position={[establecimiento.latitud, establecimiento.longitud]}
-            icon={hospitalIcon}
-            eventHandlers={{
-              click: () => {
-                if (onEstablecimientoClick) {
-                  onEstablecimientoClick(establecimiento);
-                }
-              },
-            }}
-          >
-            <Tooltip direction="top" opacity={0.9} permanent={false}>
-              <div className="text-sm">
-                <div className="font-semibold">{establecimiento.nombre}</div>
-                {establecimiento.localidad_nombre && (
-                  <div className="text-xs text-gray-600">{establecimiento.localidad_nombre}</div>
-                )}
-                <div className="text-xs text-blue-600 mt-1 cursor-pointer">
-                  Click para ver detalles
-                </div>
-              </div>
-            </Tooltip>
-            <Popup>
-              <div className="p-2 min-w-[200px]">
-                <div className="font-semibold text-sm mb-1">{establecimiento.nombre}</div>
-                {establecimiento.codigo_refes && (
-                  <div className="text-xs text-gray-500 mb-2">
-                    Código: {establecimiento.codigo_refes}
-                  </div>
-                )}
-                {establecimiento.localidad_nombre && (
-                  <div className="text-xs text-gray-600 mb-1">
-                    {establecimiento.localidad_nombre}
-                    {establecimiento.departamento_nombre && `, ${establecimiento.departamento_nombre}`}
-                  </div>
-                )}
-                {establecimiento.provincia_nombre && (
-                  <div className="text-xs text-gray-600 mb-2">
-                    {establecimiento.provincia_nombre}
-                  </div>
-                )}
-                <div className="text-xs text-gray-500 mt-2">
-                  📍 {establecimiento.latitud.toFixed(6)}, {establecimiento.longitud.toFixed(6)}
-                </div>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+        {/* OPTIMIZACIÓN: Usar clustering para establecimientos */}
+        {mostrarEstablecimientos && establecimientos.length > 0 && (
+          <MarkerClusterGroup
+            establecimientos={establecimientos}
+            onEstablecimientoClick={onEstablecimientoClick}
+            icon={HOSPITAL_ICON}
+          />
+        )}
       </MapContainer>
 
       {/* Toggle para mostrar/ocultar establecimientos */}
@@ -473,7 +438,7 @@ export function MapaSimple({
             {(() => {
               // Agrupar eventos por categoría
               const categorias = new Map<number, Set<string>>();
-              domiciliosConCoordenadas.forEach((d) => {
+              domiciliosConCoordenadas.forEach((d: DomicilioMapaItem) => {
                 if (d.tipo_evento_predominante) {
                   const cat = categorizarEvento(d.tipo_evento_predominante);
                   if (!categorias.has(cat)) {

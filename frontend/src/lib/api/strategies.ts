@@ -11,8 +11,12 @@ export const extractSuccessData = <T>(response: { data?: T; success?: boolean } 
 }
 
 // Hooks using $api directly
-export const useStrategies = () => {
-  return $api.useQuery('get', '/api/v1/estrategias/')
+export const useStrategies = (params?: { page?: number; page_size?: number; active_only?: boolean; tipo_eno_id?: number }) => {
+  return $api.useQuery('get', '/api/v1/estrategias/', {
+    params: {
+      query: params || {}
+    }
+  })
 }
 
 export const useStrategy = (strategyId: number | null) => {

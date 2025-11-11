@@ -73,7 +73,10 @@ export interface EstablecimientosMapaFilters {
 /**
  * Hook para obtener establecimientos de salud para el mapa
  */
-export function useEstablecimientosMapa(filters: EstablecimientosMapaFilters) {
+export function useEstablecimientosMapa(
+  filters: EstablecimientosMapaFilters,
+  options?: { enabled?: boolean }
+) {
   return useQuery({
     queryKey: ['establecimientos-mapa', filters],
     queryFn: async () => {
@@ -114,6 +117,7 @@ export function useEstablecimientosMapa(filters: EstablecimientosMapaFilters) {
       const data = await response.json();
       return data.data as EstablecimientosMapaResponse;
     },
+    enabled: options?.enabled !== false,
   });
 }
 

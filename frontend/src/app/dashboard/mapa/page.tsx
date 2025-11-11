@@ -56,8 +56,8 @@ export default function MapaPage() {
 
   // Calcular estadísticas
   const totalDomicilios = domicilios.length;
-  const totalEventos = domicilios.reduce((sum, e) => sum + e.total_eventos, 0);
-  const provinciasUnicas = new Set(domicilios.map(e => e.id_provincia_indec)).size;
+  const totalEventos = domicilios.reduce((sum: number, e: DomicilioMapaItem) => sum + e.total_eventos, 0);
+  const provinciasUnicas = new Set(domicilios.map((e: DomicilioMapaItem) => e.id_provincia_indec)).size;
 
   return (
     <MapaLayout
