@@ -6,8 +6,7 @@ import { CollapsibleSidebar } from "@/features/layout/components";
 import {
   MapPin,
   Building2,
-  FileCheck,
-  Users,
+  Link as LinkIcon,
   ChevronRight,
   AlertTriangle,
   CheckCircle2,
@@ -57,20 +56,12 @@ export default function ConfiguracionPage() {
       showBadge: sinMapearCount > 0,
     },
     {
-      title: "Validación de Datos",
-      description: "Configurar reglas de validación para carga de archivos",
-      href: "/dashboard/configuracion/validacion",
-      icon: FileCheck,
+      title: "Estrategias de Vinculación",
+      description: "Configurar estrategias automáticas para vincular eventos entre sí",
+      href: "/dashboard/configuracion/estrategias",
+      icon: LinkIcon,
       status: "active",
       statusText: "Activo",
-    },
-    {
-      title: "Usuarios y Permisos",
-      description: "Gestionar accesos y permisos del sistema",
-      href: "/dashboard/configuracion/usuarios",
-      icon: Users,
-      status: "inactive",
-      statusText: "Próximamente",
     },
   ];
 
