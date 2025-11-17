@@ -4,7 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import { IconInnerShadowTop } from "@tabler/icons-react"
 import { navigationConfig, getNavigationItems } from "../navigation-config"
-import { useAuth } from "@/features/auth/hooks"
+import { useUserProfile } from "@/features/auth/api"
 
 import { NavMain } from "./nav-main"
 import { NavUser } from "./nav-user"
@@ -22,12 +22,12 @@ import {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const navItems = getNavigationItems();
-  const { user } = useAuth();
+  const { data: user } = useUserProfile();
 
   const userData = {
-    name: user?.name || "Usuario",
+    name: (user?.nombre || user?.apellido) ? `${user?.nombre || ''} ${user?.apellido || ''}`.trim() : "Usuario",
     email: user?.email || "usuario@epidemio.com",
-    avatar: user?.image || "/avatars/default.jpg",
+    avatar: "/avatars/default.jpg",
   };
 
   const primaryAction = navigationConfig.primaryAction;

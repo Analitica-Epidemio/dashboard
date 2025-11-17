@@ -367,6 +367,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/uploads/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview Uploaded File
+         * @description Preview uploaded file - OPTIMIZED VERSION.
+         *
+         *     **Optimizations:**
+         *     - Read each sheet ONLY ONCE with nrows limit
+         *     - No full file scanning for row counts (too slow)
+         *     - Convert all data to native Python types immediately
+         *     - Minimal memory footprint
+         *
+         *     **Returns:** Upload ID + sheet previews
+         */
+        post: operations["preview_uploaded_file_api_v1_uploads_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/uploads/process": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Process File From Preview
+         * @description Process a file that was previously uploaded and previewed.
+         *
+         *     **Flow:**
+         *     1. Find temp file by upload_id
+         *     2. Load file into memory (keeps original format: Excel or CSV)
+         *     3. Start async processing with Celery (processor handles both formats)
+         *     4. Clean up temp file
+         *
+         *     **Returns:** Job ID for progress tracking
+         *
+         *     **Optimization:** No Excel→CSV conversion! Processor reads Excel directly with calamine (~4x faster).
+         */
+        post: operations["process_file_from_preview_api_v1_uploads_process_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/geocoding/trigger": {
         parameters: {
             query?: never;
@@ -579,6 +637,154 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/establecimientos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar establecimientos con eventos
+         * @description Lista establecimientos con conteo de eventos relacionados
+         */
+        get: operations["list_establecimientos_con_eventos_api_v1_establecimientos_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/establecimientos/{id_establecimiento}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Obtener detalle de establecimiento
+         * @description Obtiene detalle completo de un establecimiento con todas las personas/eventos relacionados
+         */
+        get: operations["get_establecimiento_detalle_api_v1_establecimientos__id_establecimiento__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/establecimientos/sin-mapear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Obtener establecimientos sin mapear
+         * @description Lista establecimientos SNVS sin mapear a IGN, con sugerencias automáticas priorizadas por impacto (eventos)
+         */
+        get: operations["get_establecimientos_sin_mapear_api_v1_establecimientos_sin_mapear_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/establecimientos/ign/buscar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Buscar establecimientos IGN
+         * @description Busca establecimientos IGN por nombre o código REFES con filtros geográficos
+         */
+        get: operations["buscar_establecimientos_ign_endpoint_api_v1_establecimientos_ign_buscar_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/establecimientos/mapeos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar mapeos existentes
+         * @description Lista mapeos SNVS → IGN existentes con metadata y opciones de filtrado
+         */
+        get: operations["listar_mapeos_existentes_api_v1_establecimientos_mapeos_get"];
+        put?: never;
+        /**
+         * Crear mapeo SNVS → IGN
+         * @description Crea un mapeo manual entre un establecimiento SNVS y uno IGN
+         */
+        post: operations["crear_mapeo_snvs_ign_api_v1_establecimientos_mapeos_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/establecimientos/mapeos/{id_establecimiento_snvs}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Actualizar mapeo existente
+         * @description Actualiza un mapeo existente apuntando a un nuevo establecimiento IGN
+         */
+        put: operations["actualizar_mapeo_snvs_ign_api_v1_establecimientos_mapeos__id_establecimiento_snvs__put"];
+        post?: never;
+        /**
+         * Eliminar mapeo (desvincular)
+         * @description Elimina un mapeo existente, removiendo el código REFES y metadata
+         */
+        delete: operations["eliminar_mapeo_snvs_ign_api_v1_establecimientos_mapeos__id_establecimiento_snvs__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/establecimientos/mapeos/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Aceptar múltiples sugerencias en bulk
+         * @description Crea múltiples mapeos en una sola operación (útil para aceptar sugerencias de alta confianza)
+         */
+        post: operations["aceptar_sugerencias_bulk_api_v1_establecimientos_mapeos_bulk_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/estrategias/": {
         parameters: {
             query?: never;
@@ -588,13 +794,15 @@ export interface paths {
         };
         /**
          * List Strategies
-         * @description Listar todas las estrategias de clasificación.
+         * @description Listar todas las estrategias de clasificación con paginación.
          *
          *     **Filtros opcionales:**
          *     - `active_only`: Solo estrategias activas
          *     - `tipo_eno_id`: Filtrar por tipo de evento específico
+         *     - `page`: Número de página (default: 1)
+         *     - `page_size`: Tamaño de página (default: 50, max: 100)
          *
-         *     **Returns:** Lista de estrategias con metadatos
+         *     **Returns:** Lista paginada de estrategias con metadatos
          */
         get: operations["list_strategies_api_v1_estrategias__get"];
         put?: never;
@@ -1223,8 +1431,13 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Analytics
-         * @description Obtiene métricas de analytics comparando dos períodos
+         * Obtiene métricas de analytics comparando dos períodos
+         * @description Endpoint principal de analytics.
+         *
+         *     Retorna métricas epidemiológicas comparadas entre dos períodos:
+         *     - Casos confirmados y tendencias
+         *     - Cobertura geográfica
+         *     - Performance de clasificación
          */
         get: operations["get_analytics_api_v1_analytics_get"];
         put?: never;
@@ -1243,13 +1456,159 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Top Winners Losers
-         * @description Obtiene las entidades con mayor cambio (winners/losers)
+         * Obtiene las entidades con mayor cambio (winners/losers)
+         * @description Endpoint para obtener top winners y losers.
+         *
+         *     Winners: Entidades con mayor aumento en casos
+         *     Losers: Entidades con mayor disminución en casos
          */
         get: operations["get_top_winners_losers_api_v1_analytics_top_winners_losers_get"];
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analytics/date-range": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Obtiene el rango de fechas con datos disponibles
+         * @description Endpoint para obtener el rango de fechas con datos disponibles.
+         *
+         *     Retorna la fecha mínima y máxima de eventos en la base de datos,
+         *     útil para configurar filtros de fecha dinámicamente.
+         */
+        get: operations["get_date_range_api_v1_analytics_date_range_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/boletines/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar templates de boletines
+         * @description Listar templates de boletines con filtros opcionales.
+         */
+        get: operations["list_boletin_templates_api_v1_boletines_templates_get"];
+        put?: never;
+        /**
+         * Crear template de boletín
+         * @description Crear un nuevo template de boletín.
+         */
+        post: operations["create_boletin_template_api_v1_boletines_templates_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/boletines/templates/{template_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Obtener template por ID
+         * @description Obtener un template específico por ID.
+         */
+        get: operations["get_boletin_template_api_v1_boletines_templates__template_id__get"];
+        /**
+         * Actualizar template
+         * @description Actualizar un template existente.
+         */
+        put: operations["update_boletin_template_api_v1_boletines_templates__template_id__put"];
+        post?: never;
+        /**
+         * Eliminar template
+         * @description Eliminar un template.
+         */
+        delete: operations["delete_boletin_template_api_v1_boletines_templates__template_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/boletines/templates/{template_id}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Duplicar template
+         * @description Duplicar un template existente.
+         */
+        post: operations["duplicate_boletin_template_api_v1_boletines_templates__template_id__duplicate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/boletines/instances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar instancias de boletines
+         * @description Listar instancias de boletines generados.
+         */
+        get: operations["list_boletin_instances_api_v1_boletines_instances_get"];
+        put?: never;
+        /**
+         * Crear instancia de boletín
+         * @description Crea una instancia pendiente. El PDF se genera en un paso posterior.
+         */
+        post: operations["create_boletin_instance_api_v1_boletines_instances_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/boletines/instances/{instance_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Obtener instancia por ID
+         * @description Obtener una instancia específica por ID.
+         */
+        get: operations["get_boletin_instance_api_v1_boletines_instances__instance_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Eliminar instancia
+         * @description Eliminar una instancia.
+         */
+        delete: operations["delete_boletin_instance_api_v1_boletines_instances__instance_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1279,6 +1638,33 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AceptarSugerenciasBulkRequest
+         * @description Request para aceptar múltiples sugerencias.
+         */
+        AceptarSugerenciasBulkRequest: {
+            /**
+             * Mapeos
+             * @description Lista de mapeos a crear
+             */
+            mapeos: components["schemas"]["CrearMapeoRequest"][];
+        };
+        /**
+         * ActualizarMapeoRequest
+         * @description Request para actualizar un mapeo existente.
+         */
+        ActualizarMapeoRequest: {
+            /**
+             * Id Establecimiento Ign Nuevo
+             * @description Nuevo ID del establecimiento IGN
+             */
+            id_establecimiento_ign_nuevo: number;
+            /**
+             * Razon
+             * @description Nueva razón del mapeo
+             */
+            razon?: string | null;
+        };
         /**
          * AggregatedStats
          * @description Estadísticas agregadas sobre TODAS las personas que coinciden con los filtros
@@ -1512,6 +1898,15 @@ export interface components {
              */
             user_agent?: string | null;
         };
+        /** Body_preview_uploaded_file_api_v1_uploads_preview_post */
+        Body_preview_uploaded_file_api_v1_uploads_preview_post: {
+            /**
+             * File
+             * Format: binary
+             * @description Archivo Excel o CSV epidemiológico
+             */
+            file: string;
+        };
         /** Body_upload_csv_async_api_v1_uploads_csv_async_post */
         Body_upload_csv_async_api_v1_uploads_csv_async_post: {
             /**
@@ -1530,6 +1925,184 @@ export interface components {
              * @description Nombre de la hoja convertida
              */
             sheet_name: string;
+        };
+        /**
+         * BoletinGenerateRequest
+         * @description Request para generar un boletín
+         */
+        BoletinGenerateRequest: {
+            /**
+             * Template Id
+             * @description ID del template a usar
+             */
+            template_id: number;
+            /**
+             * Name
+             * @description Nombre del boletín
+             */
+            name: string;
+            /**
+             * Parameters
+             * @description Parámetros específicos
+             */
+            parameters: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * BoletinInstanceResponse
+         * @description Schema de respuesta de instancia
+         */
+        BoletinInstanceResponse: {
+            /** Id */
+            id: number;
+            /** Template Id */
+            template_id: number;
+            /** Name */
+            name: string;
+            /** Parameters */
+            parameters: {
+                [key: string]: unknown;
+            };
+            /** Pdf Path */
+            pdf_path: string | null;
+            /** Pdf Size Bytes */
+            pdf_size_bytes: number | null;
+            /** Status */
+            status: string;
+            /** Error Message */
+            error_message: string | null;
+            /** Generated By */
+            generated_by: number | null;
+            /** Generated At */
+            generated_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
+         * BoletinTemplateCreate
+         * @description Schema para crear template
+         */
+        BoletinTemplateCreate: {
+            /**
+             * Name
+             * @description Nombre del template
+             */
+            name: string;
+            /**
+             * Description
+             * @description Descripción
+             */
+            description?: string | null;
+            /**
+             * Category
+             * @description Categoría: semanal, brote, tendencias, etc.
+             */
+            category: string;
+            /**
+             * Thumbnail
+             * @description URL de thumbnail
+             */
+            thumbnail?: string | null;
+            /** @description Configuración de layout */
+            layout: components["schemas"]["LayoutConfig"];
+            /** @description Configuración de portada */
+            cover?: components["schemas"]["CoverConfig"] | null;
+            /**
+             * Widgets
+             * @description Lista de widgets
+             * @default []
+             */
+            widgets: (components["schemas"]["KPIWidget-Input"] | components["schemas"]["GenericWidget"])[];
+            /** @description Filtros globales */
+            global_filters?: components["schemas"]["GlobalFilters"] | null;
+            /**
+             * Content
+             * @description Contenido HTML del boletín (Tiptap)
+             */
+            content?: string | null;
+            /**
+             * Is Public
+             * @description Template público
+             * @default false
+             */
+            is_public: boolean;
+        };
+        /**
+         * BoletinTemplateResponse
+         * @description Schema de respuesta de template
+         */
+        BoletinTemplateResponse: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Description */
+            description: string | null;
+            /** Category */
+            category: string;
+            /** Thumbnail */
+            thumbnail: string | null;
+            layout: components["schemas"]["LayoutConfig"];
+            cover: components["schemas"]["CoverConfig"] | null;
+            /** Widgets */
+            widgets: (components["schemas"]["KPIWidget-Output"] | components["schemas"]["GenericWidget"])[];
+            global_filters: components["schemas"]["GlobalFilters"] | null;
+            /** Content */
+            content: string | null;
+            /** Created By */
+            created_by: number | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Updated At */
+            updated_at: string | null;
+            /** Is Public */
+            is_public: boolean;
+            /** Is System */
+            is_system: boolean;
+        };
+        /**
+         * BoletinTemplateUpdate
+         * @description Schema para actualizar template
+         */
+        BoletinTemplateUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Category */
+            category?: string | null;
+            /** Thumbnail */
+            thumbnail?: string | null;
+            layout?: components["schemas"]["LayoutConfig"] | null;
+            cover?: components["schemas"]["CoverConfig"] | null;
+            /** Widgets */
+            widgets?: (components["schemas"]["KPIWidget-Input"] | components["schemas"]["GenericWidget"])[] | null;
+            global_filters?: components["schemas"]["GlobalFilters"] | null;
+            /** Content */
+            content?: string | null;
+            /** Is Public */
+            is_public?: boolean | null;
+        };
+        /**
+         * BuscarIGNResponse
+         * @description Respuesta de búsqueda de establecimientos IGN.
+         */
+        BuscarIGNResponse: {
+            /** Items */
+            items: components["schemas"]["EstablecimientoIGNResult"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
         };
         /**
          * CasoDetalle
@@ -1939,6 +2512,64 @@ export interface components {
             contactos_embarazadas?: number | null;
         };
         /**
+         * CoverConfig
+         * @description Configuración de la portada
+         */
+        CoverConfig: {
+            /**
+             * Enabled
+             * @description Mostrar portada
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * Title
+             * @description Título del boletín
+             */
+            title: string;
+            /**
+             * Subtitle
+             * @description Subtítulo
+             */
+            subtitle?: string | null;
+            /**
+             * Logo
+             * @description URL o path al logo
+             */
+            logo?: string | null;
+            /**
+             * Background Image
+             * @description Imagen de fondo
+             */
+            background_image?: string | null;
+            /**
+             * Footer
+             * @description Texto del pie de página
+             */
+            footer?: string | null;
+        };
+        /**
+         * CrearMapeoRequest
+         * @description Request para crear un mapeo SNVS → IGN.
+         */
+        CrearMapeoRequest: {
+            /**
+             * Id Establecimiento Snvs
+             * @description ID del establecimiento SNVS (source='SNVS')
+             */
+            id_establecimiento_snvs: number;
+            /**
+             * Id Establecimiento Ign
+             * @description ID del establecimiento IGN (source='IGN')
+             */
+            id_establecimiento_ign: number;
+            /**
+             * Razon
+             * @description Razón del mapeo
+             */
+            razon?: string | null;
+        };
+        /**
          * DashboardChartsResponse
          * @description Response model para charts del dashboard
          */
@@ -1975,6 +2606,24 @@ export interface components {
             piramide_poblacional: components["schemas"]["PiramidePoblacional"][];
             /** Territorios Afectados */
             territorios_afectados: components["schemas"]["TerritorioAfectado"][];
+        };
+        /**
+         * DateRangeResponse
+         * @description Response con el rango de fechas disponibles
+         */
+        DateRangeResponse: {
+            /**
+             * Fecha Minima
+             * Format: date
+             */
+            fecha_minima: string;
+            /**
+             * Fecha Maxima
+             * Format: date
+             */
+            fecha_maxima: string;
+            /** Total Eventos */
+            total_eventos: number;
         };
         /**
          * DepartamentoEstadistica
@@ -2340,6 +2989,103 @@ export interface components {
             request_id?: string | null;
         };
         /**
+         * EstablecimientoDetalleResponse
+         * @description Respuesta con detalle completo del establecimiento y sus relaciones
+         */
+        EstablecimientoDetalleResponse: {
+            /**
+             * Id Establecimiento
+             * @description ID del establecimiento
+             */
+            id_establecimiento: number;
+            /**
+             * Nombre
+             * @description Nombre del establecimiento
+             */
+            nombre: string;
+            /**
+             * Codigo Refes
+             * @description Código REFES
+             */
+            codigo_refes?: string | null;
+            /**
+             * Codigo Snvs
+             * @description Código SNVS
+             */
+            codigo_snvs?: string | null;
+            /**
+             * Latitud
+             * @description Latitud
+             */
+            latitud: number;
+            /**
+             * Longitud
+             * @description Longitud
+             */
+            longitud: number;
+            /**
+             * Localidad Nombre
+             * @description Nombre de la localidad
+             */
+            localidad_nombre?: string | null;
+            /**
+             * Departamento Nombre
+             * @description Nombre del departamento
+             */
+            departamento_nombre?: string | null;
+            /**
+             * Provincia Nombre
+             * @description Nombre de la provincia
+             */
+            provincia_nombre?: string | null;
+            /**
+             * Total Personas
+             * @description Total de personas relacionadas
+             */
+            total_personas: number;
+            /**
+             * Personas
+             * @description Lista de personas relacionadas
+             */
+            personas?: components["schemas"]["PersonaRelacionada"][];
+            /**
+             * Relaciones Por Tipo
+             * @description Conteo de relaciones por tipo
+             */
+            relaciones_por_tipo?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Eventos Por Tipo
+             * @description Conteo de eventos por tipo
+             */
+            eventos_por_tipo?: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * EstablecimientoIGNResult
+         * @description Resultado de búsqueda de establecimientos IGN.
+         */
+        EstablecimientoIGNResult: {
+            /** Id */
+            id: number;
+            /** Nombre */
+            nombre: string;
+            /** Codigo Refes */
+            codigo_refes: string | null;
+            /** Localidad Nombre */
+            localidad_nombre: string | null;
+            /** Departamento Nombre */
+            departamento_nombre: string | null;
+            /** Provincia Nombre */
+            provincia_nombre: string | null;
+            /** Latitud */
+            latitud: number | null;
+            /** Longitud */
+            longitud: number | null;
+        };
+        /**
          * EstablecimientoInfo
          * @description Información de establecimiento
          */
@@ -2369,6 +3115,104 @@ export interface components {
              * @description Localidad
              */
             localidad?: string | null;
+        };
+        /**
+         * EstablecimientoListItem
+         * @description Item de establecimiento en el listado
+         */
+        EstablecimientoListItem: {
+            /**
+             * Id
+             * @description ID del establecimiento
+             */
+            id: number;
+            /**
+             * Nombre
+             * @description Nombre del establecimiento
+             */
+            nombre: string;
+            /**
+             * Codigo Refes
+             * @description Código REFES
+             */
+            codigo_refes?: string | null;
+            /**
+             * Codigo Snvs
+             * @description Código SNVS
+             */
+            codigo_snvs?: string | null;
+            /**
+             * Source
+             * @description Fuente del dato (IGN, SNVS)
+             */
+            source?: string | null;
+            /**
+             * Localidad Nombre
+             * @description Nombre de la localidad
+             */
+            localidad_nombre?: string | null;
+            /**
+             * Departamento Nombre
+             * @description Nombre del departamento
+             */
+            departamento_nombre?: string | null;
+            /**
+             * Provincia Nombre
+             * @description Nombre de la provincia
+             */
+            provincia_nombre?: string | null;
+            /**
+             * Latitud
+             * @description Latitud
+             */
+            latitud?: number | null;
+            /**
+             * Longitud
+             * @description Longitud
+             */
+            longitud?: number | null;
+            /**
+             * Total Eventos
+             * @description Total de eventos relacionados
+             * @default 0
+             */
+            total_eventos: number;
+            /**
+             * Eventos Consulta
+             * @description Eventos donde fue consulta
+             * @default 0
+             */
+            eventos_consulta: number;
+            /**
+             * Eventos Notificacion
+             * @description Eventos donde fue notificación
+             * @default 0
+             */
+            eventos_notificacion: number;
+            /**
+             * Eventos Carga
+             * @description Eventos donde fue carga
+             * @default 0
+             */
+            eventos_carga: number;
+            /**
+             * Eventos Muestra
+             * @description Eventos con muestras
+             * @default 0
+             */
+            eventos_muestra: number;
+            /**
+             * Eventos Diagnostico
+             * @description Eventos con diagnósticos
+             * @default 0
+             */
+            eventos_diagnostico: number;
+            /**
+             * Eventos Tratamiento
+             * @description Eventos con tratamientos
+             * @default 0
+             */
+            eventos_tratamiento: number;
         };
         /**
          * EstablecimientoMapaItem
@@ -2422,6 +3266,59 @@ export interface components {
             provincia_nombre?: string | null;
         };
         /**
+         * EstablecimientoSinMapear
+         * @description Establecimiento SNVS sin mapear a IGN.
+         */
+        EstablecimientoSinMapear: {
+            /** Id */
+            id: number;
+            /** Nombre */
+            nombre: string;
+            /** Codigo Snvs */
+            codigo_snvs: string | null;
+            /** Localidad Nombre */
+            localidad_nombre: string | null;
+            /** Departamento Nombre */
+            departamento_nombre: string | null;
+            /** Provincia Nombre */
+            provincia_nombre: string | null;
+            /** Total Eventos */
+            total_eventos: number;
+            /**
+             * Sugerencias
+             * @default []
+             */
+            sugerencias: components["schemas"]["SugerenciaMapeo"][];
+        };
+        /**
+         * EstablecimientosListResponse
+         * @description Respuesta con lista paginada de establecimientos
+         */
+        EstablecimientosListResponse: {
+            /** Items */
+            items?: components["schemas"]["EstablecimientoListItem"][];
+            /**
+             * Total
+             * @description Total de establecimientos
+             */
+            total: number;
+            /**
+             * Page
+             * @description Página actual
+             */
+            page: number;
+            /**
+             * Page Size
+             * @description Tamaño de página
+             */
+            page_size: number;
+            /**
+             * Total Pages
+             * @description Total de páginas
+             */
+            total_pages: number;
+        };
+        /**
          * EstablecimientosMapaResponse
          * @description Respuesta con lista de establecimientos para mapa
          */
@@ -2436,6 +3333,20 @@ export interface components {
              * @description Total de establecimientos
              */
             total: number;
+        };
+        /**
+         * EstablecimientosSinMapearResponse
+         * @description Respuesta de establecimientos sin mapear.
+         */
+        EstablecimientosSinMapearResponse: {
+            /** Items */
+            items: components["schemas"]["EstablecimientoSinMapear"][];
+            /** Total */
+            total: number;
+            /** Sin Mapear Count */
+            sin_mapear_count: number;
+            /** Eventos Sin Mapear Count */
+            eventos_sin_mapear_count: number;
         };
         /**
          * EstadoGeocodificacion
@@ -3340,6 +4251,96 @@ export interface components {
              */
             updated_at?: string | null;
         };
+        /**
+         * GenericDataConfig
+         * @description Configuración de datos genérica para otros widgets
+         */
+        GenericDataConfig: {
+            /**
+             * Source
+             * @description Fuente de datos
+             * @enum {string}
+             */
+            source: "manual" | "query";
+            /**
+             * Query Id
+             * @description ID de la query si source=query
+             */
+            query_id?: string | null;
+            /**
+             * Query Params
+             * @description Parámetros de la query
+             */
+            query_params?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Manual Data
+             * @description Datos manuales
+             */
+            manual_data?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /**
+         * GenericWidget
+         * @description Widget genérico (table, chart, etc)
+         */
+        GenericWidget: {
+            /**
+             * Id
+             * @description ID único del widget
+             */
+            id: string;
+            /**
+             * @description Tipo de widget (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "bar" | "corridor" | "divider" | "image" | "line" | "map" | "pagebreak" | "pie" | "pyramid" | "table" | "text";
+            /** @description Posición en el grid */
+            position: components["schemas"]["WidgetPosition"];
+            /** @description Configuración de datos */
+            data_config: components["schemas"]["GenericDataConfig"];
+            /** @description Configuración visual */
+            visual_config: components["schemas"]["WidgetVisualConfig"];
+            /**
+             * Title
+             * @description Título del widget
+             */
+            title?: string | null;
+            /**
+             * Description
+             * @description Descripción del widget
+             */
+            description?: string | null;
+        };
+        /**
+         * GlobalFilters
+         * @description Filtros globales del boletín
+         */
+        GlobalFilters: {
+            /**
+             * Temporal
+             * @description Filtros temporales
+             */
+            temporal?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Geografico
+             * @description Filtros geográficos
+             */
+            geografico?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Demografico
+             * @description Filtros demográficos
+             */
+            demografico?: {
+                [key: string]: unknown;
+            } | null;
+        };
         /** GrupoEnoInfo */
         GrupoEnoInfo: {
             /**
@@ -3566,6 +4567,191 @@ export interface components {
             } | null;
         };
         /**
+         * KPIComparisonData
+         * @description Datos de comparación para KPI
+         */
+        KPIComparisonData: {
+            /**
+             * Value
+             * @description Valor de la comparación (%)
+             */
+            value: number;
+            /**
+             * Trend
+             * @description Tendencia
+             * @enum {string}
+             */
+            trend: "up" | "down" | "neutral";
+        };
+        /**
+         * KPIDataConfig
+         * @description Configuración de datos para widget KPI
+         */
+        "KPIDataConfig-Input": {
+            /**
+             * Source
+             * @description Fuente de datos
+             * @enum {string}
+             */
+            source: "manual" | "query";
+            /**
+             * Query Id
+             * @description ID de la query si source=query
+             */
+            query_id?: string | null;
+            /**
+             * Query Params
+             * @description Parámetros de la query
+             */
+            query_params?: {
+                [key: string]: unknown;
+            } | null;
+            /** @description Datos manuales para KPI */
+            manual_data?: components["schemas"]["KPIManualData"] | null;
+        };
+        /**
+         * KPIDataConfig
+         * @description Configuración de datos para widget KPI
+         */
+        "KPIDataConfig-Output": {
+            /**
+             * Source
+             * @description Fuente de datos
+             * @enum {string}
+             */
+            source: "manual" | "query";
+            /**
+             * Query Id
+             * @description ID de la query si source=query
+             */
+            query_id?: string | null;
+            /**
+             * Query Params
+             * @description Parámetros de la query
+             */
+            query_params?: {
+                [key: string]: unknown;
+            } | null;
+            /** @description Datos manuales para KPI */
+            manual_data?: components["schemas"]["KPIManualData"] | null;
+        };
+        /**
+         * KPIManualData
+         * @description Datos manuales para widget KPI
+         */
+        KPIManualData: {
+            /**
+             * Value
+             * @description Valor principal del KPI
+             */
+            value: number;
+            /**
+             * Label
+             * @description Etiqueta del KPI
+             */
+            label?: string | null;
+            /** @description Datos de comparación */
+            comparison?: components["schemas"]["KPIComparisonData"] | null;
+        };
+        /**
+         * KPIWidget
+         * @description Widget de KPI
+         */
+        "KPIWidget-Input": {
+            /**
+             * Id
+             * @description ID único del widget
+             */
+            id: string;
+            /**
+             * @description Tipo de widget (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "kpi";
+            /** @description Posición en el grid */
+            position: components["schemas"]["WidgetPosition"];
+            /** @description Configuración de datos para KPI */
+            data_config: components["schemas"]["KPIDataConfig-Input"];
+            /** @description Configuración visual */
+            visual_config: components["schemas"]["WidgetVisualConfig"];
+            /**
+             * Title
+             * @description Título del widget
+             */
+            title?: string | null;
+            /**
+             * Description
+             * @description Descripción del widget
+             */
+            description?: string | null;
+        };
+        /**
+         * KPIWidget
+         * @description Widget de KPI
+         */
+        "KPIWidget-Output": {
+            /**
+             * Id
+             * @description ID único del widget
+             */
+            id: string;
+            /**
+             * @description Tipo de widget (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "kpi";
+            /** @description Posición en el grid */
+            position: components["schemas"]["WidgetPosition"];
+            /** @description Configuración de datos para KPI */
+            data_config: components["schemas"]["KPIDataConfig-Output"];
+            /** @description Configuración visual */
+            visual_config: components["schemas"]["WidgetVisualConfig"];
+            /**
+             * Title
+             * @description Título del widget
+             */
+            title?: string | null;
+            /**
+             * Description
+             * @description Descripción del widget
+             */
+            description?: string | null;
+        };
+        /**
+         * LayoutConfig
+         * @description Configuración del layout del boletín
+         */
+        LayoutConfig: {
+            /**
+             * Type
+             * @description Tipo de layout
+             * @default grid
+             * @constant
+             */
+            type: "grid";
+            /**
+             * Columns
+             * @description Número de columnas
+             * @default 12
+             */
+            columns: number;
+            /**
+             * Row Height
+             * @description Alto de fila en pixels
+             * @default 40
+             */
+            row_height: number;
+            /**
+             * Margin
+             * @description Margen [horizontal, vertical]
+             * @default [
+             *       10,
+             *       10
+             *     ]
+             */
+            margin: number[];
+        };
+        /**
          * MapaGeograficoResponse
          * @description Response model para mapa geográfico
          */
@@ -3587,6 +4773,60 @@ export interface components {
             filtros_aplicados: {
                 [key: string]: unknown;
             };
+        };
+        /**
+         * MapeoInfo
+         * @description Información de un mapeo existente.
+         */
+        MapeoInfo: {
+            /** Id Establecimiento Snvs */
+            id_establecimiento_snvs: number;
+            /** Nombre Snvs */
+            nombre_snvs: string;
+            /** Codigo Snvs */
+            codigo_snvs: string | null;
+            /** Id Establecimiento Ign */
+            id_establecimiento_ign: number;
+            /** Nombre Ign */
+            nombre_ign: string;
+            /** Codigo Refes */
+            codigo_refes: string | null;
+            /** Mapeo Score */
+            mapeo_score: number | null;
+            /** Mapeo Similitud Nombre */
+            mapeo_similitud_nombre: number | null;
+            /** Mapeo Confianza */
+            mapeo_confianza: string | null;
+            /** Mapeo Razon */
+            mapeo_razon: string | null;
+            /** Mapeo Es Manual */
+            mapeo_es_manual: boolean | null;
+            /** Mapeo Validado */
+            mapeo_validado: boolean | null;
+            /** Total Eventos */
+            total_eventos: number;
+            /** Localidad Nombre Snvs */
+            localidad_nombre_snvs: string | null;
+            /** Localidad Nombre Ign */
+            localidad_nombre_ign: string | null;
+            /** Provincia Nombre Snvs */
+            provincia_nombre_snvs: string | null;
+            /** Provincia Nombre Ign */
+            provincia_nombre_ign: string | null;
+        };
+        /**
+         * MapeosListResponse
+         * @description Respuesta de lista de mapeos.
+         */
+        MapeosListResponse: {
+            /** Items */
+            items: components["schemas"]["MapeoInfo"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
         };
         /**
          * MetricValue
@@ -3619,6 +4859,28 @@ export interface components {
              */
             tendencia?: string | null;
         };
+        /** PaginatedResponse[EventStrategyResponse] */
+        PaginatedResponse_EventStrategyResponse_: {
+            /**
+             * Data
+             * @description Lista de elementos
+             */
+            data: components["schemas"]["EventStrategyResponse"][];
+            /** @description Información de paginación con tipos específicos */
+            meta: components["schemas"]["PaginationMeta"];
+            /**
+             * Links
+             * @description Enlaces de navegación
+             * @example {
+             *       "first": "/api/items?page=1",
+             *       "last": "/api/items?page=5",
+             *       "next": "/api/items?page=2"
+             *     }
+             */
+            links?: {
+                [key: string]: string | null;
+            } | null;
+        };
         /** PaginatedResponse[GrupoEnoInfo] */
         PaginatedResponse_GrupoEnoInfo_: {
             /**
@@ -3626,19 +4888,8 @@ export interface components {
              * @description Lista de elementos
              */
             data: components["schemas"]["GrupoEnoInfo"][];
-            /**
-             * Meta
-             * @description Información de paginación
-             * @example {
-             *       "page": 1,
-             *       "per_page": 20,
-             *       "total": 100,
-             *       "total_pages": 5
-             *     }
-             */
-            meta: {
-                [key: string]: unknown;
-            };
+            /** @description Información de paginación con tipos específicos */
+            meta: components["schemas"]["PaginationMeta"];
             /**
              * Links
              * @description Enlaces de navegación
@@ -3659,19 +4910,8 @@ export interface components {
              * @description Lista de elementos
              */
             data: components["schemas"]["TipoEnoInfo"][];
-            /**
-             * Meta
-             * @description Información de paginación
-             * @example {
-             *       "page": 1,
-             *       "per_page": 20,
-             *       "total": 100,
-             *       "total_pages": 5
-             *     }
-             */
-            meta: {
-                [key: string]: unknown;
-            };
+            /** @description Información de paginación con tipos específicos */
+            meta: components["schemas"]["PaginationMeta"];
             /**
              * Links
              * @description Enlaces de navegación
@@ -3720,6 +4960,42 @@ export interface components {
              * @description Si hay página anterior
              */
             has_prev: boolean;
+        };
+        /**
+         * PaginationMeta
+         * @description Metadata de paginación con tipos específicos.
+         */
+        PaginationMeta: {
+            /**
+             * Page
+             * @description Página actual (1-indexed)
+             */
+            page: number;
+            /**
+             * Page Size
+             * @description Elementos por página
+             */
+            page_size: number;
+            /**
+             * Total
+             * @description Total de elementos
+             */
+            total: number;
+            /**
+             * Total Pages
+             * @description Total de páginas
+             */
+            total_pages: number;
+            /**
+             * Has Next
+             * @description Si hay página siguiente
+             */
+            has_next?: boolean | null;
+            /**
+             * Has Prev
+             * @description Si hay página anterior
+             */
+            has_prev?: boolean | null;
         };
         /**
          * PerformanceMetrics
@@ -3994,6 +5270,72 @@ export interface components {
             };
         };
         /**
+         * PersonaRelacionada
+         * @description Detalle de una persona relacionada al establecimiento
+         */
+        PersonaRelacionada: {
+            /**
+             * Codigo Ciudadano
+             * @description Código del ciudadano
+             */
+            codigo_ciudadano: number;
+            /**
+             * Dni
+             * @description DNI del ciudadano
+             */
+            dni?: string | null;
+            /**
+             * Nombre Completo
+             * @description Nombre completo
+             */
+            nombre_completo?: string | null;
+            /**
+             * Edad
+             * @description Edad del ciudadano al momento del evento
+             */
+            edad?: number | null;
+            /**
+             * Sexo
+             * @description Sexo del ciudadano
+             */
+            sexo?: string | null;
+            /**
+             * Id Evento
+             * @description ID del evento
+             */
+            id_evento: number;
+            /**
+             * Fecha Evento
+             * @description Fecha del evento
+             */
+            fecha_evento?: string | null;
+            /**
+             * Tipo Evento Nombre
+             * @description Nombre del tipo de evento
+             */
+            tipo_evento_nombre?: string | null;
+            /**
+             * Grupo Evento Nombre
+             * @description Nombre del grupo de evento
+             */
+            grupo_evento_nombre?: string | null;
+            /**
+             * Clasificacion Manual
+             * @description Clasificación manual
+             */
+            clasificacion_manual?: string | null;
+            /**
+             * Estado
+             * @description Estado del caso
+             */
+            estado?: string | null;
+            /**
+             * Tipo Relacion
+             * @description Tipo de relación: consulta, notificacion, carga, muestra, diagnostico
+             */
+            tipo_relacion: string;
+        };
+        /**
          * PersonaSortBy
          * @enum {string}
          */
@@ -4055,6 +5397,22 @@ export interface components {
             sex: string;
             /** Value */
             value: number;
+        };
+        /**
+         * ProcessFromPreviewRequest
+         * @description Request to process a previously uploaded file.
+         */
+        ProcessFromPreviewRequest: {
+            /**
+             * Upload Id
+             * @description Upload ID from preview endpoint
+             */
+            upload_id: string;
+            /**
+             * Sheet Name
+             * @description Name of sheet to process
+             */
+            sheet_name: string;
         };
         /**
          * RefreshToken
@@ -4235,6 +5593,42 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /** SuccessResponse[BoletinInstanceResponse] */
+        SuccessResponse_BoletinInstanceResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["BoletinInstanceResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[BoletinTemplateResponse] */
+        SuccessResponse_BoletinTemplateResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["BoletinTemplateResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[BuscarIGNResponse] */
+        SuccessResponse_BuscarIGNResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["BuscarIGNResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
         /** SuccessResponse[ChartsDisponiblesResponse] */
         SuccessResponse_ChartsDisponiblesResponse_: {
             /** @description Datos de la respuesta */
@@ -4263,6 +5657,18 @@ export interface components {
         SuccessResponse_DashboardResumenResponse_: {
             /** @description Datos de la respuesta */
             data: components["schemas"]["DashboardResumenResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[DateRangeResponse] */
+        SuccessResponse_DateRangeResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["DateRangeResponse"];
             /**
              * Meta
              * @description Metadata opcional (paginación, etc)
@@ -4307,10 +5713,46 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /** SuccessResponse[EstablecimientoDetalleResponse] */
+        SuccessResponse_EstablecimientoDetalleResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["EstablecimientoDetalleResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[EstablecimientosListResponse] */
+        SuccessResponse_EstablecimientosListResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["EstablecimientosListResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
         /** SuccessResponse[EstablecimientosMapaResponse] */
         SuccessResponse_EstablecimientosMapaResponse_: {
             /** @description Datos de la respuesta */
             data: components["schemas"]["EstablecimientosMapaResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[EstablecimientosSinMapearResponse] */
+        SuccessResponse_EstablecimientosSinMapearResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["EstablecimientosSinMapearResponse"];
             /**
              * Meta
              * @description Metadata opcional (paginación, etc)
@@ -4406,13 +5848,28 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
-        /** SuccessResponse[List[EventStrategyResponse]] */
-        SuccessResponse_List_EventStrategyResponse__: {
+        /** SuccessResponse[List[BoletinInstanceResponse]] */
+        SuccessResponse_List_BoletinInstanceResponse__: {
             /**
              * Data
              * @description Datos de la respuesta
              */
-            data: components["schemas"]["EventStrategyResponse"][];
+            data: components["schemas"]["BoletinInstanceResponse"][];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[List[BoletinTemplateResponse]] */
+        SuccessResponse_List_BoletinTemplateResponse__: {
+            /**
+             * Data
+             * @description Datos de la respuesta
+             */
+            data: components["schemas"]["BoletinTemplateResponse"][];
             /**
              * Meta
              * @description Metadata opcional (paginación, etc)
@@ -4425,6 +5882,18 @@ export interface components {
         SuccessResponse_MapaGeograficoResponse_: {
             /** @description Datos de la respuesta */
             data: components["schemas"]["MapaGeograficoResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[MapeosListResponse] */
+        SuccessResponse_MapeosListResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["MapeosListResponse"];
             /**
              * Meta
              * @description Metadata opcional (paginación, etc)
@@ -4516,6 +5985,55 @@ export interface components {
             meta?: {
                 [key: string]: unknown;
             } | null;
+        };
+        /** SuccessResponse[dict] */
+        SuccessResponse_dict_: {
+            /**
+             * Data
+             * @description Datos de la respuesta
+             */
+            data: {
+                [key: string]: unknown;
+            };
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /**
+         * SugerenciaMapeo
+         * @description Sugerencia de mapeo SNVS → IGN.
+         */
+        SugerenciaMapeo: {
+            /** Id Establecimiento Ign */
+            id_establecimiento_ign: number;
+            /** Nombre Ign */
+            nombre_ign: string;
+            /** Codigo Refes */
+            codigo_refes: string | null;
+            /** Localidad Nombre */
+            localidad_nombre: string | null;
+            /** Departamento Nombre */
+            departamento_nombre: string | null;
+            /** Provincia Nombre */
+            provincia_nombre: string | null;
+            /** Similitud Nombre */
+            similitud_nombre: number;
+            /** Score */
+            score: number;
+            /** Confianza */
+            confianza: string;
+            /** Razon */
+            razon: string;
+            /** Provincia Match */
+            provincia_match: boolean;
+            /** Departamento Match */
+            departamento_match: boolean;
+            /** Localidad Match */
+            localidad_match: boolean;
         };
         /**
          * TablaResumen
@@ -4925,6 +6443,57 @@ export interface components {
              * @description Timestamp de generación
              */
             generated_at: number;
+        };
+        /**
+         * WidgetPosition
+         * @description Posición del widget en el grid
+         */
+        WidgetPosition: {
+            /**
+             * X
+             * @description Posición X en el grid (columnas)
+             */
+            x: number;
+            /**
+             * Y
+             * @description Posición Y en el grid (filas)
+             */
+            y: number;
+            /**
+             * W
+             * @description Ancho en columnas (1-12)
+             */
+            w: number;
+            /**
+             * H
+             * @description Alto en filas
+             */
+            h: number;
+        };
+        /**
+         * WidgetVisualConfig
+         * @description Configuración visual del widget
+         */
+        WidgetVisualConfig: {
+            /**
+             * Show Title
+             * @description Mostrar título
+             * @default true
+             */
+            show_title: boolean;
+            /**
+             * Show Description
+             * @description Mostrar descripción
+             * @default false
+             */
+            show_description: boolean;
+            /**
+             * Config
+             * @description Configuración específica del tipo
+             */
+            config?: {
+                [key: string]: unknown;
+            } | null;
         };
         /**
          * EventoStats
@@ -5976,6 +7545,90 @@ export interface operations {
             };
         };
     };
+    preview_uploaded_file_api_v1_uploads_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_preview_uploaded_file_api_v1_uploads_preview_post"];
+            };
+        };
+        responses: {
+            /** @description Preview generado exitosamente */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Formato de archivo no válido */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    process_file_from_preview_api_v1_uploads_process_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProcessFromPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Procesamiento iniciado */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_AsyncJobResponse_"];
+                };
+            };
+            /** @description Upload ID no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     trigger_geocoding_api_v1_geocoding_trigger_post: {
         parameters: {
             query?: {
@@ -6257,11 +7910,19 @@ export interface operations {
             };
         };
     };
-    list_strategies_api_v1_estrategias__get: {
+    list_establecimientos_con_eventos_api_v1_establecimientos_get: {
         parameters: {
             query?: {
-                active_only?: boolean | null;
-                tipo_eno_id?: number | null;
+                /** @description Número de página */
+                page?: number;
+                /** @description Tamaño de página */
+                page_size?: number;
+                /** @description Ordenar por: eventos_desc, eventos_asc, nombre_asc, source_asc */
+                order_by?: string;
+                /** @description Filtrar por fuente (IGN, SNVS) */
+                source?: string | null;
+                /** @description Filtrar solo con eventos (true) o sin eventos (false) */
+                tiene_eventos?: boolean | null;
             };
             header?: never;
             path?: never;
@@ -6275,7 +7936,402 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SuccessResponse_List_EventStrategyResponse__"];
+                    "application/json": components["schemas"]["SuccessResponse_EstablecimientosListResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_establecimiento_detalle_api_v1_establecimientos__id_establecimiento__get: {
+        parameters: {
+            query?: {
+                /** @description Filtrar eventos desde esta fecha */
+                fecha_desde?: string | null;
+                /** @description Filtrar eventos hasta esta fecha */
+                fecha_hasta?: string | null;
+            };
+            header?: never;
+            path: {
+                /** @description ID del establecimiento */
+                id_establecimiento: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_EstablecimientoDetalleResponse_"];
+                };
+            };
+            /** @description Establecimiento no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno del servidor */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_establecimientos_sin_mapear_api_v1_establecimientos_sin_mapear_get: {
+        parameters: {
+            query?: {
+                /** @description Número de resultados por página */
+                limit?: number;
+                /** @description Número de resultados a saltar */
+                offset?: number;
+                /** @description Solo mostrar establecimientos con eventos */
+                con_eventos_solo?: boolean;
+                /** @description Incluir sugerencias automáticas */
+                incluir_sugerencias?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_EstablecimientosSinMapearResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    buscar_establecimientos_ign_endpoint_api_v1_establecimientos_ign_buscar_get: {
+        parameters: {
+            query?: {
+                /** @description Búsqueda por nombre o código REFES */
+                q?: string | null;
+                /** @description Filtrar por provincia */
+                provincia?: string | null;
+                /** @description Filtrar por departamento */
+                departamento?: string | null;
+                /** @description Número de página */
+                page?: number;
+                /** @description Resultados por página */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_BuscarIGNResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listar_mapeos_existentes_api_v1_establecimientos_mapeos_get: {
+        parameters: {
+            query?: {
+                /** @description Número de página */
+                page?: number;
+                /** @description Resultados por página */
+                page_size?: number;
+                /** @description Filtrar por confianza: HIGH, MEDIUM, LOW */
+                confianza?: string | null;
+                /** @description Solo mostrar mapeos validados */
+                validados_solo?: boolean;
+                /** @description Solo mostrar mapeos manuales */
+                manuales_solo?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_MapeosListResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    crear_mapeo_snvs_ign_api_v1_establecimientos_mapeos_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CrearMapeoRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_dict_"];
+                };
+            };
+            /** @description Establecimiento ya tiene mapeo */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Establecimiento no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    actualizar_mapeo_snvs_ign_api_v1_establecimientos_mapeos__id_establecimiento_snvs__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description ID del establecimiento SNVS */
+                id_establecimiento_snvs: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActualizarMapeoRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_dict_"];
+                };
+            };
+            /** @description Establecimiento no tiene mapeo */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Establecimiento no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eliminar_mapeo_snvs_ign_api_v1_establecimientos_mapeos__id_establecimiento_snvs__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description ID del establecimiento SNVS */
+                id_establecimiento_snvs: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_dict_"];
+                };
+            };
+            /** @description Establecimiento no tiene mapeo */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Establecimiento no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    aceptar_sugerencias_bulk_api_v1_establecimientos_mapeos_bulk_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AceptarSugerenciasBulkRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_dict_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_strategies_api_v1_estrategias__get: {
+        parameters: {
+            query?: {
+                active_only?: boolean | null;
+                tipo_eno_id?: number | null;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_EventStrategyResponse_"];
                 };
             };
             /** @description Validation Error */
@@ -7608,6 +9664,8 @@ export interface operations {
                 fecha_hasta?: string | null;
                 /** @description Tipo de comparación */
                 comparison_type?: components["schemas"]["ComparisonType"];
+                /** @description Fecha de referencia para 'viajar en el tiempo' y ver métricas históricas (ej: 2023-03-15) */
+                fecha_referencia?: string | null;
                 /** @description ID del grupo seleccionado */
                 grupo_id?: number | null;
                 /** @description IDs de los eventos a filtrar */
@@ -7632,6 +9690,15 @@ export interface operations {
                     "application/json": components["schemas"]["SuccessResponse_AnalyticsResponse_"];
                 };
             };
+            /** @description Parámetros inválidos */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -7639,6 +9706,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno del servidor */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -7654,6 +9730,8 @@ export interface operations {
                 fecha_desde?: string | null;
                 /** @description Fecha hasta (solo si period_type=personalizado) */
                 fecha_hasta?: string | null;
+                /** @description Fecha de referencia para 'viajar en el tiempo' (ej: 2023-03-15) */
+                fecha_referencia?: string | null;
                 /** @description ID del grupo seleccionado */
                 grupo_id?: number | null;
                 /** @description IDs de los eventos a filtrar */
@@ -7680,6 +9758,15 @@ export interface operations {
                     "application/json": components["schemas"]["SuccessResponse_TopWinnersLosersResponse_"];
                 };
             };
+            /** @description Parámetros inválidos */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -7687,6 +9774,593 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno del servidor */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_date_range_api_v1_analytics_date_range_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_DateRangeResponse_"];
+                };
+            };
+            /** @description Error interno del servidor */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_boletin_templates_api_v1_boletines_templates_get: {
+        parameters: {
+            query?: {
+                /** @description Filtrar por categoría */
+                category?: string | null;
+                /** @description Filtrar por público/privado */
+                is_public?: boolean | null;
+                /** @description Buscar por nombre o descripción */
+                search?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_List_BoletinTemplateResponse__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_boletin_template_api_v1_boletines_templates_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BoletinTemplateCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_BoletinTemplateResponse_"];
+                };
+            };
+            /** @description Datos inválidos */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_boletin_template_api_v1_boletines_templates__template_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_BoletinTemplateResponse_"];
+                };
+            };
+            /** @description Sin permisos */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Template no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_boletin_template_api_v1_boletines_templates__template_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BoletinTemplateUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_BoletinTemplateResponse_"];
+                };
+            };
+            /** @description Sin permisos */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Template no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_boletin_template_api_v1_boletines_templates__template_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_dict_"];
+                };
+            };
+            /** @description Sin permisos */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Template no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    duplicate_boletin_template_api_v1_boletines_templates__template_id__duplicate_post: {
+        parameters: {
+            query: {
+                /** @description Nombre para el template duplicado */
+                new_name: string;
+            };
+            header?: never;
+            path: {
+                template_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_BoletinTemplateResponse_"];
+                };
+            };
+            /** @description Sin permisos */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Template no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_boletin_instances_api_v1_boletines_instances_get: {
+        parameters: {
+            query?: {
+                /** @description Filtrar por template */
+                template_id?: number | null;
+                /** @description Filtrar por estado */
+                status?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_List_BoletinInstanceResponse__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_boletin_instance_api_v1_boletines_instances_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BoletinGenerateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_BoletinInstanceResponse_"];
+                };
+            };
+            /** @description Template no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_boletin_instance_api_v1_boletines_instances__instance_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                instance_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_BoletinInstanceResponse_"];
+                };
+            };
+            /** @description Sin permisos */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Instancia no encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_boletin_instance_api_v1_boletines_instances__instance_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                instance_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_dict_"];
+                };
+            };
+            /** @description Sin permisos */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Instancia no encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

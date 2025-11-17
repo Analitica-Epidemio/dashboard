@@ -9,6 +9,7 @@ import {
   IconHome,
   IconTrendingUp,
   IconBuildingHospital,
+  IconBook,
 } from "@tabler/icons-react";
 
 export interface NavItem {
@@ -103,6 +104,13 @@ export const navigationConfig = {
       title: "Reportes",
       icon: IconFileText,
       url: "/dashboard/reportes",
+      type: "link",
+    },
+    {
+      id: "boletines",
+      title: "Boletines",
+      icon: IconBook,
+      url: "/dashboard/boletines",
       type: "link",
     },
 

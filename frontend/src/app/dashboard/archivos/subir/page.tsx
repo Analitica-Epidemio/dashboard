@@ -7,14 +7,14 @@ import { ArrowLeft, FileUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 // Modern components
-import { ModernFileUpload } from "./_components/modern-file-upload";
-import { ModernSheetPreview } from "./_components/modern-sheet-preview";
-import { UploadProgress } from "./_components/upload-progress";
-import { UploadSuccess } from "./_components/upload-success";
+import { ModernFileUpload } from "@/features/uploads/components/modern-file-upload";
+import { ModernSheetPreview } from "@/features/uploads/components/modern-sheet-preview";
+import { UploadProgress } from "@/features/uploads/components/upload-progress";
+import { UploadSuccess } from "@/features/uploads/components/upload-success";
 
 // Hooks
-import { useServerPreview } from "./_hooks/use-server-preview";
-import { useJobProgress } from "./_hooks/use-job-progress";
+import { useServerPreview } from "@/features/uploads/hooks/use-server-preview";
+import { useJobProgress } from "@/features/uploads/hooks/use-job-progress";
 
 export default function ModernUploadPage() {
   const {

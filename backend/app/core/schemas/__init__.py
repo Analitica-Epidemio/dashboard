@@ -5,6 +5,7 @@ from .response import (
     ErrorDetail,
     ErrorResponse,
     PaginatedResponse,
+    PaginationMeta,
     SuccessResponse,
 )
 
@@ -13,5 +14,6 @@ __all__ = [
     "ErrorResponse",
     "SuccessResponse",
     "PaginatedResponse",
+    "PaginationMeta",
     "DataResponse",
 ]

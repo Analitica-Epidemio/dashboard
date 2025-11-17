@@ -9,8 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { useAuth } from "@/features/auth/hooks";
-import { SecretariaDeSaludLogo } from "@/components/logo-secretaria-de-salud";
+import { SecretariaDeSaludLogo } from "@/components/assets/logo-secretaria-de-salud";
 
 // Validation schema
 const loginSchema = z.object({
@@ -24,7 +23,10 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
-  const { login, isLoggingIn, loginError } = useAuth();
+  // TODO: Implement proper login with NextAuth
+  const login = (data: LoginFormData) => console.log('Login:', data);
+  const isLoggingIn = false;
+  const loginError: string | null = null;
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),

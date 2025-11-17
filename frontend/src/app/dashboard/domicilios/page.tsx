@@ -27,9 +27,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { useDomicilios } from "@/lib/api/domicilios";
-import type { DomicilioListItem } from "@/lib/api/domicilios";
-import { DomicilioDetalleSheet } from "./_components/domicilio-detalle-sheet";
+import { useDomicilios } from "@/features/domicilios/api";
+import type { DomicilioListItem } from "@/features/domicilios/api";
+import { DomicilioDetalleSheet } from "@/features/domicilios/components/domicilio-detalle-sheet";
 
 export default function DomiciliosPage() {
   const [detailSheetOpen, setDetailSheetOpen] = useState(false);

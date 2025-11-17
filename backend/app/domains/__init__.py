@@ -93,6 +93,13 @@ from app.domains.territorio.capas_gis_models import (
     CapaAreaUrbana,
 )
 
+# 📋 BOLETINES DOMAIN
+from app.domains.boletines.models import (
+    BoletinTemplate,
+    BoletinInstance,
+    QueryDefinition,
+)
+
 # 📊 FEATURES MODELS (para detección de Alembic)
 # Idealmente estos deberían estar en domains, pero por ahora están en features
 from app.features.dashboard.models import (
@@ -156,6 +163,10 @@ __all__ = [
     "Establecimiento",
     "CapaHidrografia",
     "CapaAreaUrbana",
+    # Boletines
+    "BoletinTemplate",
+    "BoletinInstance",
+    "QueryDefinition",
     # Features
     "DashboardChart",
     "ProcessingJob",

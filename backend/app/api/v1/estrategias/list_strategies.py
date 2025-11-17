@@ -10,7 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.core.schemas.response import PaginatedResponse, SuccessResponse
+from app.core.schemas.response import PaginatedResponse, PaginationMeta, SuccessResponse
 from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User
 from app.domains.eventos_epidemiologicos.clasificacion.models import EventStrategy
@@ -31,7 +31,7 @@ async def list_strategies(
     page_size: int = Query(50, ge=1, le=100),
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(RequireAnyRole()),
-) -> PaginatedResponse[List[EventStrategyResponse]]:
+) -> PaginatedResponse[EventStrategyResponse]:
     """
     Listar todas las estrategias de clasificación con paginación.
 
@@ -86,14 +86,14 @@ async def list_strategies(
 
         return PaginatedResponse(
             data=strategy_responses,
-            meta={
-                "page": page,
-                "page_size": page_size,
-                "total": total,
-                "total_pages": total_pages,
-                "has_next": has_next,
-                "has_prev": has_prev,
-            },
+            meta=PaginationMeta(
+                page=page,
+                page_size=page_size,
+                total=total,
+                total_pages=total_pages,
+                has_next=has_next,
+                has_prev=has_prev,
+            ),
         )
 
     except Exception as e:

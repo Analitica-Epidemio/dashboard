@@ -18,11 +18,11 @@ import {
 import { AppSidebar } from "@/features/layout/components";
 
 // Shared filter components
-import { FilterToolbar, StatsBar, type StatItem } from "@/components/shared/filters";
+import { FilterToolbar, StatsBar, type StatItem } from "@/components/filters";
 
-import { usePersonas, type PersonaFilters } from "@/lib/api/personas";
-import { PersonaFiltersAdvanced } from "./_components/persona-filters";
-import { PersonaDetailModern } from "./_components/persona-detail-modern";
+import { usePersonas, type PersonaFilters } from "@/features/personas/api";
+import { PersonaFiltersAdvanced } from "@/features/personas/components/persona-filters";
+import { PersonaDetailModern } from "@/features/personas/components/persona-detail-modern";
 import type { components } from "@/lib/api/types";
 
 export default function PersonasPage() {
