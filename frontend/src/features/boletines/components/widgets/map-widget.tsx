@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 
 // Import ChubutMapChart dynamically to avoid SSR issues with D3
 const ChubutMapChart = dynamic(
-  () => import("@/features/dashboard/components/charts/chubut-map-chart").then((mod) => mod.ChubutMapChart),
+  () => import("@/components/charts/chubut-map-chart").then((mod) => mod.ChubutMapChart),
   { ssr: false }
 );
 

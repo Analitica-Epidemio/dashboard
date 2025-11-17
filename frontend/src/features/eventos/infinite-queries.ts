@@ -2,7 +2,7 @@
 
 import { useInfiniteQuery, type UseInfiniteQueryResult, type InfiniteData } from '@tanstack/react-query'
 import { env } from '@/env'
-import type { Group, Event } from '@/features/dashboard/types'
+import type { Group, Event } from '@/lib/types/eventos'
 
 // Tipos para las respuestas de la API
 interface ApiEventSimple {

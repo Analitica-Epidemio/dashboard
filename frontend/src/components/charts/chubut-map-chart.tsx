@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { ChubutSvg } from "@/components/assets/chubut.svg";
-import { getSvgIdFromIndec } from "../../constants/chubut-mapping";
+import { getSvgIdFromIndec } from "./chubut-mapping";
 
 interface DepartmentData {
   codigo_indec: number;

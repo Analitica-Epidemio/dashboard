@@ -4,7 +4,7 @@ import React from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Eye, AlertCircle, Check } from 'lucide-react'
-import { ClassificationBadges, TipoClasificacion } from "../selectors/classification-selector"
+import { ClassificationBadges, TipoClasificacion } from "@/components/selectors/classification-selector"
 
 interface CombinationPreviewProps {
   groupName?: string

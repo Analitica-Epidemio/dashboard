@@ -6,9 +6,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Plus, Layers, Check, X, Save, XCircle } from 'lucide-react'
 import { GroupSelector } from "../selectors/group-selector"
-import { ClassificationSelector, TipoClasificacion } from "../selectors/classification-selector"
+import { ClassificationSelector, TipoClasificacion } from "@/components/selectors/classification-selector"
 import { useFilterContext } from "@/features/reports/contexts/filter-context"
-import type { Event } from '@/features/dashboard/types'
+import type { Event } from '@/lib/types/eventos'
 
 interface CurrentFilter {
   groupId: string | null

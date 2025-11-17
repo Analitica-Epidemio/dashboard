@@ -24,7 +24,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { FilterWizard, type WizardResult } from "./filter-wizard"
 import { UnifiedFilterSelector } from "./unified-filter-selector"
-import { ClassificationSelector, TipoClasificacion } from "../selectors/classification-selector"
+import { ClassificationSelector, TipoClasificacion } from "@/components/selectors/classification-selector"
 import { useFilterContext } from "@/features/reports/contexts/filter-context"
 
 const COMBINATION_COLORS = [

@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import type { DashboardFilters, Group, Event } from '../types'
+import type { DashboardFilters } from '../types'
+import type { Group, Event } from '@/lib/types/eventos'
 import { useGroups, useAllEvents, useEventsByGroup } from '@/features/eventos/api'
 
 // Tipo más flexible para errores de query - compatible con react-query

@@ -38,7 +38,7 @@ import {
 import {
   getClasificacionLabel,
   getClasificacionColorClasses,
-} from "@/features/eventos/api";
+} from "@/lib/utils/clasificacion";
 import { cn } from "@/lib/utils";
 
 interface PersonaDetailModernProps {
