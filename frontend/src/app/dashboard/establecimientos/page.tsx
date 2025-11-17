@@ -3,7 +3,6 @@
 import { useState } from "react";
 import {
   Building2,
-  CheckCircle2,
   MapPin,
 } from "lucide-react";
 
@@ -25,9 +24,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { useEstablecimientos } from "@/lib/api/establecimientos";
-import type { EstablecimientoListItem } from "@/lib/api/establecimientos";
-import { EstablecimientoDetalleSheet } from "./_components/establecimiento-detalle-sheet";
+import { useEstablecimientos } from "@/features/establecimientos/api";
+import type { EstablecimientoListItem } from "@/features/establecimientos/api";
+import { EstablecimientoDetalleSheet } from "@/features/establecimientos/components/establecimiento-detalle-sheet";
 
 export default function EstablecimientosPage() {
   const [detailSheetOpen, setDetailSheetOpen] = useState(false);

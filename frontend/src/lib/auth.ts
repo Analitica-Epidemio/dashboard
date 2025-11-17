@@ -1,4 +1,5 @@
 import type { NextAuthOptions } from 'next-auth';
+import type { JWT } from 'next-auth/jwt';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { env } from '@/env';
 
@@ -6,7 +7,7 @@ import { env } from '@/env';
  * Refresca el access token usando el refresh token
  * Se llama automáticamente cuando el access token expira
  */
-async function refreshAccessToken(token: any) {
+async function refreshAccessToken(token: JWT): Promise<JWT> {
   try {
     const response = await fetch(`${env.NEXT_PUBLIC_API_HOST}/api/v1/auth/refresh`, {
       method: 'POST',

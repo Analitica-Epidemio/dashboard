@@ -52,15 +52,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AppSidebar } from "@/features/layout/components";
-import { FilterToolbar, StatsBar, type StatItem } from "@/components/shared/filters";
+import { FilterToolbar, StatsBar, type StatItem } from "@/components/filters";
 
 import {
-  useStrategies,
-  useDeleteStrategy,
+  useEstrategias,
+  useEliminarEstrategia,
   type EventStrategy,
-} from "@/lib/api/strategies";
-import { StrategyPreview } from "./_components/strategy-preview";
-import { StrategyForm } from "./_components/strategy-form";
+} from "@/features/estrategias/api";
+import { StrategyPreview } from "@/features/estrategias/components/strategy-preview";
+import { StrategyForm } from "@/features/estrategias/components/strategy-form";
 
 // Tipo para agrupar estrategias por evento
 interface EventStrategiesGroup {
@@ -89,13 +89,13 @@ export default function EstrategiasPageNew() {
   const [openGroups, setOpenGroups] = useState<Set<number>>(new Set());
 
   // API Query con paginación
-  const strategiesQuery = useStrategies({
+  const strategiesQuery = useEstrategias({
     page,
     page_size: pageSize,
     active_only: filterStatus === "active" ? true : filterStatus === "inactive" ? false : undefined,
   });
 
-  const deleteStrategyMutation = useDeleteStrategy();
+  const deleteStrategyMutation = useEliminarEstrategia();
 
   const strategiesData = useMemo(() => strategiesQuery.data?.data || [], [strategiesQuery.data]);
   const pagination = strategiesQuery.data?.meta;

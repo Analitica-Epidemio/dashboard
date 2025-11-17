@@ -6,7 +6,7 @@ import type { LegendType } from 'recharts';
 
 // Base payload type for chart data points
 export interface BaseChartPayload {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // Tooltip payload entry with generic typing

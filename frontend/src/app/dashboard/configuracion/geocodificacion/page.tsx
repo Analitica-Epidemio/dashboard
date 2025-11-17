@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { CollapsibleSidebar } from "@/features/layout/components";
 import { Button } from "@/components/ui/button";
-import { GeocodingConfigPanel } from "../_components/geocoding-config-panel";
+import { GeocodingConfigPanel } from "@/features/geocodificacion/components/geocoding-config-panel";
 
 export default function GeocodificacionPage() {
   return (

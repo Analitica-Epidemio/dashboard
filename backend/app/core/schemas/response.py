@@ -15,6 +15,17 @@ from pydantic import BaseModel, Field
 T = TypeVar("T")
 
 
+class PaginationMeta(BaseModel):
+    """Metadata de paginación con tipos específicos."""
+
+    page: int = Field(..., description="Página actual (1-indexed)", ge=1)
+    page_size: int = Field(..., description="Elementos por página", ge=1, le=100)
+    total: int = Field(..., description="Total de elementos", ge=0)
+    total_pages: int = Field(..., description="Total de páginas", ge=0)
+    has_next: Optional[bool] = Field(default=None, description="Si hay página siguiente")
+    has_prev: Optional[bool] = Field(default=None, description="Si hay página anterior")
+
+
 class ErrorDetail(BaseModel):
     """Detalle de un error específico."""
 
@@ -63,10 +74,9 @@ class PaginatedResponse(BaseModel, Generic[T]):
     """
 
     data: List[T] = Field(..., description="Lista de elementos")
-    meta: Dict[str, Any] = Field(
+    meta: PaginationMeta = Field(
         ...,
-        description="Información de paginación",
-        example={"page": 1, "per_page": 20, "total": 100, "total_pages": 5},
+        description="Información de paginación con tipos específicos",
     )
     links: Optional[Dict[str, Optional[str]]] = Field(
         default=None,

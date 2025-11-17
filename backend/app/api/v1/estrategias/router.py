@@ -6,7 +6,7 @@ from typing import List
 
 from fastapi import APIRouter, status
 
-from app.core.schemas.response import ErrorResponse, SuccessResponse
+from app.core.schemas.response import ErrorResponse, PaginatedResponse, SuccessResponse
 from app.domains.eventos_epidemiologicos.clasificacion.schemas import (
     AuditLogResponse,
     EventStrategyResponse,
@@ -29,7 +29,7 @@ router.add_api_route(
     "/",
     list_strategies,
     methods=["GET"],
-    response_model=SuccessResponse[List[EventStrategyResponse]],
+    response_model=PaginatedResponse[EventStrategyResponse],
     responses={
         500: {"model": ErrorResponse, "description": "Error interno del servidor"}
     },

@@ -20,6 +20,7 @@ export function NavMain({
     url?: string
     icon?: Icon | React.ElementType
     type?: "separator" | "link" | "header"
+    id?: string
   }[]
 }) {
   const pathname = usePathname()

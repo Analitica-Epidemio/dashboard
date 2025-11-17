@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_async_session
-from app.core.schemas.response import PaginatedResponse
+from app.core.schemas.response import PaginatedResponse, PaginationMeta
 from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User
 from app.domains.eventos_epidemiologicos.eventos.models import (
@@ -122,12 +122,12 @@ async def list_grupos_eno(
 
         return PaginatedResponse(
             data=grupos_info,
-            meta={
-                "page": page,
-                "per_page": per_page,
-                "total": total,
-                "total_pages": total_pages,
-            },
+            meta=PaginationMeta(
+                page=page,
+                page_size=per_page,
+                total=total,
+                total_pages=total_pages,
+            ),
             links={
                 "first": (
                     f"/api/v1/gruposEno?page=1&per_page={per_page}"

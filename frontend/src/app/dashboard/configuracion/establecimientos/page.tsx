@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { CollapsibleSidebar } from "@/features/layout/components";
 import { Button } from "@/components/ui/button";
-import { MapeoEstablecimientosPanel } from "../_components/mapeo-establecimientos-panel";
+import { MapeoEstablecimientosPanel } from "@/features/establecimientos/components/mapeo-establecimientos-panel";
 
 export default function MapeoEstablecimientosPage() {
   return (

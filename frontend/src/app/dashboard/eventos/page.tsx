@@ -29,7 +29,7 @@ import { AppSidebar } from "@/features/layout/components";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 // Shared filter components
-import { FilterToolbar, StatsBar, type StatItem } from "@/components/shared/filters";
+import { FilterToolbar, StatsBar, type StatItem } from "@/components/filters";
 
 // API y tipos
 import {
@@ -37,11 +37,11 @@ import {
   getClasificacionLabel,
   getClasificacionColorClasses,
   type EventoFilters,
-} from "@/lib/api/eventos";
+} from "@/features/eventos/api";
 
 // Componentes
-import { EventoDetailModern } from "./_components/evento-detail-modern";
-import { EventoFiltersModern } from "./_components/evento-filters-modern";
+import { EventoDetailModern } from "@/features/eventos/components/evento-detail-modern";
+import { EventoFiltersModern } from "@/features/eventos/components/evento-filters-modern";
 
 export default function EventosPage() {
   // Estados de filtros y búsqueda

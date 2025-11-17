@@ -1,19 +1,31 @@
 import { useState } from "react";
 
+type Rango = {
+  desde: number;
+  hasta: string | number;
+  unidad: string;
+};
+
 export default function RangosEdad() {
-  const [rangos, setRangos] = useState([
+  const [rangos, setRangos] = useState<Rango[]>([
     { desde: 0, hasta: "", unidad: "años" }
   ]);
 
   const unidades = ["días", "meses", "años"];
 
-  const actualizarRango = (index, campo, valor) => {
+  const actualizarRango = (index: number, campo: keyof Rango, valor: string | number) => {
     const nuevos = [...rangos];
-    nuevos[index][campo] = valor;
+    if (campo === "desde") {
+      nuevos[index].desde = typeof valor === "number" ? valor : parseFloat(String(valor)) || 0;
+    } else if (campo === "hasta") {
+      nuevos[index].hasta = valor;
+    } else if (campo === "unidad") {
+      nuevos[index].unidad = String(valor);
+    }
 
     // Si cambió el límite "hasta", actualizamos el inicio del siguiente
     if (campo === "hasta" && index < rangos.length - 1) {
-      nuevos[index + 1].desde = parseFloat(valor) || 0;
+      nuevos[index + 1].desde = parseFloat(String(valor)) || 0;
     }
 
     setRangos(nuevos);
@@ -21,15 +33,16 @@ export default function RangosEdad() {
 
   const agregarRango = () => {
     const ultimo = rangos[rangos.length - 1];
-    if (ultimo.hasta === "" || isNaN(ultimo.hasta)) return;
+    const hastaNum = typeof ultimo.hasta === 'string' ? parseFloat(ultimo.hasta) : ultimo.hasta;
+    if (ultimo.hasta === "" || isNaN(hastaNum)) return;
 
     setRangos([
       ...rangos,
-      { desde: parseFloat(ultimo.hasta), hasta: "", unidad: "años" }
+      { desde: hastaNum, hasta: "", unidad: "años" }
     ]);
   };
 
-  const eliminarRango = (index) => {
+  const eliminarRango = (index: number) => {
     const nuevos = rangos.filter((_, i) => i !== index);
     if (nuevos.length === 0) nuevos.push({ desde: 0, hasta: "", unidad: "años" });
     setRangos(nuevos);

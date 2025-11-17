@@ -33,7 +33,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { UserProfileDialog } from "@/components/user/user-profile-dialog";
+import { UserProfileDialog } from "@/features/auth/components/user-profile-dialog";
 
 export function NavUser({
   user,

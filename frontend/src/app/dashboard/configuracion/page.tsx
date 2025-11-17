@@ -11,9 +11,9 @@ import {
   AlertTriangle,
   CheckCircle2,
 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useEstablecimientosSinMapear } from "@/lib/api/establecimientos";
+import { useEstablecimientosSinMapear } from "@/features/establecimientos/api";
 
 interface ConfigCard {
   title: string;
@@ -33,7 +33,7 @@ export default function ConfiguracionPage() {
     incluir_sugerencias: false,
   });
 
-  const sinMapearCount = sinMapearData?.sin_mapear_count || 0;
+  const sinMapearCount = sinMapearData?.data?.sin_mapear_count || 0;
 
   const configCards: ConfigCard[] = [
     {

@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends
 
 from app.api.v1.analytics.router import router as analytics_router
 from app.api.v1.auth.router import router as auth_router
+from app.api.v1.boletines.router import router as boletines_router
 from app.api.v1.charts.router import router as charts_router
 from app.api.v1.dashboard.router import router as dashboard_router
 from app.api.v1.domicilios.router import router as domicilios_router
@@ -38,6 +39,7 @@ api_router.include_router(grupos_router)
 api_router.include_router(charts_router)
 api_router.include_router(reports_router)
 api_router.include_router(analytics_router)  # Router de analytics
+api_router.include_router(boletines_router)  # Router de boletines
 
 
 # Endpoint raíz de la API

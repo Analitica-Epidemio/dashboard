@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Search, TrendingUp, TrendingDown } from "lucide-react";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/features/layout/components";
@@ -24,13 +24,10 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import {
-  getTopWinnersLosers,
-  getDateRange as getAvailableDateRange,
-  type TopWinnerLoser,
-} from "@/lib/api/analytics";
-import { DateRangePicker } from "./_components/date-range-picker";
+import { $api } from "@/lib/api/client";
+import { DateRangePicker } from "@/features/analytics/components/date-range-picker";
 import type { DateRange } from "react-day-picker";
+import type { TopWinnerLoser } from "@/features/analytics/api";
 
 type MetricType = "departamentos" | "tipo_eno" | "provincias";
 
@@ -38,85 +35,57 @@ export default function AnalyticsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [metricType, setMetricType] = useState<MetricType>("departamentos");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const [winners, setWinners] = useState<TopWinnerLoser[]>([]);
-  const [losers, setLosers] = useState<TopWinnerLoser[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [maxDate, setMaxDate] = useState<Date | undefined>();
+
+  const { data: dateRangeResponse } = $api.useQuery(
+    'get',
+    '/api/v1/analytics/date-range',
+    {}
+  );
+
+  const maxDate = dateRangeResponse?.data?.fecha_maxima
+    ? new Date(dateRangeResponse.data.fecha_maxima)
+    : new Date();
+
+  const { data: analyticsResponse, isLoading } = $api.useQuery(
+    'get',
+    '/api/v1/analytics/top-winners-losers',
+    {
+      params: {
+        query: {
+          metric_type: metricType,
+          limit: 50,
+          period_type: "personalizado",
+          fecha_desde: dateRange?.from?.toISOString().split("T")[0],
+          fecha_hasta: dateRange?.to?.toISOString().split("T")[0],
+        }
+      }
+    },
+    {
+      enabled: !!dateRange?.from && !!dateRange?.to
+    }
+  );
 
   // Combinar winners y losers en una sola tabla
   const allData = useMemo(() => {
+    const data = analyticsResponse?.data as { top_winners?: TopWinnerLoser[], top_losers?: TopWinnerLoser[] } | undefined;
+    const winners = data?.top_winners || [];
+    const losers = data?.top_losers || [];
+
     return [...winners, ...losers].sort(
-      (a, b) =>
+      (a: TopWinnerLoser, b: TopWinnerLoser) =>
         Math.abs(b.diferencia_porcentual) - Math.abs(a.diferencia_porcentual)
     );
-  }, [winners, losers]);
+  }, [analyticsResponse]);
 
   // Filtrar por búsqueda
   const filteredData = useMemo(() => {
     if (!searchQuery) return allData;
 
     const query = searchQuery.toLowerCase();
-    return allData.filter((item) =>
+    return allData.filter((item: TopWinnerLoser) =>
       item.entidad_nombre.toLowerCase().includes(query)
     );
   }, [allData, searchQuery]);
-
-  // Fetch date range on mount and set initial dateRange
-  useEffect(() => {
-    const fetchDateRange = async () => {
-      try {
-        const apiDateRange = await getAvailableDateRange();
-        const maxDateObj = new Date(apiDateRange.fecha_maxima);
-        setMaxDate(maxDateObj);
-
-        // Set initial date range (last 21 days / 3 weeks)
-        const initialFrom = new Date(maxDateObj);
-        initialFrom.setDate(initialFrom.getDate() - 20);
-        setDateRange({ from: initialFrom, to: maxDateObj });
-      } catch (error) {
-        console.error("Error fetching date range:", error);
-        // Fallback a fecha actual si falla
-        const today = new Date();
-        setMaxDate(today);
-        const from = new Date(today);
-        from.setDate(from.getDate() - 20);
-        setDateRange({ from, to: today });
-      }
-    };
-
-    fetchDateRange();
-  }, []);
-
-  // Fetch data when dateRange or metricType changes
-  useEffect(() => {
-    if (!dateRange?.from || !dateRange?.to) return;
-
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        const apiParams: any = {
-          metric_type: metricType,
-          limit: 50,
-          period_type: "personalizado",
-          fecha_desde: dateRange.from?.toISOString().split("T")[0],
-          fecha_hasta: dateRange.to?.toISOString().split("T")[0],
-        };
-
-        const data = await getTopWinnersLosers(apiParams);
-
-        setWinners(data.top_winners || []);
-        setLosers(data.top_losers || []);
-      } catch (error) {
-        console.error("Error fetching analytics:", error);
-        setWinners([]);
-        setLosers([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [metricType, dateRange]);
 
   const getChangeColor = (change: number) => {
     // Verde para disminución (bueno), Rojo para aumento (malo)

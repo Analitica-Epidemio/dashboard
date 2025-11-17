@@ -2,16 +2,16 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
-import { MapaLayout } from "./_components/mapa-layout";
-import { MapaSidebar } from "./_components/mapa-sidebar-v2";
-import { DomicilioDetalleDialog } from "./_components/domicilio-detalle-dialog";
-import { EstablecimientoDetalleDialog } from "./_components/establecimiento-detalle-dialog";
-import { useDomiciliosMapa, type DomicilioMapaItem } from "@/lib/api/mapa";
-import { type EstablecimientoMapaItem } from "@/lib/api/establecimientos";
+import { MapaLayout } from "@/features/mapa/components/mapa-layout";
+import { MapaSidebar } from "@/features/mapa/components/mapa-sidebar-v2";
+import { DomicilioDetalleDialog } from "@/features/mapa/components/domicilio-detalle-dialog";
+import { EstablecimientoDetalleDialog } from "@/features/mapa/components/establecimiento-detalle-dialog";
+import { useDomiciliosMapa, type DomicilioMapaItem } from "@/features/mapa/api";
+import { type EstablecimientoMapaItem } from "@/features/establecimientos/api";
 
 // Cargar el mapa solo en el cliente (no SSR) porque Leaflet usa window
 const MapaSimple = dynamic(
-  () => import("./_components/mapa-simple").then((mod) => ({ default: mod.MapaSimple })),
+  () => import("@/features/mapa/components/mapa-simple").then((mod) => ({ default: mod.MapaSimple })),
   {
     ssr: false,
     loading: () => (

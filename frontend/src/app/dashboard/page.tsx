@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import {
   Activity,
   Users,
@@ -41,11 +41,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { PopulationPyramid } from "@/features/dashboard/components/charts/PopulationPyramid";
-import {
-  getDashboardResumen,
-  type DashboardResumen,
-} from "@/lib/api/dashboard";
+import { PopulationPyramid } from "@/features/dashboard/components/charts/population-pyramid";
+import { $api } from "@/lib/api/client";
+import type { DashboardResumen } from "@/features/dashboard/api";
 
 const COLORS = [
   "#0088FE",
@@ -136,9 +134,6 @@ function MetricCard({ title, value, icon, colorClass = "text-blue-600", subtitle
 
 export default function DashboardPage() {
   const searchParams = useSearchParams();
-  const [data, setData] = useState<DashboardResumen | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("resumen");
 
   const tabsConfig = [
@@ -148,38 +143,28 @@ export default function DashboardPage() {
     { id: "geografico", label: "Geográfico", icon: <MapPin className="h-4 w-4" /> },
   ];
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        setLoading(true);
-        const params = {
-          fecha_desde: searchParams.get("fecha_desde") || undefined,
-          fecha_hasta: searchParams.get("fecha_hasta") || undefined,
-          grupo_id: searchParams.get("grupo_id")
-            ? Number(searchParams.get("grupo_id"))
-            : undefined,
-          tipo_eno_id: searchParams.get("tipo_eno_id")
-            ? Number(searchParams.get("tipo_eno_id"))
-            : undefined,
-          clasificacion: searchParams.get("clasificacion") || undefined,
-          provincia_id: searchParams.get("provincia_id")
-            ? Number(searchParams.get("provincia_id"))
-            : undefined,
-        };
+  const queryParams = useMemo(() => ({
+    fecha_desde: searchParams.get("fecha_desde") || undefined,
+    fecha_hasta: searchParams.get("fecha_hasta") || undefined,
+    grupo_id: searchParams.get("grupo_id")
+      ? Number(searchParams.get("grupo_id"))
+      : undefined,
+    tipo_eno_ids: searchParams.get("tipo_eno_id")
+      ? [Number(searchParams.get("tipo_eno_id"))]
+      : undefined,
+    clasificacion: searchParams.get("clasificacion") || undefined,
+    provincia_id: searchParams.get("provincia_id")
+      ? Number(searchParams.get("provincia_id"))
+      : undefined,
+  }), [searchParams]);
 
-        const resumen = await getDashboardResumen(params);
-        setData(resumen);
-        setError(null);
-      } catch (err) {
-        console.error("Error fetching dashboard data:", err);
-        setError("Error al cargar los datos del dashboard");
-      } finally {
-        setLoading(false);
-      }
-    }
+  const { data: response, isLoading: loading, error } = $api.useQuery(
+    'get',
+    '/api/v1/dashboard/resumen',
+    { params: { query: queryParams } }
+  );
 
-    fetchData();
-  }, [searchParams]);
+  const data = response?.data as DashboardResumen | undefined;
 
   if (loading) {
     return (
@@ -203,7 +188,7 @@ export default function DashboardPage() {
       <div className="p-6">
         <Alert variant="destructive">
           <AlertDescription>
-            {error || "No hay datos disponibles"}
+            {error ? "Error al cargar los datos del dashboard" : "No hay datos disponibles"}
           </AlertDescription>
         </Alert>
       </div>

@@ -1,47 +1,33 @@
+/**
+ * API Configuration and URL builders
+ */
+
 import { env } from '@/env';
 
-/**
- * API configuration helpers
- */
+const API_BASE = env.NEXT_PUBLIC_API_HOST;
 
 /**
- * Get the URL for uploading CSV files asynchronously
+ * Upload endpoints
  */
 export function getUploadCsvAsyncUrl(): string {
-  return `${env.NEXT_PUBLIC_API_HOST}/api/v1/uploads/csv-async`;
+  return `${API_BASE}/api/v1/uploads/csv/async`;
+}
+
+export function getUploadPreviewUrl(): string {
+  return `${API_BASE}/api/v1/uploads/preview`;
+}
+
+export function getUploadProcessUrl(): string {
+  return `${API_BASE}/api/v1/uploads/process`;
 }
 
 /**
- * Get the URL for checking job status
+ * Job management endpoints
  */
 export function getJobStatusUrl(jobId: string): string {
-  return `${env.NEXT_PUBLIC_API_HOST}/api/v1/uploads/jobs/${jobId}/status`;
+  return `${API_BASE}/api/v1/jobs/${jobId}/status`;
 }
 
-/**
- * Get the URL for canceling a job
- */
 export function getCancelJobUrl(jobId: string): string {
-  return `${env.NEXT_PUBLIC_API_HOST}/api/v1/uploads/jobs/${jobId}`;
-}
-
-/**
- * Get the URL for uploading file for preview (new modern flow)
- */
-export function getUploadPreviewUrl(): string {
-  return `${env.NEXT_PUBLIC_API_HOST}/api/v1/uploads/preview`;
-}
-
-/**
- * Get the URL for processing from preview (new modern flow)
- */
-export function getUploadProcessUrl(): string {
-  return `${env.NEXT_PUBLIC_API_HOST}/api/v1/uploads/process`;
-}
-
-/**
- * Get the base API URL
- */
-export function getApiBaseUrl(): string {
-  return env.NEXT_PUBLIC_API_HOST;
+  return `${API_BASE}/api/v1/jobs/${jobId}/cancel`;
 }
