@@ -13,8 +13,8 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { ChevronLeft, ChevronRight, Check, Sparkles, BarChart3, Filter, Layers } from 'lucide-react'
 import { UnifiedFilterSelector } from "./unified-filter-selector"
-import { ClassificationSelector, TipoClasificacion } from "../selectors/classification-selector"
-import type { Group, Event } from '@/features/dashboard/types'
+import { ClassificationSelector, TipoClasificacion } from "@/components/selectors/classification-selector"
+import type { Group, Event } from '@/lib/types/eventos'
 
 interface FilterWizardProps {
   open: boolean

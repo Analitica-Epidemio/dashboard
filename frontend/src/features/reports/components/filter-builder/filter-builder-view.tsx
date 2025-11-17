@@ -34,7 +34,7 @@ import { EpiWeekRangeSelector } from "./epi-week-range-selector";
 import {
   ClassificationSelector,
   TipoClasificacion,
-} from "../selectors/classification-selector";
+} from "@/components/selectors/classification-selector";
 import { useFilterContext } from "@/features/reports/contexts/filter-context";
 import { useInfiniteGroups } from "@/features/eventos/infinite-queries";
 import { cn } from "@/lib/utils";

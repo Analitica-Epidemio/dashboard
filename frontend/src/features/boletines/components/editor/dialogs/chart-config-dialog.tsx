@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { LineChart, BarChart3, PieChart, TrendingUp, Activity, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useChartsDisponibles } from "@/features/boletines/api";
-import { GrupoEventoSelector } from "../grupo-evento-selector";
+import { GrupoEventoSelector } from "@/components/selectors/grupo-evento-selector";
 import { PeriodSelector } from "./period-selector";
 
 interface ChartConfig {
@@ -205,10 +205,14 @@ export function ChartConfigDialog({ open, onOpenChange, onInsert, initialConfig 
             <div className="grid gap-2">
               <Label>Seleccionar Grupos y Eventos</Label>
               <GrupoEventoSelector
-                selectedGroups={config.selectedGroups}
-                selectedEvents={config.selectedEvents}
+                selectedGroupIds={Array.from(config.selectedGroups).map(id => parseInt(id))}
+                selectedEventIds={Array.from(config.selectedEvents).map(id => parseInt(id))}
                 onSelectionChange={(grupos, eventos) =>
-                  setConfig({ ...config, selectedGroups: grupos, selectedEvents: eventos })
+                  setConfig({
+                    ...config,
+                    selectedGroups: new Set(grupos.map(String)),
+                    selectedEvents: new Set(eventos.map(String))
+                  })
                 }
               />
             </div>

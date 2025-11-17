@@ -1,7 +1,7 @@
 import { Node, mergeAttributes } from "@tiptap/core";
 import { ReactNodeViewRenderer, NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
 import { BarChart3, Loader2, AlertCircle } from "lucide-react";
-import { DynamicChart } from "@/features/dashboard/components/charts/dynamic-chart";
+import { DynamicChart } from "@/components/charts/dynamic-chart";
 import { useDashboardCharts } from "@/features/boletines/api";
 import type { DynamicChartAttrs } from '../tiptap';
 

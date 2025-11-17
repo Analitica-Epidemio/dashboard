@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Check, ChevronsUpDown, Folder, FileText, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { Group, Event } from '@/features/dashboard/types'
+import type { Group, Event } from '@/lib/types/eventos'
 
 interface Selection {
   groups: string[]  // IDs de grupos seleccionados

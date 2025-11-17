@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { useInfiniteGroups } from "@/features/eventos/infinite-queries";
-import { Group } from "@/features/dashboard/types";
+import { Group } from "@/lib/types/eventos";
 
 // Tipo más flexible para errores de query - compatible con react-query
 type QueryError = unknown;

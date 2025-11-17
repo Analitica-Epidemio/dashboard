@@ -453,7 +453,7 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
 
         // Import dinámico del componente de pirámide
         const PopulationPyramid = React.lazy(() =>
-          import("./population-pyramid").then(module => ({
+          import("@/features/dashboard/components/charts/population-pyramid").then(module => ({
             default: module.PopulationPyramid
           }))
         );
@@ -494,7 +494,7 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({
         };
 
         // Import dinámico del componente de mapa
-        const ChubutMapChart = React.lazy(() => import("./chubut-map-chart"));
+        const ChubutMapChart = React.lazy(() => import("@/components/charts/chubut-map-chart"));
 
         return (
           <React.Suspense fallback={<div>Cargando mapa...</div>}>

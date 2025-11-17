@@ -10,7 +10,7 @@ import { CompactFilterBar } from "./compact-filter-bar";
 import { Activity, AlertTriangle } from "lucide-react";
 
 // Import dynamic chart components
-import { DynamicChart } from "@/features/dashboard/components/charts/dynamic-chart";
+import { DynamicChart } from "@/components/charts/dynamic-chart";
 import { useDashboardCharts, useIndicadores, useGenerateZipReport, useGenerateSignedUrl } from "@/features/reports/api";
 import type { FilterCombination } from "../../contexts/filter-context";
 

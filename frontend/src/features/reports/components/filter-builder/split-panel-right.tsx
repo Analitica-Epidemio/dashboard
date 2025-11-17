@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Play, Filter, Pencil, Copy, X } from 'lucide-react'
 import { useFilterContext } from "@/features/reports/contexts/filter-context"
-import { ClassificationBadges, TipoClasificacion } from "../selectors/classification-selector"
+import { ClassificationBadges, TipoClasificacion } from "@/components/selectors/classification-selector"
 
 export function SplitPanelRight() {
   const {

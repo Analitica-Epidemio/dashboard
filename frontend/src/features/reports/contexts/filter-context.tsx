@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, ReactNode } from "react";
 import { useDashboardFilters } from "@/features/dashboard/hooks/use-dashboard-filters";
-import type { Group, Event } from "@/features/dashboard/types";
+import type { Group, Event } from "@/lib/types/eventos";
 import type { TipoClasificacion } from "@/features/eventos/api";
 
 // Tipo más flexible para errores de query - compatible con los tipos de react-query

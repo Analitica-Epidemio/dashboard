@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { ClassificationSelector } from "@/features/reports/components/selectors/classification-selector";
+import { ClassificationSelector } from "@/components/selectors/classification-selector";
 import type { EventoFilters, TipoClasificacion } from "@/features/eventos/api";
 import { useInfiniteGroups } from "@/features/eventos/infinite-queries";
 import { EventoSelectorUnified } from "./evento-selector-unified";

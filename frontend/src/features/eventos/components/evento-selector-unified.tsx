@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
-import type { Event, Group } from "@/features/dashboard/types";
+import type { Event, Group } from "@/lib/types/eventos";
 
 interface Selection {
   groups: string[]; // IDs de grupos seleccionados

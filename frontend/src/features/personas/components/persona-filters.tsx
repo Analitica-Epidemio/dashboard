@@ -20,11 +20,9 @@ import { Switch } from "@/components/ui/switch";
 import { AdvancedFilterPanel, type FilterSection } from "@/components/filters";
 import type { PersonaFilters } from "@/features/personas/api";
 
-// Importar componentes compartidos desde eventos
-import {
-  ProvinciasMultiSelect,
-  EventoSelectorInfinite
-} from "@/features/eventos/components/evento-filters-modern";
+// Importar componentes compartidos
+import { ProvinciasMultiSelect } from "@/components/selectors/provincias-multi-select";
+import { GrupoEventoSelector } from "@/components/selectors/grupo-evento-selector";
 
 interface PersonaFiltersAdvancedProps {
   filters?: PersonaFilters;
@@ -98,8 +96,8 @@ export function PersonaFiltersAdvanced({
             </p>
           </div>
 
-          {/* Selector de Eventos compartido con eventos page */}
-          <EventoSelectorInfinite
+          {/* Selector de Eventos compartido */}
+          <GrupoEventoSelector
             selectedGroupIds={filters?.grupo_eno_ids || []}
             selectedEventIds={filters?.tipo_eno_ids || []}
             onSelectionChange={(groups, events) => {
