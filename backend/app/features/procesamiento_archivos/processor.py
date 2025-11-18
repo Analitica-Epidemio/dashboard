@@ -132,6 +132,7 @@ class SimpleEpidemiologicalProcessor:
                 try_parse_dates=True,
                 infer_schema_length=10000,
                 truncate_ragged_lines=True,  # CSV del SNVS tienen filas irregulares
+                quote_char='"',  # Manejar campos con comas dentro de comillas
             )
         elif file_path.suffix.lower() in [".xlsx", ".xls"]:
             logger.info(f"⚡ Leyendo Excel con Polars...")

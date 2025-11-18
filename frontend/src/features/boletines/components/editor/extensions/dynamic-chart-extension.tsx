@@ -1,8 +1,8 @@
 import { Node, mergeAttributes } from "@tiptap/core";
 import { ReactNodeViewRenderer, NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
 import { BarChart3, Loader2, AlertCircle } from "lucide-react";
-import { DynamicChart } from "@/components/charts/dynamic-chart";
-import { useDashboardCharts } from "@/features/boletines/api";
+import { UniversalChart } from "@/components/charts/universal-chart";
+import { useDashboardCharts } from "@/features/reports/api";
 import type { DynamicChartAttrs } from '../tiptap';
 
 // Componente React para renderizar el nodo
@@ -22,7 +22,7 @@ function DynamicChartComponent({ node, updateAttributes }: NodeViewProps) {
   const selectedGrupoIds = grupoIds ? grupoIds.split(",").filter(Boolean).map(Number) : [];
   const selectedEventoIds = eventoIds ? eventoIds.split(",").filter(Boolean).map(Number) : [];
 
-  // Fetch chart data using the hook
+  // Fetch chart data using $api (returns UniversalChartSpec[])
   const { data, isLoading, error } = useDashboardCharts({
     grupo_id: selectedGrupoIds.length > 0 ? selectedGrupoIds[0] : undefined,
     tipo_eno_ids: selectedEventoIds,
@@ -31,7 +31,7 @@ function DynamicChartComponent({ node, updateAttributes }: NodeViewProps) {
   });
 
   // Find the specific chart by code
-  const chartData = data?.data?.charts?.find((c) => c.codigo === chartCode);
+  const chartSpec = data?.data?.charts?.find((c) => c.codigo === chartCode);
 
   const handleEdit = () => {
     // Emit custom event to open config dialog
@@ -74,15 +74,8 @@ function DynamicChartComponent({ node, updateAttributes }: NodeViewProps) {
             <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
             <span className="text-sm text-red-600">Error al cargar el gráfico</span>
           </div>
-        ) : chartData ? (
-          <DynamicChart
-            codigo={chartData.codigo}
-            nombre={chartData.nombre}
-            descripcion={chartData.descripcion}
-            tipo={chartData.tipo}
-            data={chartData.data as never}
-            config={chartData.config}
-          />
+        ) : chartSpec ? (
+          <UniversalChart spec={chartSpec} />
         ) : (
           <div className="flex flex-col items-center justify-center py-12 px-4 text-gray-500">
             <BarChart3 className="w-8 h-8 mb-2 text-gray-400" />

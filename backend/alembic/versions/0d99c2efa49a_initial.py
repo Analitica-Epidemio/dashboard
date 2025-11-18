@@ -1,8 +1,8 @@
-""".
+"""initial
 
-Revision ID: 40a4e08ba52c
+Revision ID: 0d99c2efa49a
 Revises: 
-Create Date: 2025-11-11 12:04:17.061459
+Create Date: 2025-11-17 20:40:50.927330
 
 """
 from typing import Sequence, Union
@@ -14,7 +14,7 @@ import geoalchemy2  # Required for Geometry types
 
 
 # revision identifiers, used by Alembic.
-revision: str = '40a4e08ba52c'
+revision: str = '0d99c2efa49a'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -32,6 +32,22 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('descripcion', name='uq_antecedente_epidemiologico_descripcion')
     )
+    op.create_table('boletin_queries',
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('name', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('category', sqlmodel.sql.sqltypes.AutoString(length=50), nullable=False),
+    sa.Column('query_config', sa.JSON(), nullable=False),
+    sa.Column('required_params', sa.JSON(), nullable=False),
+    sa.Column('result_schema', sa.JSON(), nullable=True),
+    sa.Column('example_response', sa.JSON(), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_boletin_queries_category'), 'boletin_queries', ['category'], unique=False)
+    op.create_index(op.f('ix_boletin_queries_name'), 'boletin_queries', ['name'], unique=True)
     op.create_table('capa_hidrografia',
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
@@ -263,6 +279,27 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('nombre', name='uq_vacuna_nombre')
     )
+    op.create_table('boletin_templates',
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('name', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('category', sqlmodel.sql.sqltypes.AutoString(length=50), nullable=False),
+    sa.Column('thumbnail', sqlmodel.sql.sqltypes.AutoString(length=500), nullable=True),
+    sa.Column('layout', sa.JSON(), nullable=False),
+    sa.Column('widgets', sa.JSON(), nullable=False),
+    sa.Column('cover', sa.JSON(), nullable=True),
+    sa.Column('global_filters', sa.JSON(), nullable=True),
+    sa.Column('content', sa.Text(), nullable=True),
+    sa.Column('is_public', sa.Boolean(), nullable=False),
+    sa.Column('is_system', sa.Boolean(), nullable=False),
+    sa.Column('created_by', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_boletin_templates_category'), 'boletin_templates', ['category'], unique=False)
+    op.create_index(op.f('ix_boletin_templates_name'), 'boletin_templates', ['name'], unique=False)
     op.create_table('ciudadano_comorbilidades',
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
@@ -368,6 +405,27 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_user_sessions_session_token'), 'user_sessions', ['session_token'], unique=True)
     op.create_index(op.f('ix_user_sessions_user_id'), 'user_sessions', ['user_id'], unique=False)
+    op.create_table('boletin_instances',
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('name', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
+    sa.Column('template_id', sa.Integer(), nullable=False),
+    sa.Column('parameters', sa.JSON(), nullable=False),
+    sa.Column('template_snapshot', sa.JSON(), nullable=False),
+    sa.Column('status', sqlmodel.sql.sqltypes.AutoString(length=20), nullable=False),
+    sa.Column('pdf_path', sqlmodel.sql.sqltypes.AutoString(length=500), nullable=True),
+    sa.Column('pdf_size', sa.Integer(), nullable=True),
+    sa.Column('generated_at', sa.DateTime(), nullable=True),
+    sa.Column('error_message', sa.Text(), nullable=True),
+    sa.Column('generated_by', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['generated_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['template_id'], ['boletin_templates.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_boletin_instances_name'), 'boletin_instances', ['name'], unique=False)
+    op.create_index(op.f('ix_boletin_instances_status'), 'boletin_instances', ['status'], unique=False)
+    op.create_index(op.f('ix_boletin_instances_template_id'), 'boletin_instances', ['template_id'], unique=False)
     op.create_table('capa_area_urbana',
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
@@ -943,6 +1001,10 @@ def downgrade() -> None:
     op.drop_table('classification_rule')
     op.drop_index('idx_capa_area_urbana_geometria', table_name='capa_area_urbana', postgresql_using='gist')
     op.drop_table('capa_area_urbana')
+    op.drop_index(op.f('ix_boletin_instances_template_id'), table_name='boletin_instances')
+    op.drop_index(op.f('ix_boletin_instances_status'), table_name='boletin_instances')
+    op.drop_index(op.f('ix_boletin_instances_name'), table_name='boletin_instances')
+    op.drop_table('boletin_instances')
     op.drop_index(op.f('ix_user_sessions_user_id'), table_name='user_sessions')
     op.drop_index(op.f('ix_user_sessions_session_token'), table_name='user_sessions')
     op.drop_table('user_sessions')
@@ -963,6 +1025,9 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_departamento_id_departamento_indec'), table_name='departamento')
     op.drop_table('departamento')
     op.drop_table('ciudadano_comorbilidades')
+    op.drop_index(op.f('ix_boletin_templates_name'), table_name='boletin_templates')
+    op.drop_index(op.f('ix_boletin_templates_category'), table_name='boletin_templates')
+    op.drop_table('boletin_templates')
     op.drop_table('vacuna')
     op.drop_index(op.f('ix_users_email'), table_name='users')
     op.drop_table('users')
@@ -1010,5 +1075,8 @@ def downgrade() -> None:
     op.drop_table('ciudadano')
     op.drop_index('idx_capa_hidrografia_geometria', table_name='capa_hidrografia', postgresql_using='gist')
     op.drop_table('capa_hidrografia')
+    op.drop_index(op.f('ix_boletin_queries_name'), table_name='boletin_queries')
+    op.drop_index(op.f('ix_boletin_queries_category'), table_name='boletin_queries')
+    op.drop_table('boletin_queries')
     op.drop_table('antecedente_epidemiologico')
     # ### end Alembic commands ###

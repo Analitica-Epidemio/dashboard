@@ -9,8 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { CompactFilterBar } from "./compact-filter-bar";
 import { Activity, AlertTriangle } from "lucide-react";
 
-// Import dynamic chart components
-import { DynamicChart } from "@/components/charts/dynamic-chart";
+// Import chart components
+import { UniversalChart } from "@/components/charts/universal-chart";
 import { useDashboardCharts, useIndicadores, useGenerateZipReport, useGenerateSignedUrl } from "@/features/reports/api";
 import type { FilterCombination } from "../../contexts/filter-context";
 
@@ -127,17 +127,9 @@ const DynamicChartsColumn: React.FC<{
           </CardContent>
         </Card>
 
-        {/* Dynamic Charts */}
-        {data?.data?.charts?.map((chart) => (
-          <DynamicChart
-            key={chart.codigo}
-            codigo={chart.codigo}
-            nombre={chart.nombre}
-            descripcion={chart.descripcion}
-            tipo={chart.tipo}
-            data={chart.data as never}
-            config={chart.config}
-          />
+        {/* Dynamic Charts (UniversalChartSpec) */}
+        {data?.data?.charts?.map((chartSpec) => (
+          <UniversalChart key={chartSpec.id} spec={chartSpec} />
         ))}
 
         {/* If no charts available */}
@@ -214,9 +206,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
       format: "pdf",
     };
 
-    generateZipReportMutation.mutate({
-      body: reportRequest,
-    });
+    generateZipReportMutation.mutate(reportRequest);
   };
 
   const handleGenerateSignedUrl = () => {

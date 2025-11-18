@@ -1231,40 +1231,15 @@ export interface paths {
         };
         /**
          * Get Dashboard Charts
-         * @description Obtiene los charts aplicables y sus datos según los filtros
+         * @description Obtiene los charts aplicables como UniversalChartSpec con datos REALES
          *
-         *     Simple:
-         *     1. Busca qué charts aplican según las condiciones
-         *     2. Procesa los datos de cada chart
-         *     3. Devuelve todo listo para renderizar
+         *     Flujo:
+         *     1. Busca qué charts aplican según las condiciones en BD
+         *     2. Convierte filtros a ChartFilters
+         *     3. Usa ChartSpecGenerator para generar specs con datos REALES
+         *     4. Devuelve UniversalChartSpec listo para renderizar
          */
         get: operations["get_dashboard_charts_api_v1_charts_dashboard_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/charts/indicadores": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Indicadores
-         * @description Obtiene los indicadores de resumen para el dashboard
-         *
-         *     Calcula:
-         *     - Total de casos
-         *     - Tasa de incidencia (por 100.000 habitantes)
-         *     - Áreas afectadas (departamentos únicos)
-         *     - Letalidad (si hay datos de fallecidos)
-         */
-        get: operations["get_indicadores_api_v1_charts_indicadores_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1282,8 +1257,8 @@ export interface paths {
         };
         /**
          * Get Charts Disponibles
-         * @description Lista todos los charts disponibles sin procesar datos
-         *     Útil para configuración y preview
+         * @description Obtiene lista de charts disponibles desde BD
+         *     Usado por el selector de charts en el editor de boletines
          */
         get: operations["get_charts_disponibles_api_v1_charts_disponibles_get"];
         put?: never;
@@ -1294,7 +1269,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/charts/mapa-geografico": {
+    "/api/v1/charts/indicadores": {
         parameters: {
             query?: never;
             header?: never;
@@ -1302,16 +1277,66 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Mapa Geografico
-         * @description Obtiene estadísticas por departamento para visualización en mapa
+         * Get Indicadores
+         * @description Obtiene indicadores clave basados en filtros
          *
-         *     Incluye:
-         *     - Casos por departamento
-         *     - Tasa de incidencia
-         *     - Información de zona UGD
-         *     - Población
+         *     Args:
+         *         db: Sesión de base de datos
+         *         current_user: Usuario autenticado o validado por signed URL
+         *         grupo_id: Filtro por grupo de ENO
+         *         tipo_eno_ids: Filtro por tipos de ENO
+         *         fecha_desde: Fecha desde (formato ISO)
+         *         fecha_hasta: Fecha hasta (formato ISO)
+         *         clasificaciones: Filtro por clasificaciones
+         *         provincia_id: Filtro por provincia (ej: 26 para Chubut)
+         *
+         *     Returns:
+         *         Indicadores calculados
          */
-        get: operations["get_mapa_geografico_api_v1_charts_mapa_geografico_get"];
+        get: operations["get_indicadores_api_v1_charts_indicadores_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/charts/spec": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate Chart Spec
+         * @description Genera la especificación universal para un chart con datos REALES
+         *
+         *     El spec puede ser usado tanto por el frontend (para renderizar interactivamente)
+         *     como por el backend (para generar reportes server-side)
+         */
+        post: operations["generate_chart_spec_api_v1_charts_spec_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/charts/available": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Available Charts
+         * @description Retorna la lista de códigos de charts disponibles con datos REALES
+         */
+        get: operations["get_available_charts_api_v1_charts_available_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1331,8 +1356,8 @@ export interface paths {
         put?: never;
         /**
          * Generate Report
-         * @description Genera un reporte PDF usando Playwright para capturar la página del frontend.
-         *     Esto asegura fidelidad exacta de la UI en los PDFs generados.
+         * @description Genera un reporte PDF 100% SERVER-SIDE usando matplotlib + ReportLab
+         *     Sin Playwright - Renderizado completo en el backend
          */
         post: operations["generate_report_api_v1_reports_generate_post"];
         delete?: never;
@@ -1811,6 +1836,62 @@ export interface components {
             fecha_antecedente?: string | null;
         };
         /**
+         * AreaChartConfig
+         * @description Configuración específica para area charts
+         */
+        AreaChartConfig: {
+            /** Height */
+            height?: number | null;
+            /** Width */
+            width?: number | null;
+            /**
+             * Showlegend
+             * @default true
+             */
+            showLegend: boolean | null;
+            /**
+             * Showgrid
+             * @default true
+             */
+            showGrid: boolean | null;
+            /** Colors */
+            colors?: string[] | null;
+            /**
+             * Stacked
+             * @default false
+             */
+            stacked: boolean | null;
+            /**
+             * Fillopacity
+             * @default 0.6
+             */
+            fillOpacity: number | null;
+        };
+        /**
+         * AreaChartConfigWrapper
+         * @description Wrapper con discriminador para area chart config
+         */
+        AreaChartConfigWrapper: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "area";
+            config: components["schemas"]["AreaChartConfig"];
+        };
+        /**
+         * AreaChartData
+         * @description Wrapper con discriminador para area chart data
+         */
+        AreaChartData: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "area";
+            data: components["schemas"]["BaseChartData"];
+        };
+        /**
          * AsyncJobResponse
          * @description Respuesta cuando se inicia un job asíncrono.
          */
@@ -1897,6 +1978,74 @@ export interface components {
              * @description User agent del navegador
              */
             user_agent?: string | null;
+        };
+        /**
+         * BarChartConfig
+         * @description Configuración específica para bar charts
+         */
+        BarChartConfig: {
+            /** Height */
+            height?: number | null;
+            /** Width */
+            width?: number | null;
+            /**
+             * Showlegend
+             * @default true
+             */
+            showLegend: boolean | null;
+            /**
+             * Showgrid
+             * @default true
+             */
+            showGrid: boolean | null;
+            /** Colors */
+            colors?: string[] | null;
+            /**
+             * Stacked
+             * @default false
+             */
+            stacked: boolean | null;
+            /**
+             * Horizontal
+             * @default false
+             */
+            horizontal: boolean | null;
+        };
+        /**
+         * BarChartConfigWrapper
+         * @description Wrapper con discriminador para bar chart config
+         */
+        BarChartConfigWrapper: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "bar";
+            config: components["schemas"]["BarChartConfig"];
+        };
+        /**
+         * BarChartData
+         * @description Wrapper con discriminador para bar chart data
+         */
+        BarChartData: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "bar";
+            data: components["schemas"]["BaseChartData"];
+        };
+        /**
+         * BaseChartData
+         * @description Datos para line, bar, area, pie charts
+         */
+        BaseChartData: {
+            /** Labels */
+            labels: string[];
+            /** Datasets */
+            datasets: components["schemas"]["Dataset"][];
+            /** Metadata */
+            metadata?: components["schemas"]["WeekMetadata"][] | null;
         };
         /** Body_preview_uploaded_file_api_v1_uploads_preview_post */
         Body_preview_uploaded_file_api_v1_uploads_preview_post: {
@@ -2185,95 +2334,81 @@ export interface components {
             }[];
         };
         /**
-         * ChartDataItem
-         * @description Modelo para un chart individual del dashboard
-         */
-        ChartDataItem: {
-            /**
-             * Codigo
-             * @description Código único del chart
-             */
-            codigo: string;
-            /**
-             * Nombre
-             * @description Nombre del chart
-             */
-            nombre: string;
-            /**
-             * Descripcion
-             * @description Descripción del chart
-             */
-            descripcion?: string | null;
-            /**
-             * Tipo
-             * @description Tipo de visualización
-             */
-            tipo: string;
-            /**
-             * Data
-             * @description Datos del chart
-             */
-            data: unknown;
-            /**
-             * Config
-             * @description Configuración adicional del chart
-             */
-            config?: {
-                [key: string]: unknown;
-            };
-        };
-        /**
          * ChartDisponibleItem
-         * @description Modelo para un chart disponible en el catálogo
+         * @description Chart disponible para insertar en boletines
          */
         ChartDisponibleItem: {
-            /**
-             * Id
-             * @description ID del chart
-             */
+            /** Id */
             id: number;
-            /**
-             * Codigo
-             * @description Código único del chart
-             */
+            /** Codigo */
             codigo: string;
-            /**
-             * Nombre
-             * @description Nombre del chart
-             */
+            /** Nombre */
             nombre: string;
-            /**
-             * Descripcion
-             * @description Descripción del chart
-             */
+            /** Descripcion */
             descripcion?: string | null;
-            /**
-             * Tipo Visualizacion
-             * @description Tipo de visualización
-             */
+            /** Tipo Visualizacion */
             tipo_visualizacion: string;
-            /**
-             * Condiciones
-             * @description Condiciones de aplicación
-             */
-            condiciones?: {
+            /** Funcion Procesamiento */
+            funcion_procesamiento: string;
+        };
+        /**
+         * ChartFilters
+         * @description Filtros aplicados al chart (para reproducibilidad)
+         */
+        ChartFilters: {
+            /** Grupo Eno Ids */
+            grupo_eno_ids?: number[] | null;
+            /** Tipo Eno Ids */
+            tipo_eno_ids?: number[] | null;
+            /** Clasificacion */
+            clasificacion?: string[] | null;
+            /** Provincia Id */
+            provincia_id?: number[] | null;
+            /** Fecha Desde */
+            fecha_desde?: string | null;
+            /** Fecha Hasta */
+            fecha_hasta?: string | null;
+            /** Edad Min */
+            edad_min?: number | null;
+            /** Edad Max */
+            edad_max?: number | null;
+            /** Tipo Sujeto */
+            tipo_sujeto?: ("humano" | "animal") | null;
+            /** Extra */
+            extra?: {
                 [key: string]: unknown;
             } | null;
         };
         /**
+         * ChartSpecRequest
+         * @description Request para obtener spec de un chart
+         */
+        ChartSpecRequest: {
+            /** Chart Code */
+            chart_code: string;
+            filters: components["schemas"]["ChartFilters"];
+            /** Config */
+            config?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /**
+         * ChartSpecResponse
+         * @description Response con el spec generado
+         */
+        ChartSpecResponse: {
+            spec: components["schemas"]["UniversalChartSpec"];
+            /** Generated At */
+            generated_at: string;
+        };
+        /**
          * ChartsDisponiblesResponse
-         * @description Response model para charts disponibles
+         * @description Response con lista de charts disponibles
          */
         ChartsDisponiblesResponse: {
-            /**
-             * Charts
-             * @description Lista de charts disponibles
-             */
+            /** Charts */
             charts: components["schemas"]["ChartDisponibleItem"][];
-            /**
-             * Total
-             * @description Total de charts disponibles
-             */
+            /** Total */
             total: number;
         };
         /**
@@ -2571,26 +2706,21 @@ export interface components {
         };
         /**
          * DashboardChartsResponse
-         * @description Response model para charts del dashboard
+         * @description Response model para charts del dashboard usando UniversalChartSpec
          */
         DashboardChartsResponse: {
             /**
              * Charts
-             * @description Lista de charts con sus datos
+             * @description Lista de charts como UniversalChartSpec
              */
-            charts: components["schemas"]["ChartDataItem"][];
+            charts: components["schemas"]["UniversalChartSpec"][];
             /**
              * Total
              * @description Total de charts aplicables
              */
             total: number;
-            /**
-             * Filtros Aplicados
-             * @description Filtros que se aplicaron
-             */
-            filtros_aplicados: {
-                [key: string]: unknown;
-            };
+            /** @description Filtros que se aplicaron */
+            filtros_aplicados: components["schemas"]["ChartFilters"];
         };
         /**
          * DashboardResumenResponse
@@ -2606,6 +2736,20 @@ export interface components {
             piramide_poblacional: components["schemas"]["PiramidePoblacional"][];
             /** Territorios Afectados */
             territorios_afectados: components["schemas"]["TerritorioAfectado"][];
+        };
+        /**
+         * Dataset
+         * @description Dataset para charts line/bar/area/pie
+         */
+        Dataset: {
+            /** Label */
+            label?: string | null;
+            /** Data */
+            data: number[];
+            /** Color */
+            color?: string | null;
+            /** Type */
+            type?: ("area" | "line") | null;
         };
         /**
          * DateRangeResponse
@@ -2624,42 +2768,6 @@ export interface components {
             fecha_maxima: string;
             /** Total Eventos */
             total_eventos: number;
-        };
-        /**
-         * DepartamentoEstadistica
-         * @description Estadística de un departamento
-         */
-        DepartamentoEstadistica: {
-            /**
-             * Codigo Indec
-             * @description Código INDEC del departamento
-             */
-            codigo_indec: number;
-            /**
-             * Nombre
-             * @description Nombre del departamento
-             */
-            nombre: string;
-            /**
-             * Zona Ugd
-             * @description Zona UGD del departamento
-             */
-            zona_ugd: string;
-            /**
-             * Poblacion
-             * @description Población del departamento
-             */
-            poblacion: number;
-            /**
-             * Casos
-             * @description Número de casos
-             */
-            casos: number;
-            /**
-             * Tasa Incidencia
-             * @description Tasa de incidencia por 100.000 habitantes
-             */
-            tasa_incidencia: number;
         };
         /**
          * DomicilioDetalleResponse
@@ -4401,37 +4509,30 @@ export interface components {
             detail?: components["schemas"]["ValidationError"][];
         };
         /**
-         * IndicadoresResponse
-         * @description Response model para indicadores del dashboard
+         * IndicadoresData
+         * @description Indicadores clave para reportes
          */
-        IndicadoresResponse: {
+        IndicadoresData: {
             /**
              * Total Casos
-             * @description Total de casos registrados
+             * @default 0
              */
             total_casos: number;
             /**
              * Tasa Incidencia
-             * @description Tasa de incidencia por 100.000 habitantes
+             * @default 0
              */
             tasa_incidencia: number;
             /**
              * Areas Afectadas
-             * @description Número de departamentos afectados
+             * @default 0
              */
             areas_afectadas: number;
             /**
              * Letalidad
-             * @description Tasa de letalidad en porcentaje
+             * @default 0
              */
             letalidad: number;
-            /**
-             * Filtros Aplicados
-             * @description Filtros que se aplicaron a la consulta
-             */
-            filtros_aplicados: {
-                [key: string]: unknown;
-            };
         };
         /**
          * InvestigacionInfo
@@ -4752,27 +4853,144 @@ export interface components {
             margin: number[];
         };
         /**
-         * MapaGeograficoResponse
-         * @description Response model para mapa geográfico
+         * LineChartConfig
+         * @description Configuración específica para line charts
          */
-        MapaGeograficoResponse: {
+        LineChartConfig: {
+            /** Height */
+            height?: number | null;
+            /** Width */
+            width?: number | null;
             /**
-             * Departamentos
-             * @description Lista de departamentos con estadísticas
+             * Showlegend
+             * @default true
              */
-            departamentos: components["schemas"]["DepartamentoEstadistica"][];
+            showLegend: boolean | null;
             /**
-             * Total Casos
-             * @description Total de casos en toda la provincia
+             * Showgrid
+             * @default true
              */
+            showGrid: boolean | null;
+            /** Colors */
+            colors?: string[] | null;
+            /**
+             * Showpoints
+             * @default true
+             */
+            showPoints: boolean | null;
+            /**
+             * Curved
+             * @default false
+             */
+            curved: boolean | null;
+        };
+        /**
+         * LineChartConfigWrapper
+         * @description Wrapper con discriminador para line chart config
+         */
+        LineChartConfigWrapper: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "line";
+            config: components["schemas"]["LineChartConfig"];
+        };
+        /**
+         * LineChartData
+         * @description Wrapper con discriminador para line chart data
+         */
+        LineChartData: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "line";
+            data: components["schemas"]["BaseChartData"];
+        };
+        /**
+         * MapChartConfig
+         * @description Configuración específica para map charts
+         */
+        MapChartConfig: {
+            /** Height */
+            height?: number | null;
+            /** Width */
+            width?: number | null;
+            /**
+             * Showlegend
+             * @default true
+             */
+            showLegend: boolean | null;
+            /**
+             * Showgrid
+             * @default true
+             */
+            showGrid: boolean | null;
+            /** Colors */
+            colors?: string[] | null;
+            /**
+             * Colorscale
+             * @default sequential
+             */
+            colorScale: ("sequential" | "diverging") | null;
+            /**
+             * Province
+             * @default chubut
+             */
+            province: "chubut" | null;
+        };
+        /**
+         * MapChartConfigWrapper
+         * @description Wrapper con discriminador para map chart config
+         */
+        MapChartConfigWrapper: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "mapa";
+            config: components["schemas"]["MapChartConfig"];
+        };
+        /**
+         * MapChartData
+         * @description Datos para mapa de Chubut
+         */
+        MapChartData: {
+            /** Departamentos */
+            departamentos: components["schemas"]["MapDepartmentData"][];
+            /** Total Casos */
             total_casos: number;
+        };
+        /**
+         * MapChartDataWrapper
+         * @description Wrapper con discriminador para map chart data
+         */
+        MapChartDataWrapper: {
             /**
-             * Filtros Aplicados
-             * @description Filtros que se aplicaron
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
              */
-            filtros_aplicados: {
-                [key: string]: unknown;
-            };
+            type: "mapa";
+            data: components["schemas"]["MapChartData"];
+        };
+        /**
+         * MapDepartmentData
+         * @description Datos de departamento para mapa
+         */
+        MapDepartmentData: {
+            /** Codigo Indec */
+            codigo_indec: number;
+            /** Nombre */
+            nombre: string;
+            /** Zona Ugd */
+            zona_ugd: string;
+            /** Poblacion */
+            poblacion: number;
+            /** Casos */
+            casos: number;
+            /** Tasa Incidencia */
+            tasa_incidencia: number;
         };
         /**
          * MapeoInfo
@@ -5387,6 +5605,62 @@ export interface components {
             total_eventos: number;
         };
         /**
+         * PieChartConfig
+         * @description Configuración específica para pie charts
+         */
+        PieChartConfig: {
+            /** Height */
+            height?: number | null;
+            /** Width */
+            width?: number | null;
+            /**
+             * Showlegend
+             * @default true
+             */
+            showLegend: boolean | null;
+            /**
+             * Showgrid
+             * @default true
+             */
+            showGrid: boolean | null;
+            /** Colors */
+            colors?: string[] | null;
+            /**
+             * Showpercentages
+             * @default true
+             */
+            showPercentages: boolean | null;
+            /**
+             * Innerradius
+             * @default 0
+             */
+            innerRadius: number | null;
+        };
+        /**
+         * PieChartConfigWrapper
+         * @description Wrapper con discriminador para pie chart config
+         */
+        PieChartConfigWrapper: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "pie";
+            config: components["schemas"]["PieChartConfig"];
+        };
+        /**
+         * PieChartData
+         * @description Wrapper con discriminador para pie chart data
+         */
+        PieChartData: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "pie";
+            data: components["schemas"]["BaseChartData"];
+        };
+        /**
          * PiramidePoblacional
          * @description Datos para pirámide poblacional
          */
@@ -5413,6 +5687,70 @@ export interface components {
              * @description Name of sheet to process
              */
             sheet_name: string;
+        };
+        /**
+         * PyramidChartConfig
+         * @description Configuración específica para pyramid charts
+         */
+        PyramidChartConfig: {
+            /** Height */
+            height?: number | null;
+            /** Width */
+            width?: number | null;
+            /**
+             * Showlegend
+             * @default true
+             */
+            showLegend: boolean | null;
+            /**
+             * Showgrid
+             * @default true
+             */
+            showGrid: boolean | null;
+            /** Colors */
+            colors?: string[] | null;
+            /**
+             * Showaxislabels
+             * @default true
+             */
+            showAxisLabels: boolean | null;
+        };
+        /**
+         * PyramidChartConfigWrapper
+         * @description Wrapper con discriminador para pyramid chart config
+         */
+        PyramidChartConfigWrapper: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "d3_pyramid";
+            config: components["schemas"]["PyramidChartConfig"];
+        };
+        /**
+         * PyramidChartData
+         * @description Wrapper con discriminador para pyramid chart data
+         */
+        PyramidChartData: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "d3_pyramid";
+            /** Data */
+            data: components["schemas"]["PyramidDataPoint"][];
+        };
+        /**
+         * PyramidDataPoint
+         * @description Punto de datos para pirámide poblacional
+         */
+        PyramidDataPoint: {
+            /** Age Group */
+            age_group: string;
+            /** Male */
+            male: number;
+            /** Female */
+            female: number;
         };
         /**
          * RefreshToken
@@ -5809,10 +6147,10 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
-        /** SuccessResponse[IndicadoresResponse] */
-        SuccessResponse_IndicadoresResponse_: {
+        /** SuccessResponse[IndicadoresData] */
+        SuccessResponse_IndicadoresData_: {
             /** @description Datos de la respuesta */
-            data: components["schemas"]["IndicadoresResponse"];
+            data: components["schemas"]["IndicadoresData"];
             /**
              * Meta
              * @description Metadata opcional (paginación, etc)
@@ -5870,18 +6208,6 @@ export interface components {
              * @description Datos de la respuesta
              */
             data: components["schemas"]["BoletinTemplateResponse"][];
-            /**
-             * Meta
-             * @description Metadata opcional (paginación, etc)
-             */
-            meta?: {
-                [key: string]: unknown;
-            } | null;
-        };
-        /** SuccessResponse[MapaGeograficoResponse] */
-        SuccessResponse_MapaGeograficoResponse_: {
-            /** @description Datos de la respuesta */
-            data: components["schemas"]["MapaGeograficoResponse"];
             /**
              * Meta
              * @description Metadata opcional (paginación, etc)
@@ -6286,6 +6612,59 @@ export interface components {
             periodo_comparacion: components["schemas"]["PeriodInfo"];
         };
         /**
+         * UniversalChartSpec
+         * @description Especificación universal de chart
+         *     Puede ser usada tanto por frontend como backend
+         * @example {
+         *       "config": {
+         *         "height": 400,
+         *         "showLegend": true
+         *       },
+         *       "data": {
+         *         "datasets": [
+         *           {
+         *             "data": [
+         *               10,
+         *               15,
+         *               12
+         *             ],
+         *             "label": "Confirmados"
+         *           }
+         *         ],
+         *         "labels": [
+         *           "SE 1",
+         *           "SE 2",
+         *           "SE 3"
+         *         ]
+         *       },
+         *       "id": "chart_001",
+         *       "title": "Casos por Semana Epidemiológica",
+         *       "type": "line"
+         *     }
+         */
+        UniversalChartSpec: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Description */
+            description?: string | null;
+            /** Codigo */
+            codigo?: string | null;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "line" | "bar" | "area" | "pie" | "d3_pyramid" | "mapa";
+            /** Data */
+            data: components["schemas"]["LineChartData"] | components["schemas"]["BarChartData"] | components["schemas"]["AreaChartData"] | components["schemas"]["PieChartData"] | components["schemas"]["PyramidChartData"] | components["schemas"]["MapChartDataWrapper"];
+            /** Config */
+            config: components["schemas"]["LineChartConfigWrapper"] | components["schemas"]["BarChartConfigWrapper"] | components["schemas"]["AreaChartConfigWrapper"] | components["schemas"]["PieChartConfigWrapper"] | components["schemas"]["PyramidChartConfigWrapper"] | components["schemas"]["MapChartConfigWrapper"];
+            filters?: components["schemas"]["ChartFilters"] | null;
+            /** Generated At */
+            generated_at?: string | null;
+        };
+        /**
          * UserChangePassword
          * @description Schema for changing password
          */
@@ -6443,6 +6822,20 @@ export interface components {
              * @description Timestamp de generación
              */
             generated_at: number;
+        };
+        /**
+         * WeekMetadata
+         * @description Metadata de semana epidemiológica
+         */
+        WeekMetadata: {
+            /** Year */
+            year: number;
+            /** Week */
+            week: number;
+            /** Start Date */
+            start_date: string;
+            /** End Date */
+            end_date: string;
         };
         /**
          * WidgetPosition
@@ -9382,48 +9775,6 @@ export interface operations {
             };
         };
     };
-    get_indicadores_api_v1_charts_indicadores_get: {
-        parameters: {
-            query?: {
-                /** @description ID del grupo seleccionado */
-                grupo_id?: number | null;
-                /** @description IDs de los eventos a filtrar */
-                tipo_eno_ids?: number[] | null;
-                /** @description Fecha desde (formato: YYYY-MM-DD) */
-                fecha_desde?: string | null;
-                /** @description Fecha hasta (formato: YYYY-MM-DD) */
-                fecha_hasta?: string | null;
-                /** @description Filtrar por clasificaciones estratégicas */
-                clasificaciones?: string[] | null;
-                /** @description Código INDEC de provincia (opcional, si no se envía muestra todas las provincias) */
-                provincia_id?: number | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SuccessResponse_IndicadoresResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     get_charts_disponibles_api_v1_charts_disponibles_get: {
         parameters: {
             query?: never;
@@ -9444,20 +9795,14 @@ export interface operations {
             };
         };
     };
-    get_mapa_geografico_api_v1_charts_mapa_geografico_get: {
+    get_indicadores_api_v1_charts_indicadores_get: {
         parameters: {
             query?: {
-                /** @description ID del grupo seleccionado */
                 grupo_id?: number | null;
-                /** @description IDs de los eventos a filtrar */
                 tipo_eno_ids?: number[] | null;
-                /** @description Fecha desde (formato: YYYY-MM-DD) */
                 fecha_desde?: string | null;
-                /** @description Fecha hasta (formato: YYYY-MM-DD) */
                 fecha_hasta?: string | null;
-                /** @description Filtrar por clasificaciones estratégicas */
                 clasificaciones?: string[] | null;
-                /** @description Código INDEC de provincia (opcional, si no se envía muestra todas las provincias) */
                 provincia_id?: number | null;
             };
             header?: never;
@@ -9472,7 +9817,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SuccessResponse_MapaGeograficoResponse_"];
+                    "application/json": components["schemas"]["SuccessResponse_IndicadoresData_"];
                 };
             };
             /** @description Validation Error */
@@ -9482,6 +9827,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generate_chart_spec_api_v1_charts_spec_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChartSpecRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChartSpecResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_available_charts_api_v1_charts_available_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
                 };
             };
         };

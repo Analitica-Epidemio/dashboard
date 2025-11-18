@@ -16,9 +16,9 @@ class TipoDocumento(str, Enum):
 class SexoBiologico(str, Enum):
     """Sexo biológico"""
 
-    MASCULINO = "M"
-    FEMENINO = "F"
-    NO_ESPECIFICADO = "X"
+    MASCULINO = "MASCULINO"
+    FEMENINO = "FEMENINO"
+    NO_ESPECIFICADO = "NO_ESPECIFICADO"
 
 
 class RespuestaSiNoIndeterminado(str, Enum):

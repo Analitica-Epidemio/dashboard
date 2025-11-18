@@ -1,5 +1,6 @@
 """
 Generate report endpoint
+100% SERVER-SIDE - Sin Playwright
 """
 
 import io
@@ -13,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_async_session
 from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User
-from app.features.reporteria.playwright_generator import playwright_generator
+from app.features.reporteria.serverside_pdf_generator import serverside_pdf_generator
 
 from .schemas import ReportRequest
 
@@ -26,29 +27,34 @@ async def generate_report(
     current_user: User = Depends(RequireAnyRole())
 ) -> Response:
     """
-    Genera un reporte PDF usando Playwright para capturar la página del frontend.
-    Esto asegura fidelidad exacta de la UI en los PDFs generados.
+    Genera un reporte PDF 100% SERVER-SIDE usando matplotlib + ReportLab
+    Sin Playwright - Renderizado completo en el backend
     """
     try:
-        logger.info(f"Generando reporte PDF con Playwright para {len(request.combinations)} combinaciones")
+        logger.info(f"Generando reporte PDF SERVER-SIDE para {len(request.combinations)} combinaciones")
 
         # Solo PDF es soportado
         if request.format.lower() != 'pdf':
             raise HTTPException(status_code=400, detail="Solo formato PDF es soportado")
 
-        # Generar PDF usando Playwright
-        pdf_content = await playwright_generator.generate_pdf_from_page(
-            combinations=[
-                {
-                    'id': combo.id,
-                    'group_id': combo.group_id,
-                    'group_name': combo.group_name,
-                    'event_ids': combo.event_ids,
-                    'event_names': combo.event_names,
-                    'clasificaciones': getattr(combo, 'clasificaciones', [])
-                }
-                for combo in request.combinations
-            ],
+        # Si hay múltiples combinaciones, generar solo la primera por ahora
+        # (el endpoint ZIP maneja múltiples combinaciones)
+        if len(request.combinations) == 0:
+            raise HTTPException(status_code=400, detail="No se proporcionaron combinaciones")
+
+        first_combo = request.combinations[0]
+
+        # Generar PDF usando SERVER-SIDE generator
+        pdf_content = await serverside_pdf_generator.generate_pdf(
+            db=db,
+            combination={
+                'id': first_combo.id,
+                'group_id': first_combo.group_id,
+                'group_name': first_combo.group_name,
+                'event_ids': first_combo.event_ids,
+                'event_names': first_combo.event_names,
+                'clasificaciones': getattr(first_combo, 'clasificaciones', [])
+            },
             date_range=request.date_range
         )
 
@@ -63,5 +69,5 @@ async def generate_report(
         )
 
     except Exception as e:
-        logger.error(f"Error generando reporte con Playwright: {e}", exc_info=True)
+        logger.error(f"Error generando reporte SERVER-SIDE: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error generando reporte: {str(e)}")

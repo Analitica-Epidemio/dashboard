@@ -1,6 +1,7 @@
 """
 ZIP Report Generator
 Generates multiple PDFs in parallel and packages them in a ZIP file
+100% SERVER-SIDE - Sin Playwright
 """
 import asyncio
 import io
@@ -8,8 +9,9 @@ import logging
 import zipfile
 from datetime import datetime
 from typing import Any, Dict, List
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.reporteria.playwright_generator import playwright_generator
+from app.features.reporteria.serverside_pdf_generator import serverside_pdf_generator
 
 logger = logging.getLogger(__name__)
 
@@ -23,14 +25,17 @@ class ZipReportGenerator:
 
     async def generate_zip_report(
         self,
+        db: AsyncSession,
         combinations: List[Dict[str, Any]],
         date_range: Dict[str, str],
         output_path: str = None
     ) -> bytes:
         """
         Generate multiple PDF reports in parallel and create a ZIP file
+        100% SERVER-SIDE usando matplotlib + ReportLab
 
         Args:
+            db: Database session
             combinations: List of filter combinations
             date_range: Date range for reports
             output_path: Optional path to save ZIP file
@@ -38,16 +43,13 @@ class ZipReportGenerator:
         Returns:
             ZIP file content as bytes
         """
-        logger.info(f"Starting ZIP report generation for {len(combinations)} combinations")
+        logger.info(f"Starting SERVER-SIDE ZIP report generation for {len(combinations)} combinations")
 
         # Generate PDFs in parallel
         pdf_tasks = []
         for i, combo in enumerate(combinations):
-            # Create individual combination list
-            single_combo = [combo]
-
-            # Create task for PDF generation
-            task = self._generate_single_pdf(single_combo, date_range, i + 1)
+            # Create task for PDF generation (server-side)
+            task = self._generate_single_pdf(db, combo, date_range, i + 1)
             pdf_tasks.append(task)
 
         # Execute all PDF generations in parallel
@@ -101,28 +103,30 @@ class ZipReportGenerator:
 
     async def _generate_single_pdf(
         self,
-        combination: List[Dict[str, Any]],
+        db: AsyncSession,
+        combination: Dict[str, Any],
         date_range: Dict[str, str],
         index: int
     ) -> bytes:
-        """Generate a single PDF for a combination"""
+        """Generate a single PDF for a combination (SERVER-SIDE)"""
         try:
-            logger.info(f"Generating PDF {index} for {combination[0].get('group_name', 'Unknown')}")
+            logger.info(f"Generating SERVER-SIDE PDF {index} for {combination.get('group_name', 'Unknown')}")
 
-            pdf_content = await playwright_generator.generate_pdf_from_page(
-                combinations=combination,
+            pdf_content = await serverside_pdf_generator.generate_pdf(
+                db=db,
+                combination=combination,
                 date_range=date_range
             )
 
             if pdf_content:
-                logger.info(f"PDF {index} generated successfully ({len(pdf_content)} bytes)")
+                logger.info(f"SERVER-SIDE PDF {index} generated successfully ({len(pdf_content)} bytes)")
                 return pdf_content
             else:
-                logger.warning(f"PDF {index} generation returned empty content")
+                logger.warning(f"SERVER-SIDE PDF {index} generation returned empty content")
                 return b''
 
         except Exception as e:
-            logger.error(f"Error generating PDF {index}: {e}")
+            logger.error(f"Error generating SERVER-SIDE PDF {index}: {e}")
             raise e
 
     def _safe_filename(self, name: str) -> str:
