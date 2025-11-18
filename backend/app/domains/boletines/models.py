@@ -11,33 +11,56 @@ from sqlmodel import Field, Relationship
 from app.core.models import BaseModel
 
 
+class BoletinSnippet(BaseModel, table=True):
+    """
+    Snippets reutilizables para boletines epidemiológicos.
+    Contiene templates de texto con placeholders para contenido dinámico.
+    """
+    __tablename__ = "boletin_snippets"
+
+    codigo: str = Field(max_length=100, unique=True, index=True, description="Código único del snippet (ej: evento_crecimiento)")
+    nombre: str = Field(max_length=255, description="Nombre descriptivo del snippet")
+    descripcion: Optional[str] = Field(default=None, sa_column=Column(Text), description="Descripción del snippet")
+    categoria: str = Field(max_length=50, index=True, description="Categoría (evento, introduccion, conclusion, recomendacion, etc.)")
+
+    # Template con placeholders: {evento_nombre}, {semana}, {anio}, {casos_actuales}, etc.
+    template: str = Field(sa_column=Column(Text, nullable=False), description="Template HTML con placeholders estilo Jinja2")
+
+    # Variables disponibles y sus tipos (JSON)
+    # Ej: {"evento_nombre": "string", "casos_actuales": "number", "cambio_porcentual": "number"}
+    variables_schema: Dict[str, str] = Field(
+        sa_column=Column(JSON, nullable=False),
+        description="Schema de variables disponibles con sus tipos"
+    )
+
+    # Condiciones para mostrar este snippet (JSON)
+    # Ej: {"tipo_cambio": "crecimiento", "porcentaje_min": 50}
+    condiciones: Optional[Dict[str, Any]] = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="Condiciones para mostrar el snippet"
+    )
+
+    # Orden de visualización
+    orden: int = Field(default=0, description="Orden de visualización en la UI")
+
+    is_active: bool = Field(default=True, description="Si el snippet está activo")
+
+
 class BoletinTemplate(BaseModel, table=True):
     """
     Plantilla reutilizable para boletines epidemiológicos.
-    Contiene la estructura (layout, widgets, filtros) pero no los datos específicos.
+    SIMPLIFICADA: Solo contiene metadatos y contenido HTML generado con TipTap.
     """
     __tablename__ = "boletin_templates"
 
     name: str = Field(max_length=255, index=True, description="Nombre de la plantilla")
     description: Optional[str] = Field(default=None, sa_column=Column(Text), description="Descripción de la plantilla")
     category: str = Field(max_length=50, index=True, description="Categoría (semanal, brote, tendencias, etc.)")
-    thumbnail: Optional[str] = Field(default=None, max_length=500, description="URL o path a imagen de preview")
-
-    # Configuración del layout (JSON)
-    # { "type": "grid", "columns": 12, "rowHeight": 40, "margin": [10, 10] }
-    layout: Dict[str, Any] = Field(sa_column=Column(JSON, nullable=False), description="Configuración del layout")
-
-    # Widgets del boletín (JSON Array)
-    # [{ "id": "widget-1", "type": "kpi", "position": {...}, "data_config": {...}, "visual_config": {...} }]
-    widgets: List[Dict[str, Any]] = Field(sa_column=Column(JSON, nullable=False), description="Widgets del boletín")
 
     # Configuración de portada (JSON)
     # { "enabled": true, "title": "...", "subtitle": "...", "footer": "..." }
     cover: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON), description="Configuración de portada")
-
-    # Filtros globales (JSON)
-    # { "temporal": {...}, "geografico": {...}, "demografico": {...} }
-    global_filters: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON), description="Filtros globales")
 
     # Contenido HTML del boletín (Tiptap)
     content: Optional[str] = Field(default=None, sa_column=Column(Text), description="Contenido HTML del boletín editado con Tiptap")
