@@ -1,7 +1,6 @@
 import { Node, mergeAttributes } from "@tiptap/core";
 import { ReactNodeViewRenderer, NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
 import { useState } from "react";
-import '../tiptap';
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {

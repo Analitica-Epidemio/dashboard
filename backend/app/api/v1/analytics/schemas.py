@@ -107,3 +107,102 @@ class TopWinnersLosersResponse(BaseModel):
     metric_type: str = Field(..., description="Tipo de métrica analizada")
     periodo_actual: PeriodInfo
     periodo_comparacion: PeriodInfo
+
+
+# ============================================================================
+# Schemas para el nuevo sistema de Analytics con Boletines
+# ============================================================================
+
+class EventoCambio(BaseModel):
+    """Evento con su cambio entre dos períodos"""
+    tipo_eno_id: int = Field(..., description="ID del tipo de evento")
+    tipo_eno_nombre: str = Field(..., description="Nombre del evento")
+    grupo_eno_id: int = Field(..., description="ID del grupo epidemiológico")
+    grupo_eno_nombre: str = Field(..., description="Nombre del grupo")
+    casos_actuales: int = Field(..., description="Casos en período actual")
+    casos_anteriores: int = Field(..., description="Casos en período anterior")
+    diferencia_absoluta: int = Field(..., description="Diferencia absoluta de casos")
+    diferencia_porcentual: float = Field(..., description="% de cambio")
+    tasa_incidencia_actual: Optional[float] = Field(None, description="Tasa por 100k habitantes en período actual")
+    tasa_incidencia_anterior: Optional[float] = Field(None, description="Tasa por 100k habitantes en período anterior")
+
+
+class GrupoConCambios(BaseModel):
+    """Grupo epidemiológico con sus eventos de mayor crecimiento/decrecimiento"""
+    grupo_id: int = Field(..., description="ID del grupo")
+    grupo_nombre: str = Field(..., description="Nombre del grupo")
+    top_crecimiento: List[EventoCambio] = Field(..., description="Top eventos con mayor crecimiento")
+    top_decrecimiento: List[EventoCambio] = Field(..., description="Top eventos con mayor decrecimiento")
+
+
+class PeriodoAnalisis(BaseModel):
+    """Información de un período de análisis epidemiológico"""
+    semana_inicio: int = Field(..., description="Semana epidemiológica de inicio")
+    semana_fin: int = Field(..., description="Semana epidemiológica de fin")
+    anio: int = Field(..., description="Año epidemiológico")
+    fecha_inicio: date = Field(..., description="Fecha de inicio del período")
+    fecha_fin: date = Field(..., description="Fecha de fin del período")
+
+
+class TopChangesByGroupResponse(BaseModel):
+    """Response de top cambios GLOBALES (sin agrupar por grupo)"""
+    periodo_actual: PeriodoAnalisis = Field(..., description="Período actual analizado")
+    periodo_anterior: PeriodoAnalisis = Field(..., description="Período de comparación")
+    top_crecimiento: List[EventoCambio] = Field(..., description="Top 10 eventos con mayor crecimiento")
+    top_decrecimiento: List[EventoCambio] = Field(..., description="Top 10 eventos con mayor decrecimiento")
+
+
+class CalculateChangesRequest(BaseModel):
+    """Request para calcular cambios de eventos custom"""
+    tipo_eno_ids: List[int] = Field(..., description="IDs de eventos a calcular")
+    semana_actual: int = Field(..., description="Semana epidemiológica actual", ge=1, le=53)
+    anio_actual: int = Field(..., description="Año epidemiológico actual")
+    num_semanas: int = Field(default=4, description="Número de semanas hacia atrás", ge=1, le=52)
+
+
+class EventoCambioConCategoria(EventoCambio):
+    """Evento con cambio y su categoría automática"""
+    categoria: str = Field(..., description="Categoría: 'crecimiento' o 'decrecimiento'")
+
+
+class CalculateChangesResponse(BaseModel):
+    """Response de cambios calculados para eventos custom"""
+    eventos: List[EventoCambioConCategoria] = Field(..., description="Eventos con sus cambios calculados")
+
+
+class TrendSemanal(BaseModel):
+    """Punto en la serie temporal semanal"""
+    semana: int = Field(..., description="Semana epidemiológica")
+    anio: int = Field(..., description="Año epidemiológico")
+    casos: int = Field(..., description="Número de casos")
+    periodo: str = Field(..., description="'actual' o 'anterior'")
+
+
+class ResumenEvento(BaseModel):
+    """Resumen del evento para el dialog de detalles"""
+    casos_actuales: int = Field(..., description="Casos en período actual")
+    casos_anteriores: int = Field(..., description="Casos en período anterior")
+    diferencia_porcentual: float = Field(..., description="% de cambio")
+    diferencia_absoluta: int = Field(..., description="Cambio absoluto")
+
+
+class TipoEnoBasic(BaseModel):
+    """Información básica de un tipo de evento"""
+    id: int
+    nombre: str
+    codigo: Optional[str] = None
+
+
+class GrupoEnoBasic(BaseModel):
+    """Información básica de un grupo epidemiológico"""
+    id: int
+    nombre: str
+    descripcion: Optional[str] = None
+
+
+class EventoDetailsResponse(BaseModel):
+    """Response con detalles completos de un evento para el dialog"""
+    tipo_eno: TipoEnoBasic = Field(..., description="Información del tipo de evento")
+    grupo_eno: GrupoEnoBasic = Field(..., description="Información del grupo epidemiológico")
+    resumen: ResumenEvento = Field(..., description="Resumen del cambio")
+    trend_semanal: List[TrendSemanal] = Field(..., description="Serie temporal por semana")

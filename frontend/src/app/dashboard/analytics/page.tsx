@@ -1,113 +1,96 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Search, TrendingUp, TrendingDown } from "lucide-react";
+/**
+ * Analytics Page - Generación automática de boletines
+ *
+ * Muestra top eventos con mayor crecimiento/decrecimiento por grupo epidemiológico.
+ * Permite seleccionar eventos y generar borradores de boletines automáticamente.
+ */
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/features/layout/components";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
-import { $api } from "@/lib/api/client";
-import { DateRangePicker } from "@/features/analytics/components/date-range-picker";
-import type { DateRange } from "react-day-picker";
-import type { TopWinnerLoser } from "@/features/analytics/api";
-
-type MetricType = "departamentos" | "tipo_eno" | "provincias";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Loader2, TrendingUp, TrendingDown, FileText, Info } from "lucide-react";
+import { toast } from "sonner";
+import { useTopChangesByGroup, useGenerateDraft, type EventoCambio } from "@/features/analytics/api";
 
 export default function AnalyticsPage() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [metricType, setMetricType] = useState<MetricType>("departamentos");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const router = useRouter();
 
-  const { data: dateRangeResponse } = $api.useQuery(
-    'get',
-    '/api/v1/analytics/date-range',
-    {}
-  );
+  // State
+  const [semanaActual, setSemanaActual] = useState(40);
+  const [anioActual, setAnioActual] = useState(2025);
+  const [numSemanas, setNumSemanas] = useState(4);
+  const [eventosSeleccionados, setEventosSeleccionados] = useState<Set<number>>(new Set());
 
-  const maxDate = dateRangeResponse?.data?.fecha_maxima
-    ? new Date(dateRangeResponse.data.fecha_maxima)
-    : new Date();
+  // Data fetching
+  const { data, isLoading } = useTopChangesByGroup({
+    semana_actual: semanaActual,
+    anio_actual: anioActual,
+    num_semanas: numSemanas,
+    limit: 10,
+  });
 
-  const { data: analyticsResponse, isLoading } = $api.useQuery(
-    'get',
-    '/api/v1/analytics/top-winners-losers',
-    {
-      params: {
-        query: {
-          metric_type: metricType,
-          limit: 50,
-          period_type: "personalizado",
-          fecha_desde: dateRange?.from?.toISOString().split("T")[0],
-          fecha_hasta: dateRange?.to?.toISOString().split("T")[0],
-        }
-      }
-    },
-    {
-      enabled: !!dateRange?.from && !!dateRange?.to
+  const generateBoletin = useGenerateDraft();
+
+  // Handlers
+  const toggleEvento = (id: number) => {
+    const newSet = new Set(eventosSeleccionados);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
     }
-  );
-
-  // Combinar winners y losers en una sola tabla
-  const allData = useMemo(() => {
-    const data = analyticsResponse?.data as { top_winners?: TopWinnerLoser[], top_losers?: TopWinnerLoser[] } | undefined;
-    const winners = data?.top_winners || [];
-    const losers = data?.top_losers || [];
-
-    return [...winners, ...losers].sort(
-      (a: TopWinnerLoser, b: TopWinnerLoser) =>
-        Math.abs(b.diferencia_porcentual) - Math.abs(a.diferencia_porcentual)
-    );
-  }, [analyticsResponse]);
-
-  // Filtrar por búsqueda
-  const filteredData = useMemo(() => {
-    if (!searchQuery) return allData;
-
-    const query = searchQuery.toLowerCase();
-    return allData.filter((item: TopWinnerLoser) =>
-      item.entidad_nombre.toLowerCase().includes(query)
-    );
-  }, [allData, searchQuery]);
-
-  const getChangeColor = (change: number) => {
-    // Verde para disminución (bueno), Rojo para aumento (malo)
-    if (change < 0) return "text-green-600 dark:text-green-500";
-    if (change > 0) return "text-red-600 dark:text-red-500";
-    return "text-muted-foreground";
+    setEventosSeleccionados(newSet);
   };
 
-  const getChangeBgColor = (change: number) => {
-    if (change < 0) return "bg-green-50 dark:bg-green-950/20";
-    if (change > 0) return "bg-red-50 dark:bg-red-950/20";
-    return "bg-muted/20";
+  const handleGenerar = async () => {
+    if (eventosSeleccionados.size === 0) {
+      toast.error("Debes seleccionar al menos un evento");
+      return;
+    }
+
+    try {
+      const result = await generateBoletin.mutateAsync({
+        semana: semanaActual,
+        anio: anioActual,
+        num_semanas: numSemanas,
+        eventos_seleccionados: Array.from(eventosSeleccionados).map((id) => ({
+          tipo_eno_id: id,
+          incluir_charts: true,
+        })),
+      });
+
+      console.log("Generate result:", result);
+
+      if (!result?.data?.boletin_instance_id) {
+        console.error("No boletin_instance_id in response:", result);
+        toast.error("Error: No se recibió ID del boletín");
+        return;
+      }
+
+      toast.success("Boletín generado exitosamente");
+      router.push(`/dashboard/boletines/instances/${result.data.boletin_instance_id}`);
+    } catch (error) {
+      console.error("Error generando boletín:", error);
+      toast.error("Error al generar boletín");
+    }
   };
 
-  const formatNumber = (num: number) => {
-    return new Intl.NumberFormat("es-AR").format(Math.round(num));
-  };
-
-  const formatPercent = (num: number) => {
-    const formatted = Math.abs(num).toFixed(2);
-    return num > 0 ? `+${formatted}%` : num < 0 ? `${formatted}%` : "0.00%";
-  };
+  const topCrecimiento = data?.data?.top_crecimiento || [];
+  const topDecrecimiento = data?.data?.top_decrecimiento || [];
+  const periodoAnalisis = data?.data?.periodo_actual;
 
   return (
     <SidebarProvider
@@ -125,202 +108,342 @@ export default function AnalyticsPage() {
             {/* Header */}
             <div className="mb-8">
               <div className="flex items-center gap-3 mb-2">
-                <TrendingUp className="w-5 h-5 text-muted-foreground" />
+                <FileText className="w-5 h-5 text-muted-foreground" />
                 <h1 className="text-2xl font-semibold">
-                  Análisis de Variaciones
+                  Generador de Boletines
                 </h1>
               </div>
               <p className="text-sm text-muted-foreground">
-                Monitoreo de cambios en casos epidemiológicos por región y tipo de evento
+                Analiza los eventos con mayores cambios y genera boletines automáticamente
               </p>
             </div>
 
-        {/* Filtros */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col lg:flex-row gap-4 lg:items-end">
-                {/* Búsqueda */}
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por nombre..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
-                  />
+            {/* Filtros */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Configuración del Análisis</CardTitle>
+                <CardDescription>
+                  Selecciona el período de análisis para identificar eventos relevantes
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="semana">Semana Epidemiológica</Label>
+                    <Input
+                      id="semana"
+                      type="number"
+                      min={1}
+                      max={53}
+                      value={semanaActual}
+                      onChange={(e) => setSemanaActual(Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="anio">Año</Label>
+                    <Input
+                      id="anio"
+                      type="number"
+                      min={2020}
+                      max={2030}
+                      value={anioActual}
+                      onChange={(e) => setAnioActual(Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="numSemanas">Número de Semanas</Label>
+                    <Select
+                      value={numSemanas.toString()}
+                      onValueChange={(value) => setNumSemanas(Number(value))}
+                    >
+                      <SelectTrigger id="numSemanas">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="4">4 semanas</SelectItem>
+                        <SelectItem value="8">8 semanas</SelectItem>
+                        <SelectItem value="12">12 semanas</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
-                {/* Tipo de métrica */}
-                <Select
-                  value={metricType}
-                  onValueChange={(value) => setMetricType(value as MetricType)}
-                >
-                  <SelectTrigger className="w-full md:w-[200px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="departamentos">Departamentos</SelectItem>
-                    <SelectItem value="provincias">Provincias</SelectItem>
-                    <SelectItem value="tipo_eno">Tipo de Evento</SelectItem>
-                  </SelectContent>
-                </Select>
+                {periodoAnalisis && (
+                  <div className="text-sm text-muted-foreground">
+                    Período de análisis: Semanas {periodoAnalisis.semana_inicio} - {periodoAnalisis.semana_fin} del {periodoAnalisis.anio}
+                    <br />
+                    ({periodoAnalisis.fecha_inicio} - {periodoAnalisis.fecha_fin})
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-                {/* Date Range Picker */}
-                <DateRangePicker
-                  dateRange={dateRange}
-                  onDateRangeChange={setDateRange}
-                  maxDate={maxDate}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            {/* Selected Events Summary */}
+            {eventosSeleccionados.size > 0 && (
+              <Card className="border-primary">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span>Eventos Seleccionados ({eventosSeleccionados.size})</span>
+                    <Button
+                      onClick={handleGenerar}
+                      disabled={generateBoletin.isPending}
+                    >
+                      {generateBoletin.isPending && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      Generar Boletín
+                    </Button>
+                  </CardTitle>
+                </CardHeader>
+              </Card>
+            )}
 
-        {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Registros
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{filteredData.length}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Con Aumento
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <div className="text-2xl font-bold text-red-600">
-                {filteredData.filter((d) => d.diferencia_porcentual > 0).length}
-              </div>
-              <TrendingUp className="h-5 w-5 text-red-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Con Disminución
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <div className="text-2xl font-bold text-green-600">
-                {filteredData.filter((d) => d.diferencia_porcentual < 0).length}
-              </div>
-              <TrendingDown className="h-5 w-5 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-        </div>
-
-        {/* Tabla Principal */}
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {metricType === "departamentos"
-                ? "Departamentos"
-                : metricType === "tipo_eno"
-                ? "Tipos de Evento"
-                : "Provincias"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="space-y-3">
-                {[...Array(10)].map((_, i) => (
-                  <Skeleton key={i} className="h-12 w-full" />
+            {/* Loading State */}
+            {isLoading && (
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <Card key={i}>
+                    <CardHeader>
+                      <Skeleton className="h-6 w-48" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {[...Array(5)].map((_, j) => (
+                          <Skeleton key={j} className="h-12 w-full" />
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
-            ) : filteredData.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">No hay datos disponibles</p>
-              </div>
-            ) : (
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[50px]">#</TableHead>
-                      <TableHead>Nombre</TableHead>
-                      <TableHead className="text-right">Anterior</TableHead>
-                      <TableHead className="text-right">Actual</TableHead>
-                      <TableHead className="text-right">Diferencia</TableHead>
-                      <TableHead className="text-right w-[140px]">
-                        Cambio %
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredData.map((item, index) => {
-                      const change = item.diferencia_porcentual;
-                      const isIncrease = change > 0;
-                      const isDecrease = change < 0;
-
-                      return (
-                        <TableRow
-                          key={item.entidad_id}
-                          className="hover:bg-muted/50 transition-colors"
-                        >
-                          <TableCell className="font-medium text-muted-foreground">
-                            {index + 1}
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {item.entidad_nombre}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {formatNumber(item.valor_anterior)}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums font-semibold">
-                            {formatNumber(item.valor_actual)}
-                          </TableCell>
-                          <TableCell
-                            className={cn(
-                              "text-right tabular-nums font-medium",
-                              getChangeColor(change)
-                            )}
-                          >
-                            {change > 0 ? "+" : ""}
-                            {formatNumber(item.diferencia_absoluta)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <Badge
-                                variant="secondary"
-                                className={cn(
-                                  "tabular-nums font-semibold",
-                                  getChangeBgColor(change),
-                                  getChangeColor(change)
-                                )}
-                              >
-                                {isIncrease && (
-                                  <TrendingUp className="h-3 w-3 mr-1" />
-                                )}
-                                {isDecrease && (
-                                  <TrendingDown className="h-3 w-3 mr-1" />
-                                )}
-                                {formatPercent(change)}
-                              </Badge>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
             )}
-          </CardContent>
-        </Card>
+
+            {/* Empty State */}
+            {!isLoading && topCrecimiento.length === 0 && topDecrecimiento.length === 0 && (
+              <Card>
+                <CardContent className="py-12">
+                  <div className="text-center text-muted-foreground">
+                    No se encontraron cambios significativos en el período seleccionado
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Top Crecimiento - Tabla Global */}
+            {!isLoading && topCrecimiento.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-red-600" />
+                    Top 10 - Mayor Crecimiento
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p className="font-semibold mb-1">¿Cómo se calculan los rankings?</p>
+                          <p className="text-sm">
+                            Se compara el número de casos del período actual con el período anterior del mismo tamaño.
+                            Los eventos se ordenan por el porcentaje de cambio, mostrando aquellos con mayor incremento relativo.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </CardTitle>
+                  <CardDescription>
+                    Eventos con mayor incremento de casos en el período analizado
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[50px]"></TableHead>
+                          <TableHead>Evento</TableHead>
+                          <TableHead>Grupo</TableHead>
+                          <TableHead className="text-right">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="cursor-help">Anterior</span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-sm">Casos en el período anterior de igual duración</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </TableHead>
+                          <TableHead className="text-right">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="cursor-help">Actual</span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-sm">Casos en el período seleccionado</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </TableHead>
+                          <TableHead className="text-right">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="cursor-help">Cambio</span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-sm">Variación porcentual: ((Actual - Anterior) / Anterior) × 100%</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {topCrecimiento.map((evento: EventoCambio) => (
+                          <TableRow key={evento.tipo_eno_id}>
+                            <TableCell>
+                              <Checkbox
+                                checked={eventosSeleccionados.has(evento.tipo_eno_id)}
+                                onCheckedChange={() => toggleEvento(evento.tipo_eno_id)}
+                              />
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              {evento.tipo_eno_nombre}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{evento.grupo_eno_nombre}</Badge>
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {evento.casos_anteriores}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums font-semibold">
+                              {evento.casos_actuales}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Badge variant="secondary" className="bg-red-50 text-red-700">
+                                <TrendingUp className="h-3 w-3 mr-1" />
+                                +{evento.diferencia_porcentual.toFixed(1)}%
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Top Decrecimiento - Tabla Global */}
+            {!isLoading && topDecrecimiento.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingDown className="h-5 w-5 text-green-600" />
+                    Top 10 - Mayor Decrecimiento
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p className="font-semibold mb-1">¿Cómo se calculan los rankings?</p>
+                          <p className="text-sm">
+                            Se compara el número de casos del período actual con el período anterior del mismo tamaño.
+                            Los eventos se ordenan por el porcentaje de cambio negativo, mostrando aquellos con mayor disminución relativa.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </CardTitle>
+                  <CardDescription>
+                    Eventos con mayor disminución de casos en el período analizado
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[50px]"></TableHead>
+                          <TableHead>Evento</TableHead>
+                          <TableHead>Grupo</TableHead>
+                          <TableHead className="text-right">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="cursor-help">Anterior</span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-sm">Casos en el período anterior de igual duración</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </TableHead>
+                          <TableHead className="text-right">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="cursor-help">Actual</span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-sm">Casos en el período seleccionado</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </TableHead>
+                          <TableHead className="text-right">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="cursor-help">Cambio</span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-sm">Variación porcentual: ((Actual - Anterior) / Anterior) × 100%</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {topDecrecimiento.map((evento: EventoCambio) => (
+                          <TableRow key={evento.tipo_eno_id}>
+                            <TableCell>
+                              <Checkbox
+                                checked={eventosSeleccionados.has(evento.tipo_eno_id)}
+                                onCheckedChange={() => toggleEvento(evento.tipo_eno_id)}
+                              />
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              {evento.tipo_eno_nombre}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{evento.grupo_eno_nombre}</Badge>
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {evento.casos_anteriores}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums font-semibold">
+                              {evento.casos_actuales}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Badge variant="secondary" className="bg-green-50 text-green-700">
+                                <TrendingDown className="h-3 w-3 mr-1" />
+                                {evento.diferencia_porcentual.toFixed(1)}%
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </SidebarInset>

@@ -40,8 +40,15 @@ async def generate_chart_spec(
         )
 
     except ValueError as e:
+        import traceback
+        print(f"❌ ValueError en generate_chart_spec: {str(e)}")
+        print(traceback.format_exc())
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        import traceback
+        print(f"❌ Exception en generate_chart_spec: {str(e)}")
+        print(f"Request data: chart_code={request.chart_code}, filters={request.filters}, config={request.config}")
+        print(traceback.format_exc())
         raise HTTPException(
             status_code=500,
             detail=f"Error generando chart spec: {str(e)}"

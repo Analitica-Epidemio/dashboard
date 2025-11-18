@@ -190,11 +190,12 @@ class BoletinGenerateRequest(BaseModel):
 class BoletinInstanceResponse(BaseModel):
     """Schema de respuesta de instancia"""
     id: int
-    template_id: int
+    template_id: Optional[int]
     name: str
     parameters: Dict[str, Any]
+    content: Optional[str]
     pdf_path: Optional[str]
-    pdf_size_bytes: Optional[int]
+    pdf_size: Optional[int]  # Debe coincidir con el nombre del campo en el modelo
     status: str
     error_message: Optional[str]
     generated_by: Optional[int]
@@ -290,3 +291,37 @@ class SUHResponse(BaseModel):
     """Respuesta de SUH"""
     casos: List[Dict[str, Any]]
     historico: List[Dict[str, Any]]
+
+
+# ============================================================================
+# Schemas para el nuevo sistema de generación automática con snippets
+# ============================================================================
+
+class EventoSeleccionado(BaseModel):
+    """Evento seleccionado para incluir en el boletín"""
+    tipo_eno_id: int = Field(..., description="ID del tipo de evento")
+    incluir_charts: bool = Field(True, description="Incluir charts del evento")
+    snippets_custom: Optional[List[str]] = Field(None, description="Códigos de snippets custom adicionales")
+
+
+class GenerateDraftRequest(BaseModel):
+    """Request para generar borrador de boletín automático"""
+    semana: int = Field(..., description="Semana epidemiológica", ge=1, le=53)
+    anio: int = Field(..., description="Año epidemiológico")
+    num_semanas: int = Field(4, description="Número de semanas de análisis", ge=1, le=52)
+    eventos_seleccionados: List[EventoSeleccionado] = Field(..., description="Eventos a incluir en el boletín")
+    titulo_custom: Optional[str] = Field(None, description="Título personalizado (opcional)")
+
+
+class BoletinMetadata(BaseModel):
+    """Metadatos del boletín generado"""
+    periodo_analisis: Dict[str, Any] = Field(..., description="Información del período analizado")
+    eventos_incluidos: List[Dict[str, Any]] = Field(..., description="Eventos incluidos con sus datos")
+    fecha_generacion: datetime = Field(..., description="Fecha de generación del borrador")
+
+
+class GenerateDraftResponse(BaseModel):
+    """Response al generar borrador de boletín"""
+    boletin_instance_id: int = Field(..., description="ID de la instancia de boletín creada")
+    content: str = Field(..., description="Contenido HTML generado (TipTap compatible)")
+    metadata: BoletinMetadata = Field(..., description="Metadatos del boletín")
