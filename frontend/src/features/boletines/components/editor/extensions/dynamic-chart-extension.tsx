@@ -2,8 +2,23 @@ import { Node, mergeAttributes } from "@tiptap/core";
 import { ReactNodeViewRenderer, NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
 import { BarChart3, Loader2, AlertCircle } from "lucide-react";
 import { UniversalChart } from "@/components/charts/universal-chart";
-import { useDashboardCharts } from "@/features/reports/api";
+import { $api } from "@/lib/api/client";
 import type { DynamicChartAttrs } from '../tiptap';
+
+const chartCodeMap: Record<string, string> = {
+  "curva-epidemiologica": "casos_por_semana",
+  "corredor-endemico": "corredor_endemico",
+  "piramide-poblacional": "piramide_edad",
+  "mapa-geografico": "mapa_chubut",
+  "estacionalidad-mensual": "estacionalidad",
+  "casos-edad": "casos_edad",
+  "distribucion-clasificacion": "distribucion_clasificacion",
+};
+
+const resolveChartCode = (code?: string) => {
+  if (!code) return code;
+  return chartCodeMap[code] ?? code;
+};
 
 // Componente React para renderizar el nodo
 function DynamicChartComponent({ node, updateAttributes }: NodeViewProps) {
@@ -11,27 +26,69 @@ function DynamicChartComponent({ node, updateAttributes }: NodeViewProps) {
     chartId: number;
     chartCode: string;
     title: string;
-    grupoIds: string;
-    eventoIds: string;
+    grupoIds: string | number;
+    eventoIds: string | number;
     fechaDesde: string;
     fechaHasta: string;
   };
   const { chartCode, title, grupoIds, eventoIds, fechaDesde, fechaHasta } = attrs;
+  const apiChartCode = resolveChartCode(chartCode);
 
-  // Parse IDs from comma-separated strings
-  const selectedGrupoIds = grupoIds ? grupoIds.split(",").filter(Boolean).map(Number) : [];
-  const selectedEventoIds = eventoIds ? eventoIds.split(",").filter(Boolean).map(Number) : [];
+  // Parse IDs from comma-separated strings or numbers
+  const parseIds = (value: string | number | undefined): number[] => {
+    if (!value) return [];
+    if (typeof value === 'number') return [value];
+    if (typeof value === 'string') {
+      return value.split(",").filter(Boolean).map(Number);
+    }
+    return [];
+  };
 
-  // Fetch chart data using $api (returns UniversalChartSpec[])
-  const { data, isLoading, error } = useDashboardCharts({
-    grupo_id: selectedGrupoIds.length > 0 ? selectedGrupoIds[0] : undefined,
-    tipo_eno_ids: selectedEventoIds,
-    fecha_desde: fechaDesde || undefined,
-    fecha_hasta: fechaHasta || undefined,
-  });
+  const selectedGrupoIds = parseIds(grupoIds);
+  const selectedEventoIds = parseIds(eventoIds);
 
-  // Find the specific chart by code
-  const chartSpec = data?.data?.charts?.find((c) => c.codigo === chartCode);
+  // Fetch chart spec using the /charts/spec endpoint
+  // Note: We use useQuery with POST because we want caching behavior
+  const { data, isLoading, error } = $api.useQuery(
+    'post',
+    '/api/v1/charts/spec',
+    {
+      body: {
+        chart_code: apiChartCode,
+        filters: {
+          grupo_eno_ids: selectedGrupoIds.length > 0 ? selectedGrupoIds : undefined,
+          tipo_eno_ids: selectedEventoIds.length > 0 ? selectedEventoIds : undefined,
+          fecha_desde: fechaDesde || undefined,
+          fecha_hasta: fechaHasta || undefined,
+        },
+        config: undefined,
+      } as any, // Type assertion needed for POST body in useQuery
+    },
+    {
+      enabled: !!apiChartCode && selectedEventoIds.length > 0, // Only fetch when we have chartCode and events
+    }
+  );
+
+  // Extract the chart spec from response
+  // The response structure from $api is already unwrapped: { spec: {...}, generated_at: "..." }
+  const chartSpec = data?.spec;
+
+  // Debug logging
+  if (process.env.NODE_ENV === 'development') {
+    console.log('DynamicChart Debug:', {
+      chartCode,
+      apiChartCode,
+      eventoIds: selectedEventoIds,
+      fechaDesde,
+      fechaHasta,
+      isLoading,
+      hasError: !!error,
+      hasData: !!data,
+      hasSpec: !!chartSpec,
+      dataStructure: data ? Object.keys(data) : [],
+      dataDataStructure: data?.data ? Object.keys(data.data) : [],
+    });
+  }
 
   const handleEdit = () => {
     // Emit custom event to open config dialog
@@ -79,9 +136,16 @@ function DynamicChartComponent({ node, updateAttributes }: NodeViewProps) {
         ) : (
           <div className="flex flex-col items-center justify-center py-12 px-4 text-gray-500">
             <BarChart3 className="w-8 h-8 mb-2 text-gray-400" />
-            <p className="text-sm">No se encontró el gráfico &quot;{chartCode}&quot;</p>
+            <p className="text-sm font-medium">No se encontró el gráfico &quot;{chartCode}&quot;</p>
             <p className="text-xs text-gray-400 mt-1">
-              Verifica que los filtros y período sean correctos
+              {selectedEventoIds.length > 0
+                ? `Evento(s): ${selectedEventoIds.join(', ')}`
+                : 'No hay eventos seleccionados'}
+            </p>
+            <p className="text-xs text-gray-400">
+              {fechaDesde && fechaHasta
+                ? `Período: ${fechaDesde} - ${fechaHasta}`
+                : 'Sin período definido'}
             </p>
           </div>
         )}

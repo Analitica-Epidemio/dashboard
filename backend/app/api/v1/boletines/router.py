@@ -8,12 +8,15 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import FileResponse
 
 from app.api.v1.boletines import instances_crud, templates_crud
+from app.api.v1.boletines.generate_draft import generate_draft
 from app.api.v1.boletines.schemas import (
     BoletinGenerateRequest,
     BoletinInstanceResponse,
     BoletinTemplateCreate,
     BoletinTemplateResponse,
     BoletinTemplateUpdate,
+    GenerateDraftRequest,
+    GenerateDraftResponse,
 )
 from app.core.schemas.response import ErrorResponse, SuccessResponse
 
@@ -160,6 +163,53 @@ router.add_api_route(
     responses={
         404: {"model": ErrorResponse, "description": "Instancia no encontrada"},
         403: {"model": ErrorResponse, "description": "Sin permisos"},
+        500: {"model": ErrorResponse, "description": "Error interno"},
+    },
+)
+
+router.add_api_route(
+    "/instances/{instance_id}/content",
+    instances_crud.update_instance_content,
+    methods=["PUT"],
+    response_model=SuccessResponse[BoletinInstanceResponse],
+    name="update_boletin_instance_content",
+    summary="Actualizar contenido de instancia",
+    responses={
+        404: {"model": ErrorResponse, "description": "Instancia no encontrada"},
+        403: {"model": ErrorResponse, "description": "Sin permisos"},
+        500: {"model": ErrorResponse, "description": "Error interno"},
+    },
+)
+
+router.add_api_route(
+    "/instances/{instance_id}/export-pdf",
+    instances_crud.generate_instance_pdf,
+    methods=["POST"],
+    name="generate_boletin_instance_pdf",
+    summary="Generar y descargar PDF de instancia",
+    responses={
+        404: {"model": ErrorResponse, "description": "Instancia no encontrada"},
+        403: {"model": ErrorResponse, "description": "Sin permisos"},
+        400: {"model": ErrorResponse, "description": "Sin contenido para generar"},
+        500: {"model": ErrorResponse, "description": "Error generando PDF"},
+    },
+)
+
+
+# ============================================================================
+# New automatic generation endpoint
+# ============================================================================
+
+router.add_api_route(
+    "/generate-draft",
+    generate_draft,
+    methods=["POST"],
+    response_model=SuccessResponse[GenerateDraftResponse],
+    name="generate_draft_boletin",
+    summary="Generar borrador de boletín automático basado en analytics",
+    description="Genera un boletín epidemiológico automático usando datos de analytics y snippets",
+    responses={
+        400: {"model": ErrorResponse, "description": "Datos inválidos"},
         500: {"model": ErrorResponse, "description": "Error interno"},
     },
 )

@@ -138,15 +138,8 @@ function LineChartRenderer({
     const point: Record<string, string | number> = { name: label };
     data.datasets.forEach((dataset) => {
       if (dataset.label) {
-        // Extraer valor numérico - manejar tanto números simples como objetos {source, parsedValue}
         const rawValue = dataset.data[index];
-        const numericValue =
-          typeof rawValue === "object" &&
-          rawValue !== null &&
-          "parsedValue" in rawValue
-            ? (rawValue as any).parsedValue
-            : rawValue;
-        point[dataset.label] = numericValue || 0;
+        point[dataset.label] = rawValue;
       }
     });
     return point;
@@ -192,14 +185,8 @@ function BarChartRenderer({
     const point: Record<string, string | number> = { name: label };
     data.datasets.forEach((dataset) => {
       if (dataset.label) {
-        // Extraer valor numérico - manejar tanto números simples como objetos {source, parsedValue}
         const rawValue = dataset.data[index];
-        const numericValue =
-          typeof rawValue === "object" &&
-          rawValue !== null &&
-          "parsedValue" in rawValue
-            ? (rawValue as any).parsedValue
-            : rawValue;
+        const numericValue = rawValue;
         point[dataset.label] = numericValue || 0;
       }
     });
@@ -253,65 +240,12 @@ function AreaChartRenderer({
     const point: Record<string, string | number> = { name: label };
     data.datasets.forEach((dataset) => {
       if (dataset.label) {
-        // Extraer valor numérico - manejar tanto números simples como objetos {source, parsedValue}
         const rawValue = dataset.data[index];
-        const numericValue =
-          typeof rawValue === "object" &&
-          rawValue !== null &&
-          "parsedValue" in rawValue
-            ? (rawValue as any).parsedValue
-            : rawValue;
+        const numericValue = rawValue;
         point[dataset.label] = numericValue || 0;
       }
     });
-    return point;
   });
-
-  // Detectar si hay datasets mixtos (área + línea)
-  const hasLineDatasets = data.datasets.some(ds => ds.type === "line");
-  const ChartComponent = hasLineDatasets ? ComposedChart : AreaChart;
-
-  return (
-    <ResponsiveContainer width="100%" height={height}>
-      <ChartComponent data={chartData}>
-        {config.showGrid !== false && <CartesianGrid strokeDasharray="3 3" />}
-        <XAxis dataKey="name" />
-        <YAxis />
-        <Tooltip />
-        {config.showLegend !== false && <Legend />}
-        {data.datasets.map((dataset, index) => {
-          const color = dataset.color || `hsl(${index * 60}, 70%, 50%)`;
-
-          // Si el dataset tiene type="line", renderizar como línea
-          if (dataset.type === "line") {
-            return (
-              <Line
-                key={index}
-                type="monotone"
-                dataKey={dataset.label || `Series ${index + 1}`}
-                stroke={dataset.color || color}
-                strokeWidth={3}
-                dot={true}
-              />
-            );
-          }
-
-          // Sino renderizar como área
-          return (
-            <Area
-              key={index}
-              type="monotone"
-              dataKey={dataset.label || `Series ${index + 1}`}
-              stroke={color}
-              fill={color}
-              fillOpacity={config.fillOpacity || 0.6}
-              stackId={config.stacked ? "stack" : undefined}
-            />
-          );
-        })}
-      </ChartComponent>
-    </ResponsiveContainer>
-  );
 }
 
 // Pie Chart Renderer

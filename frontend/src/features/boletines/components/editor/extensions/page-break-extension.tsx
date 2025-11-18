@@ -1,7 +1,6 @@
 import { Node, mergeAttributes } from "@tiptap/core";
 import { ReactNodeViewRenderer, NodeViewWrapper } from "@tiptap/react";
 import { FileText } from "lucide-react";
-import '../tiptap';
 
 // Componente React para renderizar el nodo
 function PageBreakComponent() {

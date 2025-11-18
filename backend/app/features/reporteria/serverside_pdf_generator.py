@@ -4,10 +4,11 @@ Genera PDFs 100% server-side con matplotlib + SVG rendering
 Sin dependencias del frontend ni navegadores
 """
 
+import asyncio
 import io
 import logging
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, PageBreak
@@ -31,6 +32,34 @@ class ServerSidePDFGenerator:
     def __init__(self):
         self.styles = getSampleStyleSheet()
         self._setup_custom_styles()
+        self._base_html_css = """
+        @page {
+            size: A4;
+            margin: 20mm;
+        }
+        body {
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            color: #1f2937;
+            line-height: 1.5;
+            font-size: 11pt;
+        }
+        h1, h2, h3, h4 {
+            color: #1e3a8a;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        th, td {
+            border: 1px solid #e5e7eb;
+            padding: 0.35rem;
+        }
+        """
 
     def _setup_custom_styles(self):
         """Crear estilos personalizados"""
@@ -230,6 +259,41 @@ class ServerSidePDFGenerator:
             fecha_desde=date_range.get('from'),
             fecha_hasta=date_range.get('to'),
         )
+
+    async def generate_pdf_from_html(
+        self,
+        html_content: str,
+        output_path: str,
+        page_size: str = "A4",
+        margin: str = "20mm",
+        extra_css: Optional[str] = None,
+    ) -> None:
+        """
+        Convierte HTML enriquecido a PDF usando xhtml2pdf.
+        Mantiene estilos inline e incrustaciones base64 de imágenes.
+        """
+        if not html_content:
+            raise ValueError("No hay contenido HTML para generar el PDF")
+
+        css = self._base_html_css.replace("A4", page_size).replace("20mm", margin)
+        if extra_css:
+            css = f"{css}\n{extra_css}"
+
+        html_document = (
+            "<!DOCTYPE html><html lang='es'><head><meta charset='utf-8'/>"
+            f"<style>{css}</style></head><body>{html_content}</body></html>"
+        )
+
+        await asyncio.to_thread(self._write_pdf, html_document, output_path)
+
+    def _write_pdf(self, html_document: str, output_path: str) -> None:
+        from xhtml2pdf import pisa
+
+        with open(output_path, "wb") as output_file:
+            result = pisa.CreatePDF(html_document, dest=output_file)
+
+        if result.err:
+            raise RuntimeError("Error generando PDF a partir del HTML del boletín")
 
 
 # Singleton instance

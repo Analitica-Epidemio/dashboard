@@ -82,7 +82,7 @@ class BoletinInstance(BaseModel, table=True):
     __tablename__ = "boletin_instances"
 
     name: str = Field(max_length=255, index=True, description="Nombre del boletín generado")
-    template_id: int = Field(foreign_key="boletin_templates.id", index=True, description="ID de la plantilla usada")
+    template_id: Optional[int] = Field(default=None, foreign_key="boletin_templates.id", index=True, description="ID de la plantilla usada (None para boletines generados automáticamente)")
 
     # Parámetros usados para generar el boletín (JSON)
     # { "periodo": "2024-W40", "departamento": "Rawson", "filtros_aplicados": {...} }
@@ -91,6 +91,9 @@ class BoletinInstance(BaseModel, table=True):
     # Snapshot de la configuración del template al momento de generar (JSON)
     # Guarda widgets y layout para que cambios futuros no afecten el historial
     template_snapshot: Dict[str, Any] = Field(sa_column=Column(JSON, nullable=False), description="Snapshot del template")
+
+    # Contenido HTML editable (TipTap)
+    content: Optional[str] = Field(default=None, sa_column=Column(Text), description="Contenido HTML del boletín (editable con TipTap)")
 
     # Estado de generación
     status: str = Field(

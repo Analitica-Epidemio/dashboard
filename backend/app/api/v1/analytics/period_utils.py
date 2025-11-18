@@ -17,6 +17,37 @@ def get_epi_week(fecha: date) -> Tuple[int, int]:
     return iso_calendar[0], iso_calendar[1]
 
 
+def get_epi_week_dates(semana: int, anio: int) -> Tuple[date, date]:
+    """
+    Calcula las fechas de inicio y fin de una semana epidemiológica.
+
+    Args:
+        semana: Número de semana epidemiológica (1-53)
+        anio: Año epidemiológico
+
+    Returns:
+        Tupla (fecha_inicio, fecha_fin) - Lunes a Domingo de esa semana
+    """
+    # Crear fecha del primer día del año
+    primer_dia = date(anio, 1, 1)
+
+    # Encontrar el lunes de la semana 1 del año ISO
+    # ISO week 1 es la primera semana que tiene jueves
+    iso_cal = primer_dia.isocalendar()
+    dias_hasta_lunes_semana1 = (1 - primer_dia.weekday()) % 7
+    if iso_cal[1] > 1:
+        # Si el 1 de enero no está en semana 1, ajustar
+        dias_hasta_lunes_semana1 += 7
+
+    lunes_semana1 = primer_dia + timedelta(days=dias_hasta_lunes_semana1)
+
+    # Calcular lunes de la semana objetivo
+    lunes_objetivo = lunes_semana1 + timedelta(weeks=(semana - 1))
+    domingo_objetivo = lunes_objetivo + timedelta(days=6)
+
+    return lunes_objetivo, domingo_objetivo
+
+
 def get_period_dates(
     period_type: PeriodType,
     fecha_referencia: date | None = None

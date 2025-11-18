@@ -1519,6 +1519,82 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/analytics/top-changes-by-group": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Obtiene top eventos con mayor crecimiento/decrecimiento por grupo epidemiológico
+         * @description Endpoint optimizado para obtener top cambios por grupo epidemiológico.
+         *
+         *     Calcula los N eventos con mayor crecimiento y decrecimiento para cada grupo,
+         *     comparando el período actual vs el período anterior equivalente.
+         *
+         *     Ejemplo:
+         *     - semana_actual=40, anio_actual=2025, num_semanas=4
+         *     - Período actual: semanas 37-40 del 2025
+         *     - Período anterior: semanas 33-36 del 2025
+         */
+        get: operations["get_top_changes_by_group_api_v1_analytics_top_changes_by_group_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analytics/calculate-changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Calcula cambios para eventos custom seleccionados manualmente
+         * @description Calcula cambios para eventos custom seleccionados por el usuario.
+         *
+         *     La categoría (crecimiento/decrecimiento) se determina automáticamente
+         *     basándose en el cambio porcentual.
+         */
+        post: operations["calculate_changes_api_v1_analytics_calculate_changes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analytics/evento-details/{tipo_eno_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Obtiene detalles completos de un evento (para dialog)
+         * @description Obtiene detalles completos de un evento específico para mostrar en el dialog.
+         *
+         *     Incluye:
+         *     - Información del tipo de evento y su grupo
+         *     - Resumen de cambio (casos actuales vs anteriores)
+         *     - Serie temporal semanal con ambos períodos
+         */
+        get: operations["get_evento_details_api_v1_analytics_evento_details__tipo_eno_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/boletines/templates": {
         parameters: {
             query?: never;
@@ -1634,6 +1710,66 @@ export interface paths {
          * @description Eliminar una instancia.
          */
         delete: operations["delete_boletin_instance_api_v1_boletines_instances__instance_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/boletines/instances/{instance_id}/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Actualizar contenido de instancia
+         * @description Actualizar el contenido HTML de una instancia de boletín.
+         */
+        put: operations["update_boletin_instance_content_api_v1_boletines_instances__instance_id__content_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/boletines/instances/{instance_id}/export-pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generar y descargar PDF de instancia
+         * @description Generar PDF de una instancia de boletín y retornarlo como descarga.
+         */
+        post: operations["generate_boletin_instance_pdf_api_v1_boletines_instances__instance_id__export_pdf_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/boletines/generate-draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generar borrador de boletín automático basado en analytics
+         * @description Genera un boletín epidemiológico automático usando datos de analytics y snippets
+         */
+        post: operations["generate_draft_boletin_api_v1_boletines_generate_draft_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2106,17 +2242,19 @@ export interface components {
             /** Id */
             id: number;
             /** Template Id */
-            template_id: number;
+            template_id: number | null;
             /** Name */
             name: string;
             /** Parameters */
             parameters: {
                 [key: string]: unknown;
             };
+            /** Content */
+            content: string | null;
             /** Pdf Path */
             pdf_path: string | null;
-            /** Pdf Size Bytes */
-            pdf_size_bytes: number | null;
+            /** Pdf Size */
+            pdf_size: number | null;
             /** Status */
             status: string;
             /** Error Message */
@@ -2130,6 +2268,32 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /**
+         * BoletinMetadata
+         * @description Metadatos del boletín generado
+         */
+        BoletinMetadata: {
+            /**
+             * Periodo Analisis
+             * @description Información del período analizado
+             */
+            periodo_analisis: {
+                [key: string]: unknown;
+            };
+            /**
+             * Eventos Incluidos
+             * @description Eventos incluidos con sus datos
+             */
+            eventos_incluidos: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Fecha Generacion
+             * Format: date-time
+             * @description Fecha de generación del borrador
+             */
+            fecha_generacion: string;
         };
         /**
          * BoletinTemplateCreate
@@ -2252,6 +2416,44 @@ export interface components {
             page: number;
             /** Page Size */
             page_size: number;
+        };
+        /**
+         * CalculateChangesRequest
+         * @description Request para calcular cambios de eventos custom
+         */
+        CalculateChangesRequest: {
+            /**
+             * Tipo Eno Ids
+             * @description IDs de eventos a calcular
+             */
+            tipo_eno_ids: number[];
+            /**
+             * Semana Actual
+             * @description Semana epidemiológica actual
+             */
+            semana_actual: number;
+            /**
+             * Anio Actual
+             * @description Año epidemiológico actual
+             */
+            anio_actual: number;
+            /**
+             * Num Semanas
+             * @description Número de semanas hacia atrás
+             * @default 4
+             */
+            num_semanas: number;
+        };
+        /**
+         * CalculateChangesResponse
+         * @description Response de cambios calculados para eventos custom
+         */
+        CalculateChangesResponse: {
+            /**
+             * Eventos
+             * @description Eventos con sus cambios calculados
+             */
+            eventos: components["schemas"]["EventoCambioConCategoria"][];
         };
         /**
          * CasoDetalle
@@ -3689,6 +3891,123 @@ export interface components {
             metadata_extractors?: components["schemas"]["FilterConditionRequest"][] | null;
         };
         /**
+         * EventoCambio
+         * @description Evento con su cambio entre dos períodos
+         */
+        EventoCambio: {
+            /**
+             * Tipo Eno Id
+             * @description ID del tipo de evento
+             */
+            tipo_eno_id: number;
+            /**
+             * Tipo Eno Nombre
+             * @description Nombre del evento
+             */
+            tipo_eno_nombre: string;
+            /**
+             * Grupo Eno Id
+             * @description ID del grupo epidemiológico
+             */
+            grupo_eno_id: number;
+            /**
+             * Grupo Eno Nombre
+             * @description Nombre del grupo
+             */
+            grupo_eno_nombre: string;
+            /**
+             * Casos Actuales
+             * @description Casos en período actual
+             */
+            casos_actuales: number;
+            /**
+             * Casos Anteriores
+             * @description Casos en período anterior
+             */
+            casos_anteriores: number;
+            /**
+             * Diferencia Absoluta
+             * @description Diferencia absoluta de casos
+             */
+            diferencia_absoluta: number;
+            /**
+             * Diferencia Porcentual
+             * @description % de cambio
+             */
+            diferencia_porcentual: number;
+            /**
+             * Tasa Incidencia Actual
+             * @description Tasa por 100k habitantes en período actual
+             */
+            tasa_incidencia_actual?: number | null;
+            /**
+             * Tasa Incidencia Anterior
+             * @description Tasa por 100k habitantes en período anterior
+             */
+            tasa_incidencia_anterior?: number | null;
+        };
+        /**
+         * EventoCambioConCategoria
+         * @description Evento con cambio y su categoría automática
+         */
+        EventoCambioConCategoria: {
+            /**
+             * Tipo Eno Id
+             * @description ID del tipo de evento
+             */
+            tipo_eno_id: number;
+            /**
+             * Tipo Eno Nombre
+             * @description Nombre del evento
+             */
+            tipo_eno_nombre: string;
+            /**
+             * Grupo Eno Id
+             * @description ID del grupo epidemiológico
+             */
+            grupo_eno_id: number;
+            /**
+             * Grupo Eno Nombre
+             * @description Nombre del grupo
+             */
+            grupo_eno_nombre: string;
+            /**
+             * Casos Actuales
+             * @description Casos en período actual
+             */
+            casos_actuales: number;
+            /**
+             * Casos Anteriores
+             * @description Casos en período anterior
+             */
+            casos_anteriores: number;
+            /**
+             * Diferencia Absoluta
+             * @description Diferencia absoluta de casos
+             */
+            diferencia_absoluta: number;
+            /**
+             * Diferencia Porcentual
+             * @description % de cambio
+             */
+            diferencia_porcentual: number;
+            /**
+             * Tasa Incidencia Actual
+             * @description Tasa por 100k habitantes en período actual
+             */
+            tasa_incidencia_actual?: number | null;
+            /**
+             * Tasa Incidencia Anterior
+             * @description Tasa por 100k habitantes en período anterior
+             */
+            tasa_incidencia_anterior?: number | null;
+            /**
+             * Categoria
+             * @description Categoría: 'crecimiento' o 'decrecimiento'
+             */
+            categoria: string;
+        };
+        /**
          * EventoCompleto
          * @description Evento completo con toda su información
          */
@@ -4035,6 +4354,23 @@ export interface components {
             total_investigaciones: number;
         };
         /**
+         * EventoDetailsResponse
+         * @description Response con detalles completos de un evento para el dialog
+         */
+        EventoDetailsResponse: {
+            /** @description Información del tipo de evento */
+            tipo_eno: components["schemas"]["TipoEnoBasic"];
+            /** @description Información del grupo epidemiológico */
+            grupo_eno: components["schemas"]["GrupoEnoBasic"];
+            /** @description Resumen del cambio */
+            resumen: components["schemas"]["ResumenEvento"];
+            /**
+             * Trend Semanal
+             * @description Serie temporal por semana
+             */
+            trend_semanal: components["schemas"]["TrendSemanal"][];
+        };
+        /**
          * EventoListItem
          * @description Item individual en la lista de eventos
          */
@@ -4175,6 +4511,28 @@ export interface components {
             filters_applied: {
                 [key: string]: unknown;
             };
+        };
+        /**
+         * EventoSeleccionado
+         * @description Evento seleccionado para incluir en el boletín
+         */
+        EventoSeleccionado: {
+            /**
+             * Tipo Eno Id
+             * @description ID del tipo de evento
+             */
+            tipo_eno_id: number;
+            /**
+             * Incluir Charts
+             * @description Incluir charts del evento
+             * @default true
+             */
+            incluir_charts: boolean;
+            /**
+             * Snippets Custom
+             * @description Códigos de snippets custom adicionales
+             */
+            snippets_custom?: string[] | null;
         };
         /**
          * EventoSortBy
@@ -4360,6 +4718,56 @@ export interface components {
             updated_at?: string | null;
         };
         /**
+         * GenerateDraftRequest
+         * @description Request para generar borrador de boletín automático
+         */
+        GenerateDraftRequest: {
+            /**
+             * Semana
+             * @description Semana epidemiológica
+             */
+            semana: number;
+            /**
+             * Anio
+             * @description Año epidemiológico
+             */
+            anio: number;
+            /**
+             * Num Semanas
+             * @description Número de semanas de análisis
+             * @default 4
+             */
+            num_semanas: number;
+            /**
+             * Eventos Seleccionados
+             * @description Eventos a incluir en el boletín
+             */
+            eventos_seleccionados: components["schemas"]["EventoSeleccionado"][];
+            /**
+             * Titulo Custom
+             * @description Título personalizado (opcional)
+             */
+            titulo_custom?: string | null;
+        };
+        /**
+         * GenerateDraftResponse
+         * @description Response al generar borrador de boletín
+         */
+        GenerateDraftResponse: {
+            /**
+             * Boletin Instance Id
+             * @description ID de la instancia de boletín creada
+             */
+            boletin_instance_id: number;
+            /**
+             * Content
+             * @description Contenido HTML generado (TipTap compatible)
+             */
+            content: string;
+            /** @description Metadatos del boletín */
+            metadata: components["schemas"]["BoletinMetadata"];
+        };
+        /**
          * GenericDataConfig
          * @description Configuración de datos genérica para otros widgets
          */
@@ -4448,6 +4856,18 @@ export interface components {
             demografico?: {
                 [key: string]: unknown;
             } | null;
+        };
+        /**
+         * GrupoEnoBasic
+         * @description Información básica de un grupo epidemiológico
+         */
+        GrupoEnoBasic: {
+            /** Id */
+            id: number;
+            /** Nombre */
+            nombre: string;
+            /** Descripcion */
+            descripcion?: string | null;
         };
         /** GrupoEnoInfo */
         GrupoEnoInfo: {
@@ -5274,6 +5694,39 @@ export interface components {
          */
         PeriodType: "ultima_semana_epi" | "ultimas_4_semanas_epi" | "ultimas_12_semanas_epi" | "mes_hasta_fecha" | "mes_pasado" | "ultimos_3_meses" | "trimestre_actual" | "trimestre_pasado" | "ultimos_6_meses" | "anio_hasta_fecha" | "anio_pasado" | "personalizado";
         /**
+         * PeriodoAnalisis
+         * @description Información de un período de análisis epidemiológico
+         */
+        PeriodoAnalisis: {
+            /**
+             * Semana Inicio
+             * @description Semana epidemiológica de inicio
+             */
+            semana_inicio: number;
+            /**
+             * Semana Fin
+             * @description Semana epidemiológica de fin
+             */
+            semana_fin: number;
+            /**
+             * Anio
+             * @description Año epidemiológico
+             */
+            anio: number;
+            /**
+             * Fecha Inicio
+             * Format: date
+             * @description Fecha de inicio del período
+             */
+            fecha_inicio: string;
+            /**
+             * Fecha Fin
+             * Format: date
+             * @description Fecha de fin del período
+             */
+            fecha_fin: string;
+        };
+        /**
          * PersonaDetailResponse
          * @description Respuesta detallada de una persona (PERSON-CENTERED)
          */
@@ -5807,6 +6260,32 @@ export interface components {
             format: string;
         };
         /**
+         * ResumenEvento
+         * @description Resumen del evento para el dialog de detalles
+         */
+        ResumenEvento: {
+            /**
+             * Casos Actuales
+             * @description Casos en período actual
+             */
+            casos_actuales: number;
+            /**
+             * Casos Anteriores
+             * @description Casos en período anterior
+             */
+            casos_anteriores: number;
+            /**
+             * Diferencia Porcentual
+             * @description % de cambio
+             */
+            diferencia_porcentual: number;
+            /**
+             * Diferencia Absoluta
+             * @description Cambio absoluto
+             */
+            diferencia_absoluta: number;
+        };
+        /**
          * SessionInfo
          * @description Session information response
          */
@@ -5959,6 +6438,18 @@ export interface components {
         SuccessResponse_BuscarIGNResponse_: {
             /** @description Datos de la respuesta */
             data: components["schemas"]["BuscarIGNResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[CalculateChangesResponse] */
+        SuccessResponse_CalculateChangesResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["CalculateChangesResponse"];
             /**
              * Meta
              * @description Metadata opcional (paginación, etc)
@@ -6123,6 +6614,18 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /** SuccessResponse[EventoDetailsResponse] */
+        SuccessResponse_EventoDetailsResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["EventoDetailsResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
         /** SuccessResponse[EventoListResponse] */
         SuccessResponse_EventoListResponse_: {
             /** @description Datos de la respuesta */
@@ -6139,6 +6642,18 @@ export interface components {
         SuccessResponse_EventoTimelineResponse_: {
             /** @description Datos de la respuesta */
             data: components["schemas"]["EventoTimelineResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[GenerateDraftResponse] */
+        SuccessResponse_GenerateDraftResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["GenerateDraftResponse"];
             /**
              * Meta
              * @description Metadata opcional (paginación, etc)
@@ -6280,6 +6795,18 @@ export interface components {
         SuccessResponse_StrategyTestResponse_: {
             /** @description Datos de la respuesta */
             data: components["schemas"]["StrategyTestResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[TopChangesByGroupResponse] */
+        SuccessResponse_TopChangesByGroupResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["TopChangesByGroupResponse"];
             /**
              * Meta
              * @description Metadata opcional (paginación, etc)
@@ -6472,6 +6999,18 @@ export interface components {
          * @enum {string}
          */
         TipoClasificacion: "CONFIRMADOS" | "SOSPECHOSOS" | "PROBABLES" | "EN_ESTUDIO" | "NEGATIVOS" | "DESCARTADOS" | "NOTIFICADOS" | "CON_RESULTADO_MORTAL" | "SIN_RESULTADO_MORTAL" | "REQUIERE_REVISION";
+        /**
+         * TipoEnoBasic
+         * @description Información básica de un tipo de evento
+         */
+        TipoEnoBasic: {
+            /** Id */
+            id: number;
+            /** Nombre */
+            nombre: string;
+            /** Codigo */
+            codigo?: string | null;
+        };
         /** TipoEnoInfo */
         TipoEnoInfo: {
             /**
@@ -6553,6 +7092,26 @@ export interface components {
             role: components["schemas"]["UserRole"];
         };
         /**
+         * TopChangesByGroupResponse
+         * @description Response de top cambios GLOBALES (sin agrupar por grupo)
+         */
+        TopChangesByGroupResponse: {
+            /** @description Período actual analizado */
+            periodo_actual: components["schemas"]["PeriodoAnalisis"];
+            /** @description Período de comparación */
+            periodo_anterior: components["schemas"]["PeriodoAnalisis"];
+            /**
+             * Top Crecimiento
+             * @description Top 10 eventos con mayor crecimiento
+             */
+            top_crecimiento: components["schemas"]["EventoCambio"][];
+            /**
+             * Top Decrecimiento
+             * @description Top 10 eventos con mayor decrecimiento
+             */
+            top_decrecimiento: components["schemas"]["EventoCambio"][];
+        };
+        /**
          * TopWinnerLoser
          * @description Item en lista de top winners/losers
          */
@@ -6612,6 +7171,32 @@ export interface components {
             periodo_comparacion: components["schemas"]["PeriodInfo"];
         };
         /**
+         * TrendSemanal
+         * @description Punto en la serie temporal semanal
+         */
+        TrendSemanal: {
+            /**
+             * Semana
+             * @description Semana epidemiológica
+             */
+            semana: number;
+            /**
+             * Anio
+             * @description Año epidemiológico
+             */
+            anio: number;
+            /**
+             * Casos
+             * @description Número de casos
+             */
+            casos: number;
+            /**
+             * Periodo
+             * @description 'actual' o 'anterior'
+             */
+            periodo: string;
+        };
+        /**
          * UniversalChartSpec
          * @description Especificación universal de chart
          *     Puede ser usada tanto por frontend como backend
@@ -6663,6 +7248,14 @@ export interface components {
             filters?: components["schemas"]["ChartFilters"] | null;
             /** Generated At */
             generated_at?: string | null;
+        };
+        /**
+         * UpdateInstanceContentRequest
+         * @description Request para actualizar el contenido HTML de una instancia
+         */
+        UpdateInstanceContentRequest: {
+            /** Content */
+            content: string;
         };
         /**
          * UserChangePassword
@@ -10214,6 +10807,170 @@ export interface operations {
             };
         };
     };
+    get_top_changes_by_group_api_v1_analytics_top_changes_by_group_get: {
+        parameters: {
+            query: {
+                /** @description Semana epidemiológica actual */
+                semana_actual: number;
+                /** @description Año epidemiológico actual */
+                anio_actual: number;
+                /** @description Número de semanas hacia atrás */
+                num_semanas?: number;
+                /** @description Top N eventos por grupo */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_TopChangesByGroupResponse_"];
+                };
+            };
+            /** @description Parámetros inválidos */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno del servidor */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    calculate_changes_api_v1_analytics_calculate_changes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CalculateChangesRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_CalculateChangesResponse_"];
+                };
+            };
+            /** @description Parámetros inválidos */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno del servidor */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_evento_details_api_v1_analytics_evento_details__tipo_eno_id__get: {
+        parameters: {
+            query: {
+                /** @description Semana epidemiológica actual */
+                semana_actual: number;
+                /** @description Año epidemiológico actual */
+                anio_actual: number;
+                /** @description Número de semanas hacia atrás */
+                num_semanas?: number;
+            };
+            header?: never;
+            path: {
+                /** @description ID del tipo de evento */
+                tipo_eno_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_EventoDetailsResponse_"];
+                };
+            };
+            /** @description Evento no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno del servidor */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_boletin_templates_api_v1_boletines_templates_get: {
         parameters: {
             query?: {
@@ -10736,6 +11493,186 @@ export interface operations {
             };
             /** @description Instancia no encontrada */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_boletin_instance_content_api_v1_boletines_instances__instance_id__content_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                instance_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateInstanceContentRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_BoletinInstanceResponse_"];
+                };
+            };
+            /** @description Sin permisos */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Instancia no encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    generate_boletin_instance_pdf_api_v1_boletines_instances__instance_id__export_pdf_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                instance_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Sin contenido para generar */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Sin permisos */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Instancia no encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error generando PDF */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    generate_draft_boletin_api_v1_boletines_generate_draft_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GenerateDraftRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_GenerateDraftResponse_"];
+                };
+            };
+            /** @description Datos inválidos */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
