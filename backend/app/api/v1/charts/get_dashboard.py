@@ -1,10 +1,11 @@
 """
 Get dashboard charts endpoint
+MIGRADO 100% a UniversalChartSpec con datos REALES
 """
 
 import logging
 from datetime import date
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from fastapi import Depends, Query
 from pydantic import BaseModel, Field
@@ -17,28 +18,30 @@ from app.core.security import RequireAuthOrSignedUrl
 from app.domains.autenticacion.models import User
 from app.features.dashboard.conditions import ChartConditionResolver
 from app.features.dashboard.models import DashboardChart
-from app.features.dashboard.processors import ChartDataProcessor
+from app.schemas.chart_spec import ChartFilters, UniversalChartSpec
+from app.services.chart_spec_generator import ChartSpecGenerator
 
 logger = logging.getLogger(__name__)
 
 
-class ChartDataItem(BaseModel):
-    """Modelo para un chart individual del dashboard"""
-
-    codigo: str = Field(..., description="Código único del chart")
-    nombre: str = Field(..., description="Nombre del chart")
-    descripcion: Optional[str] = Field(None, description="Descripción del chart")
-    tipo: str = Field(..., description="Tipo de visualización")
-    data: Any = Field(..., description="Datos del chart")
-    config: Dict[str, Any] = Field(default_factory=dict, description="Configuración adicional del chart")
-
-
 class DashboardChartsResponse(BaseModel):
-    """Response model para charts del dashboard"""
+    """Response model para charts del dashboard usando UniversalChartSpec"""
 
-    charts: List[ChartDataItem] = Field(..., description="Lista de charts con sus datos")
+    charts: List[UniversalChartSpec] = Field(..., description="Lista de charts como UniversalChartSpec")
     total: int = Field(..., description="Total de charts aplicables")
-    filtros_aplicados: Dict[str, Any] = Field(..., description="Filtros que se aplicaron")
+    filtros_aplicados: ChartFilters = Field(..., description="Filtros que se aplicaron")
+
+
+# Mapeo de códigos de BD a códigos del generador
+CHART_CODE_MAPPING = {
+    "curva_epidemiologica": "casos_por_semana",
+    "corredor_endemico": "corredor_endemico",
+    "piramide_poblacional": "piramide_edad",
+    "mapa_geografico": "mapa_chubut",
+    "estacionalidad": "estacionalidad",
+    "casos_edad": "casos_edad",
+    "distribucion_clasificacion": "distribucion_clasificacion",
+}
 
 
 async def get_dashboard_charts(
@@ -52,16 +55,27 @@ async def get_dashboard_charts(
     current_user: Optional[User] = RequireAuthOrSignedUrl
 ) -> SuccessResponse[DashboardChartsResponse]:
     """
-    Obtiene los charts aplicables y sus datos según los filtros
+    Obtiene los charts aplicables como UniversalChartSpec con datos REALES
 
-    Simple:
-    1. Busca qué charts aplican según las condiciones
-    2. Procesa los datos de cada chart
-    3. Devuelve todo listo para renderizar
+    Flujo:
+    1. Busca qué charts aplican según las condiciones en BD
+    2. Convierte filtros a ChartFilters
+    3. Usa ChartSpecGenerator para generar specs con datos REALES
+    4. Devuelve UniversalChartSpec listo para renderizar
     """
 
-    # Preparar filtros (convertir fechas a string para el procesador)
-    filtros = {
+    # Convertir filtros a ChartFilters
+    filters = ChartFilters(
+        grupo_eno_ids=[grupo_id] if grupo_id else None,
+        tipo_eno_ids=tipo_eno_ids,
+        clasificacion=clasificaciones,
+        provincia_id=[provincia_id] if provincia_id else None,
+        fecha_desde=fecha_desde.isoformat() if fecha_desde else None,
+        fecha_hasta=fecha_hasta.isoformat() if fecha_hasta else None,
+    )
+
+    # Preparar filtros para condition resolver (formato viejo)
+    filtros_dict = {
         "grupo_id": grupo_id,
         "tipo_eno_ids": tipo_eno_ids,
         "fecha_desde": fecha_desde.isoformat() if fecha_desde else None,
@@ -70,52 +84,60 @@ async def get_dashboard_charts(
         "provincia_id": provincia_id
     }
 
-    # Obtener charts aplicables
+    # Obtener charts aplicables desde BD
     query = select(DashboardChart).where(DashboardChart.activo == True).order_by(DashboardChart.orden)
     result = await db.execute(query)
     all_charts = result.scalars().all()
 
-    # Resolver condiciones usando códigos estables
+    # Resolver condiciones
     condition_resolver = ChartConditionResolver(db)
-    charts_config = await condition_resolver.get_applicable_charts(filtros, all_charts)
+    charts_config = await condition_resolver.get_applicable_charts(filtros_dict, all_charts)
 
     logger.info(f"Charts totales: {len(all_charts)}, Charts aplicables: {len(charts_config)}")
-    if len(charts_config) == 0:
-        logger.warning(f"No hay charts aplicables para filtros: {filtros}")
 
-    # Procesar cada chart aplicable
-    processor = ChartDataProcessor(db)
-    charts_data = []
+    # Generar specs con datos REALES usando ChartSpecGenerator
+    generator = ChartSpecGenerator(db)
+    charts_specs = []
 
     for chart_config in charts_config:
-
-        # Procesar datos del chart
         try:
-            logger.debug(f"Procesando chart {chart_config.codigo}")
-            chart_data = await processor.process_chart(chart_config, filtros)
+            # Mapear código de BD a código del generador
+            chart_code = CHART_CODE_MAPPING.get(chart_config.funcion_procesamiento)
 
-            charts_data.append(
-                ChartDataItem(
-                    codigo=chart_config.codigo,
-                    nombre=chart_config.nombre,
-                    descripcion=chart_config.descripcion,
-                    tipo=chart_config.tipo_visualizacion,
-                    data=chart_data,
-                    config=chart_config.configuracion_chart or {}
-                )
+            if not chart_code:
+                logger.warning(f"No hay mapeo para {chart_config.funcion_procesamiento}, saltando...")
+                continue
+
+            logger.debug(f"Generando spec para {chart_code}")
+
+            # Generar spec con datos REALES
+            spec = await generator.generate_spec(
+                chart_code=chart_code,
+                filters=filters,
+                config={"height": 400}
             )
+
+            # Actualizar título si viene de BD
+            if chart_config.nombre:
+                spec.title = chart_config.nombre
+
+            # Actualizar descripción si viene de BD
+            if chart_config.descripcion:
+                spec.description = chart_config.descripcion
+
+            charts_specs.append(spec)
+
         except Exception as e:
-            # Log error pero continuar con otros charts
-            logger.error(f"Error procesando chart {chart_config.codigo}: {e}")
-            logger.error(f"Error tipo: {type(e).__name__}")
+            logger.error(f"Error generando spec para {chart_config.codigo}: {e}")
             import traceback
             logger.error(f"Traceback: {traceback.format_exc()}")
-            continue
+            # Re-raise la excepción para que falle de forma visible
+            raise
 
     response = DashboardChartsResponse(
-        charts=charts_data,
-        total=len(charts_data),
-        filtros_aplicados=filtros
+        charts=charts_specs,
+        total=len(charts_specs),
+        filtros_aplicados=filters
     )
 
     return SuccessResponse(data=response)

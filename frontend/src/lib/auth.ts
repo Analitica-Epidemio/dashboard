@@ -93,13 +93,48 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       // Initial sign in
       if (user) {
         token.accessToken = user.accessToken;
         token.refreshToken = user.refreshToken;
         token.role = user.role;
         token.accessTokenExpires = user.accessTokenExpires;
+        token.lastValidated = Date.now();
+      }
+
+      // Validate token against backend every 5 minutes (even if not expired)
+      // This ensures deleted/disabled users are logged out promptly
+      const shouldValidate = trigger === 'update' ||
+        !token.lastValidated ||
+        Date.now() - (token.lastValidated as number) > 5 * 60 * 1000;
+
+      if (shouldValidate && token.accessToken) {
+        try {
+          // Call /auth/me to validate the token is still valid
+          // NOTE: Can't use apiClient here as it would create circular dependency
+          const response = await fetch(`${env.NEXT_PUBLIC_API_HOST}/api/v1/auth/me`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token.accessToken}`,
+              'Content-Type': 'application/json',
+            },
+            cache: 'no-store',
+          });
+
+          if (!response.ok) {
+            // Token is invalid (user deleted, disabled, or token revoked)
+            console.log('🔒 Token validation failed, forcing re-login');
+            return { ...token, error: 'TokenValidationFailed' };
+          }
+
+          // Update last validation timestamp
+          token.lastValidated = Date.now();
+          console.log('✅ Token validated successfully');
+        } catch (error) {
+          console.error('❌ Error validating token:', error);
+          return { ...token, error: 'TokenValidationError' };
+        }
       }
 
       // Return previous token if the access token has not expired yet

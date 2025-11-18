@@ -3,6 +3,9 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,10 +26,9 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
-  // TODO: Implement proper login with NextAuth
-  const login = (data: LoginFormData) => console.log('Login:', data);
-  const isLoggingIn = false;
-  const loginError: string | null = null;
+  const router = useRouter();
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -43,8 +45,30 @@ export default function LoginPage() {
     formState: { errors, isValid },
   } = form;
 
-  const onSubmit = handleSubmit((data) => {
-    login(data);
+  const onSubmit = handleSubmit(async (data) => {
+    setIsLoggingIn(true);
+    setLoginError(null);
+
+    try {
+      const result = await signIn("credentials", {
+        email: data.email,
+        password: data.password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setLoginError("Email o contraseña incorrectos");
+      } else if (result?.ok) {
+        // Redirect to dashboard on success
+        router.push("/");
+        router.refresh();
+      }
+    } catch (error) {
+      console.error("Login failed:", error);
+      setLoginError("Error al iniciar sesión. Por favor intenta nuevamente.");
+    } finally {
+      setIsLoggingIn(false);
+    }
   });
 
   return (

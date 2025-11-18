@@ -1,8 +1,10 @@
 """
-Get charts disponibles endpoint
+Get available charts endpoint
+Retorna lista de charts disponibles desde BD para selector de boletines
 """
 
-from typing import Any, Dict, List, Optional
+import logging
+from typing import List
 
 from fastapi import Depends
 from pydantic import BaseModel, Field
@@ -11,59 +13,57 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
-from app.core.security import RequireAnyRole
+from app.core.security import RequireAuthOrSignedUrl
 from app.domains.autenticacion.models import User
 from app.features.dashboard.models import DashboardChart
 
+logger = logging.getLogger(__name__)
+
 
 class ChartDisponibleItem(BaseModel):
-    """Modelo para un chart disponible en el catálogo"""
-
-    id: int = Field(..., description="ID del chart")
-    codigo: str = Field(..., description="Código único del chart")
-    nombre: str = Field(..., description="Nombre del chart")
-    descripcion: Optional[str] = Field(None, description="Descripción del chart")
-    tipo_visualizacion: str = Field(..., description="Tipo de visualización")
-    condiciones: Optional[Dict[str, Any]] = Field(None, description="Condiciones de aplicación")
+    """Chart disponible para insertar en boletines"""
+    id: int
+    codigo: str
+    nombre: str
+    descripcion: str | None = None
+    tipo_visualizacion: str
+    funcion_procesamiento: str
 
 
 class ChartsDisponiblesResponse(BaseModel):
-    """Response model para charts disponibles"""
-
-    charts: List[ChartDisponibleItem] = Field(..., description="Lista de charts disponibles")
-    total: int = Field(..., description="Total de charts disponibles")
+    """Response con lista de charts disponibles"""
+    charts: List[ChartDisponibleItem]
+    total: int
 
 
 async def get_charts_disponibles(
     db: AsyncSession = Depends(get_async_session),
-    current_user: User = Depends(RequireAnyRole())
+    current_user: User | None = RequireAuthOrSignedUrl
 ) -> SuccessResponse[ChartsDisponiblesResponse]:
     """
-    Lista todos los charts disponibles sin procesar datos
-    Útil para configuración y preview
+    Obtiene lista de charts disponibles desde BD
+    Usado por el selector de charts en el editor de boletines
     """
-    query = select(DashboardChart).where(
-        DashboardChart.activo == True
-    ).order_by(DashboardChart.orden)
-
+    # Obtener charts activos de la BD
+    query = select(DashboardChart).where(DashboardChart.activo == True).order_by(DashboardChart.orden)
     result = await db.execute(query)
     charts = result.scalars().all()
 
-    charts_list = [
+    charts_items = [
         ChartDisponibleItem(
             id=chart.id,
             codigo=chart.codigo,
             nombre=chart.nombre,
             descripcion=chart.descripcion,
             tipo_visualizacion=chart.tipo_visualizacion,
-            condiciones=chart.condiciones_display
+            funcion_procesamiento=chart.funcion_procesamiento,
         )
         for chart in charts
     ]
 
     response = ChartsDisponiblesResponse(
-        charts=charts_list,
-        total=len(charts_list)
+        charts=charts_items,
+        total=len(charts_items)
     )
 
     return SuccessResponse(data=response)

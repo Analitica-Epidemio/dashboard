@@ -26,30 +26,26 @@ fetchClient.use({
       request.headers.set('Authorization', `Bearer ${session.accessToken}`);
     }
 
-    // Log for debugging
-    if (typeof window !== 'undefined') {
+    // Log for debugging (only in development)
+    if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
       console.log('API Request:', request.url);
-      console.log('Session:', session);
+      console.log('Has session:', !!session);
       console.log('Has token:', !!session?.accessToken);
-      if (session?.accessToken) {
-        console.log('Token (first 20 chars):', session.accessToken.substring(0, 20) + '...');
-      }
-      console.log('Headers:', Object.fromEntries(request.headers.entries()));
     }
 
     return request;
   },
 
   async onResponse({ response }) {
-    // Log for debugging
-    if (typeof window !== 'undefined') {
+    // Log for debugging (only in development)
+    if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
       console.log('API Response:', response.url, 'Status:', response.status);
     }
 
     // Handle 401 - redirect to login
     if (response.status === 401) {
       if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-        // Clear session and redirect
+        // Redirect to login page (NextAuth will handle session cleanup)
         window.location.href = '/login';
       }
     }

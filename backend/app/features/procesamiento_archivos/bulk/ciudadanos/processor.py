@@ -85,6 +85,38 @@ class CiudadanosProcessor(BulkProcessorBase):
         if ciudadanos_prepared.height == 0:
             return BulkOperationResult(0, 0, 0, [], 0.0)
 
+        # DEBUG: Reporte de sexos encontrados (ambas columnas)
+        sexo_stats_query = (
+            df.select([
+                pl.col(Columns.SEXO.name).alias("sexo_original"),
+                pl_map_sexo(Columns.SEXO.name).alias("sexo_mapeado"),
+            ])
+            .group_by(["sexo_original", "sexo_mapeado"])
+            .agg(pl.count().alias("count"))
+            .sort("count", descending=True)
+        )
+        sexo_stats = sexo_stats_query.collect() if hasattr(sexo_stats_query, 'collect') else sexo_stats_query
+
+        sexo_al_nacer_stats_query = (
+            df.select([
+                pl.col(Columns.SEXO_AL_NACER.name).alias("sexo_al_nacer_original"),
+                pl_map_sexo(Columns.SEXO_AL_NACER.name).alias("sexo_al_nacer_mapeado"),
+            ])
+            .group_by(["sexo_al_nacer_original", "sexo_al_nacer_mapeado"])
+            .agg(pl.count().alias("count"))
+            .sort("count", descending=True)
+        )
+        sexo_al_nacer_stats = sexo_al_nacer_stats_query.collect() if hasattr(sexo_al_nacer_stats_query, 'collect') else sexo_al_nacer_stats_query
+
+        self.logger.info("📊 REPORTE DE SEXOS EN CSV:")
+        self.logger.info(f"   Total de registros únicos de ciudadanos: {ciudadanos_prepared.height}")
+        self.logger.info("   --- Columna SEXO ---")
+        for row in sexo_stats.to_dicts():
+            self.logger.info(f"   '{row['sexo_original']}' -> '{row['sexo_mapeado']}': {row['count']} registros")
+        self.logger.info("   --- Columna SEXO_AL_NACER ---")
+        for row in sexo_al_nacer_stats.to_dicts():
+            self.logger.info(f"   '{row['sexo_al_nacer_original']}' -> '{row['sexo_al_nacer_mapeado']}': {row['count']} registros")
+
         # Convertir a dicts para SQL insert (única conversión necesaria)
         ciudadanos_data = ciudadanos_prepared.to_dicts()
 
@@ -107,6 +139,16 @@ class CiudadanosProcessor(BulkProcessorBase):
         )
 
         self.context.session.execute(upsert_stmt)
+
+        # DEBUG: Reporte de sexos insertados en la BD
+        sexo_inserted_stats = {}
+        for record in ciudadanos_data:
+            sexo = record.get("sexo_biologico") or record.get("sexo_biologico_al_nacer") or "NULL"
+            sexo_inserted_stats[sexo] = sexo_inserted_stats.get(sexo, 0) + 1
+
+        self.logger.info("✅ REPORTE DE SEXOS INSERTADOS EN BD:")
+        for sexo, count in sorted(sexo_inserted_stats.items(), key=lambda x: x[1], reverse=True):
+            self.logger.info(f"   {sexo}: {count} registros")
 
         duration = (self._get_current_timestamp() - start_time).total_seconds()
 

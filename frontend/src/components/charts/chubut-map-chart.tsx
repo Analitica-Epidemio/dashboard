@@ -25,8 +25,6 @@ export const ChubutMapChart: React.FC<ChubutMapChartProps> = ({ data }) => {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const svgRef = useRef<HTMLDivElement>(null);
 
-  console.log("ChubutMapChart", data);
-
   // Crear mapa de datos por SVG ID
   const dataByDeptId = React.useMemo(() => {
     const map = new Map<string, DepartmentData>();

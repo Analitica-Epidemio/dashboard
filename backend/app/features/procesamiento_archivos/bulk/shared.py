@@ -161,17 +161,31 @@ def pl_map_sexo(col_name: str) -> pl.Expr:
     """
     Expresión Polars para mapear sexo a enum.
 
-    Mapea: M -> MASCULINO, F -> FEMENINO, X -> OTRO
+    Mapea:
+    - M / MASCULINO -> MASCULINO
+    - F / FEMENINO -> FEMENINO
+    - X / NO_ESPECIFICADO -> NO_ESPECIFICADO
 
     Usage:
         df.select(pl_map_sexo("sexo").alias("sexo_biologico"))
     """
+    col_upper = pl.col(col_name).str.to_uppercase().str.strip_chars()
+
     return (
-        pl.when(pl.col(col_name).str.to_uppercase().str.strip_chars() == "M")
+        pl.when(
+            (col_upper == "M") |
+            (col_upper == "MASCULINO")
+        )
         .then(pl.lit(SexoBiologico.MASCULINO.value))
-        .when(pl.col(col_name).str.to_uppercase().str.strip_chars() == "F")
+        .when(
+            (col_upper == "F") |
+            (col_upper == "FEMENINO")
+        )
         .then(pl.lit(SexoBiologico.FEMENINO.value))
-        .when(pl.col(col_name).str.to_uppercase().str.strip_chars() == "X")
+        .when(
+            (col_upper == "X") |
+            (col_upper == "NO_ESPECIFICADO")
+        )
         .then(pl.lit(SexoBiologico.NO_ESPECIFICADO.value))
         .otherwise(None)
     )

@@ -14,6 +14,11 @@ from app.features.procesamiento_archivos.utils.epidemiological_calculations impo
     obtener_fechas_semana_epidemiologica,
     generar_metadata_semanas
 )
+from app.features.dashboard.age_groups_config import (
+    get_age_groups_config,
+    generate_sql_case_when,
+    get_age_group_labels,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -526,30 +531,23 @@ class ChartDataProcessor:
                     {
                         "label": "Máximo (P75)",
                         "data": percentiles['maximo'].tolist(),
-                        "borderColor": "red",
-                        "backgroundColor": "rgba(255, 0, 0, 0.1)",
-                        "fill": "+1"
+                        "color": "rgba(255, 0, 0, 0.8)",
                     },
                     {
                         "label": "Mediana (P50)",
                         "data": percentiles['mediana'].tolist(),
-                        "borderColor": "orange",
-                        "backgroundColor": "rgba(255, 165, 0, 0.1)",
-                        "fill": False
+                        "color": "rgba(255, 165, 0, 0.8)",
                     },
                     {
                         "label": "Mínimo (P25)",
                         "data": percentiles['minimo'].tolist(),
-                        "borderColor": "green",
-                        "backgroundColor": "rgba(0, 255, 0, 0.1)",
-                        "fill": False
+                        "color": "rgba(0, 255, 0, 0.8)",
                     },
                     {
                         "label": "Casos actuales",
                         "data": casos_actuales,
-                        "borderColor": "blue",
+                        "color": "rgba(59, 130, 246, 1)",  # Blue-500 sólido
                         "type": "line",
-                        "fill": False
                     }
                 ],
                 "metadata": metadata
@@ -559,27 +557,25 @@ class ChartDataProcessor:
     async def process_piramide_poblacional(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
         """
         Procesa datos para pirámide poblacional - Solo Chubut
+        Usa configuración flexible de grupos etarios desde age_groups_config.py
+
+        Parámetros de filtros opcionales:
+            - age_group_config: str = "standard" | "pediatric" | "simple" | "decennial"
         """
+        # Obtener configuración de grupos etarios
+        age_group_config_name = filtros.get("age_group_config", "standard")
+        age_groups_config = get_age_groups_config(age_group_config_name)
+        age_group_labels = get_age_group_labels(age_groups_config)
+
+        # Generar CASE WHEN dinámico basado en la configuración
+        case_when_sql = generate_sql_case_when(age_groups_config)
+
         # Query para obtener distribución por edad y sexo
-        query = """
+        # Usa sexo_biologico_al_nacer si existe, sino sexo_biologico
+        query = f"""
         SELECT
-            CASE
-                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 5 THEN '0-4'
-                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 10 THEN '5-9'
-                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 15 THEN '10-14'
-                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 20 THEN '15-19'
-                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 25 THEN '20-24'
-                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 30 THEN '25-29'
-                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 35 THEN '30-34'
-                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 40 THEN '35-39'
-                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 45 THEN '40-44'
-                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 50 THEN '45-49'
-                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 55 THEN '50-54'
-                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 60 THEN '55-59'
-                WHEN EXTRACT(YEAR FROM AGE(e.fecha_minima_evento, e.fecha_nacimiento)) < 65 THEN '60-64'
-                ELSE '65+'
-            END as grupo_edad,
-            COALESCE(c.sexo_biologico, 'NO_ESPECIFICADO') as sexo,
+            {case_when_sql} as grupo_edad,
+            COALESCE(c.sexo_biologico, c.sexo_biologico_al_nacer, 'NO_ESPECIFICADO') as sexo,
             COUNT(*) as casos
         FROM evento e
         LEFT JOIN ciudadano c ON e.codigo_ciudadano = c.codigo_ciudadano
@@ -626,53 +622,59 @@ class ChartDataProcessor:
         result = await self.db.execute(text(query), params)
         rows = result.fetchall()
         
-        logger.info(f"Pirámide poblacional - Filas encontradas: {len(rows)}")
+        logger.info(f"🔍 Pirámide poblacional ({age_group_config_name}) - Filas encontradas: {len(rows)}")
         if rows and len(rows) > 0:
-            logger.info(f"Pirámide poblacional - Primeras 5 filas: {rows[:5]}")
-            logger.info(f"Pirámide poblacional - Valores de sexo encontrados: {set([row[1] for row in rows])}")
-        
-        # Procesar para formato de pirámide
-        age_groups = ["0-4", "5-9", "10-14", "15-19", "20-24", "25-29", "30-34", 
-                     "35-39", "40-44", "45-49", "50-54", "55-59", "60-64", "65+"]
-        
-        male_data = {g: 0 for g in age_groups}
-        female_data = {g: 0 for g in age_groups}
-        
+            logger.info(f"📊 Pirámide poblacional - Primeras 5 filas: {rows[:5]}")
+            logger.info(f"👥 Pirámide poblacional - Valores de sexo encontrados: {set([row[1] for row in rows])}")
+
+        # Procesar para formato de pirámide usando los labels de la configuración
+        male_data = {g: 0 for g in age_group_labels}
+        female_data = {g: 0 for g in age_group_labels}
+
         for row in rows:
             grupo_edad, sexo, casos = row
-            if sexo in ['MASCULINO', 'M']:
-                male_data[grupo_edad] = -casos  # Negativos para el lado izquierdo
-            elif sexo in ['FEMENINO', 'F']:
-                female_data[grupo_edad] = casos
-        
+
+            # Ignorar grupo "Desconocido" si existe
+            if grupo_edad == "Desconocido":
+                continue
+
+            # Solo procesar datos con sexo especificado
+            if sexo == 'MASCULINO':
+                if grupo_edad in male_data:
+                    male_data[grupo_edad] = casos
+            elif sexo == 'FEMENINO':
+                if grupo_edad in female_data:
+                    female_data[grupo_edad] = casos
+            # Ignorar casos con sexo NO_ESPECIFICADO - no crear datos falsos
+
         # Preparar datos para D3.js - formato de pirámide poblacional
         # Incluir todos los grupos de edad, incluso con 0 casos
         pyramid_data = []
-        for age_group in age_groups:
-            male_count = abs(male_data[age_group])  # Convertir negativos a positivos
+        for age_group in age_group_labels:
+            male_count = male_data[age_group]
             female_count = female_data[age_group]
-            
-            # Siempre agregar entrada para masculino
+
+            # Agregar entrada para masculino y femenino
             pyramid_data.append({
-                "age": age_group,
-                "sex": "M",
-                "value": male_count
+                "age_group": age_group,
+                "male": male_count,
+                "female": female_count,
             })
-            
-            # Siempre agregar entrada para femenino
-            pyramid_data.append({
-                "age": age_group,
-                "sex": "F", 
-                "value": female_count
-            })
-        
+
+        total_male = sum(male_data.values())
+        total_female = sum(female_data.values())
+
+        logger.info(f"✅ Pirámide poblacional - Total M: {total_male}, F: {total_female}")
+
         return {
             "type": "d3_pyramid",
             "data": pyramid_data,
             "metadata": {
-                "age_groups": age_groups,
-                "total_male": sum(abs(male_data[g]) for g in age_groups),
-                "total_female": sum(female_data[g] for g in age_groups)
+                "age_groups": age_group_labels,
+                "age_group_config": age_group_config_name,
+                "total_male": total_male,
+                "total_female": total_female,
+                "total_casos": total_male + total_female,
             }
         }
 
@@ -842,26 +844,13 @@ class ChartDataProcessor:
             if 1 <= mes <= 12:
                 casos_por_mes[mes] = row[1]
 
-        if not rows:
-            return {
-                "type": "bar",
-                "data": {
-                    "labels": meses_nombres,
-                    "datasets": [{
-                        "label": "Casos por mes",
-                        "data": [0] * 12,
-                        "backgroundColor": "rgba(54, 162, 235, 0.5)"
-                    }]
-                }
-            }
-
+        # Formato nuevo: BaseChartData compatible
         return {
-            "type": "bar",
             "data": {
                 "labels": meses_nombres,
                 "datasets": [{
-                    "label": "Casos por mes",
-                    "data": [casos_por_mes[i] for i in range(1, 13)],
+                    "label": "Casos",
+                    "data": [int(casos_por_mes[i]) for i in range(1, 13)],
                     "backgroundColor": "rgba(54, 162, 235, 0.5)"
                 }]
             }
@@ -935,27 +924,17 @@ class ChartDataProcessor:
         logger.info(f"Casos por edad - Filas encontradas: {len(rows)}")
         if rows and len(rows) > 0:
             logger.info(f"Casos por edad - Grupos: {rows}")
-        
-        if not rows:
-            return {
-                "type": "bar",
-                "data": {
-                    "labels": [],
-                    "datasets": [{
-                        "label": "Casos por edad",
-                        "data": [],
-                        "backgroundColor": "rgba(153, 102, 255, 0.5)"
-                    }]
-                }
-            }
-        
+
+        # Formato nuevo: BaseChartData compatible
+        labels = [str(row[0]) for row in rows] if rows else []
+        data_values = [int(row[1]) for row in rows] if rows else []
+
         return {
-            "type": "bar",
             "data": {
-                "labels": [row[0] for row in rows],
+                "labels": labels,
                 "datasets": [{
-                    "label": "Casos por edad",
-                    "data": [row[1] for row in rows],
+                    "label": "Casos",
+                    "data": data_values,
                     "backgroundColor": "rgba(153, 102, 255, 0.5)"
                 }]
             }
@@ -1246,18 +1225,6 @@ class ChartDataProcessor:
         if rows and len(rows) > 0:
             logger.info(f"Distribución clasificación - Datos: {rows}")
 
-        if not rows:
-            return {
-                "type": "pie",
-                "data": {
-                    "labels": ["Sin datos"],
-                    "datasets": [{
-                        "data": [1],
-                        "backgroundColor": ["rgba(200, 200, 200, 0.5)"]
-                    }]
-                }
-            }
-
         # Mapeo de colores por clasificación
         color_map = {
             "CONFIRMADOS": "rgba(76, 175, 80, 0.7)",      # Verde
@@ -1275,7 +1242,7 @@ class ChartDataProcessor:
 
         # Preparar datos con colores apropiados
         labels = []
-        data = []
+        data_values = []
         colors = []
 
         for row in rows:
@@ -1285,29 +1252,17 @@ class ChartDataProcessor:
             # Formatear label para mostrar
             label_formateado = clasificacion.replace("_", " ").title()
             labels.append(label_formateado)
-            data.append(casos)
+            data_values.append(casos)
             colors.append(color_map.get(clasificacion, "rgba(158, 158, 158, 0.7)"))
 
-        total_casos = sum(data)
-
+        # Formato nuevo: BaseChartData compatible
         return {
-            "type": "pie",
             "data": {
                 "labels": labels,
                 "datasets": [{
-                    "data": data,
+                    "label": "Casos",
+                    "data": [int(v) for v in data_values],
                     "backgroundColor": colors
                 }]
-            },
-            "metadata": {
-                "total_casos": total_casos,
-                "proporciones": [
-                    {
-                        "clasificacion": labels[i],
-                        "casos": data[i],
-                        "porcentaje": round((data[i] / total_casos) * 100, 2) if total_casos > 0 else 0
-                    }
-                    for i in range(len(labels))
-                ]
             }
         }

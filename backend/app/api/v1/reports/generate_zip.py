@@ -35,8 +35,9 @@ async def generate_zip_report(
         if not request.combinations:
             raise HTTPException(status_code=400, detail="No combinations provided")
 
-        # Generate ZIP with PDFs in parallel
+        # Generate ZIP with PDFs in parallel (SERVER-SIDE)
         zip_content = await zip_generator.generate_zip_report(
+            db=db,
             combinations=[
                 {
                     'id': combo.id,

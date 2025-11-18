@@ -10,6 +10,7 @@ import React from "react";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { SessionValidator } from "@/components/auth/session-validator";
 
 interface EpidemiologyLayoutProps {
   children: React.ReactNode;
@@ -31,8 +32,16 @@ export default async function EpidemiologyLayout({
     redirect('/login');
   }
 
+  // Si la sesión tiene error (usuario eliminado, token inválido), redirigir
+  if (session.error) {
+    redirect('/login');
+  }
+
   return (
     <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
+      {/* Validador de sesión en tiempo real (client-side) */}
+      <SessionValidator />
+
       {/* Contenido principal con altura completa */}
       <div className="flex-1 overflow-hidden">{children}</div>
     </div>

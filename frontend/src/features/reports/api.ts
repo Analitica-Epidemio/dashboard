@@ -7,7 +7,8 @@
  * @module features/reports/api
  */
 
-import { $api } from '@/lib/api/client';
+import { $api, apiClient } from '@/lib/api/client';
+import { useMutation } from '@tanstack/react-query';
 import type { components } from '@/lib/api/types';
 
 // ============================================================================
@@ -185,21 +186,33 @@ export function useReportPreview(
  * ```tsx
  * const generatePdf = useGenerateReport();
  * await generatePdf.mutateAsync({
- *   body: {
- *     date_range: { start: '2024-01-01', end: '2024-12-31' },
- *     combinations: [...]
- *   }
+ *   date_range: { start: '2024-01-01', end: '2024-12-31' },
+ *   combinations: [...]
  * });
  * ```
  */
 export function useGenerateReport() {
-  return $api.useMutation('post', '/api/v1/reports/generate', {
-    onSuccess: (data) => {
-      // Auto-download the PDF if it's a blob
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if ((data as any)?.data instanceof Blob) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const url = URL.createObjectURL((data as any).data);
+  return useMutation({
+    mutationFn: async (request: {
+      date_range: Record<string, string>;
+      combinations: Array<Record<string, unknown>>;
+      format?: string;
+    }) => {
+      const response = await apiClient.POST('/api/v1/reports/generate', {
+        body: request as any,
+        parseAs: 'blob', // Importante: parsear como blob, no JSON
+      });
+
+      if (response.error) {
+        throw new Error('Error al generar el reporte PDF');
+      }
+
+      return response.data;
+    },
+    onSuccess: (blob) => {
+      // Auto-download the PDF
+      if (blob instanceof Blob) {
+        const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
         link.download = `reporte_epidemiologico_${new Date().toISOString().slice(0, 10)}.pdf`;
@@ -224,24 +237,36 @@ export function useGenerateReport() {
  * ```tsx
  * const generateZip = useGenerateZipReport();
  * await generateZip.mutateAsync({
- *   body: {
- *     date_range: { start: '2024-01-01', end: '2024-12-31' },
- *     combinations: [...]
- *   }
+ *   date_range: { start: '2024-01-01', end: '2024-12-31' },
+ *   combinations: [...]
  * });
  * ```
  */
 export function useGenerateZipReport() {
-  return $api.useMutation('post', '/api/v1/reports/generate-zip', {
-    onSuccess: (data) => {
-      // Auto-download the ZIP if it's a blob
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if ((data as any)?.data instanceof Blob) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const url = URL.createObjectURL((data as any).data);
+  return useMutation({
+    mutationFn: async (request: {
+      date_range: Record<string, string>;
+      combinations: Array<Record<string, unknown>>;
+      format?: string;
+    }) => {
+      const response = await apiClient.POST('/api/v1/reports/generate-zip', {
+        body: request as any,
+        parseAs: 'blob', // Importante: parsear como blob, no JSON
+      });
+
+      if (response.error) {
+        throw new Error('Error al generar el reporte ZIP');
+      }
+
+      return response.data;
+    },
+    onSuccess: (blob) => {
+      // Auto-download the ZIP
+      if (blob instanceof Blob) {
+        const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `reporte_epidemiologico_${new Date().toISOString().slice(0, 10)}.zip`;
+        link.download = `reportes_epidemiologicos_${new Date().toISOString().slice(0, 10)}.zip`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);

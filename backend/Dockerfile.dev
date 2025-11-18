@@ -8,6 +8,13 @@ RUN apt-get update && apt-get install -y \
     libpq5 \
     libmagic1 \
     curl \
+    # Build tools para compilar pycairo (requerido por svglib) \
+    gcc \
+    pkg-config \
+    libcairo2-dev \
+    # Fuentes modernas para charts profesionales \
+    fonts-roboto \
+    fontconfig \
     # Dependencias para Playwright\
     wget \
     ca-certificates \
@@ -33,6 +40,9 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
+# Actualizar cache de fuentes
+RUN fc-cache -f -v
+
 # Instalar uv para gestión rápida de dependencias
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
@@ -45,9 +55,6 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
-# Playwright configuration
-ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
-ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=0
 
 # Copiar SOLO archivos de dependencias primero (para aprovechar caché de Docker)
 # Esto significa que las dependencias solo se reinstalan si pyproject.toml o uv.lock cambian
@@ -68,9 +75,6 @@ COPY . .
 
 # Instalar el proyecto en modo editable ahora que tenemos el código completo
 RUN uv sync --frozen
-
-# Instalar Playwright browsers
-RUN uv run playwright install chromium --with-deps
 
 # Crear directorios necesarios
 RUN mkdir -p /app/uploads /app/logs
