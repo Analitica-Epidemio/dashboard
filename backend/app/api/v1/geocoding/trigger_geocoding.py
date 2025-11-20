@@ -3,12 +3,12 @@ Endpoint para triggear geocodificación manual.
 """
 
 import logging
-from typing import Any, Dict
 
 from fastapi import Depends, HTTPException
 from sqlalchemy import select
 from sqlmodel import Session, func
 
+from app.api.v1.geocoding.schemas import TriggerGeocodingResponse
 from app.core.config import settings
 from app.core.database import get_session
 from app.core.security import RequireAnyRole
@@ -22,7 +22,7 @@ async def trigger_geocoding(
     batch_size: int = 500,
     current_user: User = Depends(RequireAnyRole()),
     session: Session = Depends(get_session),
-) -> Dict[str, Any]:
+) -> TriggerGeocodingResponse:
     """
     Triggea manualmente la geocodificación de domicilios pendientes.
 
@@ -34,33 +34,33 @@ async def trigger_geocoding(
     Returns:
         Estadísticas y task_id de la tarea encolada
     """
-    if not settings.ENABLE_GEOCODING:
-        raise HTTPException(
-            status_code=400,
-            detail="Geocodificación deshabilitada. Configura ENABLE_GEOCODING=true en .env",
-        )
-
     # Contar domicilios pendientes
     logger.info("🔍 [DEBUG] Iniciando conteo de domicilios pendientes...")
     stmt = select(func.count(Domicilio.id)).where(
-        Domicilio.estado_geocodificacion.in_([
-            EstadoGeocodificacion.PENDIENTE,
-            EstadoGeocodificacion.EN_COLA,
-            EstadoGeocodificacion.FALLO_TEMPORAL,
-        ])
+        Domicilio.estado_geocodificacion.in_(
+            [
+                EstadoGeocodificacion.PENDIENTE,
+                EstadoGeocodificacion.EN_COLA,
+                EstadoGeocodificacion.FALLO_TEMPORAL,
+            ]
+        )
     )
     pending_count_result = session.exec(stmt).one()
-    logger.info(f"🔍 [DEBUG] Resultado de query (tipo: {type(pending_count_result).__name__}): {pending_count_result}")
+    logger.info(
+        f"🔍 [DEBUG] Resultado de query (tipo: {type(pending_count_result).__name__}): {pending_count_result}"
+    )
 
     pending_count = pending_count_result[0]  # Extraer el valor del Row
-    logger.info(f"🔍 [DEBUG] Valor extraído (tipo: {type(pending_count).__name__}): {pending_count}")
+    logger.info(
+        f"🔍 [DEBUG] Valor extraído (tipo: {type(pending_count).__name__}): {pending_count}"
+    )
 
     if pending_count == 0:
-        return {
-            "message": "No hay domicilios pendientes de geocodificar",
-            "pending_count": 0,
-            "task_id": None,
-        }
+        return TriggerGeocodingResponse(
+            message="No hay domicilios pendientes de geocodificar",
+            pending_count=0,
+            task_id=None,
+        )
 
     # Encolar tarea de geocodificación
     from app.features.geocoding.tasks import geocode_pending_domicilios
@@ -75,13 +75,13 @@ async def trigger_geocoding(
             f"{pending_count} domicilios pendientes (task_id: {task_result.id})"
         )
 
-        return {
-            "message": f"Geocodificación iniciada para {pending_count} domicilios",
-            "pending_count": pending_count,
-            "task_id": task_result.id,
-            "batch_size": batch_size,
-            "estimated_batches": (pending_count + batch_size - 1) // batch_size,
-        }
+        return TriggerGeocodingResponse(
+            message=f"Geocodificación iniciada para {pending_count} domicilios",
+            pending_count=pending_count,
+            task_id=task_result.id,
+            batch_size=batch_size,
+            estimated_batches=(pending_count + batch_size - 1) // batch_size,
+        )
 
     except Exception as e:
         logger.error(f"Error triggeando geocodificación: {e}")

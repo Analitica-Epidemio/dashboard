@@ -61,15 +61,6 @@ def geocode_pending_domicilios(self, batch_size: int = 500, max_attempts: int = 
     Returns:
         Dict con estadísticas del procesamiento
     """
-    if not settings.ENABLE_GEOCODING:
-        logger.info("Geocodificación deshabilitada en settings")
-        return {
-            "processed": 0,
-            "geocoded": 0,
-            "failed": 0,
-            "status": "disabled",
-        }
-
     start_time = datetime.now()
     geocoded_count = 0
     failed_count = 0
@@ -80,11 +71,13 @@ def geocode_pending_domicilios(self, batch_size: int = 500, max_attempts: int = 
         stmt = (
             select(Domicilio)
             .where(
-                Domicilio.estado_geocodificacion.in_([
-                    EstadoGeocodificacion.PENDIENTE,
-                    EstadoGeocodificacion.EN_COLA,
-                    EstadoGeocodificacion.FALLO_TEMPORAL,
-                ])
+                Domicilio.estado_geocodificacion.in_(
+                    [
+                        EstadoGeocodificacion.PENDIENTE,
+                        EstadoGeocodificacion.EN_COLA,
+                        EstadoGeocodificacion.FALLO_TEMPORAL,
+                    ]
+                )
             )
             .where(Domicilio.intentos_geocodificacion < max_attempts)
             .limit(batch_size)
@@ -102,9 +95,11 @@ def geocode_pending_domicilios(self, batch_size: int = 500, max_attempts: int = 
                 "status": "no_pending",
             }
 
-        logger.info("="*70)
-        logger.info(f"🗺️  GEOCODIFICACIÓN EN PARALELO - Batch de {len(domicilios)} domicilios")
-        logger.info("="*70)
+        logger.info("=" * 70)
+        logger.info(
+            f"🗺️  GEOCODIFICACIÓN EN PARALELO - Batch de {len(domicilios)} domicilios"
+        )
+        logger.info("=" * 70)
 
         # Inicializar servicio de geocodificación
         geocoding_service = SyncGeocodingService(session)
@@ -113,7 +108,9 @@ def geocode_pending_domicilios(self, batch_size: int = 500, max_attempts: int = 
             # Marcar todos como DESHABILITADO si no hay adapter configurado
             for domicilio in domicilios:
                 domicilio.estado_geocodificacion = EstadoGeocodificacion.DESHABILITADO
-                domicilio.ultimo_error_geocodificacion = "Geocodificación deshabilitada - no hay API key configurada"
+                domicilio.ultimo_error_geocodificacion = (
+                    "Geocodificación deshabilitada - no hay API key configurada"
+                )
             session.commit()
 
             return {
@@ -142,16 +139,22 @@ def geocode_pending_domicilios(self, batch_size: int = 500, max_attempts: int = 
 
                 # Verificar si tiene datos suficientes
                 if not domicilio.calle and not domicilio.numero:
-                    domicilio.estado_geocodificacion = EstadoGeocodificacion.NO_GEOCODIFICABLE
-                    domicilio.ultimo_error_geocodificacion = "Dirección incompleta: sin calle ni número"
+                    domicilio.estado_geocodificacion = (
+                        EstadoGeocodificacion.NO_GEOCODIFICABLE
+                    )
+                    domicilio.ultimo_error_geocodificacion = (
+                        "Dirección incompleta: sin calle ni número"
+                    )
                     return "no_geocodificable"
 
                 try:
                     # Resolver nombres geográficos si es necesario
                     localidad_nombre, provincia_nombre = None, None
                     if domicilio.id_localidad_indec:
-                        localidad_nombre, provincia_nombre = geocoding_service._resolve_geographic_names(
-                            domicilio.id_localidad_indec
+                        localidad_nombre, provincia_nombre = (
+                            geocoding_service._resolve_geographic_names(
+                                domicilio.id_localidad_indec
+                            )
                         )
 
                     # Geocodificar usando adapter async directamente
@@ -167,8 +170,12 @@ def geocode_pending_domicilios(self, batch_size: int = 500, max_attempts: int = 
                         # Éxito!
                         domicilio.latitud = result.latitud
                         domicilio.longitud = result.longitud
-                        domicilio.estado_geocodificacion = EstadoGeocodificacion.GEOCODIFICADO
-                        domicilio.proveedor_geocoding = settings.GEOCODING_PROVIDER  # Usar provider de settings
+                        domicilio.estado_geocodificacion = (
+                            EstadoGeocodificacion.GEOCODIFICADO
+                        )
+                        domicilio.proveedor_geocoding = (
+                            settings.GEOCODING_PROVIDER
+                        )  # Usar provider de settings
                         domicilio.confidence_geocoding = result.confidence
                         domicilio.ultimo_error_geocodificacion = None
                         logger.debug(f"✅ Geocodificado: {domicilio.id}")
@@ -176,11 +183,17 @@ def geocode_pending_domicilios(self, batch_size: int = 500, max_attempts: int = 
                     else:
                         # No se encontraron resultados
                         if domicilio.intentos_geocodificacion >= max_attempts:
-                            domicilio.estado_geocodificacion = EstadoGeocodificacion.FALLO_PERMANENTE
+                            domicilio.estado_geocodificacion = (
+                                EstadoGeocodificacion.FALLO_PERMANENTE
+                            )
                             domicilio.ultimo_error_geocodificacion = "No se encontraron resultados después de múltiples intentos"
                         else:
-                            domicilio.estado_geocodificacion = EstadoGeocodificacion.FALLO_TEMPORAL
-                            domicilio.ultimo_error_geocodificacion = "No se encontraron resultados - reintentando más tarde"
+                            domicilio.estado_geocodificacion = (
+                                EstadoGeocodificacion.FALLO_TEMPORAL
+                            )
+                            domicilio.ultimo_error_geocodificacion = (
+                                "No se encontraron resultados - reintentando más tarde"
+                            )
                         return "failed"
 
                 except Exception as e:
@@ -188,9 +201,13 @@ def geocode_pending_domicilios(self, batch_size: int = 500, max_attempts: int = 
 
                     # Marcar como fallo
                     if domicilio.intentos_geocodificacion >= max_attempts:
-                        domicilio.estado_geocodificacion = EstadoGeocodificacion.FALLO_PERMANENTE
+                        domicilio.estado_geocodificacion = (
+                            EstadoGeocodificacion.FALLO_PERMANENTE
+                        )
                     else:
-                        domicilio.estado_geocodificacion = EstadoGeocodificacion.FALLO_TEMPORAL
+                        domicilio.estado_geocodificacion = (
+                            EstadoGeocodificacion.FALLO_TEMPORAL
+                        )
 
                     domicilio.ultimo_error_geocodificacion = str(e)[:500]
                     return "error"
@@ -198,12 +215,13 @@ def geocode_pending_domicilios(self, batch_size: int = 500, max_attempts: int = 
             # 🚀 Procesar en chunks con rate limiting para evitar 429 errors
             all_results = []
             for i in range(0, len(domicilios_list), CONCURRENT_LIMIT):
-                chunk = domicilios_list[i:i + CONCURRENT_LIMIT]
-                logger.info(f"   📍 Procesando chunk {i//CONCURRENT_LIMIT + 1}/{(len(domicilios_list) + CONCURRENT_LIMIT - 1)//CONCURRENT_LIMIT} ({len(chunk)} domicilios)")
+                chunk = domicilios_list[i : i + CONCURRENT_LIMIT]
+                logger.info(
+                    f"   📍 Procesando chunk {i//CONCURRENT_LIMIT + 1}/{(len(domicilios_list) + CONCURRENT_LIMIT - 1)//CONCURRENT_LIMIT} ({len(chunk)} domicilios)"
+                )
 
                 chunk_results = await asyncio.gather(
-                    *[geocode_one(d) for d in chunk],
-                    return_exceptions=False
+                    *[geocode_one(d) for d in chunk], return_exceptions=False
                 )
                 all_results.extend(chunk_results)
 
@@ -237,15 +255,17 @@ def geocode_pending_domicilios(self, batch_size: int = 500, max_attempts: int = 
         "status": "completed",
     }
 
-    logger.info("="*70)
+    logger.info("=" * 70)
     logger.info("✅ GEOCODIFICACIÓN BATCH COMPLETADO")
-    logger.info("="*70)
-    logger.info(f"   ✅ Geocodificados exitosamente: {geocoded_count}/{len(domicilios)}")
+    logger.info("=" * 70)
+    logger.info(
+        f"   ✅ Geocodificados exitosamente: {geocoded_count}/{len(domicilios)}"
+    )
     logger.info(f"   ❌ Fallos: {failed_count}")
     logger.info(f"   ⚠️  No geocodificables: {no_geocodificable_count}")
     logger.info(f"   ⏱️  Tiempo total: {elapsed:.2f}s")
     logger.info(f"   ⚡ Velocidad: {len(domicilios)/elapsed:.1f} domicilios/segundo")
-    logger.info("="*70)
+    logger.info("=" * 70)
 
     # Si quedan más domicilios pendientes, encolar otro batch
     # (con un pequeño delay para respetar rate limits)
@@ -253,18 +273,22 @@ def geocode_pending_domicilios(self, batch_size: int = 500, max_attempts: int = 
         remaining = session.exec(
             select(Domicilio)
             .where(
-                Domicilio.estado_geocodificacion.in_([
-                    EstadoGeocodificacion.PENDIENTE,
-                    EstadoGeocodificacion.EN_COLA,
-                    EstadoGeocodificacion.FALLO_TEMPORAL,
-                ])
+                Domicilio.estado_geocodificacion.in_(
+                    [
+                        EstadoGeocodificacion.PENDIENTE,
+                        EstadoGeocodificacion.EN_COLA,
+                        EstadoGeocodificacion.FALLO_TEMPORAL,
+                    ]
+                )
             )
             .where(Domicilio.intentos_geocodificacion < max_attempts)
             .limit(1)
         ).first()
 
         if remaining:
-            logger.info("🔄 Hay más domicilios pendientes - encolando siguiente batch...")
+            logger.info(
+                "🔄 Hay más domicilios pendientes - encolando siguiente batch..."
+            )
             logger.info(f"   ⏱️  Siguiente batch iniciará en 2 segundos (rate limiting)")
             # Encolar con delay de 2 segundos para rate limiting
             next_task = geocode_pending_domicilios.apply_async(
@@ -273,6 +297,8 @@ def geocode_pending_domicilios(self, batch_size: int = 500, max_attempts: int = 
             )
             logger.info(f"   ✅ Siguiente batch encolado (task_id: {next_task.id})")
         else:
-            logger.info("🎉 No quedan más domicilios pendientes - geocodificación completa")
+            logger.info(
+                "🎉 No quedan más domicilios pendientes - geocodificación completa"
+            )
 
     return result

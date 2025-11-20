@@ -46,6 +46,9 @@ class EventoListItem(BaseModel):
     id_evento_caso: int = Field(..., description="ID único del caso")
     tipo_eno_id: int = Field(..., description="ID del tipo ENO")
     tipo_eno_nombre: Optional[str] = Field(None, description="Nombre del tipo ENO")
+    id_domicilio: Optional[int] = Field(
+        None, description="ID del domicilio asociado al evento"
+    )
     fecha_minima_evento: Optional[date] = Field(None, description="Fecha del evento")
     fecha_inicio_sintomas: Optional[date] = Field(
         None, description="Fecha de inicio de síntomas"
@@ -484,6 +487,7 @@ async def list_eventos(
                     id_evento_caso=evento.id_evento_caso,
                     tipo_eno_id=evento.id_tipo_eno,
                     tipo_eno_nombre=evento.tipo_eno.nombre if evento.tipo_eno else None,
+                    id_domicilio=evento.id_domicilio,
                     fecha_minima_evento=evento.fecha_minima_evento,
                     fecha_inicio_sintomas=evento.fecha_inicio_sintomas,
                     clasificacion_estrategia=evento.clasificacion_estrategia,

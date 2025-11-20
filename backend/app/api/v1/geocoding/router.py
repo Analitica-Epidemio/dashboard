@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from app.core.schemas.response import ErrorResponse, SuccessResponse
 
 from .get_stats import get_geocoding_stats
+from .schemas import GeocodingStatsResponse, TriggerGeocodingResponse
 from .trigger_geocoding import trigger_geocoding
 
 router = APIRouter(prefix="/geocoding", tags=["Geocoding"])
@@ -16,6 +17,7 @@ router.add_api_route(
     "/trigger",
     trigger_geocoding,
     methods=["POST"],
+    response_model=TriggerGeocodingResponse,
     responses={
         200: {
             "description": "Geocodificación triggeada exitosamente",
@@ -30,6 +32,7 @@ router.add_api_route(
     "/stats",
     get_geocoding_stats,
     methods=["GET"],
+    response_model=GeocodingStatsResponse,
     responses={
         200: {
             "description": "Estadísticas de geocodificación",

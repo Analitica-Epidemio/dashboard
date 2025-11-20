@@ -5,6 +5,7 @@ Este endpoint devuelve domicilios individuales (no agregados) con sus coordenada
 permitiendo mostrar puntos exactos en el mapa.
 """
 
+import logging
 from datetime import date
 from typing import List, Optional
 
@@ -20,9 +21,13 @@ from app.domains.eventos_epidemiologicos.eventos.models import TipoEno
 from app.domains.territorio.geografia_models import (
     Departamento,
     Domicilio,
+    EstadoGeocodificacion,
     Localidad,
     Provincia,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 class DomicilioMapaItem(BaseModel):
@@ -55,6 +60,9 @@ class DomicilioMapaItem(BaseModel):
     )
     tipos_eventos: dict = Field(
         default_factory=dict, description="Conteo por tipo de evento"
+    )
+    primer_evento_fecha: Optional[date] = Field(
+        None, description="Fecha del primer evento registrado en el domicilio"
     )
 
 
@@ -98,6 +106,18 @@ async def get_domicilios_mapa(
     Útil para visualización de mapa de puntos coloreados por provincia.
     """
 
+    logger.debug(
+        "Obteniendo domicilios geocodificados para mapa | filtros provincia=%s depto=%s "
+        "localidad=%s grupo_eno=%s tipo_eno=%s fecha_hasta=%s limit=%s",
+        id_provincia_indec,
+        id_departamento_indec,
+        id_localidad_indec,
+        id_grupo_eno,
+        id_tipo_eno,
+        fecha_hasta,
+        limit,
+    )
+
     # Query principal: agrupar eventos por domicilio geocodificado
     query = (
         select(
@@ -113,6 +133,7 @@ async def get_domicilios_mapa(
             Provincia.id_provincia_indec,
             Provincia.nombre.label("provincia_nombre"),
             func.count(Evento.id).label("total_eventos"),
+            func.min(Evento.fecha_minima_evento).label("primer_evento_fecha"),
         )
         .select_from(Evento)
         .join(Domicilio, Evento.id_domicilio == Domicilio.id)
@@ -127,7 +148,7 @@ async def get_domicilios_mapa(
         # Solo domicilios geocodificados exitosamente
         .where(Domicilio.latitud.is_not(None))
         .where(Domicilio.longitud.is_not(None))
-        .where(Domicilio.estado_geocodificacion == "GEOCODIFICADO")
+        .where(Domicilio.estado_geocodificacion == EstadoGeocodificacion.GEOCODIFICADO)
     )
 
     # Aplicar filtros geográficos
@@ -173,6 +194,17 @@ async def get_domicilios_mapa(
     query = query.order_by(func.count(Evento.id).desc()).limit(limit)
 
     result = session.exec(query).all()
+
+    if not result:
+        logger.info(
+            "No se encontraron domicilios geocodificados con eventos usando los filtros dados"
+        )
+    else:
+        logger.debug(
+            "Query de domicilios mapa retornó %s domicilios y %s eventos totales (parcial)",
+            len(result),
+            sum(row.total_eventos for row in result),
+        )
 
     # Obtener tipos de evento por domicilio para todos los domicilios retornados
     domicilio_ids = [row.id for row in result]
@@ -244,6 +276,7 @@ async def get_domicilios_mapa(
                 localidad_nombre=row.localidad_nombre,
                 tipo_evento_predominante=tipo_predominante,
                 tipos_eventos=tipos_dict,
+                primer_evento_fecha=row.primer_evento_fecha,
             )
         )
 

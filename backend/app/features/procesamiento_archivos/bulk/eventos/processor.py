@@ -33,6 +33,7 @@ from ..shared import (
     pl_safe_int,
     pl_safe_date,
     pl_clean_string,
+    pl_clean_numero_domicilio,
 )
 
 
@@ -276,10 +277,11 @@ class EventosProcessor(BulkProcessorBase):
                 pl.col("localidad_residencia"),
                 pl.col("provincia_residencia"),
             ])
-            # Limpiar y validar
+            # Limpiar y normalizar claves para matchear con tabla domicilio
             .with_columns([
-                pl.col("calle_domicilio").cast(pl.Utf8).str.strip_chars(),
-                pl.col("numero_domicilio").cast(pl.Utf8).str.strip_chars(),
+                pl_clean_string("calle_domicilio").alias("calle_domicilio_clean"),
+                pl_clean_numero_domicilio("numero_domicilio").alias("numero_domicilio_clean"),
+                pl.col("id_localidad_indec").cast(pl.Int64, strict=False).alias("id_localidad_indec_int"),
             ])
             .collect()
         )
@@ -290,9 +292,9 @@ class EventosProcessor(BulkProcessorBase):
 
         for row_dict in domicilios_df.to_dicts():
             id_evento_caso = row_dict[Columns.IDEVENTOCASO.name]
-            calle = row_dict.get("calle_domicilio")
-            numero = row_dict.get("numero_domicilio")
-            id_localidad = row_dict.get("id_localidad_indec")
+            calle = row_dict.get("calle_domicilio_clean")
+            numero = row_dict.get("numero_domicilio_clean")
+            id_localidad = row_dict.get("id_localidad_indec_int")
 
             # Validar
             if not is_valid_street_name(calle) or not id_localidad:
@@ -322,7 +324,11 @@ class EventosProcessor(BulkProcessorBase):
 
         existing_domicilios = {}
         for dom_id, calle, numero, id_loc in self.context.session.execute(stmt).all():
-            key = (calle, numero, id_loc)
+            key = (
+                (calle.strip() if isinstance(calle, str) else calle),
+                (numero.strip() if isinstance(numero, str) else numero),
+                int(id_loc) if id_loc is not None else None,
+            )
             existing_domicilios[key] = dom_id
 
         # 4. Identificar nuevos domicilios a crear
@@ -364,7 +370,11 @@ class EventosProcessor(BulkProcessorBase):
 
             existing_domicilios = {}
             for dom_id, calle, numero, id_loc in self.context.session.execute(stmt).all():
-                key = (calle, numero, id_loc)
+                key = (
+                    (calle.strip() if isinstance(calle, str) else calle),
+                    (numero.strip() if isinstance(numero, str) else numero),
+                    int(id_loc) if id_loc is not None else None,
+                )
                 existing_domicilios[key] = dom_id
 
         # 6. Mapear id_evento_caso -> id_domicilio
@@ -374,6 +384,18 @@ class EventosProcessor(BulkProcessorBase):
                 result[id_evento_caso] = None
             else:
                 result[id_evento_caso] = existing_domicilios.get(domicilio_key)
+
+        if result:
+            matches = sum(1 for dom_id in result.values() if dom_id is not None)
+            self.logger.debug(
+                f"📍 Domicilios mapeados para eventos: {matches}/{len(result)} "
+                f"({len(domicilios_unicos)} domicilios únicos preprocesados)"
+            )
+            if matches == 0:
+                self.logger.warning(
+                    "⚠️  No se pudo mapear ningún domicilio a eventos. "
+                    "Verificar normalización de columnas CALLE/NUMERO/ID_LOCALIDAD en el CSV."
+                )
 
         return result
 

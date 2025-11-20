@@ -3,12 +3,12 @@ Endpoint para obtener estadísticas de geocodificación.
 """
 
 import logging
-from typing import Any, Dict
 
 from fastapi import Depends
 from sqlalchemy import select
 from sqlmodel import Session, func
 
+from app.api.v1.geocoding.schemas import GeocodingStatsResponse
 from app.core.database import get_session
 from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 async def get_geocoding_stats(
     current_user: User = Depends(RequireAnyRole()),
     session: Session = Depends(get_session),
-) -> Dict[str, Any]:
+) -> GeocodingStatsResponse:
     """
     Obtiene estadísticas de geocodificación de domicilios.
 
@@ -67,13 +67,13 @@ async def get_geocoding_stats(
     # Calcular porcentaje completado
     percentage_geocoded = (geocoded / total * 100) if total > 0 else 0
 
-    return {
-        "total_domicilios": total,
-        "geocoded": geocoded,
-        "pending": pending,
-        "processing": processing,
-        "failed": failed,
-        "not_geocodable": not_geocodable,
-        "percentage_geocoded": round(percentage_geocoded, 2),
-        "by_estado": stats_by_estado,
-    }
+    return GeocodingStatsResponse(
+        total_domicilios=total,
+        geocoded=geocoded,
+        pending=pending,
+        processing=processing,
+        failed=failed,
+        not_geocodable=not_geocodable,
+        percentage_geocoded=round(percentage_geocoded, 2),
+        by_estado=stats_by_estado,
+    )
