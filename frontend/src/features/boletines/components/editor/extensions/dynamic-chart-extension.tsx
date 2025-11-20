@@ -86,7 +86,7 @@ function DynamicChartComponent({ node, updateAttributes }: NodeViewProps) {
       hasData: !!data,
       hasSpec: !!chartSpec,
       dataStructure: data ? Object.keys(data) : [],
-      dataDataStructure: data?.data ? Object.keys(data.data) : [],
+      dataDataStructure: data?.spec?.data ? Object.keys(data.spec.data) : [],
     });
   }
 

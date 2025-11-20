@@ -1,22 +1,29 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import {
   Activity,
   Users,
   TrendingUp,
   MapPin,
-  Search,
-  Layers,
   AlertCircle,
   CheckCircle2,
-  Info
+  Info,
+  Search,
+  Pause,
+  Play,
+  RotateCcw,
 } from "lucide-react";
 import {
   Tooltip,
@@ -25,15 +32,55 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+export type TimelineMode = "day" | "week" | "month";
+
+export interface GrupoEventoResumen {
+  grupoId: string;
+  grupoNombre: string;
+  totalEventos: number;
+  tipos: { nombre: string; total: number }[];
+}
+
+interface TimelineSidebarProps {
+  available: boolean;
+  enabled: boolean;
+  loading: boolean;
+  playing: boolean;
+  currentStep: number;
+  totalSteps: number;
+  currentLabel?: string;
+  rangeLabel?: string;
+  mode: TimelineMode;
+  onModeChange: (mode: TimelineMode) => void;
+  onTogglePlay: () => void;
+  onStepChange: (value: number) => void;
+  onReset: () => void;
+  disabledMessage?: string;
+  speed: number;
+  onSpeedChange: (value: number) => void;
+  speedOptions: { label: string; value: number }[];
+}
+
 interface MapaSidebarProps {
   totalEventosGlobal: number;
   totalEventosMapeados: number;
   poblacionTotal: number;
   provinciasAfectadas: number;
   tasaIncidencia: number;
-  onNivelChange: (nivel: "departamento" | "localidad" | null) => void;
-  nivel: "departamento" | "localidad";
+  categorias: GrupoEventoResumen[];
+  grupoColorMap: Record<string, string>;
+  categoriasLoading?: boolean;
+  selectedGrupos: string[];
+  onToggleGrupo: (grupoId: string) => void;
+  onClearFiltros: () => void;
+  timeline: TimelineSidebarProps;
 }
+
+const TIMELINE_MODE_LABELS: Record<TimelineMode, string> = {
+  day: "Días",
+  week: "Semanas",
+  month: "Meses",
+};
 
 export function MapaSidebar({
   totalEventosGlobal,
@@ -41,325 +88,371 @@ export function MapaSidebar({
   poblacionTotal,
   provinciasAfectadas,
   tasaIncidencia,
-  onNivelChange,
-  nivel,
+  categorias,
+  grupoColorMap,
+  categoriasLoading = false,
+  selectedGrupos,
+  onToggleGrupo,
+  onClearFiltros,
+  timeline,
 }: MapaSidebarProps) {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [categoriaSearch, setCategoriaSearch] = useState("");
 
-  const formatNumber = (num: number): string => {
-    return num.toLocaleString('es-AR');
-  };
+  const formatNumber = (num: number): string => num.toLocaleString("es-AR");
 
   const formatCompact = (num: number): string => {
-    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+    if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
+    if (num >= 1_000) return `${(num / 1_000).toFixed(1)}K`;
     return num.toString();
   };
 
-  // Calcular domicilios no mapeados
-  const domiciliosNoMapeados = totalEventosGlobal - totalEventosMapeados;
-  const porcentajeCobertura = totalEventosGlobal > 0
-    ? ((totalEventosMapeados / totalEventosGlobal) * 100).toFixed(1)
-    : 0;
+  const domiciliosNoMapeados = Math.max(totalEventosGlobal - totalEventosMapeados, 0);
+  const porcentajeCobertura =
+    totalEventosGlobal > 0
+      ? ((totalEventosMapeados / totalEventosGlobal) * 100).toFixed(1)
+      : "0";
+
+  const poblacionText = poblacionTotal > 0 ? formatCompact(poblacionTotal) : "N/D";
+  const tasaText = tasaIncidencia > 0 ? tasaIncidencia.toFixed(1) : "N/D";
+
+  const filteredCategorias = useMemo(() => {
+    if (!categoriaSearch.trim()) return categorias;
+    const term = categoriaSearch.toLowerCase();
+    return categorias.filter(
+      (grupo) =>
+        grupo.grupoNombre.toLowerCase().includes(term) ||
+        grupo.tipos.some((tipo) => tipo.nombre.toLowerCase().includes(term))
+    );
+  }, [categorias, categoriaSearch]);
+
+  const timelineSliderMax = Math.max(timeline.totalSteps - 1, 0);
+  const timelineSliderValue = Math.min(
+    timeline.currentStep,
+    timelineSliderMax
+  );
 
   return (
     <div className="space-y-4">
-      {/* Métricas Principales - Diseño Limpio */}
-      <Card className="border-gray-200">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold text-gray-900">
-            Vigilancia Epidemiológica
-          </CardTitle>
-          <p className="text-xs text-gray-500 mt-1">
-            Datos actualizados en tiempo real
+      <section className="rounded-2xl border border-gray-200 bg-white/80 p-4 space-y-4">
+        <div>
+          <p className="text-sm font-semibold text-gray-900">
+            Vigilancia epidemiológica
           </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Total Eventos Registrados */}
-          <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <Activity className="h-4 w-4 text-blue-600" />
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex items-center gap-1">
-                          <p className="text-xs font-medium text-blue-700 uppercase tracking-wide">
-                            Total Registrado
-                          </p>
-                          <Info className="h-3 w-3 text-blue-500" />
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="max-w-xs text-xs">
-                          Total de domicilios epidemiológicos registrados en el sistema de vigilancia
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <p className="text-3xl font-bold text-blue-900">
-                  {formatNumber(totalEventosGlobal)}
-                </p>
-                <p className="text-xs text-blue-600 mt-1">casos en base de datos</p>
-              </div>
-            </div>
-          </div>
+          <p className="text-xs text-gray-500">
+            Métricas de los domicilios visibles
+          </p>
+        </div>
 
-          {/* Calidad de Datos - CRÍTICO */}
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <MapPin className="h-4 w-4 text-gray-600" />
-              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                Cobertura Geográfica
-              </p>
-            </div>
-
-            {/* Mapeados */}
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                <span className="text-sm text-gray-700">Mapeados</span>
-              </div>
-              <div className="text-right">
-                <p className="text-lg font-bold text-emerald-600">
-                  {formatNumber(totalEventosMapeados)}
-                </p>
-                <Badge variant="secondary" className="text-xs">
-                  {porcentajeCobertura}%
-                </Badge>
-              </div>
-            </div>
-
-            {/* No Mapeados - Mostrar solo si hay */}
-            {domiciliosNoMapeados > 0 && (
-              <>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4 text-amber-600" />
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="flex items-center gap-1">
-                            <span className="text-sm text-gray-700">Sin mapear</span>
-                            <Info className="h-3 w-3 text-gray-400" />
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p className="max-w-xs text-xs">
-                            Eventos sin coordenadas o con datos de ubicación incompletos
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+        <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Activity className="h-4 w-4 text-blue-600" />
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs font-medium uppercase tracking-wide text-blue-700">
+                      Total registrado
+                    </span>
+                    <Info className="h-3 w-3 text-blue-500" />
                   </div>
-                  <p className="text-lg font-bold text-amber-600">
-                    {formatNumber(domiciliosNoMapeados)}
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="max-w-xs text-xs">
+                    Total de eventos asociados a domicilios visibles en el mapa.
                   </p>
-                </div>
-              </>
-            )}
-
-            {/* Barra de progreso */}
-            <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
-              <div
-                className="bg-emerald-600 h-2 rounded-full transition-all"
-                style={{ width: `${porcentajeCobertura}%` }}
-              />
-            </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
+          <div className="text-3xl font-semibold text-blue-900">
+            {formatNumber(totalEventosGlobal)}
+          </div>
+          <p className="text-xs text-blue-700">eventos geolocalizados</p>
+        </div>
 
-          <Separator />
-
-          {/* Población Afectada */}
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="bg-emerald-50 p-1.5 rounded">
-                <Users className="h-3.5 w-3.5 text-emerald-600" />
-              </div>
-              <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">
-                Población
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-2">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-700">
+            <MapPin className="h-4 w-4" />
+            Cobertura
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Mapeados</p>
+              <p className="text-lg font-semibold text-emerald-600">
+                {formatNumber(totalEventosMapeados)}
               </p>
             </div>
-            <p className="text-2xl font-bold text-gray-900">
-              {formatCompact(poblacionTotal)}
-            </p>
-            <p className="text-xs text-gray-500 mt-0.5">habitantes afectados</p>
+            <Badge variant="secondary" className="text-xs">
+              {porcentajeCobertura}%
+            </Badge>
           </div>
-
-          <Separator />
-
-          {/* Tasa de Incidencia */}
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="bg-sky-50 p-1.5 rounded">
-                <TrendingUp className="h-3.5 w-3.5 text-sky-600" />
+          {domiciliosNoMapeados > 0 && (
+            <div className="flex items-center justify-between text-sm text-gray-600">
+              <div className="flex items-center gap-1">
+                <AlertCircle className="h-4 w-4 text-amber-600" />
+                <span>Sin geocodificar</span>
               </div>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center gap-1">
-                      <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">
-                        Tasa × 100k
-                      </p>
-                      <Info className="h-3 w-3 text-gray-400" />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="max-w-xs text-xs">
-                      Número de casos por cada 100,000 habitantes. Métrica estándar epidemiológica para comparar regiones.
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <span className="font-medium text-amber-600">
+                {formatNumber(domiciliosNoMapeados)}
+              </span>
             </div>
-            <p className="text-2xl font-bold text-gray-900">
-              {tasaIncidencia.toFixed(1)}
-            </p>
-            <p className="text-xs text-gray-500 mt-0.5">por 100,000 habitantes</p>
-          </div>
+          )}
+        </div>
 
-          <Separator />
+        <Separator />
 
-          {/* Provincias */}
+        <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="bg-purple-50 p-1.5 rounded">
-                <MapPin className="h-3.5 w-3.5 text-purple-600" />
-              </div>
-              <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">
-                Provincias
-              </p>
+            <div className="flex items-center gap-2 text-xs text-gray-500 uppercase tracking-wide">
+              <Users className="h-3.5 w-3.5" />
+              Población
             </div>
-            <p className="text-2xl font-bold text-gray-900">{provinciasAfectadas}</p>
-            <p className="text-xs text-gray-500 mt-0.5">con casos registrados</p>
+            <p className="text-xl font-semibold text-gray-900">{poblacionText}</p>
+            <p className="text-xs text-gray-500">habitantes estimados</p>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Controles del Mapa */}
-      <Card className="border-gray-200">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-            <Layers className="h-4 w-4" />
-            Controles de Visualización
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Nivel Geográfico */}
-          <div className="space-y-2">
-            <Label htmlFor="nivel" className="text-xs font-medium text-gray-700">
-              Nivel de detalle
-            </Label>
-            <Select
-              value={nivel}
-              onValueChange={(value) => {
-                if (value === "auto") {
-                  onNivelChange(null);
-                } else {
-                  onNivelChange(value as "departamento" | "localidad");
-                }
-              }}
-            >
-              <SelectTrigger id="nivel" className="w-full">
-                <SelectValue placeholder="Seleccionar nivel" />
-              </SelectTrigger>
-              <SelectContent className="z-[10000]">
-                <SelectItem value="auto">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="text-xs">Auto</Badge>
-                    Automático (por zoom)
-                  </div>
-                </SelectItem>
-                <SelectItem value="departamento">Departamentos</SelectItem>
-                <SelectItem value="localidad">Localidades/Municipios</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-gray-500">
-              {nivel === "departamento"
-                ? "Mostrando divisiones administrativas"
-                : "Mostrando municipios y comunas"}
-            </p>
+          <div>
+            <div className="flex items-center gap-2 text-xs text-gray-500 uppercase tracking-wide">
+              <TrendingUp className="h-3.5 w-3.5" />
+              Tasa × 100k
+            </div>
+            <p className="text-xl font-semibold text-gray-900">{tasaText}</p>
+            <p className="text-xs text-gray-500">incidencia acumulada</p>
           </div>
+        </div>
 
-          <Separator />
+        <Separator />
 
-          {/* Búsqueda */}
-          <div className="space-y-2">
-            <Label htmlFor="search" className="text-xs font-medium text-gray-700 flex items-center gap-2">
-              <Search className="h-3 w-3" />
-              Buscar ubicación
-            </Label>
-            <Input
-              id="search"
-              type="text"
-              placeholder="Nombre o código INDEC..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full"
-            />
+        <div>
+          <div className="flex items-center gap-2 text-xs text-gray-500 uppercase tracking-wide">
+            <MapPin className="h-3.5 w-3.5 text-purple-600" />
+            Provincias
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Leyenda */}
-      <Card className="border-gray-200">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-gray-900">
-            Leyenda
-          </CardTitle>
-          <p className="text-xs text-gray-500 mt-1">
-            Colores según número de domicilios
+          <p className="text-xl font-semibold text-gray-900">
+            {provinciasAfectadas}
           </p>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-gray-200 border border-gray-300"></div>
-                <span className="text-xs text-gray-600">Sin datos</span>
-              </div>
-              <span className="text-xs font-mono text-gray-500">0</span>
+          <p className="text-xs text-gray-500">con eventos visibles</p>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-gray-200 bg-white/80 p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold text-gray-900">
+              Categorías de eventos
+            </p>
+            <p className="text-xs text-gray-500">
+              Colores sincronizados con los puntos del mapa
+            </p>
+          </div>
+          {selectedGrupos.length > 0 && (
+            <button
+              onClick={onClearFiltros}
+              className="text-xs font-medium text-blue-600 hover:underline"
+            >
+              Mostrar todos
+            </button>
+          )}
+        </div>
+
+        <div className="relative">
+          <Input
+            placeholder="Filtrar por grupo o evento..."
+            value={categoriaSearch}
+            onChange={(e) => setCategoriaSearch(e.target.value)}
+            className="pl-9 text-sm"
+          />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+        </div>
+
+        {categoriasLoading && (
+          <p className="text-xs text-gray-500">Cargando categorías...</p>
+        )}
+
+        {!categoriasLoading && filteredCategorias.length === 0 && (
+          <p className="text-xs text-gray-500">
+            No hay coincidencias para “{categoriaSearch}”.
+          </p>
+        )}
+
+        {!categoriasLoading && filteredCategorias.length > 0 && (
+          <div className="max-h-[360px] space-y-3 overflow-y-auto pr-1">
+            {filteredCategorias.map((grupo) => {
+              const color = grupoColorMap[grupo.grupoId] || "#94a3b8";
+              const isActive =
+                selectedGrupos.length === 0 || selectedGrupos.includes(grupo.grupoId);
+
+              return (
+                <div
+                  key={grupo.grupoId}
+                  className={`rounded-xl border p-3 transition-colors ${
+                    isActive
+                      ? "border-gray-200 bg-white"
+                      : "border-dashed border-gray-200 opacity-60"
+                  }`}
+                >
+                  <button
+                    onClick={() => onToggleGrupo(grupo.grupoId)}
+                    className="flex w-full items-start justify-between text-left"
+                  >
+                    <div className="flex flex-1 items-start gap-3">
+                      <span
+                        className="mt-1.5 h-3 w-3 rounded-full border border-white shadow"
+                        style={{ backgroundColor: color }}
+                      />
+                      <div className="space-y-0.5">
+                        <p className="text-sm font-semibold text-gray-900">
+                          {grupo.grupoNombre}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {grupo.totalEventos.toLocaleString("es-AR")} eventos
+                        </p>
+                      </div>
+                    </div>
+                    <Badge
+                      variant={isActive ? "secondary" : "outline"}
+                      className="text-[10px]"
+                    >
+                      {isActive ? "Visible" : "Oculto"}
+                    </Badge>
+                  </button>
+
+                  {grupo.tipos.length > 0 && (
+                    <div className="mt-3 border-t pt-2 text-[11px] text-gray-600">
+                      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                        Eventos
+                      </p>
+                      <div className="space-y-1">
+                        {grupo.tipos.map((tipo) => (
+                          <div
+                            key={tipo.nombre}
+                            className="flex items-center justify-between gap-2"
+                          >
+                            <span className="truncate">{tipo.nombre}</span>
+                            <span className="text-gray-400">
+                              {tipo.total.toLocaleString("es-AR")}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-2xl border border-gray-200 bg-white/80 p-4 space-y-4">
+        <div>
+          <p className="text-sm font-semibold text-gray-900">
+            Timeline de aparición
+          </p>
+          <p className="text-xs text-gray-500">
+            Reproducí la evolución acumulada por día, semana o mes
+          </p>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <Select
+            value={timeline.mode}
+            onValueChange={(value) => timeline.onModeChange(value as TimelineMode)}
+            disabled={!timeline.available || timeline.loading}
+          >
+            <SelectTrigger className="w-full text-sm">
+              <SelectValue placeholder="Agrupar" />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(TIMELINE_MODE_LABELS).map(([value, label]) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={String(timeline.speed)}
+            onValueChange={(value) => timeline.onSpeedChange(Number(value))}
+            disabled={!timeline.available || timeline.loading}
+          >
+            <SelectTrigger className="w-full text-sm">
+              <SelectValue placeholder="Velocidad" />
+            </SelectTrigger>
+            <SelectContent>
+              {timeline.speedOptions.map((option) => (
+                <SelectItem key={option.value} value={String(option.value)}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {timeline.loading && (
+          <p className="text-xs text-gray-500">
+            Descargando eventos para animar el timeline...
+          </p>
+        )}
+
+        {!timeline.loading && !timeline.available && (
+          <p className="text-xs text-gray-500">
+            {timeline.disabledMessage ||
+              "Seleccioná una categoría para habilitar la animación."}
+          </p>
+        )}
+
+        {timeline.available && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant={timeline.playing ? "secondary" : "default"}
+                onClick={timeline.onTogglePlay}
+                disabled={!timeline.enabled}
+                className="flex-1"
+              >
+                {timeline.playing ? (
+                  <>
+                    <Pause className="mr-2 h-4 w-4" />
+                    Pausar
+                  </>
+                ) : (
+                  <>
+                    <Play className="mr-2 h-4 w-4" />
+                    Reproducir
+                  </>
+                )}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={timeline.onReset}
+                disabled={!timeline.enabled}
+              >
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Reiniciar
+              </Button>
             </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-green-500"></div>
-                <span className="text-xs text-gray-600">Bajo</span>
+
+            <div className="space-y-1">
+              <input
+                type="range"
+                min={0}
+                max={timelineSliderMax}
+                value={timelineSliderValue}
+                onChange={(e) => timeline.onStepChange(Number(e.target.value))}
+                disabled={!timeline.enabled}
+                className="w-full accent-blue-600"
+              />
+              <div className="flex items-center justify-between text-[10px] text-gray-500">
+                <span>{timeline.rangeLabel ?? "—"}</span>
+                <span className="font-semibold text-gray-800">
+                  {timeline.currentLabel ?? "Seleccioná un punto"}
+                </span>
               </div>
-              <span className="text-xs font-mono text-gray-500">1-10</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-yellow-500"></div>
-                <span className="text-xs text-gray-600">Moderado</span>
-              </div>
-              <span className="text-xs font-mono text-gray-500">11-100</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-orange-500"></div>
-                <span className="text-xs text-gray-600">Alto</span>
-              </div>
-              <span className="text-xs font-mono text-gray-500">101-500</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-red-600"></div>
-                <span className="text-xs text-gray-600">Crítico</span>
-              </div>
-              <span className="text-xs font-mono text-gray-500">&gt;500</span>
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Nota al pie */}
-      <div className="text-xs text-gray-500 px-2 py-3 bg-gray-50 border border-gray-200 rounded-lg">
-        <p className="font-medium text-gray-700 mb-1">Fuente de datos</p>
-        <p>Sistema Nacional de Vigilancia Epidemiológica</p>
-        <p className="mt-1 text-gray-400">Actualización en tiempo real</p>
-      </div>
+        )}
+      </section>
     </div>
   );
 }

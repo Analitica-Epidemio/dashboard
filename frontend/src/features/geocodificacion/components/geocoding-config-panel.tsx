@@ -1,65 +1,70 @@
 "use client";
 
 import React from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, MapPin, Play, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import {
+  Loader2,
+  MapPin,
+  Play,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 import { $api } from "@/lib/api/client";
+import type { components } from "@/lib/api/types";
 
-interface GeocodingStats {
-  total_domicilios: number;
-  geocoded: number;
-  pending: number;
-  processing: number;
-  failed: number;
-  not_geocodable: number;
-  percentage_geocoded: number;
-  by_estado?: Record<string, number>;
-}
-
-interface TriggerGeocodingResponse {
-  message: string;
-  pending_count: number;
-  task_id: string | null;
-  batch_size?: number;
-  estimated_batches?: number;
-}
+type GeocodingStats = components["schemas"]["GeocodingStatsResponse"];
+type TriggerGeocodingResponse =
+  components["schemas"]["TriggerGeocodingResponse"];
 
 export function GeocodingConfigPanel() {
   const queryClient = useQueryClient();
 
   // ✅ Fetch geocoding stats con $api
   const { data: statsResponse, isLoading } = $api.useQuery(
-    'get',
-    '/api/v1/geocoding/stats',
+    "get",
+    "/api/v1/geocoding/stats",
     {},
     {
       refetchInterval: 5000,
     }
   );
 
-  const stats = statsResponse?.data as GeocodingStats | undefined;
+  const stats = statsResponse;
 
   // ✅ Trigger geocoding mutation con $api
-  const triggerMutation = $api.useMutation('post', '/api/v1/geocoding/trigger', {
-    onSuccess: (response) => {
-      const data = response.data as TriggerGeocodingResponse;
-      toast.success(data.message, {
-        description: data.task_id
-          ? `Tarea encolada: ${data.task_id.slice(0, 8)}...`
-          : undefined,
-      });
-      queryClient.invalidateQueries({ queryKey: ['get', '/api/v1/geocoding/stats'] });
-    },
-    onError: (error) => {
-      toast.error("Error al triggear geocodificación", {
-        description: error instanceof Error ? error.message : "Error desconocido",
-      });
-    },
-  });
+  const triggerMutation = $api.useMutation(
+    "post",
+    "/api/v1/geocoding/trigger",
+    {
+      onSuccess: (data) => {
+        toast.success(data.message, {
+          description: data.task_id
+            ? `Tarea encolada: ${data.task_id.slice(0, 8)}...`
+            : undefined,
+        });
+        queryClient.invalidateQueries({
+          queryKey: ["get", "/api/v1/geocoding/stats"],
+        });
+      },
+      onError: (error) => {
+        toast.error("Error al triggear geocodificación", {
+          description:
+            error instanceof Error ? error.message : "Error desconocido",
+        });
+      },
+    }
+  );
 
   const handleTriggerGeocoding = () => {
     triggerMutation.mutate({
@@ -123,7 +128,9 @@ export function GeocodingConfigPanel() {
               </div>
               <Progress value={stats.percentage_geocoded} className="h-2" />
               <p className="text-xs text-muted-foreground">
-                {stats.geocoded.toLocaleString()} de {stats.total_domicilios.toLocaleString()} domicilios geocodificados
+                {stats.geocoded.toLocaleString()} de{" "}
+                {stats.total_domicilios.toLocaleString()} domicilios
+                geocodificados
               </p>
             </div>
 
@@ -137,7 +144,9 @@ export function GeocodingConfigPanel() {
                     Geocodificados
                   </span>
                 </div>
-                <div className="text-2xl font-bold">{stats.geocoded.toLocaleString()}</div>
+                <div className="text-2xl font-bold">
+                  {stats.geocoded.toLocaleString()}
+                </div>
               </div>
 
               {/* Pending */}
@@ -148,20 +157,26 @@ export function GeocodingConfigPanel() {
                     Pendientes
                   </span>
                 </div>
-                <div className="text-2xl font-bold">{stats.pending.toLocaleString()}</div>
+                <div className="text-2xl font-bold">
+                  {stats.pending.toLocaleString()}
+                </div>
               </div>
 
               {/* Processing */}
               <div className="flex flex-col space-y-2 rounded-lg border p-4">
                 <div className="flex items-center gap-2">
                   <Loader2
-                    className={`h-4 w-4 text-blue-500 ${isProcessing ? "animate-spin" : ""}`}
+                    className={`h-4 w-4 text-blue-500 ${
+                      isProcessing ? "animate-spin" : ""
+                    }`}
                   />
                   <span className="text-sm font-medium text-muted-foreground">
                     Procesando
                   </span>
                 </div>
-                <div className="text-2xl font-bold">{stats.processing.toLocaleString()}</div>
+                <div className="text-2xl font-bold">
+                  {stats.processing.toLocaleString()}
+                </div>
               </div>
 
               {/* Failed */}
@@ -172,7 +187,9 @@ export function GeocodingConfigPanel() {
                     Fallidos
                   </span>
                 </div>
-                <div className="text-2xl font-bold">{stats.failed.toLocaleString()}</div>
+                <div className="text-2xl font-bold">
+                  {stats.failed.toLocaleString()}
+                </div>
               </div>
 
               {/* Not geocodable */}
@@ -183,7 +200,9 @@ export function GeocodingConfigPanel() {
                     No Geocodificables
                   </span>
                 </div>
-                <div className="text-2xl font-bold">{stats.not_geocodable.toLocaleString()}</div>
+                <div className="text-2xl font-bold">
+                  {stats.not_geocodable.toLocaleString()}
+                </div>
               </div>
 
               {/* Total */}
@@ -194,7 +213,9 @@ export function GeocodingConfigPanel() {
                     Total
                   </span>
                 </div>
-                <div className="text-2xl font-bold">{stats.total_domicilios.toLocaleString()}</div>
+                <div className="text-2xl font-bold">
+                  {stats.total_domicilios.toLocaleString()}
+                </div>
               </div>
             </div>
 
@@ -207,7 +228,8 @@ export function GeocodingConfigPanel() {
                     Geocodificación en progreso
                   </p>
                   <p className="text-xs text-blue-700 dark:text-blue-300">
-                    {stats.processing} domicilios siendo procesados. Las estadísticas se actualizan automáticamente.
+                    {stats.processing} domicilios siendo procesados. Las
+                    estadísticas se actualizan automáticamente.
                   </p>
                 </div>
               </div>

@@ -43,7 +43,6 @@ export type EventoDetailsResponse = components['schemas']['SuccessResponse_Event
 export type GenerateDraftRequest = components['schemas']['GenerateDraftRequest'];
 export type GenerateDraftResponse = components['schemas']['SuccessResponse_GenerateDraftResponse_'];
 
-export type GrupoConCambios = components['schemas']['GrupoConCambios'];
 export type EventoCambio = components['schemas']['EventoCambio'];
 
 // ============================================================================

@@ -3209,6 +3209,11 @@ export interface components {
             tipos_eventos?: {
                 [key: string]: unknown;
             };
+            /**
+             * Primer Evento Fecha
+             * @description Fecha del primer evento registrado en el domicilio
+             */
+            primer_evento_fecha?: string | null;
         };
         /**
          * DomicilioMapaResponse
@@ -4396,6 +4401,11 @@ export interface components {
              */
             tipo_eno_nombre?: string | null;
             /**
+             * Id Domicilio
+             * @description ID del domicilio asociado al evento
+             */
+            id_domicilio?: number | null;
+            /**
              * Fecha Minima Evento
              * @description Fecha del evento
              */
@@ -4829,6 +4839,54 @@ export interface components {
              * @description Descripción del widget
              */
             description?: string | null;
+        };
+        /**
+         * GeocodingStatsResponse
+         * @description Respuesta con estadísticas de geocodificación.
+         */
+        GeocodingStatsResponse: {
+            /**
+             * Total Domicilios
+             * @description Total de domicilios en el sistema
+             */
+            total_domicilios: number;
+            /**
+             * Geocoded
+             * @description Domicilios geocodificados exitosamente
+             */
+            geocoded: number;
+            /**
+             * Pending
+             * @description Domicilios pendientes de geocodificar
+             */
+            pending: number;
+            /**
+             * Processing
+             * @description Domicilios siendo procesados actualmente
+             */
+            processing: number;
+            /**
+             * Failed
+             * @description Domicilios con fallo permanente
+             */
+            failed: number;
+            /**
+             * Not Geocodable
+             * @description Domicilios no geocodificables
+             */
+            not_geocodable: number;
+            /**
+             * Percentage Geocoded
+             * @description Porcentaje de domicilios geocodificados
+             */
+            percentage_geocoded: number;
+            /**
+             * By Estado
+             * @description Conteo de domicilios por cada estado de geocodificación
+             */
+            by_estado: {
+                [key: string]: number;
+            };
         };
         /**
          * GlobalFilters
@@ -7197,6 +7255,37 @@ export interface components {
             periodo: string;
         };
         /**
+         * TriggerGeocodingResponse
+         * @description Respuesta al triggear geocodificación manual.
+         */
+        TriggerGeocodingResponse: {
+            /**
+             * Message
+             * @description Mensaje descriptivo del resultado
+             */
+            message: string;
+            /**
+             * Pending Count
+             * @description Número de domicilios pendientes
+             */
+            pending_count: number;
+            /**
+             * Task Id
+             * @description ID de la tarea encolada (si se inició)
+             */
+            task_id?: string | null;
+            /**
+             * Batch Size
+             * @description Tamaño del batch de procesamiento
+             */
+            batch_size?: number | null;
+            /**
+             * Estimated Batches
+             * @description Número estimado de batches a procesar
+             */
+            estimated_batches?: number | null;
+        };
+        /**
          * UniversalChartSpec
          * @description Especificación universal de chart
          *     Puede ser usada tanto por frontend como backend
@@ -8632,9 +8721,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["TriggerGeocodingResponse"];
                 };
             };
             /** @description Geocodificación deshabilitada */
@@ -8681,9 +8768,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["GeocodingStatsResponse"];
                 };
             };
         };
