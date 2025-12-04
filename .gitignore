@@ -73,3 +73,5 @@ temp/
 
 node_modules/
 issues/
+.cache/
+backend/app/scripts/seeds/data
