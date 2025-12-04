@@ -7,14 +7,14 @@ from app.domains.sujetos_epidemiologicos.ciudadanos_models import Ciudadano
 
 from ...config.columns import Columns
 from ..shared import (
-    BulkProcessorBase,
     BulkOperationResult,
-    pl_safe_int,
+    BulkProcessorBase,
     pl_clean_string,
-    pl_safe_date,
+    pl_map_boolean,
     pl_map_sexo,
     pl_map_tipo_documento,
-    pl_map_boolean,
+    pl_safe_date,
+    pl_safe_int,
 )
 
 

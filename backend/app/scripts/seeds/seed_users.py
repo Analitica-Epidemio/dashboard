@@ -47,7 +47,7 @@ def seed_superadmin(session: Session) -> None:
     session.commit()
 
     print("  ✅ Superadmin creado exitosamente")
-    print(f"     Email: admin@admin.com")
-    print(f"     Contraseña: admin")
+    print("     Email: admin@admin.com")
+    print("     Contraseña: admin")
     print(f"     Rol: {UserRole.SUPERADMIN}")
     print(f"     Estado: {UserStatus.ACTIVE}")

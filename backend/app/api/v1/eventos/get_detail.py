@@ -16,20 +16,22 @@ from sqlalchemy.orm import selectinload
 from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAnyRole
+from app.domains.atencion_medica.salud_models import MuestraEvento
 from app.domains.autenticacion.models import User
-from app.domains.sujetos_epidemiologicos.ciudadanos_models import (
-    Ciudadano,
-    CiudadanoDomicilio,
-)
-from app.domains.sujetos_epidemiologicos.animales_models import Animal
 from app.domains.eventos_epidemiologicos.clasificacion.models import TipoClasificacion
 from app.domains.eventos_epidemiologicos.eventos.models import (
     DetalleEventoSintomas,
     Evento,
 )
-from app.domains.atencion_medica.salud_models import MuestraEvento
-from app.domains.atencion_medica.diagnosticos_models import EstudioEvento
-from app.domains.territorio.geografia_models import Departamento, Domicilio, Localidad, Provincia
+from app.domains.sujetos_epidemiologicos.animales_models import Animal
+from app.domains.sujetos_epidemiologicos.ciudadanos_models import (
+    Ciudadano,
+)
+from app.domains.territorio.geografia_models import (
+    Departamento,
+    Domicilio,
+    Localidad,
+)
 
 
 class CiudadanoInfo(BaseModel):

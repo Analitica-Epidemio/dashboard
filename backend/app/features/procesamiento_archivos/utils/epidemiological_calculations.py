@@ -2,7 +2,7 @@
 Utilidades para cálculos epidemiológicos
 """
 from datetime import date, timedelta
-from typing import Optional, Tuple, Dict
+from typing import Dict, Optional, Tuple
 
 
 def calcular_semana_epidemiologica(fecha: date) -> Tuple[int, int]:

@@ -34,8 +34,8 @@ class DiagnosticosProcessor:
         # Import here to avoid circular dependencies
         from .diagnosticos_eventos import DiagnosticosEventosProcessor
         from .estudios import EstudiosProcessor
-        from .tratamientos import TratamientosProcessor
         from .internaciones import InternacionesProcessor
+        from .tratamientos import TratamientosProcessor
 
         # Initialize all sub-processors
         self.diagnosticos = DiagnosticosEventosProcessor(context, logger)

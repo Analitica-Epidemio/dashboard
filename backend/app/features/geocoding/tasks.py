@@ -29,7 +29,6 @@ Mejora de rendimiento:
 
 import logging
 from datetime import datetime
-from typing import List
 
 from sqlalchemy import select
 from sqlmodel import Session
@@ -289,7 +288,7 @@ def geocode_pending_domicilios(self, batch_size: int = 500, max_attempts: int = 
             logger.info(
                 "🔄 Hay más domicilios pendientes - encolando siguiente batch..."
             )
-            logger.info(f"   ⏱️  Siguiente batch iniciará en 2 segundos (rate limiting)")
+            logger.info("   ⏱️  Siguiente batch iniciará en 2 segundos (rate limiting)")
             # Encolar con delay de 2 segundos para rate limiting
             next_task = geocode_pending_domicilios.apply_async(
                 kwargs={"batch_size": batch_size, "max_attempts": max_attempts},

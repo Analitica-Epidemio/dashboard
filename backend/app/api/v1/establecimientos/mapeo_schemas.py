@@ -1,6 +1,7 @@
 """Schemas para endpoints de mapeo de establecimientos."""
 
 from typing import List, Optional
+
 from pydantic import BaseModel, Field
 
 

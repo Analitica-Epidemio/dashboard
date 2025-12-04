@@ -6,6 +6,7 @@ import base64
 import hashlib
 import hmac
 import json
+import logging
 import time
 from datetime import date
 from typing import Dict, List, Optional
@@ -15,8 +16,10 @@ from pydantic import BaseModel, Field
 
 from app.core.config import settings
 from app.core.schemas.response import SuccessResponse
-from app.core.security import RequireAnyRole
+from app.core.security.rbac import RequireAnyRole
 from app.domains.autenticacion.models import User
+
+logger = logging.getLogger(__name__)
 
 
 class ReportFiltersRequest(BaseModel):
@@ -102,7 +105,7 @@ def verify_signed_url(data: str, signature: str) -> Dict:
         ValueError: Si la firma es inválida o la URL expiró
     """
     try:
-        print(f"Verifying signed URL")
+        print("Verifying signed URL")
         print(f"  Data (first 100 chars): {data[:100]}...")
         print(f"  Signature: {signature}")
 
@@ -140,7 +143,7 @@ def verify_signed_url(data: str, signature: str) -> Dict:
         print(f"  Received signature: {signature}")
 
         if not hmac.compare_digest(signature, expected_signature):
-            logger.error(f"Signature mismatch!")
+            logger.error("Signature mismatch!")
             raise ValueError("Invalid signature")
 
         # Remover expires_at del payload antes de devolver

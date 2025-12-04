@@ -7,12 +7,11 @@ from app.domains.atencion_medica.diagnosticos_models import InternacionEvento
 
 from ...config.columns import Columns
 from ..shared import (
-    BulkProcessorBase,
     BulkOperationResult,
-    pl_safe_int,
-    pl_safe_date,
-    pl_map_boolean,
+    BulkProcessorBase,
     pl_clean_string,
+    pl_map_boolean,
+    pl_safe_date,
 )
 
 

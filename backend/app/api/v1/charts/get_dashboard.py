@@ -85,7 +85,7 @@ async def get_dashboard_charts(
     }
 
     # Obtener charts aplicables desde BD
-    query = select(DashboardChart).where(DashboardChart.activo == True).order_by(DashboardChart.orden)
+    query = select(DashboardChart).where(DashboardChart.activo.is_(True)).order_by(DashboardChart.orden)
     result = await db.execute(query)
     all_charts = result.scalars().all()
 

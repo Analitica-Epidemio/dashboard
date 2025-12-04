@@ -11,13 +11,13 @@ Fuente: https://www.buenosaires.gob.ar/comunas
 
 import sys
 from pathlib import Path
+
 from sqlalchemy import create_engine, text
 
 # Agregar el directorio raíz al path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from app.core.config import settings
-
 
 # Mapeo de códigos INDEC a nombres descriptivos de comunas/barrios CABA
 # Cada comuna tiene sus barrios principales como referencia

@@ -7,16 +7,19 @@ from typing import List, Optional
 
 from fastapi import Depends, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import select, func, or_
+from sqlalchemy import func, select
 from sqlmodel import Session
 
 from app.core.database import get_session
 from app.core.schemas.response import SuccessResponse
-from app.domains.territorio.establecimientos_models import Establecimiento
-from app.domains.territorio.geografia_models import Localidad, Departamento, Provincia
-from app.domains.eventos_epidemiologicos.eventos.models import Evento
+from app.domains.atencion_medica.diagnosticos_models import (
+    DiagnosticoEvento,
+    TratamientoEvento,
+)
 from app.domains.atencion_medica.salud_models import MuestraEvento
-from app.domains.atencion_medica.diagnosticos_models import DiagnosticoEvento, TratamientoEvento
+from app.domains.eventos_epidemiologicos.eventos.models import Evento
+from app.domains.territorio.establecimientos_models import Establecimiento
+from app.domains.territorio.geografia_models import Departamento, Localidad, Provincia
 
 
 class EstablecimientoListItem(BaseModel):

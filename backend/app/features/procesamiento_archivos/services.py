@@ -9,7 +9,6 @@ Arquitectura moderna sin legacy:
 """
 
 import logging
-import traceback
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -18,7 +17,11 @@ from celery.result import AsyncResult
 from fastapi import HTTPException, UploadFile
 
 from app.core.celery_app import celery_app
-from app.features.procesamiento_archivos.models import JobPriority, JobStatus, ProcessingJob
+from app.features.procesamiento_archivos.models import (
+    JobPriority,
+    JobStatus,
+    ProcessingJob,
+)
 from app.features.procesamiento_archivos.repositories import job_repository
 from app.features.procesamiento_archivos.schemas import JobStatusResponse
 

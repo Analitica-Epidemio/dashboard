@@ -9,8 +9,8 @@ from app.core.schemas.response import ErrorResponse, SuccessResponse
 
 from .export import export_eventos
 from .get_detail import EventoDetailResponse, get_evento_detail
-from .get_domicilios_mapa import DomicilioMapaResponse, get_domicilios_mapa
 from .get_domicilio_detalle import DomicilioDetalleResponse, get_domicilio_detalle
+from .get_domicilios_mapa import DomicilioMapaResponse, get_domicilios_mapa
 from .get_timeline import EventoTimelineResponse, get_evento_timeline
 from .list import EventoListResponse, list_eventos
 

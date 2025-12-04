@@ -3,7 +3,6 @@ CRUD operations para instancias de boletines (boletines generados)
 """
 
 import logging
-from datetime import datetime
 from typing import List, Optional
 
 from fastapi import Depends, HTTPException, Query
@@ -192,9 +191,10 @@ async def generate_instance_pdf(
     """
     Generar PDF de una instancia de boletín y retornarlo como descarga.
     """
-    from fastapi.responses import FileResponse
-    import tempfile
     import os
+    import tempfile
+
+    from fastapi.responses import FileResponse
 
     stmt = select(BoletinInstance).where(BoletinInstance.id == instance_id)
     result = await db.execute(stmt)
@@ -223,7 +223,9 @@ async def generate_instance_pdf(
         temp_pdf.close()
 
         # Generar PDF usando el servicio serverside
-        from app.features.reporteria.serverside_pdf_generator import ServerSidePDFGenerator
+        from app.features.reporteria.serverside_pdf_generator import (
+            ServerSidePDFGenerator,
+        )
 
         pdf_generator = ServerSidePDFGenerator()
         await pdf_generator.generate_pdf_from_html(

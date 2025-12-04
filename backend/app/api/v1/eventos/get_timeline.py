@@ -15,9 +15,9 @@ from sqlalchemy.orm import selectinload
 from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAnyRole
+from app.domains.atencion_medica.salud_models import MuestraEvento
 from app.domains.autenticacion.models import User
 from app.domains.eventos_epidemiologicos.eventos.models import Evento
-from app.domains.atencion_medica.salud_models import MuestraEvento
 
 
 class EventoTimelineItem(BaseModel):

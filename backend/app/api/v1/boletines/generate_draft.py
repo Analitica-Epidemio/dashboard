@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import Depends
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.analytics.period_utils import get_epi_week_dates
@@ -20,8 +21,6 @@ from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAuthOrSignedUrl
 from app.domains.autenticacion.models import User
 from app.domains.boletines.models import BoletinInstance
-from app.services.snippet_renderer import snippet_renderer
-from sqlalchemy import select, text
 
 logger = logging.getLogger(__name__)
 
@@ -360,7 +359,7 @@ async def _generate_boletin_content(
 """)
 
     # ========== ÍNDICE / TABLA DE CONTENIDOS ==========
-    html_parts.append(f"""
+    html_parts.append("""
 <div class="boletin-indice" style="margin-bottom: 3rem;">
     <h2 style="color: #1e5a7d; border-bottom: 3px solid #1e5a7d; padding-bottom: 0.5rem; margin-bottom: 1.5rem;">
         ÍNDICE

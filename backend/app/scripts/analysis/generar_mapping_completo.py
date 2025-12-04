@@ -16,16 +16,16 @@ Genera un JSON claro con:
 - localidades: info de localidades para validación
 """
 
-import sys
-from pathlib import Path
-from difflib import SequenceMatcher
-from dataclasses import dataclass
-from typing import Optional
 import json
+import sys
 import unicodedata
+from dataclasses import dataclass
+from difflib import SequenceMatcher
+from pathlib import Path
+from typing import Optional
 
 import pandas as pd
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine
 
 # Agregar el directorio raíz al path
 sys.path.append(str(Path(__file__).parent.parent.parent))
@@ -180,8 +180,9 @@ def cargar_establecimientos_ign(conn) -> dict:
     Returns:
         {codigo_refes: EstablecimientoIGN}
     """
-    import geopandas as gpd
     import warnings
+
+    import geopandas as gpd
     from urllib3.exceptions import InsecureRequestWarning
     warnings.simplefilter('ignore', InsecureRequestWarning)
 
@@ -192,12 +193,13 @@ def cargar_establecimientos_ign(conn) -> dict:
     # URL WFS del IGN para establecimientos de salud
     url = "https://wms.ign.gob.ar/geoserver/ign/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=ign:salud_020801&outputFormat=application/json"
 
-    print(f"📥 Descargando desde IGN WFS...")
+    print("📥 Descargando desde IGN WFS...")
 
     try:
         # Descargar GeoJSON
-        import requests
         from io import StringIO
+
+        import requests
 
         response = requests.get(url, timeout=300, verify=False)
         response.raise_for_status()
@@ -406,7 +408,7 @@ def generar_mapping(establecimientos_snvs: dict, establecimientos_ign: dict) -> 
             "alternativas": matches[1:] if best["score"] < 100 and len(matches) > 1 else []
         }
 
-    print(f"\n✅ Mapping generado:")
+    print("\n✅ Mapping generado:")
     print(f"   Mapeos válidos (score ≥85 + similitud ≥80%): {stats['con_match']}")
     print(f"   Sin match (no cumple criterios estrictos): {stats['sin_match']}")
 
@@ -479,9 +481,9 @@ def main():
     print("=" * 80)
     print(f"Total SNVS: {mapping_data['stats']['total_snvs']}")
     print(f"Mapeos VÁLIDOS (alta confianza): {mapping_data['stats']['con_match']}")
-    print(f"  Criterios: score ≥85 + similitud nombre ≥80%")
+    print("  Criterios: score ≥85 + similitud nombre ≥80%")
     print(f"Sin match: {mapping_data['stats']['sin_match']}")
-    print(f"\n⚠️  Solo se guardan mapeos de alta confianza para evitar datos incorrectos")
+    print("\n⚠️  Solo se guardan mapeos de alta confianza para evitar datos incorrectos")
     print()
 
 

@@ -1,25 +1,20 @@
 """Bulk processor for events and related entities - Optimizado con Polars puro."""
 
-from datetime import date, datetime
-from decimal import Decimal
-from typing import List, Optional
 import os
+from datetime import date
+from decimal import Decimal
+from typing import Optional
 
 import polars as pl
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.core.utils.codigo_generator import CodigoGenerator
-from app.domains.eventos_epidemiologicos.ambitos_models import AmbitosConcurrenciaEvento
 from app.domains.eventos_epidemiologicos.eventos.models import (
-    AntecedenteEpidemiologico,
-    AntecedentesEpidemiologicosEvento,
-    DetalleEventoSintomas,
     Evento,
     GrupoEno,
     TipoEno,
 )
-from app.domains.atencion_medica.salud_models import Sintoma
 from app.features.procesamiento_archivos.utils.epidemiological_calculations import (
     calcular_semana_epidemiologica,
 )
@@ -27,13 +22,10 @@ from app.features.procesamiento_archivos.utils.epidemiological_calculations impo
 from ...config.columns import Columns
 from ..shared import (
     BulkProcessorBase,
-    BulkOperationResult,
     get_or_create_catalog,
     is_valid_street_name,
-    pl_safe_int,
-    pl_safe_date,
-    pl_clean_string,
     pl_clean_numero_domicilio,
+    pl_clean_string,
 )
 
 
@@ -223,7 +215,9 @@ class EventosProcessor(BulkProcessorBase):
             tipo_grupos_mapping = dict(tipo_grupos_temp)
 
             # Crear relaciones tipo-grupo en la tabla de unión
-            from app.domains.eventos_epidemiologicos.eventos.models import TipoEnoGrupoEno
+            from app.domains.eventos_epidemiologicos.eventos.models import (
+                TipoEnoGrupoEno,
+            )
 
             timestamp = self._get_current_timestamp()
             relaciones_tipo_grupo = []
@@ -643,7 +637,9 @@ class EventosProcessor(BulkProcessorBase):
             # Procesar clasificación
             clasificacion_estrategia = agg_row.get("clasificacion_estrategia_first")
             if clasificacion_estrategia is None or not str(clasificacion_estrategia).strip():
-                from app.domains.eventos_epidemiologicos.clasificacion.models import TipoClasificacion
+                from app.domains.eventos_epidemiologicos.clasificacion.models import (
+                    TipoClasificacion,
+                )
                 clasificacion_estrategia = TipoClasificacion.REQUIERE_REVISION
 
             # Calcular semanas epidemiológicas

@@ -4,10 +4,10 @@ Schemas Pydantic para la especificación universal de charts
 Compatibles con los tipos TypeScript del frontend
 """
 
-from typing import List, Optional, Dict, Any, Literal, Union, Annotated
-from pydantic import BaseModel, Field
 from datetime import datetime
+from typing import Annotated, Any, Dict, List, Literal, Optional, Union
 
+from pydantic import BaseModel, Field
 
 # ============================================================================
 # Tipos Base

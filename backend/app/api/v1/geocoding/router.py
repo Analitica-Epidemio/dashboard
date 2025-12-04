@@ -4,7 +4,7 @@ Geocoding router - Manual geocoding triggers and stats
 
 from fastapi import APIRouter
 
-from app.core.schemas.response import ErrorResponse, SuccessResponse
+from app.core.schemas.response import ErrorResponse
 
 from .get_stats import get_geocoding_stats
 from .schemas import GeocodingStatsResponse, TriggerGeocodingResponse

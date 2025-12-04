@@ -16,8 +16,11 @@ from sqlmodel import Session
 
 from app.core.database import get_session
 from app.core.schemas.response import SuccessResponse
-from app.domains.eventos_epidemiologicos.eventos.models import Evento, EventoGrupoEno
-from app.domains.eventos_epidemiologicos.eventos.models import TipoEno
+from app.domains.eventos_epidemiologicos.eventos.models import (
+    Evento,
+    EventoGrupoEno,
+    TipoEno,
+)
 from app.domains.territorio.geografia_models import (
     Departamento,
     Domicilio,
@@ -25,7 +28,6 @@ from app.domains.territorio.geografia_models import (
     Localidad,
     Provincia,
 )
-
 
 logger = logging.getLogger(__name__)
 

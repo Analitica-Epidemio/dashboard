@@ -1,6 +1,6 @@
 """Endpoint para eliminar un mapeo existente."""
 
-from fastapi import HTTPException, Path, Depends
+from fastapi import Depends, HTTPException, Path
 from sqlmodel import Session
 
 from app.core.database import get_session

@@ -4,9 +4,9 @@ Dashboard router
 
 from fastapi import APIRouter
 
-from .get_resumen import get_dashboard_resumen
-from .get_mapa_topojson import get_topojson_data, get_topojson_info
 from .get_departamentos_mapping import get_departamentos_mapping
+from .get_mapa_topojson import get_topojson_data, get_topojson_info
+from .get_resumen import get_dashboard_resumen
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 

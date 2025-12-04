@@ -8,24 +8,24 @@ import io
 import logging
 import os
 from typing import Optional
+
 import matplotlib
+
 matplotlib.use('Agg')  # Backend sin GUI
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.figure import Figure
-import matplotlib.patches as mpatches
-from svglib.svglib import svg2rlg
-from reportlab.graphics import renderPM
 from PIL import Image
+from reportlab.graphics import renderPM
+from svglib.svglib import svg2rlg
 
 from app.schemas.chart_spec import (
-    UniversalChartSpec,
-    LineChartData,
-    BarChartData,
     AreaChartData,
+    BarChartData,
+    LineChartData,
+    MapChartDataWrapper,
     PieChartData,
     PyramidChartData,
-    MapChartDataWrapper,
+    UniversalChartSpec,
 )
 
 logger = logging.getLogger(__name__)

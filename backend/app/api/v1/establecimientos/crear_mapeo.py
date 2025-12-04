@@ -1,7 +1,6 @@
 """Endpoint para crear mapeo SNVS → IGN."""
 
-from fastapi import HTTPException, Depends
-from sqlalchemy import select
+from fastapi import Depends, HTTPException
 from sqlmodel import Session
 
 from app.core.database import get_session
@@ -9,10 +8,10 @@ from app.domains.territorio.establecimientos_models import Establecimiento
 
 from .mapeo_schemas import CrearMapeoRequest
 from .suggestions_service import (
-    calcular_similitud_nombre,
     calcular_score_match,
+    calcular_similitud_nombre,
     determinar_confianza,
-    generar_razon_match
+    generar_razon_match,
 )
 
 

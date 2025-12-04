@@ -137,7 +137,7 @@ def get_period_dates(
 
     else:
         # PERSONALIZADO - no aplica aquí
-        raise ValueError(f"Período personalizado debe especificar fechas explícitamente")
+        raise ValueError("Período personalizado debe especificar fechas explícitamente")
 
     return fecha_desde, fecha_hasta
 

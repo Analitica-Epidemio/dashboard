@@ -4,18 +4,18 @@ Analytics router
 
 from fastapi import APIRouter
 
-from app.api.v1.analytics.get_analytics import get_analytics
-from app.api.v1.analytics.get_top_winners_losers import get_top_winners_losers
-from app.api.v1.analytics.get_date_range import get_date_range, DateRangeResponse
-from app.api.v1.analytics.get_top_changes_by_group import get_top_changes_by_group
 from app.api.v1.analytics.calculate_changes import calculate_changes
+from app.api.v1.analytics.get_analytics import get_analytics
+from app.api.v1.analytics.get_date_range import DateRangeResponse, get_date_range
 from app.api.v1.analytics.get_evento_details import get_evento_details
+from app.api.v1.analytics.get_top_changes_by_group import get_top_changes_by_group
+from app.api.v1.analytics.get_top_winners_losers import get_top_winners_losers
 from app.api.v1.analytics.schemas import (
     AnalyticsResponse,
-    TopWinnersLosersResponse,
-    TopChangesByGroupResponse,
     CalculateChangesResponse,
     EventoDetailsResponse,
+    TopChangesByGroupResponse,
+    TopWinnersLosersResponse,
 )
 from app.core.schemas.response import ErrorResponse, SuccessResponse
 

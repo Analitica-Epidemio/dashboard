@@ -3,7 +3,7 @@ Modelos de base de datos para el sistema de boletines epidemiológicos
 """
 
 from datetime import datetime
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy import JSON, Column, Text
 from sqlmodel import Field, Relationship

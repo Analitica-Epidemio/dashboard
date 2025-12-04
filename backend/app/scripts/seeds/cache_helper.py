@@ -5,10 +5,9 @@ Guarda las respuestas en archivos locales para acelerar re-ejecuciones
 y proveer fallback cuando los servicios están caídos.
 """
 import json
-from pathlib import Path
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Optional
-
 
 # Directorio de caché (relativo a este archivo)
 CACHE_DIR = Path(__file__).parent / "cache"
@@ -94,7 +93,7 @@ def download_with_cache(
         return cached
 
     # Descargar desde URL
-    print(f"   📥 Descargando desde WFS...")
+    print("   📥 Descargando desde WFS...")
     try:
         response = requests.get(url, timeout=timeout, verify=verify_ssl)
         response.raise_for_status()
@@ -112,6 +111,6 @@ def download_with_cache(
         # Intentar usar caché viejo si existe
         cache_file = CACHE_DIR / f"{cache_key}.cache"
         if cache_file.exists():
-            print(f"   ⚠️  Usando caché VIEJO como fallback")
+            print("   ⚠️  Usando caché VIEJO como fallback")
             return cache_file.read_text(encoding='utf-8')
         raise

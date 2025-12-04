@@ -8,7 +8,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.schemas.chart_spec import ChartSpecRequest, ChartSpecResponse, UniversalChartSpec
+from app.schemas.chart_spec import (
+    ChartSpecRequest,
+    ChartSpecResponse,
+)
 from app.services.chart_spec_generator import ChartSpecGenerator
 
 router = APIRouter()

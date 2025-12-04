@@ -15,7 +15,7 @@ OPTIMIZACIONES:
 import logging
 from datetime import datetime
 from functools import cache
-from typing import Dict, List, Set, Tuple
+from typing import Dict, Set
 
 import polars as pl
 from sqlalchemy import select

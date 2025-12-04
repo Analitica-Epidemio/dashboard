@@ -4,11 +4,11 @@ import unicodedata
 from difflib import SequenceMatcher
 from typing import List, Optional
 
-from sqlalchemy import select, func, or_
+from sqlalchemy import func, or_, select
 from sqlmodel import Session
 
 from app.domains.territorio.establecimientos_models import Establecimiento
-from app.domains.territorio.geografia_models import Localidad, Departamento, Provincia
+from app.domains.territorio.geografia_models import Departamento, Localidad, Provincia
 
 
 def normalizar_texto(texto: str) -> str:
@@ -148,7 +148,6 @@ async def buscar_sugerencias_para_establecimiento(
     result = session.exec(query).all()
 
     sugerencias = []
-    nombre_snvs_norm = normalizar_texto(nombre_snvs)
 
     for row in result:
         estab_ign = row[0]

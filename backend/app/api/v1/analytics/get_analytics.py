@@ -13,7 +13,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.analytics.period_utils import (
     create_period_info,
     get_comparison_period,
-    get_epi_week,
     get_period_dates,
     get_period_description,
 )
@@ -410,7 +409,7 @@ async def get_analytics(
     """
 
     # Log parámetros recibidos
-    logger.info(f"📊 Analytics - Parámetros recibidos:")
+    logger.info("📊 Analytics - Parámetros recibidos:")
     logger.info(f"   - period_type: {period_type}")
     logger.info(f"   - fecha_referencia: {fecha_referencia or 'None (usando hoy)'}")
     logger.info(f"   - comparison_type: {comparison_type}")
@@ -445,7 +444,7 @@ async def get_analytics(
 
     periodo_comparacion = create_period_info(comp_desde, comp_hasta, descripcion_comp)
 
-    logger.info(f"📊 Analytics - Períodos calculados:")
+    logger.info("📊 Analytics - Períodos calculados:")
     logger.info(f"   - Período actual: {periodo_desde} a {periodo_hasta}")
     logger.info(f"   - Período comparación: {comp_desde} a {comp_hasta}")
 

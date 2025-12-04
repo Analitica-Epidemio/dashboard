@@ -4,18 +4,13 @@ Router para endpoints de boletines epidemiológicos
 
 from typing import List
 
-from fastapi import APIRouter, Depends, Query
-from fastapi.responses import FileResponse
+from fastapi import APIRouter
 
 from app.api.v1.boletines import instances_crud, templates_crud
 from app.api.v1.boletines.generate_draft import generate_draft
 from app.api.v1.boletines.schemas import (
-    BoletinGenerateRequest,
     BoletinInstanceResponse,
-    BoletinTemplateCreate,
     BoletinTemplateResponse,
-    BoletinTemplateUpdate,
-    GenerateDraftRequest,
     GenerateDraftResponse,
 )
 from app.core.schemas.response import ErrorResponse, SuccessResponse

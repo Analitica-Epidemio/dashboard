@@ -9,9 +9,9 @@ from sqlmodel import Field, Relationship
 from app.core.models import BaseModel
 
 if TYPE_CHECKING:
-    from app.domains.territorio.establecimientos_models import Establecimiento
-    from app.domains.eventos_epidemiologicos.eventos.models import Evento
     from app.domains.atencion_medica.salud_models import MuestraEvento
+    from app.domains.eventos_epidemiologicos.eventos.models import Evento
+    from app.domains.territorio.establecimientos_models import Establecimiento
 
 
 class DiagnosticoEvento(BaseModel, table=True):

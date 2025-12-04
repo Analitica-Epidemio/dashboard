@@ -27,7 +27,7 @@ async def truncate_all_tables():
         "postgresql+asyncpg://epidemiologia_user:epidemiologia_password@localhost:5433/epidemiologia_db",
     )
 
-    print(f"🔗 Conectando a base de datos...")
+    print("🔗 Conectando a base de datos...")
 
     # Crear engine asíncrono
     engine = create_async_engine(database_url, echo=False)
@@ -79,7 +79,7 @@ async def truncate_all_tables():
             await session.commit()
 
             print(f"\n✨ Truncado completo: {len(tables) - 1} tablas vaciadas")
-            print(f"ℹ️  La estructura de las tablas se mantiene intacta")
+            print("ℹ️  La estructura de las tablas se mantiene intacta")
 
     except Exception as e:
         print(f"❌ Error durante el truncate: {e}")

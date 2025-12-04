@@ -4,7 +4,6 @@ Optimizado con CTEs y window functions para evitar N+1 queries
 """
 
 import logging
-from datetime import date, timedelta
 from typing import Optional
 
 from fastapi import Depends, Query

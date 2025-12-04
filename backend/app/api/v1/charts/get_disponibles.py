@@ -7,7 +7,7 @@ import logging
 from typing import List
 
 from fastapi import Depends
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -45,7 +45,7 @@ async def get_charts_disponibles(
     Usado por el selector de charts en el editor de boletines
     """
     # Obtener charts activos de la BD
-    query = select(DashboardChart).where(DashboardChart.activo == True).order_by(DashboardChart.orden)
+    query = select(DashboardChart).where(DashboardChart.activo.is_(True)).order_by(DashboardChart.orden)
     result = await db.execute(query)
     charts = result.scalars().all()
 

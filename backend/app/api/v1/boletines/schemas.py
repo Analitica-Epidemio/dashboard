@@ -3,10 +3,9 @@ Schemas Pydantic para el sistema de boletines
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Literal, Optional, Union, Annotated
+from typing import Annotated, Any, Dict, List, Literal, Optional, Union
 
-from pydantic import BaseModel, Field, Discriminator
-
+from pydantic import BaseModel, Discriminator, Field
 
 # ============================================================================
 # Schemas de Configuración de Widgets

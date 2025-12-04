@@ -38,12 +38,11 @@ class EstadoGeocodificacion(str, enum.Enum):
     DESHABILITADO = "deshabilitado"
 
 if TYPE_CHECKING:
-    from app.domains.sujetos_epidemiologicos.ciudadanos_models import (
-        CiudadanoDomicilio,
+    from app.domains.eventos_epidemiologicos.ambitos_models import (
+        AmbitosConcurrenciaEvento,
     )
-    from app.domains.sujetos_epidemiologicos.viajes_models import ViajesCiudadano
-    from app.domains.eventos_epidemiologicos.ambitos_models import AmbitosConcurrenciaEvento
     from app.domains.eventos_epidemiologicos.eventos.models import Evento
+    from app.domains.sujetos_epidemiologicos.viajes_models import ViajesCiudadano
     from app.domains.territorio.establecimientos_models import Establecimiento
 
 
