@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 
 from app.core.config import settings
 from app.core.schemas.response import SuccessResponse
-from app.core.security import RequireAnyRole
+from app.core.security.rbac import RequireAnyRole
 from app.domains.autenticacion.models import User
 
 logger = logging.getLogger(__name__)
