@@ -19,6 +19,7 @@ from app.api.v1.personas.router import router as personas_router
 from app.api.v1.reports.router import router as reports_router
 from app.api.v1.tipos_eno.router import router as tipos_router
 from app.api.v1.uploads.router import router as uploads_router
+from app.api.v1.grupos_etarios import router as gruposetarios_router
 from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User
 
@@ -40,6 +41,7 @@ api_router.include_router(charts_router)
 api_router.include_router(reports_router)
 api_router.include_router(analytics_router)  # Router de analytics
 api_router.include_router(boletines_router)  # Router de boletines
+api_router.include_router(gruposetarios_router)
 
 
 # Endpoint raíz de la API
