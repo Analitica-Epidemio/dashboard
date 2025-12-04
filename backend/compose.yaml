@@ -1,13 +1,10 @@
-# Docker Compose moderno 2025 para desarrollo
-# Nombre: compose.yaml (estándar actual, docker-compose.yml es legacy)
+# Docker Compose para desarrollo
 name: epidemiologia-dev
 
 services:
-  # =============================================================================
-  # Base de datos PostgreSQL con PostGIS
-  # =============================================================================
+  # PostgreSQL + PostGIS
   db:
-    image: postgis/postgis:16-3.4  # PostgreSQL 16 + PostGIS 3.4 (ARM64 compatible)
+    image: postgis/postgis:16-3.4
     container_name: ${COMPOSE_PROJECT_NAME:-epi}_postgres_dev
     environment:
       POSTGRES_DB: ${DB_NAME:-epidemiologia_db}
@@ -25,9 +22,7 @@ services:
       start_period: 10s
     restart: unless-stopped
 
-  # =============================================================================
-  # Redis para Celery
-  # =============================================================================
+  # Redis
   redis:
     image: redis:7-alpine
     container_name: ${COMPOSE_PROJECT_NAME:-epi}_redis_dev
@@ -43,13 +38,12 @@ services:
       start_period: 5s
     restart: unless-stopped
 
-  # =============================================================================
-  # API Backend (FastAPI) - DESARROLLO con hot-reload
-  # =============================================================================
+  # API (FastAPI) - imagen principal, reutilizada por celery
   api:
     build:
       context: .
       dockerfile: Dockerfile.dev
+    image: epidemiologia-api:dev
     container_name: ${COMPOSE_PROJECT_NAME:-epi}_api_dev
     environment:
       ENVIRONMENT: development
@@ -60,28 +54,23 @@ services:
       SECRET_KEY: ${SECRET_KEY:-development_secret_key_change_in_production}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000,http://host.docker.internal:3000}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0}
-      PYTHONPATH: /app
-      PYTHONDONTWRITEBYTECODE: 1
-      PYTHONUNBUFFERED: 1
-      # Playwright configuration
-      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
-      # Frontend URL for Playwright to capture (host.docker.internal works on Mac/Windows)
       FRONTEND_URL: ${FRONTEND_URL:-http://host.docker.internal:3000}
     ports:
       - "${API_PORT:-8000}:8000"
     volumes:
-      - .:/app:cached  # cached mejora rendimiento en macOS
-      - /app/.venv      # Preservar dependencias
+      - .:/app:cached
+      - /app/.venv
       - ./uploads:/app/uploads
-      - temp_uploads:/tmp/epidemio_uploads  # Archivos temporales de preview
-      - playwright-cache:/ms-playwright  # Cache de browsers de Playwright
+      - ./data:/app/data:ro
+      - ./.cache/seeds:/app/.cache/seeds
+      - temp_uploads:/tmp/epidemio_uploads
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
     restart: unless-stopped
-    develop:  # Nuevo en 2024: watch mode nativo
+    develop:
       watch:
         - action: sync
           path: ./app
@@ -89,15 +78,12 @@ services:
         - action: rebuild
           path: pyproject.toml
 
-  # =============================================================================
-  # pgweb - Interfaz web moderna y minimalista para PostgreSQL (solo desarrollo)
-  # =============================================================================
+  # pgweb - UI para PostgreSQL
   pgweb:
     image: sosedoff/pgweb:latest
     container_name: ${COMPOSE_PROJECT_NAME:-epi}_pgweb_dev
     environment:
       DATABASE_URL: postgres://${DB_USER:-epidemiologia_user}:${DB_PASSWORD:-epidemiologia_password}@db:5432/${DB_NAME:-epidemiologia_db}?sslmode=disable
-      PGWEB_DATABASE_URL: postgres://${DB_USER:-epidemiologia_user}:${DB_PASSWORD:-epidemiologia_password}@db:5432/${DB_NAME:-epidemiologia_db}?sslmode=disable
     ports:
       - "${PGWEB_PORT:-8081}:8081"
     depends_on:
@@ -106,13 +92,9 @@ services:
     restart: unless-stopped
     command: /usr/bin/pgweb --bind=0.0.0.0 --listen=8081
 
-  # =============================================================================
   # Celery Worker
-  # =============================================================================
   celery_worker:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
+    image: epidemiologia-api:dev
     container_name: ${COMPOSE_PROJECT_NAME:-epi}_celery_worker_dev
     environment:
       ENVIRONMENT: development
@@ -121,15 +103,15 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
       SECRET_KEY: ${SECRET_KEY:-development_secret_key_change_in_production}
-      PYTHONPATH: /app
-      PYTHONDONTWRITEBYTECODE: 1
-      PYTHONUNBUFFERED: 1
     volumes:
       - .:/app:cached
       - /app/.venv
       - ./uploads:/app/uploads
-      - temp_uploads:/tmp/epidemio_uploads  # Archivos temporales compartidos con API
+      - ./.cache/seeds:/app/.cache/seeds
+      - temp_uploads:/tmp/epidemio_uploads
     depends_on:
+      api:
+        condition: service_started
       db:
         condition: service_healthy
       redis:
@@ -137,13 +119,9 @@ services:
     restart: unless-stopped
     command: ["uv", "run", "celery", "-A", "app.core.celery_app:celery_app", "worker", "--loglevel=info", "--concurrency=2", "--queues=default,file_processing,geocoding,maintenance"]
 
-  # =============================================================================
-  # Celery Beat (Scheduler para tareas periódicas)
-  # =============================================================================
+  # Celery Beat (scheduler)
   celery_beat:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
+    image: epidemiologia-api:dev
     container_name: ${COMPOSE_PROJECT_NAME:-epi}_celery_beat_dev
     environment:
       ENVIRONMENT: development
@@ -152,14 +130,13 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
       SECRET_KEY: ${SECRET_KEY:-development_secret_key_change_in_production}
-      PYTHONPATH: /app
-      PYTHONDONTWRITEBYTECODE: 1
-      PYTHONUNBUFFERED: 1
     volumes:
       - .:/app:cached
       - /app/.venv
-      - temp_uploads:/tmp/epidemio_uploads  # Para ejecutar cleanup
+      - temp_uploads:/tmp/epidemio_uploads
     depends_on:
+      api:
+        condition: service_started
       db:
         condition: service_healthy
       redis:
@@ -167,9 +144,6 @@ services:
     restart: unless-stopped
     command: ["uv", "run", "celery", "-A", "app.core.celery_app:celery_app", "beat", "--loglevel=info"]
 
-# =============================================================================
-# Volúmenes con nombres descriptivos
-# =============================================================================
 volumes:
   postgres_data:
     name: ${COMPOSE_PROJECT_NAME:-epi}_postgres_data_dev
@@ -177,12 +151,7 @@ volumes:
     name: ${COMPOSE_PROJECT_NAME:-epi}_redis_data_dev
   temp_uploads:
     name: ${COMPOSE_PROJECT_NAME:-epi}_temp_uploads_dev
-  playwright-cache:
-    name: ${COMPOSE_PROJECT_NAME:-epi}_playwright_cache
 
-# =============================================================================
-# Red personalizada
-# =============================================================================
 networks:
   default:
     name: ${COMPOSE_PROJECT_NAME:-epi}_network_dev

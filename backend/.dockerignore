@@ -1,10 +1,10 @@
 # Git
-.git
+.git/
 .gitignore
-.github
+.github/
 
 # Python
-__pycache__
+__pycache__/
 *.py[cod]
 *$py.class
 *.so
@@ -21,7 +21,7 @@ htmlcov/
 .tox/
 .nox/
 
-# Entornos virtuales
+# Virtual environments
 venv/
 env/
 ENV/
@@ -35,35 +35,53 @@ ENV/
 *~
 .DS_Store
 
-# Proyecto
+# Cache y datos grandes
+.cache/
+data/
+uploads/
+
+# Temporales
+tmp/
+temp/
+*.tmp
 *.log
 logs/
-uploads/
-*.db
-*.sqlite
-*.sqlite3
+seed.log
 
 # Docker
 Dockerfile*
 docker-compose*.yml
+compose*.yaml
 .dockerignore
 
 # Docs
 README.md
 docs/
 *.md
+!app/**/*.md
 
-# Testing
+# Tests
 tests/
 test_*.py
 *_test.py
+pytest.ini
+conftest.py
 
-# Configuración local
+# Config local
 .env
 .env.*
 !.env.example
 
-# Temporales
-tmp/
-temp/
-*.tmp
+# DBs locales
+*.db
+*.sqlite
+*.sqlite3
+
+# Celery
+celerybeat-schedule
+celerybeat-schedule.db
+
+# Analysis output
+app/scripts/analysis/output/
+*.parquet
+*.feather

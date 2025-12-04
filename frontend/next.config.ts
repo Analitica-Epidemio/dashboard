@@ -4,7 +4,8 @@ import type { NextConfig } from "next";
 import "./src/env";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Genera build standalone para Docker (imagen más pequeña)
+  output: "standalone",
 };
 
 export default nextConfig;

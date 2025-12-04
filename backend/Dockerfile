@@ -1,102 +1,70 @@
-# Dockerfile para Sistema de Epidemiología Moderna
-# Soporte opcional de Docker con optimizaciones para producción
+# Dockerfile de producción
 
-# =============================================================================
-# STAGE 1: Builder stage con uv para instalar dependencias
-# =============================================================================
-FROM python:3.11-slim as builder
+# Stage 1: Builder - compilar pycairo
+FROM python:3.11-slim AS builder
 
-# Instalar uv para gestión rápida de dependencias
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    pkg-config \
+    libcairo2-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
-# Configurar directorio de trabajo
 WORKDIR /app
 
-# Variables de entorno para uv
-ENV UV_COMPILE_BYTECODE=1
-ENV UV_LINK_MODE=copy
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy
 
-# Copiar archivos de configuración de dependencias
 COPY pyproject.toml uv.lock ./
 
-# Instalar dependencias en un directorio específico
-RUN uv sync --frozen --no-install-project --no-dev --no-editable
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-install-project --no-dev
 
-# =============================================================================
-# STAGE 2: Runtime stage optimizado para producción
-# =============================================================================
+# Stage 2: Runtime
 FROM python:3.11-slim
 
-# Instalar dependencias del sistema necesarias
-RUN apt-get update && apt-get install -y \
-    libpq5 \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libmagic1 \
-    # Dependencias para Playwright\
-    wget \
-    ca-certificates \
-    fonts-liberation \
-    libasound2 \
-    libatk-bridge2.0-0 \
-    libatk1.0-0 \
-    libatspi2.0-0 \
-    libcups2 \
-    libdbus-1-3 \
-    libdrm2 \
-    libgbm1 \
-    libgtk-3-0 \
-    libnspr4 \
-    libnss3 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxfixes3 \
-    libxkbcommon0 \
-    libxrandr2 \
-    xdg-utils \
-    libglib2.0-0 \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
+    libcairo2 \
+    fonts-roboto \
+    fontconfig \
+    && fc-cache -f -v \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Crear usuario no-root para seguridad
+# Usuario no-root (requisito gobierno)
 RUN groupadd -r epidemiologia && useradd -r -g epidemiologia epidemiologia
 
-# Configurar directorio de trabajo
 WORKDIR /app
 
-# Copiar las dependencias instaladas desde el builder
 COPY --from=builder --chown=epidemiologia:epidemiologia /app/.venv /app/.venv
 
-# Configurar PATH para usar el entorno virtual
-ENV PATH="/app/.venv/bin:$PATH"
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONPATH=/app \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    ENVIRONMENT=production
 
-# Copiar código de la aplicación
-COPY --chown=epidemiologia:epidemiologia . .
+COPY --chown=epidemiologia:epidemiologia pyproject.toml uv.lock ./
+COPY --chown=epidemiologia:epidemiologia app/ ./app/
+COPY --chown=epidemiologia:epidemiologia alembic/ ./alembic/
+COPY --chown=epidemiologia:epidemiologia alembic.ini ./
 
-# Instalar Playwright browsers (como root antes de cambiar de usuario)
-USER root
-RUN python -m playwright install chromium --with-deps
-RUN chown -R epidemiologia:epidemiologia /ms-playwright
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev
 
-# Crear directorios necesarios
-RUN mkdir -p /app/uploads /app/logs \
-    && chown -R epidemiologia:epidemiologia /app/uploads /app/logs
+RUN mkdir -p /app/uploads /app/logs /app/.cache/seeds \
+    && chown -R epidemiologia:epidemiologia /app/uploads /app/logs /app/.cache/seeds
 
-# Variables de entorno para producción
-ENV PYTHONPATH=/app
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-ENV ENVIRONMENT=production
-# Playwright configuration
-ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+RUN rm /bin/uv
 
-# Exponer puerto
 EXPOSE 8000
 
-# Cambiar a usuario no-root
 USER epidemiologia
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8000/health')"
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
 
-# Comando para iniciar la aplicación
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]

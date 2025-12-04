@@ -1,0 +1,80 @@
+# Docker Compose para DESARROLLO
+#
+# Uso: docker compose up
+#
+# Este compose levanta solo la infraestructura (DB, Redis).
+# El frontend y backend se corren nativamente para hot-reload rápido.
+#
+# Flujo de desarrollo:
+#   Terminal 1: docker compose up (DB + Redis)
+#   Terminal 2: cd backend && make up (API + Celery)
+#   Terminal 3: cd frontend && pnpm dev (Next.js con hot-reload)
+
+name: epidemiologia-dev
+
+services:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # PostgreSQL + PostGIS
+  # ─────────────────────────────────────────────────────────────────────────────
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: epi_postgres_dev
+    environment:
+      POSTGRES_DB: ${DB_NAME:-epidemiologia_db}
+      POSTGRES_USER: ${DB_USER:-epidemiologia_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-epidemiologia_password}
+    ports:
+      - "${DB_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-epidemiologia_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Redis
+  # ─────────────────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: epi_redis_dev
+    ports:
+      - "${REDIS_PORT:-6380}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # pgweb - UI para PostgreSQL (opcional, útil para debug)
+  # ─────────────────────────────────────────────────────────────────────────────
+  pgweb:
+    image: sosedoff/pgweb:latest
+    container_name: epi_pgweb_dev
+    environment:
+      DATABASE_URL: postgres://${DB_USER:-epidemiologia_user}:${DB_PASSWORD:-epidemiologia_password}@db:5432/${DB_NAME:-epidemiologia_db}?sslmode=disable
+    ports:
+      - "${PGWEB_PORT:-8081}:8081"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    command: /usr/bin/pgweb --bind=0.0.0.0 --listen=8081
+
+volumes:
+  postgres_data:
+    name: epi_postgres_data_dev
+  redis_data:
+    name: epi_redis_data_dev
+
+networks:
+  default:
+    name: epi_network_dev
