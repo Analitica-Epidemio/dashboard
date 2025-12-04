@@ -16,7 +16,6 @@ import {
   Pie,
   AreaChart,
   Area,
-  ComposedChart,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -37,6 +36,9 @@ interface UniversalChartProps {
 export function UniversalChart({ spec, className }: UniversalChartProps) {
   // Determinar altura del chart
   const height = spec.config?.config?.height || 400;
+
+  // Verificar si hay error del backend
+  const chartError = spec.error;
 
   // Verificar si hay datos
   const hasData = React.useMemo(() => {
@@ -66,7 +68,49 @@ export function UniversalChart({ spec, className }: UniversalChartProps) {
         )}
       </CardHeader>
       <CardContent>
-        {!hasData ? (
+        {chartError ? (
+          <div
+            className="flex items-center justify-center bg-amber-50 rounded-lg border-2 border-dashed border-amber-300"
+            style={{ height: height }}
+          >
+            <div className="text-center p-6 max-w-md">
+              <svg
+                className="mx-auto h-12 w-12 text-amber-500 mb-3"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+              <p className="text-sm font-semibold text-amber-800 mb-1">
+                {chartError.title}
+              </p>
+              <p className="text-xs text-amber-700 mb-3">
+                {chartError.message}
+              </p>
+              {chartError.details && (
+                <div className="text-xs text-amber-600 bg-amber-100 rounded p-2 mb-2">
+                  {chartError.details.years_found && (
+                    <p>Años disponibles: {chartError.details.years_found.join(', ')}</p>
+                  )}
+                  {chartError.details.records_found !== undefined && (
+                    <p>Registros encontrados: {chartError.details.records_found}</p>
+                  )}
+                </div>
+              )}
+              {chartError.suggestion && (
+                <p className="text-xs text-amber-600 italic">
+                  💡 {chartError.suggestion}
+                </p>
+              )}
+            </div>
+          </div>
+        ) : !hasData ? (
           <div
             className="flex items-center justify-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-300"
             style={{ height: height }}
@@ -241,11 +285,34 @@ function AreaChartRenderer({
     data.datasets.forEach((dataset) => {
       if (dataset.label) {
         const rawValue = dataset.data[index];
-        const numericValue = rawValue;
-        point[dataset.label] = numericValue || 0;
+        point[dataset.label] = rawValue || 0;
       }
     });
+    return point;
   });
+
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <AreaChart data={chartData}>
+        {config.showGrid !== false && <CartesianGrid strokeDasharray="3 3" />}
+        <XAxis dataKey="name" />
+        <YAxis />
+        <Tooltip />
+        {config.showLegend !== false && <Legend />}
+        {data.datasets.map((dataset, index) => (
+          <Area
+            key={index}
+            type="monotone"
+            dataKey={dataset.label || `Series ${index + 1}`}
+            stroke={dataset.color || `hsl(${index * 60}, 70%, 50%)`}
+            fill={dataset.color || `hsl(${index * 60}, 70%, 50%)`}
+            fillOpacity={config.fillOpacity ?? 0.3}
+            stackId={config.stacked ? "stack" : undefined}
+          />
+        ))}
+      </AreaChart>
+    </ResponsiveContainer>
+  );
 }
 
 // Pie Chart Renderer

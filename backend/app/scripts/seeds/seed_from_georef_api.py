@@ -109,7 +109,6 @@ def seed_departamentos_desde_georef(conn):
     print(f"   Descargados: {len(departamentos)} departamentos")
 
     inserted = 0
-    updated = 0
     errors = 0
 
     for dept in departamentos:
@@ -213,7 +212,6 @@ def seed_localidades_desde_georef(conn, max_localidades=5000):
 
         # IDs INDEC
         id_localidad = int(id_full)
-        provincia_id = int(loc["provincia"]["id"])
 
         # Departamento (si existe)
         if loc.get("departamento"):
@@ -236,8 +234,7 @@ def seed_localidades_desde_georef(conn, max_localidades=5000):
         if poblacion and isinstance(poblacion, dict):
             poblacion = poblacion.get("valor")
 
-        # INSERT simple (asume DB vacía, sin verificar departamento)
-        # Nota: id_departamento será NULL, solo guardamos id_departamento_indec
+        # INSERT simple (asume DB vacía)
         stmt = text("""
             INSERT INTO localidad (
                 id_localidad_indec,

@@ -11,15 +11,15 @@ from sqlmodel import Field, SQLModel
 
 class UserRole(str, Enum):
     """User roles for authorization"""
-    SUPERADMIN = "superadmin"
-    EPIDEMIOLOGO = "epidemiologo"
+    SUPERADMIN = "SUPERADMIN"
+    EPIDEMIOLOGO = "EPIDEMIOLOGO"
 
 
 class UserStatus(str, Enum):
     """User account status"""
-    ACTIVE = "active"
-    INACTIVE = "inactive"
-    SUSPENDED = "suspended"
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
+    SUSPENDED = "SUSPENDED"
 
 
 class User(SQLModel, table=True):

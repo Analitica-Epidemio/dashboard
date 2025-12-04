@@ -17,19 +17,15 @@ async def send_reset_password_email(email: str, token: str) -> None:
         email: Email del usuario
         token: Token de reset
     """
-    # Por ahora solo log, implementar envío real cuando se configure SMTP
+    # TODO: Implementar envío real cuando se configure SMTP
     reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
 
-    logger.info(f"Reset password email para {email}")
-    logger.info(f"Reset URL: {reset_url}")
+    # Log de auditoría (sin token por seguridad)
+    logger.info(f"Reset password email generado para {email}")
 
+    # En desarrollo, mostrar URL para testing (solo via logger.debug)
     if settings.ENVIRONMENT == "development":
-        print(f"\n{'=' * 50}")
-        print("RESET PASSWORD EMAIL")
-        print(f"To: {email}")
-        print(f"Reset URL: {reset_url}")
-        print(f"Token: {token}")
-        print(f"{'=' * 50}\n")
+        logger.debug(f"[DEV] Reset URL: {reset_url}")
 
 
 async def send_verification_email(email: str, token: str) -> None:
@@ -40,16 +36,12 @@ async def send_verification_email(email: str, token: str) -> None:
         email: Email del usuario
         token: Token de verificación
     """
-    # Por ahora solo log, implementar envío real cuando se configure SMTP
+    # TODO: Implementar envío real cuando se configure SMTP
     verify_url = f"{settings.FRONTEND_URL}/verify?token={token}"
 
-    logger.info(f"Verification email para {email}")
-    logger.info(f"Verify URL: {verify_url}")
+    # Log de auditoría (sin token por seguridad)
+    logger.info(f"Verification email generado para {email}")
 
+    # En desarrollo, mostrar URL para testing (solo via logger.debug)
     if settings.ENVIRONMENT == "development":
-        print(f"\n{'=' * 50}")
-        print("VERIFICATION EMAIL")
-        print(f"To: {email}")
-        print(f"Verify URL: {verify_url}")
-        print(f"Token: {token}")
-        print(f"{'=' * 50}\n")
+        logger.debug(f"[DEV] Verify URL: {verify_url}")

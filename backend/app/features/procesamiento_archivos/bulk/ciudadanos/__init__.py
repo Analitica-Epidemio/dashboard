@@ -17,8 +17,6 @@ USAGE:
   manager.upsert_comorbilidades(df)
 """
 
-from typing import Dict
-
 import polars as pl
 
 from ..shared import BulkOperationResult

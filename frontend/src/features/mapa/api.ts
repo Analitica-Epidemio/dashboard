@@ -1,7 +1,7 @@
 /**
  * Mapa API Layer
  *
- * Semantic hooks for map-related endpoints (domicilios and establecimientos).
+ * Semantic hooks for map-related endpoints (domicilios, establecimientos, geografía).
  * Uses $api client internally - all types from OpenAPI schema.
  *
  * @module features/mapa/api
@@ -9,6 +9,39 @@
 
 import { $api } from '@/lib/api/client';
 import type { components, operations } from '@/lib/api/types';
+
+// ============================================================================
+// GEOJSON TYPES
+// ============================================================================
+
+export interface GeoJSONFeature {
+  type: 'Feature';
+  properties: {
+    id: number;
+    nombre: string;
+    poblacion?: number | null;
+    id_provincia_indec?: number;
+    id_departamento_indec?: number;
+    provincia?: string;
+    total_eventos?: number;
+    total_casos?: number;
+    tasa_incidencia?: number | null;
+    centroide?: { lat: number; lon: number } | null;
+  };
+  geometry: {
+    type: 'MultiPolygon' | 'Polygon';
+    coordinates: number[][][][];
+  };
+}
+
+export interface GeoJSONFeatureCollection {
+  type: 'FeatureCollection';
+  features: GeoJSONFeature[];
+  metadata?: {
+    max_eventos?: number;
+    total_departamentos?: number;
+  };
+}
 
 // ============================================================================
 // TYPES - Re-exported from OpenAPI schema
@@ -148,6 +181,96 @@ export function useEstablecimientoDetalle(
     },
     {
       enabled: enabled && !!idEstablecimiento,
+    }
+  );
+}
+
+// ============================================================================
+// GEOGRAFÍA HOOKS - GeoJSON para mapas coropléticos
+// ============================================================================
+
+/**
+ * Fetch provinces GeoJSON for choropleth map
+ *
+ * Returns all provinces with geometry for map visualization.
+ *
+ * @returns Query with GeoJSON FeatureCollection of provinces
+ */
+export function useProvinciasGeoJSON() {
+  return $api.useQuery(
+    'get',
+    '/api/v1/geografia/provincias/geojson'
+  );
+}
+
+/**
+ * Fetch departments GeoJSON for choropleth map
+ *
+ * Returns departments with geometry, optionally filtered by province.
+ *
+ * @param idProvinciaIndec - Optional province ID to filter
+ * @returns Query with GeoJSON FeatureCollection of departments
+ */
+export function useDepartamentosGeoJSON(idProvinciaIndec?: number | null) {
+  return $api.useQuery(
+    'get',
+    '/api/v1/geografia/departamentos/geojson',
+    {
+      params: {
+        query: idProvinciaIndec ? { id_provincia_indec: idProvinciaIndec } : {},
+      },
+    }
+  );
+}
+
+/**
+ * Fetch departments GeoJSON with event counts for choropleth map
+ *
+ * Returns departments with geometry AND event statistics (total_eventos, tasa_incidencia).
+ * Useful for coloring the map based on epidemiological data.
+ *
+ * @param filters - Province and/or grupo ENO filters
+ * @returns Query with GeoJSON FeatureCollection including event stats
+ */
+export function useDepartamentosConEventos(filters?: {
+  id_provincia_indec?: number | null;
+  id_grupo_eno?: number | null;
+}) {
+  return $api.useQuery(
+    'get',
+    '/api/v1/geografia/departamentos/geojson-con-eventos',
+    {
+      params: {
+        query: {
+          ...(filters?.id_provincia_indec && { id_provincia_indec: filters.id_provincia_indec }),
+          ...(filters?.id_grupo_eno && { id_grupo_eno: filters.id_grupo_eno }),
+        },
+      },
+    }
+  );
+}
+
+/**
+ * Fetch provinces GeoJSON with event counts for choropleth map
+ *
+ * Returns provinces with geometry AND event statistics (total_eventos, tasa_incidencia).
+ * Useful for coloring the map based on epidemiological data at province level.
+ *
+ * @param filters - Grupo ENO filter
+ * @returns Query with GeoJSON FeatureCollection including event stats
+ */
+export function useProvinciasConEventos(filters?: {
+  id_grupo_eno?: number | null;
+}) {
+  return $api.useQuery(
+    'get',
+    '/api/v1/geografia/provincias/geojson-con-eventos',
+    {
+      params: {
+        query: {
+          ...(filters?.id_grupo_eno && { id_grupo_eno: filters.id_grupo_eno }),
+        },
+      },
     }
   );
 }

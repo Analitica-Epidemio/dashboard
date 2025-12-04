@@ -20,7 +20,8 @@ class Settings(BaseSettings):
     # CONFIGURACIÓN DE ENTORNO
     # =============================================================================
     ENVIRONMENT: str = "development"
-    DEBUG: bool = True
+    # SEGURIDAD: DEBUG=False por defecto. Solo habilitar explícitamente en .env
+    DEBUG: bool = False
 
     # =============================================================================
     # CONFIGURACIÓN DE BASE DE DATOS

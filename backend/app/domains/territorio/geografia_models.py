@@ -9,7 +9,8 @@ import enum
 from decimal import Decimal
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import BigInteger, Column, Numeric, UniqueConstraint
+from geoalchemy2 import Geometry
+from sqlalchemy import BigInteger, Column, Index, Numeric, UniqueConstraint
 from sqlmodel import Field, Relationship
 
 from app.core.models import BaseModel
@@ -28,14 +29,14 @@ class EstadoGeocodificacion(str, enum.Enum):
     NO_GEOCODIFICABLE: Datos insuficientes para geocodificar (ej: solo número sin calle)
     DESHABILITADO: Geocodificación deshabilitada en settings
     """
-    PENDIENTE = "pendiente"
-    EN_COLA = "en_cola"
-    PROCESANDO = "procesando"
-    GEOCODIFICADO = "geocodificado"
-    FALLO_TEMPORAL = "fallo_temporal"
-    FALLO_PERMANENTE = "fallo_permanente"
-    NO_GEOCODIFICABLE = "no_geocodificable"
-    DESHABILITADO = "deshabilitado"
+    PENDIENTE = "PENDIENTE"
+    EN_COLA = "EN_COLA"
+    PROCESANDO = "PROCESANDO"
+    GEOCODIFICADO = "GEOCODIFICADO"
+    FALLO_TEMPORAL = "FALLO_TEMPORAL"
+    FALLO_PERMANENTE = "FALLO_PERMANENTE"
+    NO_GEOCODIFICABLE = "NO_GEOCODIFICABLE"
+    DESHABILITADO = "DESHABILITADO"
 
 if TYPE_CHECKING:
     from app.domains.eventos_epidemiologicos.ambitos_models import (
@@ -49,9 +50,11 @@ if TYPE_CHECKING:
 class Provincia(BaseModel, table=True):
     """Provincias argentinas con código INDEC."""
 
-    # TODO: Este lo agregué yo (ignacio), creo que da mas normalización y nos permitiria consultas mas interesantes
-
     __tablename__ = "provincia"
+    __table_args__ = (
+        Index("idx_provincia_geometria", "geometria", postgresql_using="gist"),
+        {"extend_existing": True},
+    )
 
     # ID INDEC único e indexado (no primary key)
     id_provincia_indec: int = Field(
@@ -71,6 +74,18 @@ class Provincia(BaseModel, table=True):
     latitud: Optional[float] = Field(None, description="Latitud del centroide geográfico")
     longitud: Optional[float] = Field(None, description="Longitud del centroide geográfico")
 
+    # Geometría para mapa coroplético (polígono de la provincia)
+    geometria: Optional[str] = Field(
+        default=None,
+        sa_column=Column(Geometry("MULTIPOLYGON", srid=4326, spatial_index=False)),
+        description="Geometría de la provincia (MultiPolygon en WGS84)"
+    )
+
+    # Metadatos de la fuente
+    fuente_geometria: Optional[str] = Field(
+        None, max_length=100, description="Fuente de la geometría (IGN, Georef, etc.)"
+    )
+
     # Relaciones
     departamentos: List["Departamento"] = Relationship(back_populates="provincia")
 
@@ -78,13 +93,12 @@ class Provincia(BaseModel, table=True):
 class Departamento(BaseModel, table=True):
     """Departamentos/Partidos con código INDEC."""
 
-    # TODO: Este lo agregué yo (ignacio), creo que da mas normalización y nos permitiria consultas mas interesantes
-
     __tablename__ = "departamento"
     __table_args__ = (
         # Constraint UNIQUE compuesta: el código de departamento solo es único dentro de cada provincia
         # Ej: Buenos Aires (prov 6) y Chubut (prov 26) pueden tener ambas un departamento con código 7
         UniqueConstraint("id_provincia_indec", "id_departamento_indec", name="uq_departamento_provincia_departamento"),
+        Index("idx_departamento_geometria", "geometria", postgresql_using="gist"),
         {"extend_existing": True},
     )
 
@@ -116,9 +130,20 @@ class Departamento(BaseModel, table=True):
     latitud: Optional[float] = Field(None, description="Latitud del centroide geográfico")
     longitud: Optional[float] = Field(None, description="Longitud del centroide geográfico")
 
+    # Geometría para mapa coroplético (polígono del departamento)
+    geometria: Optional[str] = Field(
+        default=None,
+        sa_column=Column(Geometry("MULTIPOLYGON", srid=4326, spatial_index=False)),
+        description="Geometría del departamento (MultiPolygon en WGS84)"
+    )
+
+    # Metadatos de la fuente
+    fuente_geometria: Optional[str] = Field(
+        None, max_length=100, description="Fuente de la geometría (IGN, Georef, etc.)"
+    )
+
     # Relaciones
     provincia: "Provincia" = Relationship(back_populates="departamentos")
-    localidades: List["Localidad"] = Relationship(back_populates="departamento")
 
 
 class Localidad(BaseModel, table=True):
@@ -133,19 +158,12 @@ class Localidad(BaseModel, table=True):
     nombre: str = Field(
         max_length=150, index=True, description="Nombre de la localidad"
     )
-    # Código INDEC del departamento (para referencia y búsqueda)
+    # Código INDEC del departamento (para JOINs con tabla departamento)
     id_departamento_indec: Optional[int] = Field(
         None,
         index=True,
-        description="Código INDEC del departamento (no es FK)",
+        description="Código INDEC del departamento",
     )
-    # ID del departamento en la BD (foreign key real)
-    id_departamento: Optional[int] = Field(
-        None,
-        foreign_key="departamento.id",
-        description="ID interno del departamento (opcional para localidades de viaje)",
-    )
-    # TODO: El original tenia provincia indec, pero con esto lo podemos sacar a traves de un join con el  departamento
 
     # Datos adicionales
     # TODO: Agregado por ignacio
@@ -160,7 +178,6 @@ class Localidad(BaseModel, table=True):
     longitud: Optional[float] = Field(None, description="Longitud geográfica")
 
     # Relaciones
-    departamento: Optional["Departamento"] = Relationship(back_populates="localidades")
     establecimientos: List["Establecimiento"] = Relationship(
         back_populates="localidad_establecimiento"
     )

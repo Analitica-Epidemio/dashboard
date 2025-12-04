@@ -646,6 +646,9 @@ class EventosProcessor(BulkProcessorBase):
             semana_epidemiologica_apertura = None
             anio_epidemiologico_apertura = None
             semana_epidemiologica_sintomas = None
+            # Nuevos campos canónicos basados en fecha_minima_evento
+            fecha_minima_evento_semana_epi = None
+            fecha_minima_evento_anio_epi = None
 
             if fecha_minima_evento:
                 # Convertir a date si es datetime
@@ -659,6 +662,9 @@ class EventosProcessor(BulkProcessorBase):
                 semana_epi, anio_epi = calcular_semana_epidemiologica(fecha_minima_date)
                 semana_epidemiologica_apertura = semana_epi
                 anio_epidemiologico_apertura = anio_epi
+                # Calcular los nuevos campos canónicos
+                fecha_minima_evento_semana_epi = semana_epi
+                fecha_minima_evento_anio_epi = anio_epi
 
             if fecha_inicio_sintomas_mas_temprana:
                 if hasattr(fecha_inicio_sintomas_mas_temprana, "date"):
@@ -682,6 +688,9 @@ class EventosProcessor(BulkProcessorBase):
                 "fecha_minima_evento": fecha_minima_evento,
                 "semana_epidemiologica_apertura": semana_epidemiologica_apertura,
                 "anio_epidemiologico_apertura": anio_epidemiologico_apertura,
+                # Nuevos campos canónicos
+                "fecha_minima_evento_semana_epi": fecha_minima_evento_semana_epi,
+                "fecha_minima_evento_anio_epi": fecha_minima_evento_anio_epi,
                 "semana_epidemiologica_sintomas": semana_epidemiologica_sintomas,
                 "fecha_nacimiento": agg_row.get("fecha_nacimiento_first"),
                 "id_tipo_eno": id_tipo_eno,
@@ -737,6 +746,9 @@ class EventosProcessor(BulkProcessorBase):
             "fecha_minima_evento": stmt.excluded.fecha_minima_evento,
             "semana_epidemiologica_apertura": stmt.excluded.semana_epidemiologica_apertura,
             "anio_epidemiologico_apertura": stmt.excluded.anio_epidemiologico_apertura,
+            # Nuevos campos canónicos
+            "fecha_minima_evento_semana_epi": stmt.excluded.fecha_minima_evento_semana_epi,
+            "fecha_minima_evento_anio_epi": stmt.excluded.fecha_minima_evento_anio_epi,
             "semana_epidemiologica_sintomas": stmt.excluded.semana_epidemiologica_sintomas,
             "fecha_nacimiento": stmt.excluded.fecha_nacimiento,
             "id_tipo_eno": stmt.excluded.id_tipo_eno,

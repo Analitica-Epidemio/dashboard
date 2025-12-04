@@ -1,5 +1,5 @@
 """
-List tipos ENO endpoint
+List tipos ENO endpoint con estadísticas
 """
 
 import logging
@@ -7,7 +7,7 @@ from typing import List, Optional
 
 from fastapi import Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import asc, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -16,6 +16,7 @@ from app.core.schemas.response import PaginatedResponse, PaginationMeta
 from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User
 from app.domains.eventos_epidemiologicos.eventos.models import (
+    Evento,
     TipoEno,
     TipoEnoGrupoEno,
 )
@@ -39,23 +40,48 @@ class TipoEnoInfo(BaseModel):
     grupos: List[GrupoInfo] = Field(
         default_factory=list, description="Lista de grupos a los que pertenece este tipo"
     )
+    # Estadísticas
+    total_casos: int = Field(0, description="Total de casos registrados")
+
 
 logger = logging.getLogger(__name__)
 
 
 async def list_tipos_eno(
     page: int = Query(1, ge=1, description="Número de página"),
-    per_page: int = Query(20, ge=1, le=100, description="Elementos por página"),
+    per_page: int = Query(50, ge=1, le=200, description="Elementos por página"),
     nombre: Optional[str] = Query(None, description="Filtrar por nombre del tipo"),
     grupo_id: Optional[int] = Query(None, description="Filtrar por ID del grupo"),
     grupos: Optional[List[int]] = Query(None, description="Filtrar por múltiples IDs de grupo"),
+    ordenar_por: str = Query(
+        "total_casos",
+        description="Campo para ordenar: nombre, codigo, total_casos"
+    ),
+    orden: str = Query("desc", description="Orden: asc o desc"),
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(RequireAnyRole()),
 ) -> PaginatedResponse[TipoEnoInfo]:
     try:
-        # Construir query base
-        query = select(TipoEno).options(
-            selectinload(TipoEno.tipo_grupos).selectinload(TipoEnoGrupoEno.grupo_eno)
+        # Subquery para contar casos por tipo_eno
+        casos_subquery = (
+            select(
+                Evento.id_tipo_eno,
+                func.count(Evento.id).label("total_casos")
+            )
+            .group_by(Evento.id_tipo_eno)
+            .subquery()
+        )
+
+        # Query principal
+        query = (
+            select(
+                TipoEno,
+                func.coalesce(casos_subquery.c.total_casos, 0).label("total_casos")
+            )
+            .outerjoin(casos_subquery, TipoEno.id == casos_subquery.c.id_tipo_eno)
+            .options(
+                selectinload(TipoEno.tipo_grupos).selectinload(TipoEnoGrupoEno.grupo_eno)
+            )
         )
 
         # Aplicar filtros
@@ -79,6 +105,18 @@ async def list_tipos_eno(
                     )
                 )
             )
+
+        # Ordenamiento
+        order_func = desc if orden.lower() == "desc" else asc
+        if ordenar_por == "nombre":
+            query = query.order_by(order_func(TipoEno.nombre))
+        elif ordenar_por == "codigo":
+            query = query.order_by(order_func(TipoEno.codigo))
+        elif ordenar_por == "total_casos":
+            query = query.order_by(order_func(func.coalesce(casos_subquery.c.total_casos, 0)))
+        else:
+            # Default: por total_casos descendente
+            query = query.order_by(desc(func.coalesce(casos_subquery.c.total_casos, 0)))
 
         # Contar total de elementos con los mismos filtros
         count_query = select(func.count(TipoEno.id.distinct()))
@@ -110,11 +148,14 @@ async def list_tipos_eno(
 
         # Ejecutar query
         result = await db.execute(query)
-        tipos = result.scalars().all()
+        rows = result.all()
 
         # Convertir a modelo de respuesta
         tipos_info = []
-        for tipo in tipos:
+        for row in rows:
+            tipo = row[0]
+            total_casos = row[1] or 0
+
             # Extraer grupos desde la relación many-to-many
             grupos_list = []
             if hasattr(tipo, 'tipo_grupos') and tipo.tipo_grupos:
@@ -130,7 +171,8 @@ async def list_tipos_eno(
                     nombre=tipo.nombre,
                     descripcion=tipo.descripcion,
                     codigo=tipo.codigo,
-                    grupos=grupos_list
+                    grupos=grupos_list,
+                    total_casos=total_casos,
                 )
             )
 

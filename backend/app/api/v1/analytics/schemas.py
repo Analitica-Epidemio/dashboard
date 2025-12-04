@@ -11,25 +11,25 @@ from pydantic import BaseModel, Field
 
 class PeriodType(str, Enum):
     """Tipos de períodos predefinidos"""
-    ULTIMA_SEMANA_EPI = "ultima_semana_epi"
-    ULTIMAS_4_SEMANAS_EPI = "ultimas_4_semanas_epi"
-    ULTIMAS_12_SEMANAS_EPI = "ultimas_12_semanas_epi"
-    MES_HASTA_FECHA = "mes_hasta_fecha"
-    MES_PASADO = "mes_pasado"
-    ULTIMOS_3_MESES = "ultimos_3_meses"
-    TRIMESTRE_ACTUAL = "trimestre_actual"
-    TRIMESTRE_PASADO = "trimestre_pasado"
-    ULTIMOS_6_MESES = "ultimos_6_meses"
-    ANIO_HASTA_FECHA = "anio_hasta_fecha"
-    ANIO_PASADO = "anio_pasado"
-    PERSONALIZADO = "personalizado"
+    ULTIMA_SEMANA_EPI = "ULTIMA_SEMANA_EPI"
+    ULTIMAS_4_SEMANAS_EPI = "ULTIMAS_4_SEMANAS_EPI"
+    ULTIMAS_12_SEMANAS_EPI = "ULTIMAS_12_SEMANAS_EPI"
+    MES_HASTA_FECHA = "MES_HASTA_FECHA"
+    MES_PASADO = "MES_PASADO"
+    ULTIMOS_3_MESES = "ULTIMOS_3_MESES"
+    TRIMESTRE_ACTUAL = "TRIMESTRE_ACTUAL"
+    TRIMESTRE_PASADO = "TRIMESTRE_PASADO"
+    ULTIMOS_6_MESES = "ULTIMOS_6_MESES"
+    ANIO_HASTA_FECHA = "ANIO_HASTA_FECHA"
+    ANIO_PASADO = "ANIO_PASADO"
+    PERSONALIZADO = "PERSONALIZADO"
 
 
 class ComparisonType(str, Enum):
     """Tipo de comparación a realizar"""
-    ROLLING = "rolling"  # Comparar vs período anterior del mismo tamaño
-    YEAR_OVER_YEAR = "year_over_year"  # Comparar vs mismo período año anterior
-    BOTH = "both"  # Mostrar ambas comparaciones
+    ROLLING = "ROLLING"  # Comparar vs período anterior del mismo tamaño
+    YEAR_OVER_YEAR = "YEAR_OVER_YEAR"  # Comparar vs mismo período año anterior
+    BOTH = "BOTH"  # Mostrar ambas comparaciones
 
 
 class PeriodInfo(BaseModel):

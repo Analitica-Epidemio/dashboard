@@ -180,7 +180,6 @@ class CatalogsProcessor:
             timestamp = get_current_timestamp()
             nuevos_tipos = []
             for row in tipo_faltantes_df.iter_rows(named=True):
-                tipo_codigo = row["codigo_tipo"]
                 nombre_original = row["tipo_nombre_original"]
 
                 tipo_data = CodigoGenerator.generar_par_tipo(nombre_original)

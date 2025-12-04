@@ -29,7 +29,9 @@ export function SessionValidator() {
       return;
     }
 
-    // Validar sesión cada 5 minutos
+    // SEGURIDAD: Validar sesión cada 2 minutos para datos médicos sensibles
+    const VALIDATION_INTERVAL_MS = 2 * 60 * 1000; // 2 minutos
+
     const interval = setInterval(async () => {
       try {
         // Forzar revalidación de la sesión
@@ -54,7 +56,7 @@ export function SessionValidator() {
       } catch (error) {
         console.error("Error validating session:", error);
       }
-    }, 5 * 60 * 1000); // 5 minutos
+    }, VALIDATION_INTERVAL_MS);
 
     return () => clearInterval(interval);
   }, [session, status, router]);

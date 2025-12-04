@@ -74,11 +74,6 @@ class CapaAreaUrbana(BaseModel, table=True):
         None,
         description="Código INDEC del departamento al que pertenece"
     )
-    id_departamento: Optional[int] = Field(
-        None,
-        foreign_key="departamento.id",
-        description="ID del departamento (FK)"
-    )
 
     # Datos poblacionales
     poblacion: Optional[int] = Field(

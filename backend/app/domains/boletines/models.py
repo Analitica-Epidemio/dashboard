@@ -2,7 +2,7 @@
 Modelos de base de datos para el sistema de boletines epidemiológicos
 """
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import JSON, Column, Text
@@ -11,40 +11,75 @@ from sqlmodel import Field, Relationship
 from app.core.models import BaseModel
 
 
-class BoletinSnippet(BaseModel, table=True):
+class BoletinTemplateConfig(BaseModel, table=True):
     """
-    Snippets reutilizables para boletines epidemiológicos.
-    Contiene templates de texto con placeholders para contenido dinámico.
+    Configuración única del template de boletín (singleton).
+    Solo existe UN registro en esta tabla (id=1).
+
+    Arquitectura:
+    - static_content_template: Contenido base del boletín (portada, autoridades, metodología)
+      Incluye un bloque placeholder "selectedEventsPlaceholder" donde se insertan los eventos
+    - event_section_template: Template TipTap que se repite para CADA evento seleccionado
+      Usa variables como {{ tipo_evento }}, {{ semana }}, etc.
     """
-    __tablename__ = "boletin_snippets"
+    __tablename__ = "boletin_template_config"
 
-    codigo: str = Field(max_length=100, unique=True, index=True, description="Código único del snippet (ej: evento_crecimiento)")
-    nombre: str = Field(max_length=255, description="Nombre descriptivo del snippet")
-    descripcion: Optional[str] = Field(default=None, sa_column=Column(Text), description="Descripción del snippet")
-    categoria: str = Field(max_length=50, index=True, description="Categoría (evento, introduccion, conclusion, recomendacion, etc.)")
-
-    # Template con placeholders: {evento_nombre}, {semana}, {anio}, {casos_actuales}, etc.
-    template: str = Field(sa_column=Column(Text, nullable=False), description="Template HTML con placeholders estilo Jinja2")
-
-    # Variables disponibles y sus tipos (JSON)
-    # Ej: {"evento_nombre": "string", "casos_actuales": "number", "cambio_porcentual": "number"}
-    variables_schema: Dict[str, str] = Field(
+    # Contenido TipTap base con estructura fija
+    # Incluye bloque "selectedEventsPlaceholder" donde se insertan eventos dinámicos
+    static_content_template: Dict[str, Any] = Field(
         sa_column=Column(JSON, nullable=False),
-        description="Schema de variables disponibles con sus tipos"
+        description="TipTap JSON del contenido base (portada, intro, autoridades, metodología)"
     )
 
-    # Condiciones para mostrar este snippet (JSON)
-    # Ej: {"tipo_cambio": "crecimiento", "porcentaje_min": 50}
-    condiciones: Optional[Dict[str, Any]] = Field(
+    # Template de sección de evento - se repite para cada evento seleccionado
+    # Variables: {{ tipo_evento }}, {{ semana }}, {{ anio }}, {{ num_semanas }}, etc.
+    event_section_template: Dict[str, Any] = Field(
+        default_factory=dict,
+        sa_column=Column(JSON, nullable=False),
+        description="TipTap JSON del template de sección de evento (se repite por cada evento)"
+    )
+
+    updated_by: Optional[int] = Field(
         default=None,
-        sa_column=Column(JSON),
-        description="Condiciones para mostrar el snippet"
+        foreign_key="users.id",
+        description="Usuario que actualizó la configuración"
     )
 
-    # Orden de visualización
-    orden: int = Field(default=0, description="Orden de visualización en la UI")
 
-    is_active: bool = Field(default=True, description="Si el snippet está activo")
+class CapacidadHospitalaria(BaseModel, table=True):
+    """
+    Capacidad de camas hospitalarias por UGD y semana epidemiológica.
+    Reemplaza datos ficticios hardcodeados.
+    """
+    __tablename__ = "capacidad_hospitalaria"
+
+    ugd: str = Field(max_length=100, index=True, description="Unidad de Gestión Descentralizada")
+    semana_epidemiologica: int = Field(index=True, description="Semana epidemiológica")
+    anio: int = Field(index=True, description="Año")
+
+    camas_totales: int = Field(description="Total de camas disponibles")
+    camas_ocupadas: int = Field(description="Camas ocupadas")
+    porcentaje_ocupacion: float = Field(description="Porcentaje de ocupación (0-100)")
+
+    fecha_registro: date = Field(description="Fecha de registro de los datos")
+
+
+class VirusRespiratorio(BaseModel, table=True):
+    """
+    Detección de virus respiratorios por semana epidemiológica.
+    Reemplaza datos ficticios hardcodeados.
+    """
+    __tablename__ = "virus_respiratorio"
+
+    semana_epidemiologica: int = Field(index=True, description="Semana epidemiológica")
+    anio: int = Field(index=True, description="Año")
+    virus_tipo: str = Field(max_length=100, description="Tipo de virus (Influenza A, VSR, etc.)")
+
+    casos_positivos: int = Field(description="Casos positivos detectados")
+    casos_testeados: int = Field(description="Total de casos testeados")
+    porcentaje_positividad: float = Field(description="Porcentaje de positividad (0-100)")
+
+    fecha_registro: date = Field(description="Fecha de registro de los datos")
 
 
 class BoletinTemplate(BaseModel, table=True):
@@ -95,14 +130,6 @@ class BoletinInstance(BaseModel, table=True):
     # Contenido HTML editable (TipTap)
     content: Optional[str] = Field(default=None, sa_column=Column(Text), description="Contenido HTML del boletín (editable con TipTap)")
 
-    # Estado de generación
-    status: str = Field(
-        default="pending",
-        max_length=20,
-        index=True,
-        description="Estado: pending, generating, completed, failed"
-    )
-
     # Archivo PDF generado
     pdf_path: Optional[str] = Field(default=None, max_length=500, description="Path al archivo PDF generado")
     pdf_size: Optional[int] = Field(default=None, description="Tamaño del PDF en bytes")
@@ -118,35 +145,3 @@ class BoletinInstance(BaseModel, table=True):
     template: Optional[BoletinTemplate] = Relationship(back_populates="instances")
 
 
-class QueryDefinition(BaseModel, table=True):
-    """
-    Catálogo de queries disponibles para usar en widgets.
-    Permite reutilizar queries entre diferentes templates.
-    """
-    __tablename__ = "boletin_queries"
-
-    name: str = Field(max_length=255, unique=True, index=True, description="Nombre identificador de la query")
-    description: Optional[str] = Field(default=None, sa_column=Column(Text), description="Descripción de la query")
-    category: str = Field(max_length=50, index=True, description="Categoría (enos, ira, capacidad, etc.)")
-
-    # Endpoint o SQL query (JSON)
-    # { "type": "endpoint", "url": "/api/analytics/top-enos", "method": "GET" }
-    # o { "type": "sql", "query": "SELECT ...", "params": [...] }
-    query_config: Dict[str, Any] = Field(sa_column=Column(JSON, nullable=False), description="Configuración de la query")
-
-    # Parámetros requeridos (JSON Array)
-    # [{ "name": "fecha_inicio", "type": "date", "required": true }]
-    required_params: List[Dict[str, Any]] = Field(
-        default_factory=list,
-        sa_column=Column(JSON, nullable=False),
-        description="Parámetros requeridos"
-    )
-
-    # Esquema del resultado esperado (JSON)
-    # { "type": "array", "items": { "type": "object", "properties": {...} } }
-    result_schema: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON), description="Esquema del resultado")
-
-    # Ejemplo de respuesta (JSON)
-    example_response: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON), description="Ejemplo de respuesta")
-
-    is_active: bool = Field(default=True, description="Si la query está activa")

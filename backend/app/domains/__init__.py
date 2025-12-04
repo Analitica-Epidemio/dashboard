@@ -51,7 +51,18 @@ from app.domains.autenticacion.models import User, UserLogin, UserSession
 from app.domains.boletines.models import (
     BoletinInstance,
     BoletinTemplate,
-    QueryDefinition,
+    BoletinTemplateConfig,
+    CapacidadHospitalaria,
+    VirusRespiratorio,
+)
+
+# 🦠 EVENTOS EPIDEMIOLOGICOS DOMAIN
+# IMPORTANTE: agentes debe importarse ANTES de eventos para que SQLAlchemy pueda
+# resolver la relación Evento.agentes_detectados -> EventoAgente
+from app.domains.eventos_epidemiologicos.agentes.models import (
+    AgenteEtiologico,
+    AgenteExtraccionConfig,
+    EventoAgente,
 )
 from app.domains.eventos_epidemiologicos.ambitos_models import (
     AmbitosConcurrenciaEvento,
@@ -64,8 +75,6 @@ from app.domains.eventos_epidemiologicos.clasificacion.models import (
     StrategyChangeLog,
     TipoClasificacion,
 )
-
-# 🦠 EVENTOS EPIDEMIOLOGICOS DOMAIN
 from app.domains.eventos_epidemiologicos.eventos.models import (
     AntecedenteEpidemiologico,
     AntecedentesEpidemiologicosEvento,
@@ -139,6 +148,9 @@ __all__ = [
     "EventClassificationAudit",
     "StrategyChangeLog",
     "TipoClasificacion",
+    "AgenteEtiologico",
+    "AgenteExtraccionConfig",
+    "EventoAgente",
     # Atencion medica
     "Sintoma",
     "Comorbilidad",
@@ -166,7 +178,9 @@ __all__ = [
     # Boletines
     "BoletinTemplate",
     "BoletinInstance",
-    "QueryDefinition",
+    "BoletinTemplateConfig",
+    "CapacidadHospitalaria",
+    "VirusRespiratorio",
     # Features
     "DashboardChart",
     "ProcessingJob",

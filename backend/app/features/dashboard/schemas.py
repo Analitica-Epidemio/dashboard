@@ -11,35 +11,35 @@ from pydantic import BaseModel, Field
 
 class ChartVisualizationType(str, Enum):
     """Tipos de visualización disponibles"""
-    LINE = "line"
-    BAR = "bar"
-    PIE = "pie"
-    AREA = "area"
-    SCATTER = "scatter"
-    HEATMAP = "heatmap"
-    MAP = "map"
-    TABLE = "table"
-    METRIC = "metric"
+    LINE = "LINE"
+    BAR = "BAR"
+    PIE = "PIE"
+    AREA = "AREA"
+    SCATTER = "SCATTER"
+    HEATMAP = "HEATMAP"
+    MAP = "MAP"
+    TABLE = "TABLE"
+    METRIC = "METRIC"
 
 class ChartCategory(str, Enum):
     """Categorías de charts"""
-    EPIDEMIOLOGICAL = "epidemiological"
-    DEMOGRAPHIC = "demographic"
-    GEOGRAPHIC = "geographic"
-    TEMPORAL = "temporal"
-    COMPARATIVE = "comparative"
-    GENERAL = "general"
+    EPIDEMIOLOGICAL = "EPIDEMIOLOGICAL"
+    DEMOGRAPHIC = "DEMOGRAPHIC"
+    GEOGRAPHIC = "GEOGRAPHIC"
+    TEMPORAL = "TEMPORAL"
+    COMPARATIVE = "COMPARATIVE"
+    GENERAL = "GENERAL"
 
 class FilterType(str, Enum):
     """Tipos de filtros disponibles"""
-    DATE_RANGE = "date_range"
-    SINGLE_SELECT = "single_select"
-    MULTI_SELECT = "multi_select"
-    NUMBER_RANGE = "number_range"
-    TEXT_INPUT = "text_input"
-    BOOLEAN = "boolean"
-    ENO_SELECTOR = "eno_selector"
-    DEPARTMENT_SELECTOR = "department_selector"
+    DATE_RANGE = "DATE_RANGE"
+    SINGLE_SELECT = "SINGLE_SELECT"
+    MULTI_SELECT = "MULTI_SELECT"
+    NUMBER_RANGE = "NUMBER_RANGE"
+    TEXT_INPUT = "TEXT_INPUT"
+    BOOLEAN = "BOOLEAN"
+    ENO_SELECTOR = "ENO_SELECTOR"
+    DEPARTMENT_SELECTOR = "DEPARTMENT_SELECTOR"
 
 # ====== RESPONSES PRINCIPALES ======
 
@@ -51,19 +51,19 @@ class ChartTemplateResponse(BaseModel):
     descripcion: Optional[str]
     categoria: str
     tipo_visualizacion: ChartVisualizationType
-    
+
     # Capacidades dinámicas
     tipo_eno_compatible: Optional[List[str]] = None  # null = todos
     filtros_requeridos: List[str] = Field(default_factory=list)
     filtros_opcionales: List[str] = Field(default_factory=list)
     parametros_disponibles: Dict[str, Any] = Field(default_factory=dict)
     parametros_default: Dict[str, Any] = Field(default_factory=dict)
-    
+
     # UI metadata
     orden_sugerido: int = 0
     es_publico: bool = True
     requiere_autenticacion: bool = False
-    
+
     # Timestamps
     created_at: datetime
     updated_at: datetime
@@ -75,17 +75,17 @@ class ChartDataResponse(BaseModel):
     titulo: str
     descripcion: Optional[str] = None
     tipo_visualizacion: ChartVisualizationType
-    
+
     # Datos principales
     data: Dict[str, Any]
     configuracion_chart: Dict[str, Any] = Field(default_factory=dict)
-    
+
     # Metadatos
     filtros_aplicados: Dict[str, Any] = Field(default_factory=dict)
     parametros_aplicados: Dict[str, Any] = Field(default_factory=dict)
     timestamp_generacion: datetime
     tiempo_ejecucion_ms: Optional[int] = None
-    
+
     # Info de datos
     total_registros: Optional[int] = None
     registros_filtrados: Optional[int] = None
@@ -130,13 +130,13 @@ class DashboardChartItem(BaseModel):
     titulo_personalizado: Optional[str] = None
     filtros_aplicados: Dict[str, Any] = Field(default_factory=dict)
     parametros_aplicados: Dict[str, Any] = Field(default_factory=dict)
-    
+
     # Layout position
     posicion_x: int = 0
     posicion_y: int = 0
     ancho: int = 6  # grid columns (12 total)
     alto: int = 4   # grid rows
-    
+
     # Display options
     mostrar_titulo: bool = True
     mostrar_controles: bool = True

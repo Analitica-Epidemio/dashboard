@@ -38,7 +38,7 @@ async def get_current_user_token(
     else:
         token_str = str(token)
 
-    logger.debug(f"Token validation attempt for token starting with: {token_str[:20]}...")
+    logger.debug("Token validation attempt")
 
     # Verify token
     token_data = TokenSecurity.verify_token(token_str, "access")

@@ -127,8 +127,23 @@ def process_csv_file(self, job_id: str, file_path: str) -> Dict[str, Any]:
                 job.mark_completed(**result_data)
                 logger.info(f"Procesamiento exitoso - Job: {job_id}")
             else:
-                job.mark_failed(result.get("error", "Error desconocido"), json.dumps(result_data, default=str))
+                # Si el procesador falló, la sesión puede estar corrupta
+                # Hacer rollback y usar nueva sesión para actualizar el estado
+                try:
+                    session.rollback()
+                except Exception:
+                    pass
+
+                # Usar nueva sesión para actualizar el job
+                with Session(engine) as new_session:
+                    statement = select(ProcessingJob).where(ProcessingJob.id == job_id)
+                    job = new_session.exec(statement).first()
+                    if job:
+                        job.mark_failed(result.get("error", "Error desconocido"), json.dumps(result_data, default=str))
+                        new_session.add(job)
+                        new_session.commit()
                 logger.error(f"Procesamiento falló - Job: {job_id}")
+                return convert_numpy_types(result_data)
 
             session.add(job)
             session.commit()
@@ -139,7 +154,7 @@ def process_csv_file(self, job_id: str, file_path: str) -> Dict[str, Any]:
         # Rollback de la sesión en caso de error
         try:
             session.rollback()
-        except:
+        except Exception:
             pass
         error_msg = f"Error procesando job {job_id}: {str(e)}"
         logger.error(error_msg, exc_info=True)

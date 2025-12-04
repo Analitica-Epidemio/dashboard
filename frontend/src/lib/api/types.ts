@@ -1775,6 +1775,304 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/boletines/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Obtener configuración del template de boletines
+         * @description Obtiene la configuración singleton (id=1) del template de boletines
+         */
+        get: operations["get_boletin_template_config_api_v1_boletines_config_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/boletines/config/static-content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Actualizar contenido estático del template
+         * @description Actualiza el campo static_content_template (TipTap JSON)
+         */
+        put: operations["update_static_content_api_v1_boletines_config_static_content_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/boletines/config/event-section-template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Actualizar template de sección de evento
+         * @description Actualiza el campo event_section_template (TipTap JSON que se repite por cada evento)
+         */
+        put: operations["update_event_section_template_api_v1_boletines_config_event_section_template_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/boletines/config/dynamic-blocks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Actualizar array completo de bloques dinámicos
+         * @description Reemplaza el array completo de bloques (útil para reordenar)
+         */
+        put: operations["update_dynamic_blocks_api_v1_boletines_config_dynamic_blocks_put"];
+        /**
+         * Agregar un nuevo bloque dinámico
+         * @description Agrega un bloque al final del array de bloques dinámicos
+         */
+        post: operations["create_dynamic_block_api_v1_boletines_config_dynamic_blocks_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/boletines/config/dynamic-blocks/{block_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Actualizar un bloque dinámico específico
+         * @description Actualiza la configuración de un bloque existente por su ID
+         */
+        put: operations["update_dynamic_block_api_v1_boletines_config_dynamic_blocks__block_id__put"];
+        post?: never;
+        /**
+         * Eliminar un bloque dinámico
+         * @description Elimina un bloque del array de bloques dinámicos por su ID
+         */
+        delete: operations["delete_dynamic_block_api_v1_boletines_config_dynamic_blocks__block_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/boletines/preview/evento": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview genérico de datos para cualquier evento
+         * @description Recibe el código de un TipoEno o GrupoEno y genera un resumen de datos
+         */
+        get: operations["preview_evento_api_v1_boletines_preview_evento_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/boletines/preview/eventos-disponibles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar eventos disponibles para preview
+         * @description Retorna todos los TipoEno y GrupoEno con código para usar en el selector
+         */
+        get: operations["list_available_eventos_api_v1_boletines_preview_eventos_disponibles_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/boletines/preview/agentes-disponibles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar agentes etiológicos disponibles
+         * @description Retorna todos los agentes etiológicos activos para usar en selectores de bloques dinámicos
+         */
+        get: operations["list_available_agentes_api_v1_boletines_preview_agentes_disponibles_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/geografia/provincias/geojson": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Provincias Geojson
+         * @description Retorna todas las provincias como GeoJSON FeatureCollection.
+         *
+         *     Incluye geometría (MultiPolygon) y propiedades básicas.
+         *     Solo retorna provincias que tienen geometría cargada.
+         */
+        get: operations["get_provincias_geojson_api_v1_geografia_provincias_geojson_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/geografia/provincias/geojson-con-eventos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Provincias Con Eventos
+         * @description Retorna provincias con conteo de eventos para mapa coroplético.
+         *
+         *     Incluye total_eventos y total_casos en properties para colorear el mapa.
+         */
+        get: operations["get_provincias_con_eventos_api_v1_geografia_provincias_geojson_con_eventos_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/geografia/departamentos/geojson": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Departamentos Geojson
+         * @description Retorna departamentos como GeoJSON FeatureCollection.
+         *
+         *     Opcionalmente filtrado por provincia.
+         *     Solo retorna departamentos que tienen geometría cargada.
+         */
+        get: operations["get_departamentos_geojson_api_v1_geografia_departamentos_geojson_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/geografia/departamentos/geojson-con-eventos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Departamentos Con Eventos
+         * @description Retorna departamentos con conteo de eventos para mapa coroplético.
+         *
+         *     Incluye total_eventos y total_casos en properties para colorear el mapa.
+         */
+        get: operations["get_departamentos_con_eventos_api_v1_geografia_departamentos_geojson_con_eventos_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agentes/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar agentes etiológicos
+         * @description Lista todos los agentes etiológicos con estadísticas de eventos
+         */
+        get: operations["list_agentes_api_v1_agentes__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agentes/categorias": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Obtener categorías y grupos
+         * @description Obtiene las categorías y grupos únicos de agentes para filtros
+         */
+        get: operations["get_agentes_categorias_api_v1_agentes_categorias_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/": {
         parameters: {
             query?: never;
@@ -1825,6 +2123,110 @@ export interface components {
              * @description Nueva razón del mapeo
              */
             razon?: string | null;
+        };
+        /**
+         * AgenteDisponible
+         * @description Agente etiológico disponible para selección
+         */
+        AgenteDisponible: {
+            /** Id */
+            id: number;
+            /** Codigo */
+            codigo: string;
+            /** Nombre */
+            nombre: string;
+            /** Nombre Corto */
+            nombre_corto: string;
+            /** Categoria */
+            categoria: string;
+            /** Grupo */
+            grupo: string;
+        };
+        /**
+         * AgenteEtiologicoInfo
+         * @description Información de un agente etiológico con estadísticas
+         */
+        AgenteEtiologicoInfo: {
+            /**
+             * Id
+             * @description ID del agente
+             */
+            id: number;
+            /**
+             * Codigo
+             * @description Código único del agente
+             */
+            codigo: string;
+            /**
+             * Nombre
+             * @description Nombre completo
+             */
+            nombre: string;
+            /**
+             * Nombre Corto
+             * @description Nombre corto para gráficos
+             */
+            nombre_corto: string;
+            /**
+             * Categoria
+             * @description Categoría: virus, bacteria, etc.
+             */
+            categoria: string;
+            /**
+             * Grupo
+             * @description Grupo: respiratorio, entérico, etc.
+             */
+            grupo: string;
+            /**
+             * Descripcion
+             * @description Descripción del agente
+             */
+            descripcion?: string | null;
+            /**
+             * Activo
+             * @description Si está activo
+             */
+            activo: boolean;
+            /**
+             * Total Eventos
+             * @description Total de eventos donde se buscó/detectó
+             * @default 0
+             */
+            total_eventos: number;
+            /**
+             * Eventos Positivos
+             * @description Eventos con resultado positivo
+             * @default 0
+             */
+            eventos_positivos: number;
+            /**
+             * Eventos Negativos
+             * @description Eventos con resultado negativo
+             * @default 0
+             */
+            eventos_negativos: number;
+            /**
+             * Tasa Positividad
+             * @description Tasa de positividad (%)
+             * @default 0
+             */
+            tasa_positividad: number;
+        };
+        /**
+         * AgentesCategoriasResponse
+         * @description Respuesta con categorías y grupos de agentes
+         */
+        AgentesCategoriasResponse: {
+            /**
+             * Categorias
+             * @description Lista de categorías únicas
+             */
+            categorias: string[];
+            /**
+             * Grupos
+             * @description Lista de grupos únicos
+             */
+            grupos: string[];
         };
         /**
          * AggregatedStats
@@ -2255,8 +2657,6 @@ export interface components {
             pdf_path: string | null;
             /** Pdf Size */
             pdf_size: number | null;
-            /** Status */
-            status: string;
             /** Error Message */
             error_message: string | null;
             /** Generated By */
@@ -2294,6 +2694,38 @@ export interface components {
              * @description Fecha de generación del borrador
              */
             fecha_generacion: string;
+        };
+        /**
+         * BoletinTemplateConfigResponse
+         * @description Response de configuración de template de boletines
+         */
+        BoletinTemplateConfigResponse: {
+            /** Id */
+            id: number;
+            /**
+             * Static Content Template
+             * @description Template base en formato TipTap JSON (incluye selectedEventsPlaceholder)
+             */
+            static_content_template: {
+                [key: string]: unknown;
+            };
+            /**
+             * Event Section Template
+             * @description Template de sección de evento (se repite por cada evento seleccionado)
+             */
+            event_section_template?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Updated At
+             * @description Última actualización
+             */
+            updated_at?: string | null;
+            /**
+             * Updated By
+             * @description Usuario que actualizó
+             */
+            updated_by?: number | null;
         };
         /**
          * BoletinTemplateCreate
@@ -2554,6 +2986,24 @@ export interface components {
             funcion_procesamiento: string;
         };
         /**
+         * ChartError
+         * @description Error estructurado para charts que no pueden generarse
+         */
+        ChartError: {
+            /** Code */
+            code: string;
+            /** Title */
+            title: string;
+            /** Message */
+            message: string;
+            /** Details */
+            details?: {
+                [key: string]: unknown;
+            } | null;
+            /** Suggestion */
+            suggestion?: string | null;
+        };
+        /**
          * ChartFilters
          * @description Filtros aplicados al chart (para reproducibilidad)
          */
@@ -2576,6 +3026,27 @@ export interface components {
             edad_max?: number | null;
             /** Tipo Sujeto */
             tipo_sujeto?: ("humano" | "animal") | null;
+            /** Anio */
+            anio?: number | null;
+            /** Semana Desde */
+            semana_desde?: number | null;
+            /** Semana Hasta */
+            semana_hasta?: number | null;
+            /**
+             * Agrupacion Temporal
+             * @default semana
+             */
+            agrupacion_temporal: ("semana" | "mes" | "anio") | null;
+            /**
+             * Comparar Anio Anterior
+             * @default false
+             */
+            comparar_anio_anterior: boolean | null;
+            /**
+             * Comparar Periodo Anterior
+             * @default false
+             */
+            comparar_periodo_anterior: boolean | null;
             /** Extra */
             extra?: {
                 [key: string]: unknown;
@@ -2811,7 +3282,7 @@ export interface components {
          * @description Tipo de comparación a realizar
          * @enum {string}
          */
-        ComparisonType: "rolling" | "year_over_year" | "both";
+        ComparisonType: "ROLLING" | "YEAR_OVER_YEAR" | "BOTH";
         /**
          * ContactoInfo
          * @description Información de contactos
@@ -2847,6 +3318,26 @@ export interface components {
              * @description Contactos embarazadas
              */
             contactos_embarazadas?: number | null;
+        };
+        /**
+         * CorredorPreview
+         * @description Preview de corredor endémico
+         */
+        CorredorPreview: {
+            /** Casos Acumulados */
+            casos_acumulados: number;
+            /**
+             * Zona Actual
+             * @enum {string}
+             */
+            zona_actual: "exito" | "seguridad" | "alerta" | "brote";
+            /**
+             * Tendencia
+             * @enum {string}
+             */
+            tendencia: "up" | "down" | "stable";
+            /** Porcentaje Cambio */
+            porcentaje_cambio?: number | null;
         };
         /**
          * CoverConfig
@@ -2905,6 +3396,19 @@ export interface components {
              * @description Razón del mapeo
              */
             razon?: string | null;
+        };
+        /**
+         * CreateDynamicBlockRequest
+         * @description Request para crear un nuevo bloque dinámico
+         */
+        CreateDynamicBlockRequest: {
+            /**
+             * Block
+             * @description Configuración del bloque a crear
+             */
+            block: {
+                [key: string]: unknown;
+            };
         };
         /**
          * DashboardChartsResponse
@@ -3214,6 +3718,11 @@ export interface components {
              * @description Fecha del primer evento registrado en el domicilio
              */
             primer_evento_fecha?: string | null;
+            /**
+             * Fechas Eventos
+             * @description Lista de fechas de eventos para animación temporal
+             */
+            fechas_eventos?: string[];
         };
         /**
          * DomicilioMapaResponse
@@ -3677,7 +4186,7 @@ export interface components {
          *     DESHABILITADO: Geocodificación deshabilitada en settings
          * @enum {string}
          */
-        EstadoGeocodificacion: "pendiente" | "en_cola" | "procesando" | "geocodificado" | "fallo_temporal" | "fallo_permanente" | "no_geocodificable" | "deshabilitado";
+        EstadoGeocodificacion: "PENDIENTE" | "EN_COLA" | "PROCESANDO" | "GEOCODIFICADO" | "FALLO_TEMPORAL" | "FALLO_PERMANENTE" | "NO_GEOCODIFICABLE" | "DESHABILITADO";
         /**
          * EventStrategyCreate
          * @description Request DTO para crear estrategia.
@@ -4374,6 +4883,23 @@ export interface components {
              * @description Serie temporal por semana
              */
             trend_semanal: components["schemas"]["TrendSemanal"][];
+        };
+        /**
+         * EventoDisponible
+         * @description Evento disponible para selección en boletines
+         */
+        EventoDisponible: {
+            /** Id */
+            id: number;
+            /** Codigo */
+            codigo: string;
+            /** Nombre */
+            nombre: string;
+            /**
+             * Tipo
+             * @enum {string}
+             */
+            tipo: "tipo_eno" | "grupo_eno";
         };
         /**
          * EventoListItem
@@ -5078,7 +5604,7 @@ export interface components {
          * @description Estados posibles de un trabajo de procesamiento.
          * @enum {string}
          */
-        JobStatus: "pending" | "in_progress" | "completed" | "failed" | "cancelled";
+        JobStatus: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "FAILED" | "CANCELLED";
         /**
          * JobStatusResponse
          * @description Respuesta del estado de un job asíncrono.
@@ -5525,6 +6051,22 @@ export interface components {
             page_size: number;
         };
         /**
+         * MetricItem
+         * @description Item de métrica para preview
+         */
+        MetricItem: {
+            /** Label */
+            label: string;
+            /** Value */
+            value: string | number;
+            /** Trend */
+            trend?: ("up" | "down" | "stable") | null;
+            /** Trend Value */
+            trend_value?: number | null;
+            /** Alert */
+            alert?: boolean | null;
+        };
+        /**
          * MetricValue
          * @description Valor de una métrica con su comparación
          */
@@ -5554,6 +6096,28 @@ export interface components {
              * @description up, down o stable
              */
             tendencia?: string | null;
+        };
+        /** PaginatedResponse[AgenteEtiologicoInfo] */
+        PaginatedResponse_AgenteEtiologicoInfo_: {
+            /**
+             * Data
+             * @description Lista de elementos
+             */
+            data: components["schemas"]["AgenteEtiologicoInfo"][];
+            /** @description Información de paginación con tipos específicos */
+            meta: components["schemas"]["PaginationMeta"];
+            /**
+             * Links
+             * @description Enlaces de navegación
+             * @example {
+             *       "first": "/api/items?page=1",
+             *       "last": "/api/items?page=5",
+             *       "next": "/api/items?page=2"
+             *     }
+             */
+            links?: {
+                [key: string]: string | null;
+            } | null;
         };
         /** PaginatedResponse[EventStrategyResponse] */
         PaginatedResponse_EventStrategyResponse_: {
@@ -5750,7 +6314,7 @@ export interface components {
          * @description Tipos de períodos predefinidos
          * @enum {string}
          */
-        PeriodType: "ultima_semana_epi" | "ultimas_4_semanas_epi" | "ultimas_12_semanas_epi" | "mes_hasta_fecha" | "mes_pasado" | "ultimos_3_meses" | "trimestre_actual" | "trimestre_pasado" | "ultimos_6_meses" | "anio_hasta_fecha" | "anio_pasado" | "personalizado";
+        PeriodType: "ULTIMA_SEMANA_EPI" | "ULTIMAS_4_SEMANAS_EPI" | "ULTIMAS_12_SEMANAS_EPI" | "MES_HASTA_FECHA" | "MES_PASADO" | "ULTIMOS_3_MESES" | "TRIMESTRE_ACTUAL" | "TRIMESTRE_PASADO" | "ULTIMOS_6_MESES" | "ANIO_HASTA_FECHA" | "ANIO_PASADO" | "PERSONALIZADO";
         /**
          * PeriodoAnalisis
          * @description Información de un período de análisis epidemiológico
@@ -6344,6 +6908,30 @@ export interface components {
             diferencia_absoluta: number;
         };
         /**
+         * SectionPreviewResponse
+         * @description Response de preview de sección
+         */
+        SectionPreviewResponse: {
+            /** Evento Codigo */
+            evento_codigo: string;
+            /** Evento Nombre */
+            evento_nombre: string;
+            /**
+             * Evento Tipo
+             * @enum {string}
+             */
+            evento_tipo: "tipo_eno" | "grupo_eno";
+            /** Summary */
+            summary?: string | null;
+            /** Metrics */
+            metrics?: components["schemas"]["MetricItem"][];
+            corredor?: components["schemas"]["CorredorPreview"] | null;
+            /** Periodo */
+            periodo?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /**
          * SessionInfo
          * @description Session information response
          */
@@ -6472,6 +7060,18 @@ export interface components {
         SuccessResponse_BoletinInstanceResponse_: {
             /** @description Datos de la respuesta */
             data: components["schemas"]["BoletinInstanceResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[BoletinTemplateConfigResponse] */
+        SuccessResponse_BoletinTemplateConfigResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["BoletinTemplateConfigResponse"];
             /**
              * Meta
              * @description Metadata opcional (paginación, etc)
@@ -6744,6 +7344,21 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /** SuccessResponse[List[AgenteDisponible]] */
+        SuccessResponse_List_AgenteDisponible__: {
+            /**
+             * Data
+             * @description Datos de la respuesta
+             */
+            data: components["schemas"]["AgenteDisponible"][];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
         /** SuccessResponse[List[AuditLogResponse]] */
         SuccessResponse_List_AuditLogResponse__: {
             /**
@@ -6781,6 +7396,21 @@ export interface components {
              * @description Datos de la respuesta
              */
             data: components["schemas"]["BoletinTemplateResponse"][];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[List[EventoDisponible]] */
+        SuccessResponse_List_EventoDisponible__: {
+            /**
+             * Data
+             * @description Datos de la respuesta
+             */
+            data: components["schemas"]["EventoDisponible"][];
             /**
              * Meta
              * @description Metadata opcional (paginación, etc)
@@ -6829,6 +7459,18 @@ export interface components {
         SuccessResponse_PersonaTimelineResponse_: {
             /** @description Datos de la respuesta */
             data: components["schemas"]["PersonaTimelineResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[SectionPreviewResponse] */
+        SuccessResponse_SectionPreviewResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["SectionPreviewResponse"];
             /**
              * Meta
              * @description Metadata opcional (paginación, etc)
@@ -7096,6 +7738,12 @@ export interface components {
              * @description Lista de grupos a los que pertenece este tipo
              */
             grupos?: components["schemas"]["GrupoInfo"][];
+            /**
+             * Total Casos
+             * @description Total de casos registrados
+             * @default 0
+             */
+            total_casos: number;
         };
         /** TipoEnoSimple */
         TipoEnoSimple: {
@@ -7335,8 +7983,48 @@ export interface components {
             /** Config */
             config: components["schemas"]["LineChartConfigWrapper"] | components["schemas"]["BarChartConfigWrapper"] | components["schemas"]["AreaChartConfigWrapper"] | components["schemas"]["PieChartConfigWrapper"] | components["schemas"]["PyramidChartConfigWrapper"] | components["schemas"]["MapChartConfigWrapper"];
             filters?: components["schemas"]["ChartFilters"] | null;
+            error?: components["schemas"]["ChartError"] | null;
             /** Generated At */
             generated_at?: string | null;
+        };
+        /**
+         * UpdateDynamicBlockRequest
+         * @description Request para actualizar un bloque específico
+         */
+        UpdateDynamicBlockRequest: {
+            /**
+             * Block
+             * @description Nueva configuración del bloque
+             */
+            block: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * UpdateDynamicBlocksRequest
+         * @description Request para actualizar array completo de bloques (reordenar)
+         */
+        UpdateDynamicBlocksRequest: {
+            /**
+             * Blocks
+             * @description Array completo de bloques dinámicos
+             */
+            blocks: {
+                [key: string]: unknown;
+            }[];
+        };
+        /**
+         * UpdateEventSectionTemplateRequest
+         * @description Request para actualizar template de sección de evento
+         */
+        UpdateEventSectionTemplateRequest: {
+            /**
+             * Content
+             * @description Template TipTap JSON de sección de evento
+             */
+            content: {
+                [key: string]: unknown;
+            };
         };
         /**
          * UpdateInstanceContentRequest
@@ -7345,6 +8033,19 @@ export interface components {
         UpdateInstanceContentRequest: {
             /** Content */
             content: string;
+        };
+        /**
+         * UpdateStaticContentRequest
+         * @description Request para actualizar contenido estático
+         */
+        UpdateStaticContentRequest: {
+            /**
+             * Content
+             * @description Contenido TipTap JSON
+             */
+            content: {
+                [key: string]: unknown;
+            };
         };
         /**
          * UserChangePassword
@@ -7372,7 +8073,7 @@ export interface components {
             apellido: string;
             /** Password */
             password: string;
-            /** @default epidemiologo */
+            /** @default EPIDEMIOLOGO */
             role: components["schemas"]["UserRole"];
         };
         /**
@@ -7426,13 +8127,13 @@ export interface components {
          * @description User roles for authorization
          * @enum {string}
          */
-        UserRole: "superadmin" | "epidemiologo";
+        UserRole: "SUPERADMIN" | "EPIDEMIOLOGO";
         /**
          * UserStatus
          * @description User account status
          * @enum {string}
          */
-        UserStatus: "active" | "inactive" | "suspended";
+        UserStatus: "ACTIVE" | "INACTIVE" | "SUSPENDED";
         /**
          * UserUpdate
          * @description Schema for updating user information
@@ -10330,6 +11031,10 @@ export interface operations {
                 grupo_id?: number | null;
                 /** @description Filtrar por múltiples IDs de grupo */
                 grupos?: number[] | null;
+                /** @description Campo para ordenar: nombre, codigo, total_casos */
+                ordenar_por?: string;
+                /** @description Orden: asc o desc */
+                orden?: string;
             };
             header?: never;
             path?: never;
@@ -11398,8 +12103,6 @@ export interface operations {
             query?: {
                 /** @description Filtrar por template */
                 template_id?: number | null;
-                /** @description Filtrar por estado */
-                status?: string | null;
                 limit?: number;
                 offset?: number;
             };
@@ -11775,6 +12478,746 @@ export interface operations {
                 };
             };
             /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_boletin_template_config_api_v1_boletines_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_BoletinTemplateConfigResponse_"];
+                };
+            };
+            /** @description Configuración no encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_static_content_api_v1_boletines_config_static_content_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateStaticContentRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_BoletinTemplateConfigResponse_"];
+                };
+            };
+            /** @description Sin permisos (requiere admin) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Configuración no encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_event_section_template_api_v1_boletines_config_event_section_template_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateEventSectionTemplateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_BoletinTemplateConfigResponse_"];
+                };
+            };
+            /** @description Sin permisos (requiere admin) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Configuración no encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_dynamic_blocks_api_v1_boletines_config_dynamic_blocks_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateDynamicBlocksRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_BoletinTemplateConfigResponse_"];
+                };
+            };
+            /** @description Datos inválidos */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Sin permisos (requiere admin) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Configuración no encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_dynamic_block_api_v1_boletines_config_dynamic_blocks_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDynamicBlockRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_BoletinTemplateConfigResponse_"];
+                };
+            };
+            /** @description Bloque con ID duplicado o datos inválidos */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Sin permisos (requiere admin) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Configuración no encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_dynamic_block_api_v1_boletines_config_dynamic_blocks__block_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                block_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateDynamicBlockRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_BoletinTemplateConfigResponse_"];
+                };
+            };
+            /** @description Sin permisos (requiere admin) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Configuración o bloque no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_dynamic_block_api_v1_boletines_config_dynamic_blocks__block_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                block_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_BoletinTemplateConfigResponse_"];
+                };
+            };
+            /** @description Sin permisos (requiere admin) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Configuración o bloque no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    preview_evento_api_v1_boletines_preview_evento_get: {
+        parameters: {
+            query: {
+                /** @description Código del TipoEno o GrupoEno */
+                codigo: string;
+                /** @description Semana epidemiológica */
+                semana: number;
+                /** @description Año */
+                anio: number;
+                /** @description Semanas a analizar */
+                num_semanas?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_SectionPreviewResponse_"];
+                };
+            };
+            /** @description Evento no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_available_eventos_api_v1_boletines_preview_eventos_disponibles_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_List_EventoDisponible__"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_available_agentes_api_v1_boletines_preview_agentes_disponibles_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_List_AgenteDisponible__"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_provincias_geojson_api_v1_geografia_provincias_geojson_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    get_provincias_con_eventos_api_v1_geografia_provincias_geojson_con_eventos_get: {
+        parameters: {
+            query?: {
+                /** @description Filtrar por grupo ENO */
+                id_grupo_eno?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_departamentos_geojson_api_v1_geografia_departamentos_geojson_get: {
+        parameters: {
+            query?: {
+                /** @description Filtrar por provincia */
+                id_provincia_indec?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_departamentos_con_eventos_api_v1_geografia_departamentos_geojson_con_eventos_get: {
+        parameters: {
+            query?: {
+                /** @description Filtrar por provincia */
+                id_provincia_indec?: number | null;
+                /** @description Filtrar por grupo ENO */
+                id_grupo_eno?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_agentes_api_v1_agentes__get: {
+        parameters: {
+            query?: {
+                /** @description Número de página */
+                page?: number;
+                /** @description Elementos por página */
+                per_page?: number;
+                /** @description Filtrar por categoría */
+                categoria?: string | null;
+                /** @description Filtrar por grupo */
+                grupo?: string | null;
+                /** @description Filtrar por estado activo */
+                activo?: boolean | null;
+                /** @description Buscar por nombre o código */
+                busqueda?: string | null;
+                /** @description Campo para ordenar: nombre, codigo, total_eventos, eventos_positivos, tasa_positividad */
+                ordenar_por?: string;
+                /** @description Orden: asc o desc */
+                orden?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_AgenteEtiologicoInfo_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno del servidor */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_agentes_categorias_api_v1_agentes_categorias_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentesCategoriasResponse"];
+                };
+            };
+            /** @description Error interno del servidor */
             500: {
                 headers: {
                     [name: string]: unknown;

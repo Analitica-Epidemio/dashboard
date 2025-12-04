@@ -14,7 +14,6 @@ OPTIMIZACIONES:
 
 import logging
 from datetime import datetime
-from functools import cache
 from typing import Dict, Set
 
 import polars as pl
@@ -235,9 +234,6 @@ class GeografiaBootstrapService:
             for loc_id, dep_id in self.session.execute(stmt).all()
         }
 
-        # Obtener IDs auto-generados de departamentos
-        dep_indec_to_id = self._get_departamento_id_mapping(set(loc_to_depto.values()))
-
         # Crear localidades faltantes
         nuevas = []
 
@@ -248,7 +244,6 @@ class GeografiaBootstrapService:
                     "id_localidad_indec": loc_id,
                     "nombre": f"Localidad INDEC {loc_id}",
                     "id_departamento_indec": dep_indec,
-                    "id_departamento": dep_indec_to_id.get(dep_indec),
                     "created_at": datetime.utcnow(),
                     "updated_at": datetime.utcnow(),
                 })
@@ -260,7 +255,6 @@ class GeografiaBootstrapService:
                     "id_localidad_indec": loc_id,
                     "nombre": f"Localidad Viaje INDEC {loc_id}",
                     "id_departamento_indec": None,
-                    "id_departamento": None,
                     "created_at": datetime.utcnow(),
                     "updated_at": datetime.utcnow(),
                 })
@@ -269,40 +263,6 @@ class GeografiaBootstrapService:
             stmt = pg_insert(Localidad.__table__).values(nuevas)
             self.session.execute(stmt.on_conflict_do_nothing())
             logger.info(f"Creadas {len(nuevas)} localidades placeholder")
-
-    @staticmethod
-    @cache  # Cache sin expiración - los IDs no cambian durante la sesión
-    def _get_cached_departamento_ids(dep_indec_codes_tuple: tuple) -> Dict[int, int]:
-        """
-        Versión cacheada estática para obtener mapeo de departamentos.
-        Usa tupla en lugar de Set para ser hashable.
-        """
-        # Esta función será sobreescrita con una instancia específica
-        # El cache es por tupla de IDs, así que múltiples llamadas con los mismos IDs
-        # reutilizan el resultado
-        return {}
-
-    def _get_departamento_id_mapping(self, dep_indec_codes: Set[int]) -> Dict[int, int]:
-        """
-        Obtiene mapeo: departamento_indec_code → id (auto-generated).
-
-        Necesario para la FK de Localidad.id_departamento.
-        Con cache para evitar queries repetidas.
-        """
-        if not dep_indec_codes:
-            return {}
-
-        stmt = select(
-            Departamento.id_departamento_indec,
-            Departamento.id
-        ).where(
-            Departamento.id_departamento_indec.in_(list(dep_indec_codes))
-        )
-
-        return {
-            indec_code: auto_id
-            for indec_code, auto_id in self.session.execute(stmt).all()
-        }
 
     # ===== HELPERS =====
 

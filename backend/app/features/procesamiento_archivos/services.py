@@ -13,6 +13,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+import magic
 from celery.result import AsyncResult
 from fastapi import HTTPException, UploadFile
 
@@ -39,30 +40,69 @@ class AsyncFileProcessingService:
     - Error handling senior-level
     """
 
+    # MIME types válidos para archivos permitidos
+    VALID_MIME_TYPES = {
+        "text/csv",
+        "text/plain",  # Algunos CSV se detectan como text/plain
+        "application/csv",
+        "application/vnd.ms-excel",  # .xls
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",  # .xlsx
+    }
+
     def __init__(self, upload_dir: str = "uploads"):
         self.upload_dir = Path(upload_dir)
         self.upload_dir.mkdir(exist_ok=True)
         self.max_file_size = 50 * 1024 * 1024  # 50MB
 
-    def validate_file(self, file: UploadFile) -> None:
-        """Validar archivo Excel o CSV con límites estrictos."""
+    async def validate_file(self, file: UploadFile) -> bytes:
+        """
+        Validar archivo Excel o CSV con límites estrictos.
 
-        if hasattr(file, "size") and file.size and file.size > self.max_file_size:
-            raise HTTPException(
-                status_code=413,
-                detail=f"Archivo demasiado grande. Máximo: {self.max_file_size / (1024 * 1024):.0f}MB",
-            )
+        Valida:
+        - Tamaño máximo
+        - Extensión permitida
+        - MIME type real del contenido (magic bytes)
 
+        Returns:
+            bytes: Contenido del archivo para evitar leerlo múltiples veces
+        """
         if not file.filename:
             raise HTTPException(status_code=400, detail="Nombre de archivo inválido")
 
-        # Validar extensión (CSV o Excel)
+        # Validar extensión
         ext = file.filename.lower()
         if not (ext.endswith(".csv") or ext.endswith(".xlsx") or ext.endswith(".xls")):
             raise HTTPException(
                 status_code=400,
                 detail="Solo archivos CSV (.csv) o Excel (.xlsx, .xls) permitidos"
             )
+
+        # Leer contenido para validar tamaño y MIME
+        content = await file.read()
+        await file.seek(0)  # Reset para uso posterior
+
+        # Validar tamaño
+        if len(content) > self.max_file_size:
+            raise HTTPException(
+                status_code=413,
+                detail=f"Archivo demasiado grande. Máximo: {self.max_file_size / (1024 * 1024):.0f}MB",
+            )
+
+        # Validar MIME type real usando magic bytes
+        detected_mime = magic.from_buffer(content, mime=True)
+
+        if detected_mime not in self.VALID_MIME_TYPES:
+            logger.warning(
+                f"MIME type inválido detectado: {detected_mime} para archivo {file.filename}"
+            )
+            raise HTTPException(
+                status_code=400,
+                detail=f"Tipo de archivo no válido. MIME detectado: {detected_mime}. "
+                       f"Solo se permiten archivos CSV y Excel reales."
+            )
+
+        logger.debug(f"Archivo validado: {file.filename}, MIME: {detected_mime}, Size: {len(content)}")
+        return content
 
     async def start_file_processing(
         self,
@@ -89,8 +129,8 @@ class AsyncFileProcessingService:
         logger.info(f"Starting {file_type} processing: {original_filename} ({file_size_mb:.1f} MB)")
 
         try:
-            # Validaciones previas
-            self.validate_file(file)
+            # Validaciones previas (incluye MIME type check)
+            await self.validate_file(file)
 
             # Crear y persistir job
             job = ProcessingJob(
