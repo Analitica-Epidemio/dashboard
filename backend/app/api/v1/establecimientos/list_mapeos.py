@@ -1,16 +1,17 @@
 """Endpoint para listar mapeos existentes."""
 
 from typing import Optional
-from fastapi import Query, Depends
-from sqlalchemy import select, func, or_
+
+from fastapi import Depends, Query
+from sqlalchemy import func, or_, select
 from sqlmodel import Session
 
 from app.core.database import get_session
-from app.domains.territorio.establecimientos_models import Establecimiento
-from app.domains.territorio.geografia_models import Localidad, Departamento, Provincia
 from app.domains.eventos_epidemiologicos.eventos.models import Evento
+from app.domains.territorio.establecimientos_models import Establecimiento
+from app.domains.territorio.geografia_models import Departamento, Localidad, Provincia
 
-from .mapeo_schemas import MapeosListResponse, MapeoInfo
+from .mapeo_schemas import MapeoInfo, MapeosListResponse
 
 
 async def listar_mapeos_existentes(

@@ -20,12 +20,11 @@ from alembic import context
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 # Importar SQLModel
+# Importar helpers de GeoAlchemy2 para Alembic
+from geoalchemy2 import alembic_helpers
 from sqlmodel import SQLModel
 
 from app.core.config import settings
-
-# Importar helpers de GeoAlchemy2 para Alembic
-from geoalchemy2 import alembic_helpers
 
 # Importar todos los modelos para que Alembic los detecte
 # IMPORTANTE: Importar todos los modelos de los dominios aquí

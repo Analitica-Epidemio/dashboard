@@ -21,11 +21,11 @@ from typing import Dict
 
 import polars as pl
 
+from ..shared import BulkOperationResult
 from .comorbilidades import ComorbilidadesProcessor
 from .domicilios import DomiciliosProcessor
 from .processor import CiudadanosProcessor
 from .viajes import ViajesProcessor
-from ..shared import BulkOperationResult
 
 
 class CiudadanosManager:

@@ -1,29 +1,34 @@
 from datetime import date
-from decimal import Decimal
 from typing import TYPE_CHECKING, Dict, List, Optional
 
-from sqlalchemy import JSON, BigInteger, Column, Index, Numeric, Text, UniqueConstraint
+from sqlalchemy import JSON, BigInteger, Column, Index, Text, UniqueConstraint
 from sqlmodel import Field, Relationship
 
 from app.core.models import BaseModel
 
 if TYPE_CHECKING:
-    from app.domains.sujetos_epidemiologicos.ciudadanos_models import Ciudadano
-    from app.domains.sujetos_epidemiologicos.animales_models import Animal
-    from app.domains.eventos_epidemiologicos.ambitos_models import AmbitosConcurrenciaEvento
-    from app.domains.eventos_epidemiologicos.clasificacion.models import EventStrategy
     from app.domains.atencion_medica.diagnosticos_models import (
         DiagnosticoEvento,
         InternacionEvento,
         TratamientoEvento,
     )
-    from app.domains.territorio.establecimientos_models import Establecimiento
-    from app.domains.territorio.geografia_models import Domicilio
     from app.domains.atencion_medica.investigaciones_models import (
         ContactosNotificacion,
         InvestigacionEvento,
     )
-    from app.domains.atencion_medica.salud_models import MuestraEvento, Sintoma, VacunasCiudadano
+    from app.domains.atencion_medica.salud_models import (
+        MuestraEvento,
+        Sintoma,
+        VacunasCiudadano,
+    )
+    from app.domains.eventos_epidemiologicos.ambitos_models import (
+        AmbitosConcurrenciaEvento,
+    )
+    from app.domains.eventos_epidemiologicos.clasificacion.models import EventStrategy
+    from app.domains.sujetos_epidemiologicos.animales_models import Animal
+    from app.domains.sujetos_epidemiologicos.ciudadanos_models import Ciudadano
+    from app.domains.territorio.establecimientos_models import Establecimiento
+    from app.domains.territorio.geografia_models import Domicilio
 
 
 class EventoGrupoEno(BaseModel, table=True):

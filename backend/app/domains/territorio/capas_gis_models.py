@@ -8,7 +8,7 @@ Almacena información geoespacial complementaria útil para análisis epidemiol�
 from typing import Optional
 
 from geoalchemy2 import Geometry
-from sqlalchemy import BigInteger, Column, Index
+from sqlalchemy import Column, Index
 from sqlmodel import Field
 
 from app.core.models import BaseModel

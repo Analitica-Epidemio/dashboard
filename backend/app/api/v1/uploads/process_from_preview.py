@@ -6,7 +6,6 @@ import logging
 import os
 import tempfile
 from pathlib import Path
-from typing import Optional
 
 from fastapi import Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -59,7 +58,7 @@ async def process_file_from_preview(
         logger.error(f"❌ Upload ID not found: {request.upload_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Archivo no encontrado. El preview pudo haber expirado."
+            detail="Archivo no encontrado. El preview pudo haber expirado."
         )
 
     temp_file_path = matching_files[0]
@@ -83,6 +82,7 @@ async def process_file_from_preview(
 
         # Create UploadFile-like object
         from io import BytesIO
+
         from fastapi import UploadFile
 
         # Mantener el formato original (CSV o Excel)

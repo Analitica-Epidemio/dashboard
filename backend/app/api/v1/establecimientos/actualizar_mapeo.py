@@ -1,6 +1,6 @@
 """Endpoint para actualizar un mapeo existente."""
 
-from fastapi import HTTPException, Path, Depends
+from fastapi import Depends, HTTPException, Path
 from sqlmodel import Session
 
 from app.core.database import get_session
@@ -8,10 +8,10 @@ from app.domains.territorio.establecimientos_models import Establecimiento
 
 from .mapeo_schemas import ActualizarMapeoRequest
 from .suggestions_service import (
-    calcular_similitud_nombre,
     calcular_score_match,
+    calcular_similitud_nombre,
     determinar_confianza,
-    generar_razon_match
+    generar_razon_match,
 )
 
 

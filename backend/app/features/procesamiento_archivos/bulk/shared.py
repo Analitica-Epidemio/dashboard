@@ -8,25 +8,20 @@ Consolidates:
 - Catalog get-or-create patterns
 """
 
+import re
 from dataclasses import dataclass
-from datetime import datetime, date
+from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Type, TypeVar
 
 import polars as pl
-import re
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlmodel import Session
 
 from app.core.shared.enums import (
-    FrecuenciaOcurrencia,
-    OrigenFinanciamiento,
     SexoBiologico,
-    TipoDocumento,
 )
 
-from ..config.constants import BOOLEAN_MAPPING, DOCUMENTO_MAPPING, SEXO_MAPPING
-
+from ..config.constants import BOOLEAN_MAPPING, DOCUMENTO_MAPPING
 
 # Patrones de calles inválidas
 INVALID_CALLE_PATTERNS = [
@@ -377,7 +372,7 @@ def get_or_create_catalog(
                 key_value = record.get(key_field)
                 if key_value:
                     valor_to_key[valor] = key_value
-            except Exception as e:
+            except Exception:
                 # Si falla la transformación, skip este valor
                 continue
     else:

@@ -10,12 +10,16 @@ no domicilio del ciudadano, para consistencia epidemiológica.
 
 from datetime import date
 from typing import List, Optional
-from sqlalchemy import and_, or_, String, select, func
-from sqlalchemy.orm import Query
 
-from app.domains.eventos_epidemiologicos.eventos.models import Evento, TipoEno, TipoEnoGrupoEno
-from app.domains.sujetos_epidemiologicos.ciudadanos_models import Ciudadano
+from sqlalchemy import String, and_, func, or_
+
+from app.domains.eventos_epidemiologicos.eventos.models import (
+    Evento,
+    TipoEno,
+    TipoEnoGrupoEno,
+)
 from app.domains.sujetos_epidemiologicos.animales_models import Animal
+from app.domains.sujetos_epidemiologicos.ciudadanos_models import Ciudadano
 from app.domains.territorio.establecimientos_models import Establecimiento
 from app.domains.territorio.geografia_models import Departamento, Localidad, Provincia
 

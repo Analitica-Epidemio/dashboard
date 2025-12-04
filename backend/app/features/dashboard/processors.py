@@ -10,14 +10,13 @@ import pandas as pd
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.procesamiento_archivos.utils.epidemiological_calculations import (
-    obtener_fechas_semana_epidemiologica,
-    generar_metadata_semanas
-)
 from app.features.dashboard.age_groups_config import (
-    get_age_groups_config,
     generate_sql_case_when,
     get_age_group_labels,
+    get_age_groups_config,
+)
+from app.features.procesamiento_archivos.utils.epidemiological_calculations import (
+    obtener_fechas_semana_epidemiologica,
 )
 
 logger = logging.getLogger(__name__)
@@ -106,7 +105,7 @@ class ChartDataProcessor:
             params["provincia_id"] = provincia_id
             logger.debug(f"🔍 Filtro provincia aplicado: {provincia_id}")
         else:
-            logger.debug(f"🌍 Sin filtro de provincia - datos de TODAS las provincias")
+            logger.debug("🌍 Sin filtro de provincia - datos de TODAS las provincias")
 
         return query, params
 
@@ -298,7 +297,7 @@ class ChartDataProcessor:
         Muestra solo las semanas del rango de fechas seleccionado
         """
         from app.features.procesamiento_archivos.utils.epidemiological_calculations import (
-            calcular_semana_epidemiologica
+            calcular_semana_epidemiologica,
         )
 
         # Determinar rango de semanas a mostrar basado en filtros de fecha
@@ -683,10 +682,11 @@ class ChartDataProcessor:
         Procesa datos para mapa geográfico con departamentos de Chubut
         """
         from datetime import datetime
+
         from app.core.constants.geografia_chubut import (
             DEPARTAMENTOS_CHUBUT,
             POBLACION_DEPARTAMENTOS,
-            get_zona_ugd
+            get_zona_ugd,
         )
 
         # Query para obtener casos por departamento

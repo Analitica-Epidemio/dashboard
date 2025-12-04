@@ -1,10 +1,12 @@
 """Endpoint para buscar establecimientos IGN."""
 
 from typing import Optional
-from fastapi import Query, Depends
+
+from fastapi import Depends, Query
 from sqlmodel import Session
 
 from app.core.database import get_session
+
 from .mapeo_schemas import BuscarIGNResponse
 from .suggestions_service import buscar_establecimientos_ign
 

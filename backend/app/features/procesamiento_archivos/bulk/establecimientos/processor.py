@@ -21,7 +21,7 @@ OPTIMIZACIONES:
 """
 
 import polars as pl
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.domains.territorio.establecimientos_models import Establecimiento
@@ -30,8 +30,7 @@ from app.domains.territorio.services.geografia_bootstrap_service import (
 )
 
 from ...config.columns import Columns
-from ..shared import BulkProcessorBase, pl_safe_int, pl_clean_string
-
+from ..shared import BulkProcessorBase, pl_clean_string, pl_safe_int
 
 # Configuración: Mapeo de columnas de establecimientos
 # Formato: (columna_id_snvs, columna_nombre, columna_localidad)
@@ -257,7 +256,7 @@ class EstablecimientosProcessor(BulkProcessorBase):
             }
             self.logger.info(f"✅ Mapping actualizado: {len(existing_mapping)} establecimientos")
         else:
-            self.logger.info(f"ℹ️  Todos los establecimientos ya existen en BD")
+            self.logger.info("ℹ️  Todos los establecimientos ya existen en BD")
 
         return existing_mapping
 

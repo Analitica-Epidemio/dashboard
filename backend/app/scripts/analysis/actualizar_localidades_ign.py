@@ -12,10 +12,11 @@ Algoritmo v2 (mejorado):
 3. Si no hay localidades con coordenadas, usar la primera del departamento
 """
 
+import os
 import sys
 from pathlib import Path
+
 from sqlalchemy import create_engine, text
-import os
 
 # Agregar el directorio raíz al path
 sys.path.append(str(Path(__file__).parent.parent.parent))

@@ -10,12 +10,12 @@ from app.domains.territorio.geografia_models import Domicilio, Localidad
 
 from ...config.columns import Columns
 from ..shared import (
-    BulkProcessorBase,
     BulkOperationResult,
+    BulkProcessorBase,
     is_valid_street_name,
-    pl_safe_int,
-    pl_clean_string,
     pl_clean_numero_domicilio,
+    pl_clean_string,
+    pl_safe_int,
 )
 
 
@@ -258,10 +258,10 @@ class DomiciliosProcessor(BulkProcessorBase):
             f"🗺️  GEOCODIFICACIÓN ACTIVADA: Encolando {domicilios_count} domicilios para geocodificar"
         )
         self.logger.info(
-            f"   🔄 Los domicilios serán geocodificados en background por Celery (cola 'geocoding')"
+            "   🔄 Los domicilios serán geocodificados en background por Celery (cola 'geocoding')"
         )
         self.logger.info(
-            f"   ⏱️  Procesamiento iniciará en 5 segundos (después del commit de DB)"
+            "   ⏱️  Procesamiento iniciará en 5 segundos (después del commit de DB)"
         )
 
         from app.features.geocoding.tasks import geocode_pending_domicilios
@@ -273,12 +273,12 @@ class DomiciliosProcessor(BulkProcessorBase):
                 f"   ✅ Tarea de geocodificación encolada exitosamente (task_id: {task_result.id})"
             )
             self.logger.info(
-                f"   📊 Para monitorear: celery -A app.core.celery_app inspect active"
+                "   📊 Para monitorear: celery -A app.core.celery_app inspect active"
             )
         except Exception as e:
             self.logger.error(f"   ❌ Error encolando tarea de geocodificación: {e}")
             self.logger.error(
-                f"   ⚠️  Verifica que Redis y Celery worker estén corriendo"
+                "   ⚠️  Verifica que Redis y Celery worker estén corriendo"
             )
 
     def _create_vinculos_ciudadano_domicilio(

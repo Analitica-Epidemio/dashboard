@@ -9,7 +9,6 @@ from sqlalchemy import select
 from sqlmodel import Session, func
 
 from app.api.v1.geocoding.schemas import TriggerGeocodingResponse
-from app.core.config import settings
 from app.core.database import get_session
 from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User

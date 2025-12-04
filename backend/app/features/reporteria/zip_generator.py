@@ -9,6 +9,7 @@ import logging
 import zipfile
 from datetime import datetime
 from typing import Any, Dict, List
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.reporteria.serverside_pdf_generator import serverside_pdf_generator

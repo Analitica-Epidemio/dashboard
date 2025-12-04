@@ -26,7 +26,6 @@ from app.domains.eventos_epidemiologicos.eventos.models import (
 from app.domains.sujetos_epidemiologicos.animales_models import Animal
 from app.domains.sujetos_epidemiologicos.ciudadanos_models import (
     Ciudadano,
-    CiudadanoDomicilio,
 )
 from app.domains.territorio.geografia_models import Departamento, Domicilio, Localidad
 

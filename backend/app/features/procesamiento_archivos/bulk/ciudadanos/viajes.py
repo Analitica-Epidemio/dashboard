@@ -8,7 +8,7 @@ from app.domains.sujetos_epidemiologicos.ciudadanos_models import Ciudadano
 from app.domains.sujetos_epidemiologicos.viajes_models import ViajesCiudadano
 
 from ...config.columns import Columns
-from ..shared import BulkProcessorBase, BulkOperationResult, pl_safe_int, pl_safe_date
+from ..shared import BulkOperationResult, BulkProcessorBase, pl_safe_date, pl_safe_int
 
 
 class ViajesProcessor(BulkProcessorBase):

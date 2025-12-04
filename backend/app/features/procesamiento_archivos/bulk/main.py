@@ -24,7 +24,7 @@ from .establecimientos import EstablecimientosProcessor
 from .eventos import EventosManager
 from .investigaciones import InvestigacionesProcessor
 from .salud import SaludManager
-from .shared import BulkOperationResult, pl_safe_int, pl_safe_date
+from .shared import BulkOperationResult, pl_safe_date, pl_safe_int
 
 
 class MainProcessor:
@@ -222,13 +222,15 @@ class MainProcessor:
                 self.establecimientos_processor.upsert_establecimientos(df)
             )
             self.context.session.flush()  # FLUSH en lugar de COMMIT (permite queries en misma transacción)
-            self.logger.info(f"✅ Establecimientos flushed")
+            self.logger.info("✅ Establecimientos flushed")
             self._update_operation_progress("establecimientos")
 
             # Ensure "Desconocido" establishment exists (used as default by muestras)
-            from app.domains.territorio.establecimientos_models import Establecimiento
             from sqlalchemy import select
             from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+            from app.domains.territorio.establecimientos_models import Establecimiento
+
             from .shared import get_current_timestamp
 
             if "DESCONOCIDO" not in establecimiento_mapping:
@@ -272,7 +274,7 @@ class MainProcessor:
             # COMMIT CRÍTICO 1: Establecimientos + Ciudadanos + datos asociados
             # Combina establecimientos (flushed antes) + ciudadanos + domicilios + viajes + comorbilidades
             self.context.session.commit()
-            self.logger.info(f"✅ Establecimientos, ciudadanos y datos asociados committed")
+            self.logger.info("✅ Establecimientos, ciudadanos y datos asociados committed")
             self._update_operation_progress("establecimientos y ciudadanos")
 
             # 3. EVENTOS - Requires ciudadanos and establecimientos
@@ -285,7 +287,7 @@ class MainProcessor:
             # COMMIT CRÍTICO 2: Eventos
             # Este commit ES NECESARIO porque necesitamos los id_evento para el JOIN siguiente
             self.context.session.commit()
-            self.logger.info(f"✅ Eventos committed")
+            self.logger.info("✅ Eventos committed")
             self._update_operation_progress("eventos")
 
             # ===== OPTIMIZACIÓN 3: JOIN CENTRALIZADO =====
@@ -384,7 +386,7 @@ class MainProcessor:
                         self.logger.error(f"❌ {op_name} generó excepción: {exc}")
                         raise
 
-            self.logger.info(f"✅ Fase 1 completada")
+            self.logger.info("✅ Fase 1 completada")
 
             # FASE 2: Operaciones que DEPENDEN de fase 1 (estudios depende de muestras)
             self.logger.info("🚀 Fase 2: Ejecutando operaciones dependientes...")
@@ -398,14 +400,14 @@ class MainProcessor:
                 self.logger.error(f"❌ estudios_eventos generó excepción: {exc}")
                 raise
 
-            self.logger.info(f"✅ Todas las operaciones completadas (Fase 1 + Fase 2)")
+            self.logger.info("✅ Todas las operaciones completadas (Fase 1 + Fase 2)")
 
             # ===== COMMIT CRÍTICO 3: TODAS LAS RELACIONES Y DATOS SECUNDARIOS =====
             # Todas las operaciones desde ciudadanos_datos hasta contactos en un solo commit
             # Esto incluye: ciudadanos_datos, ambitos, síntomas, antecedentes, muestras,
             # vacunas, diagnósticos, estudios, tratamientos, internaciones, investigaciones, contactos
             self.context.session.commit()
-            self.logger.info(f"✅ Todas las relaciones y datos secundarios committed")
+            self.logger.info("✅ Todas las relaciones y datos secundarios committed")
             self._update_operation_progress("relaciones y datos secundarios")
             self._log_summary(results)
 

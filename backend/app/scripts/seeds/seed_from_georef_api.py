@@ -9,12 +9,10 @@ Este script:
 3. Descarga localidades desde la API Georef
 4. Las inserta en la BD con coordenadas y población (censo 2010)
 """
-import os
-import sys
 import json
+import os
 import time
 import urllib.request
-from pathlib import Path
 
 from sqlalchemy import create_engine, text
 
@@ -327,7 +325,7 @@ def main():
     print("\n" + "="*70)
     print("✅ SEED DESDE GEOREF COMPLETADO")
     print("="*70)
-    print(f"\nDatos cargados:")
+    print("\nDatos cargados:")
     print(f"  ✅ {prov_count} Provincias")
     print(f"  ✅ {dept_count} Departamentos")
     print(f"  ✅ {loc_count} Localidades")

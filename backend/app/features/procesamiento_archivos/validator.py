@@ -6,7 +6,7 @@ Usa Polars para máximo rendimiento y mínimo uso de memoria.
 
 import logging
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict
 
 import polars as pl
 
@@ -14,10 +14,8 @@ from .config import Columns
 from .config.constants import (
     BOOLEAN_COLUMNS,
     BOOLEAN_MAPPING,
-    DATE_COLUMNS,
     DOCUMENTO_MAPPING,
     NULL_VALUES,
-    NUMERIC_COLUMNS,
     PROVINCIA_MAPPING,
     REQUIRED_COLUMNS,
     SEXO_MAPPING,

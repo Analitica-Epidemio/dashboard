@@ -7,9 +7,9 @@ from .constants import (
     DATE_COLUMNS_LIST,
     DOCUMENTO_MAPPING,
     NUMERIC_COLUMNS_LIST,
+    SEXO_MAPPING,
     ProcessingStage,
     ProcessingStatus,
-    SEXO_MAPPING,
 )
 from .context import ProcessingContext
 

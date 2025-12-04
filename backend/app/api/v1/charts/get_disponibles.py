@@ -7,7 +7,7 @@ import logging
 from typing import List
 
 from fastapi import Depends
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 

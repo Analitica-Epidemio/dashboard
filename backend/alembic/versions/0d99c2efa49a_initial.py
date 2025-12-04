@@ -7,11 +7,11 @@ Create Date: 2025-11-17 20:40:50.927330
 """
 from typing import Sequence, Union
 
-from alembic import op
+import geoalchemy2  # Required for Geometry types
 import sqlalchemy as sa
 import sqlmodel  # Always import sqlmodel for SQLModel types
-import geoalchemy2  # Required for Geometry types
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = '0d99c2efa49a'

@@ -18,10 +18,10 @@ EJECUCIÓN:
 python migrate_domains.py
 """
 
-import os
 import shutil
 import sys
 from pathlib import Path
+
 
 def main():
     """Ejecuta la migración completa de dominios"""

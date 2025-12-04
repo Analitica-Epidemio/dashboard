@@ -116,9 +116,9 @@ def main():
         print("PASO 1/7: GEOGRAFÍA (API Georef)")
         print("=" * 70)
         from app.scripts.seeds.seed_from_georef_api import (
-            seed_provincias_desde_georef,
             seed_departamentos_desde_georef,
             seed_localidades_desde_georef,
+            seed_provincias_desde_georef,
         )
 
         with engine.connect() as conn:
@@ -131,8 +131,8 @@ def main():
         print("PASO 2/7: POBLACIÓN (Censo 2022)")
         print("=" * 70)
         from app.scripts.seeds.seed_poblacion_censo2022 import (
-            seed_poblacion_provincias,
             seed_poblacion_departamentos,
+            seed_poblacion_provincias,
         )
 
         data_dir = Path(__file__).parent / "seeds" / "data"
@@ -237,16 +237,16 @@ def main():
         print(f"\n  ✅ {prov_count} Provincias con coordenadas")
         print(f"  ✅ {dept_count} Departamentos con coordenadas")
         print(f"  ✅ {loc_count} Localidades con coordenadas")
-        print(f"  ✅ Población del Censo 2022")
+        print("  ✅ Población del Censo 2022")
         print(f"  ✅ {estab_count:,} Establecimientos de Salud (REFES)")
         # if gis_hidro_count > 0 or gis_areas_count > 0:
         #     print(f"  ✅ {gis_hidro_count:,} Cursos de agua (GIS)")
         #     print(f"  ✅ {gis_areas_count:,} Áreas urbanas (GIS)")
         # else:
         #     print(f"  ⚠️  Capas GIS no cargadas (archivos no disponibles)")
-        print(f"  ✅ Estrategias epidemiológicas")
-        print(f"  ✅ Configuración de gráficos")
-        print(f"  ✅ Usuario superadmin (admin@admin.com)")
+        print("  ✅ Estrategias epidemiológicas")
+        print("  ✅ Configuración de gráficos")
+        print("  ✅ Usuario superadmin (admin@admin.com)")
         print("=" * 70)
 
     except Exception as e:

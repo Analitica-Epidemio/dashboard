@@ -16,9 +16,8 @@ import pandas as pd
 # Agregar el directorio raíz al path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from sqlalchemy import create_engine, select, update, text
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
-
 
 # Mapeo de nombres de provincias del censo a códigos INDEC
 PROVINCIA_CODES = {
@@ -240,7 +239,7 @@ def seed_poblacion_departamentos(session: Session, archivo_path: Path):
     session.commit()
 
     print(f"\n{'='*60}")
-    print(f"✅ RESUMEN DEPARTAMENTOS:")
+    print("✅ RESUMEN DEPARTAMENTOS:")
     print(f"   Actualizados: {total_updated}")
     print(f"   No encontrados: {total_not_found}")
     print(f"{'='*60}")

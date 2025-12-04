@@ -8,17 +8,18 @@ import asyncio
 import io
 import logging
 from datetime import datetime
-from typing import List, Dict, Any, Optional
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import inch
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, PageBreak
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from typing import Any, Dict, List, Optional
+
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import inch
+from reportlab.platypus import Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.schemas.chart_spec import ChartFilters
-from app.services.chart_spec_generator import ChartSpecGenerator
 from app.services.chart_renderer import chart_renderer
+from app.services.chart_spec_generator import ChartSpecGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -216,7 +217,7 @@ class ServerSidePDFGenerator:
         info_lines = [
             f"<b>Período:</b> {date_range.get('from', '')} a {date_range.get('to', '')}",
             f"<b>Fecha de generación:</b> {datetime.now().strftime('%Y-%m-%d %H:%M')}",
-            f"<b>Provincia:</b> Chubut",
+            "<b>Provincia:</b> Chubut",
         ]
 
         # Agregar eventos si existen

@@ -3,14 +3,14 @@ List strategies endpoint
 """
 
 import logging
-from typing import Dict, List, Optional
+from typing import Optional
 
 from fastapi import Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.core.schemas.response import PaginatedResponse, PaginationMeta, SuccessResponse
+from app.core.schemas.response import PaginatedResponse, PaginationMeta
 from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User
 from app.domains.eventos_epidemiologicos.clasificacion.models import EventStrategy

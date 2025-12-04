@@ -11,8 +11,8 @@ Grupos etarios estándar basados en:
 - Normativas del Ministerio de Salud de Argentina
 """
 
-from typing import List, Dict, Any
 from dataclasses import dataclass
+from typing import List
 
 
 @dataclass

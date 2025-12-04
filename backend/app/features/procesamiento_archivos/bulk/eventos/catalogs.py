@@ -15,8 +15,7 @@ from app.core.utils.codigo_generator import CodigoGenerator
 from app.domains.eventos_epidemiologicos.eventos.models import GrupoEno, TipoEno
 
 from ...config.columns import Columns
-from ..shared import get_or_create_catalog, get_current_timestamp
-
+from ..shared import get_current_timestamp, get_or_create_catalog
 
 logger = logging.getLogger(__name__)
 

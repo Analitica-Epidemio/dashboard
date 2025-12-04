@@ -16,8 +16,9 @@ USAGE:
   manager.upsert_sintomas_eventos(df, sintoma_mapping)
 """
 
-import polars as pl
 from typing import Dict
+
+import polars as pl
 
 from ..shared import BulkOperationResult
 
@@ -34,10 +35,10 @@ class EventosManager:
         self.logger = logger
 
         # Import here to avoid circular dependencies
+        from .ambitos import AmbitosProcessor
+        from .antecedentes import AntecedentesProcessor
         from .processor import EventosProcessor
         from .sintomas import SintomasProcessor
-        from .antecedentes import AntecedentesProcessor
-        from .ambitos import AmbitosProcessor
 
         # Initialize all sub-processors
         self.eventos = EventosProcessor(context, logger)

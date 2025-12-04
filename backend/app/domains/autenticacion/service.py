@@ -3,7 +3,7 @@ Authentication service layer
 Handles user management, authentication, and session management
 """
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import List, Optional, Tuple
 
 from fastapi import HTTPException, Request, status

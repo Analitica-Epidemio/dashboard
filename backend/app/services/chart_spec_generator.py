@@ -4,41 +4,41 @@ Genera especificaciones universales de charts desde datos REALES de la BD
 Reutiliza ChartDataProcessor para obtener los datos
 """
 
-from typing import Optional, Dict, Any, List
-from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime
 import uuid
+from typing import Any, Dict, Optional
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.features.dashboard.processors import ChartDataProcessor
 from app.schemas.chart_spec import (
-    UniversalChartSpec,
-    ChartFilters,
-    BaseChartData,
-    Dataset,
-    WeekMetadata,
-    MapChartData,
-    MapDepartmentData,
-    PyramidDataPoint,
-    LineChartConfig,
-    BarChartConfig,
     AreaChartConfig,
-    PieChartConfig,
-    PyramidChartConfig,
-    MapChartConfig,
+    AreaChartConfigWrapper,
+    AreaChartData,
+    BarChartConfig,
+    BarChartConfigWrapper,
+    BarChartData,
+    BaseChartData,
+    ChartFilters,
+    Dataset,
+    LineChartConfig,
+    LineChartConfigWrapper,
     # Discriminated union wrappers
     LineChartData,
-    BarChartData,
-    AreaChartData,
-    PieChartData,
-    PyramidChartData,
-    MapChartDataWrapper,
-    LineChartConfigWrapper,
-    BarChartConfigWrapper,
-    AreaChartConfigWrapper,
-    PieChartConfigWrapper,
-    PyramidChartConfigWrapper,
+    MapChartConfig,
     MapChartConfigWrapper,
+    MapChartData,
+    MapChartDataWrapper,
+    MapDepartmentData,
+    PieChartConfig,
+    PieChartConfigWrapper,
+    PieChartData,
+    PyramidChartConfig,
+    PyramidChartConfigWrapper,
+    PyramidChartData,
+    PyramidDataPoint,
+    UniversalChartSpec,
+    WeekMetadata,
 )
-from app.features.dashboard.processors import ChartDataProcessor
 
 
 class ChartSpecGenerator:

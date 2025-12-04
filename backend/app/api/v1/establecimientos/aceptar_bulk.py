@@ -1,13 +1,12 @@
 """Endpoint para aceptar múltiples sugerencias de mapeo en bulk."""
 
-from typing import List, Dict
 from fastapi import Depends
 from sqlmodel import Session
 
 from app.core.database import get_session
-from .mapeo_schemas import AceptarSugerenciasBulkRequest
+
 from .crear_mapeo import crear_mapeo_snvs_ign
-from .mapeo_schemas import CrearMapeoRequest
+from .mapeo_schemas import AceptarSugerenciasBulkRequest
 
 
 async def aceptar_sugerencias_bulk(

@@ -270,10 +270,10 @@ def revisar_mapeos_validacion_manual(data: Dict) -> Dict:
 
         if "OK:" in mapeo['validacion']:
             stats['validados_ok'].append(mapeo)
-            print(f"   ✓ VALIDADO - Se agregará al mapping")
+            print("   ✓ VALIDADO - Se agregará al mapping")
         else:
             stats['requieren_investigacion'].append(mapeo)
-            print(f"   ⚠ REQUIERE INVESTIGACIÓN - No se agregará aún")
+            print("   ⚠ REQUIERE INVESTIGACIÓN - No se agregará aún")
 
         print()
 
