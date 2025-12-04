@@ -89,3 +89,9 @@ temp/
 # Incluir explícitamente el dominio uploads (código fuente)
 !/app/domains/uploads/
 celerybeat-schedule
+
+# Seed data files (se descargan automáticamente)
+app/scripts/seeds/data/censo2022_poblacion.xlsx
+
+# Cache de seeds (521MB+ de datos de APIs externas)
+.cache/

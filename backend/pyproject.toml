@@ -2,7 +2,6 @@
 name = "epidemiologia-api"
 version = "1.0.0"
 description = "API del Sistema de Epidemiología"
-readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi[standard]>=0.110.0",

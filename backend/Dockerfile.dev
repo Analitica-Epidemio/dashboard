@@ -1,86 +1,47 @@
-# Dockerfile optimizado para DESARROLLO con hot-reload y caché de dependencias
-# Este Dockerfile mantiene las dependencias en caché y solo las reinstala cuando cambian
+# Dockerfile para desarrollo con hot-reload
 
-FROM python:3.11-slim
+# Stage 1: Builder - compilar pycairo
+FROM python:3.11-slim AS builder
 
-# Instalar dependencias del sistema una sola vez (se cachea en la capa)
-RUN apt-get update && apt-get install -y \
-    libpq5 \
-    libmagic1 \
-    curl \
-    # Build tools para compilar pycairo (requerido por svglib) \
-    gcc \
-    pkg-config \
-    libcairo2-dev \
-    # Fuentes modernas para charts profesionales \
-    fonts-roboto \
-    fontconfig \
-    # Dependencias para Playwright\
-    wget \
-    ca-certificates \
-    fonts-liberation \
-    libasound2 \
-    libatk-bridge2.0-0 \
-    libatk1.0-0 \
-    libatspi2.0-0 \
-    libcups2 \
-    libdbus-1-3 \
-    libdrm2 \
-    libgbm1 \
-    libgtk-3-0 \
-    libnspr4 \
-    libnss3 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxfixes3 \
-    libxkbcommon0 \
-    libxrandr2 \
-    xdg-utils \
-    libglib2.0-0 \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc pkg-config libcairo2-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Actualizar cache de fuentes
-RUN fc-cache -f -v
-
-# Instalar uv para gestión rápida de dependencias
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
-
-# Configurar directorio de trabajo
 WORKDIR /app
 
-# Variables de entorno para desarrollo
-ENV PYTHONPATH=/app
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-ENV UV_COMPILE_BYTECODE=1
-ENV UV_LINK_MODE=copy
+ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
 
-# Copiar SOLO archivos de dependencias primero (para aprovechar caché de Docker)
-# Esto significa que las dependencias solo se reinstalan si pyproject.toml o uv.lock cambian
 COPY pyproject.toml uv.lock ./
+RUN touch README.md && mkdir -p app
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-install-project
 
-# Crear un README.md vacío temporalmente (requerido por pyproject.toml)
-RUN touch README.md
+# Stage 2: Runtime
+FROM python:3.11-slim
 
-# Crear estructura mínima para que uv sync funcione
-RUN mkdir -p app
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libmagic1 libcairo2 fonts-roboto fontconfig \
+    && fc-cache -f -v \
+    && rm -rf /var/lib/apt/lists/*
 
-# Instalar dependencias con uv (mucho más rápido que pip)
-# Esta capa se cachea hasta que cambien pyproject.toml o uv.lock
-RUN uv sync --frozen --no-install-project --no-dev --no-editable
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+WORKDIR /app
 
-# Copiar el resto del código (esto cambia frecuentemente, por eso va al final)
-COPY . .
+COPY --from=builder /app/.venv /app/.venv
 
-# Instalar el proyecto en modo editable ahora que tenemos el código completo
-RUN uv sync --frozen
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONPATH=/app \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-# Crear directorios necesarios
-RUN mkdir -p /app/uploads /app/logs
+COPY pyproject.toml uv.lock ./
+COPY app/ ./app/
+COPY alembic/ ./alembic/
+COPY alembic.ini ./
 
-# Exponer puerto
+RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen
+RUN mkdir -p /app/uploads /app/logs /app/.cache/seeds
+
 EXPOSE 8000
-
-# Comando por defecto para desarrollo con hot-reload
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

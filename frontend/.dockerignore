@@ -1,0 +1,35 @@
+# Dependencias
+node_modules
+
+# Build output
+.next
+out
+dist
+
+# Cache
+.turbo
+.cache
+
+# Env files (se pasan como build args)
+.env*
+!.env.example
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Git
+.git
+.gitignore
+
+# Docs
+README.md
+*.md
+
+# Tests
+__tests__
+*.test.*
+*.spec.*
+coverage

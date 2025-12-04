@@ -1,0 +1,175 @@
+# Docker Compose para PRODUCCIÓN
+#
+# Uso: docker compose -f docker-compose.prod.yaml up -d
+#
+# Este compose levanta:
+# - Frontend (Next.js) - puerto 3000
+# - Backend (FastAPI) - puerto 8000
+# - Celery (workers + beat)
+# - PostgreSQL + PostGIS
+# - Redis
+#
+# IMPORTANTE: Requiere Nginx instalado en el servidor como reverse proxy.
+# Ver docs/DEPLOYMENT.md para configuracion.
+
+name: epidemiologia-prod
+
+services:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Frontend - Next.js
+  # ─────────────────────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_HOST: ${NEXT_PUBLIC_API_HOST}
+        NEXT_PUBLIC_APP_ENV: production
+    image: epidemiologia-frontend:prod
+    container_name: epi_frontend
+    ports:
+      - "127.0.0.1:3000:3000"  # Solo localhost, Nginx hace proxy
+    environment:
+      NODE_ENV: production
+      SECRET_KEY: ${SECRET_KEY}
+    restart: always
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Backend - FastAPI
+  # ─────────────────────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: epidemiologia-api:prod
+    container_name: epi_api
+    ports:
+      - "127.0.0.1:8000:8000"  # Solo localhost, Nginx hace proxy
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+      FRONTEND_URL: ${FRONTEND_URL}
+    volumes:
+      - uploads_data:/app/uploads
+      - logs_data:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Celery Worker
+  # ─────────────────────────────────────────────────────────────────────────────
+  celery_worker:
+    image: epidemiologia-api:prod
+    container_name: epi_celery_worker
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY}
+    volumes:
+      - uploads_data:/app/uploads
+      - logs_data:/app/logs
+    depends_on:
+      api:
+        condition: service_started
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+    command: ["celery", "-A", "app.core.celery_app:celery_app", "worker", "--loglevel=warning", "--concurrency=4", "--queues=default,file_processing,geocoding,maintenance"]
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Celery Beat (scheduler)
+  # ─────────────────────────────────────────────────────────────────────────────
+  celery_beat:
+    image: epidemiologia-api:prod
+    container_name: epi_celery_beat
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY}
+    depends_on:
+      api:
+        condition: service_started
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+    command: ["celery", "-A", "app.core.celery_app:celery_app", "beat", "--loglevel=warning"]
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # PostgreSQL + PostGIS
+  # ─────────────────────────────────────────────────────────────────────────────
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: epi_postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Redis
+  # ─────────────────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: epi_redis
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    restart: always
+
+volumes:
+  postgres_data:
+    name: epi_postgres_data
+  redis_data:
+    name: epi_redis_data
+  uploads_data:
+    name: epi_uploads_data
+  logs_data:
+    name: epi_logs_data
+
+networks:
+  default:
+    name: epi_network
