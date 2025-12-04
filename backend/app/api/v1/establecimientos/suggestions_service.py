@@ -148,7 +148,6 @@ async def buscar_sugerencias_para_establecimiento(
     result = session.exec(query).all()
 
     sugerencias = []
-    nombre_snvs_norm = normalizar_texto(nombre_snvs)
 
     for row in result:
         estab_ign = row[0]

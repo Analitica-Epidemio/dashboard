@@ -77,10 +77,10 @@ async def listar_mapeos_existentes(
         query = query.where(Establecimiento.mapeo_confianza == confianza.upper())
 
     if validados_solo:
-        query = query.where(Establecimiento.mapeo_validado == True)
+        query = query.where(Establecimiento.mapeo_validado.is_(True))
 
     if manuales_solo:
-        query = query.where(Establecimiento.mapeo_es_manual == True)
+        query = query.where(Establecimiento.mapeo_es_manual.is_(True))
 
     # Ordenar por score descendente
     query = query.order_by(Establecimiento.mapeo_score.desc())
