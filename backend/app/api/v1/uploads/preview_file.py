@@ -9,6 +9,7 @@ import uuid
 from pathlib import Path
 from typing import Any, List
 
+import magic
 import pandas as pd
 from fastapi import Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel
@@ -17,6 +18,15 @@ from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User
 from app.features.procesamiento_archivos.config.columns import REQUIRED_COLUMNS
+
+# MIME types válidos para archivos permitidos
+VALID_MIME_TYPES = {
+    "text/csv",
+    "text/plain",  # Algunos CSV se detectan como text/plain
+    "application/csv",
+    "application/vnd.ms-excel",  # .xls
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",  # .xlsx
+}
 
 logger = logging.getLogger(__name__)
 
@@ -162,17 +172,32 @@ async def preview_uploaded_file(
     try:
         start_time = time.time()
 
+        # Read content for validation
+        content = await file.read()
+
+        # Validate MIME type using magic bytes
+        detected_mime = magic.from_buffer(content, mime=True)
+        if detected_mime not in VALID_MIME_TYPES:
+            logger.warning(
+                f"MIME type inválido: {detected_mime} para archivo {file.filename}"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Tipo de archivo no válido. MIME detectado: {detected_mime}. "
+                       f"Solo se permiten archivos CSV y Excel reales."
+            )
+
         # Generate unique upload ID
         upload_id = str(uuid.uuid4())
 
-        # Save to temp file
-        temp_file_path = TEMP_UPLOAD_DIR / f"{upload_id}_{file.filename}"
+        # Save to temp file with sanitized filename (UUID prefix prevents path traversal)
+        safe_filename = f"{upload_id}{file_ext}"
+        temp_file_path = TEMP_UPLOAD_DIR / safe_filename
 
         logger.info(f"💾 Saving to temp: {temp_file_path}")
         save_start = time.time()
 
         with open(temp_file_path, "wb") as f:
-            content = await file.read()
             f.write(content)
 
         file_size = len(content)

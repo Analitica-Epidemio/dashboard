@@ -105,45 +105,32 @@ def verify_signed_url(data: str, signature: str) -> Dict:
         ValueError: Si la firma es inválida o la URL expiró
     """
     try:
-        print("Verifying signed URL")
-        print(f"  Data (first 100 chars): {data[:100]}...")
-        print(f"  Signature: {signature}")
-
         # IMPORTANTE: Guardar el data original para verificar la firma
         original_data = data
 
-        # Decodificar payload
-        # Añadir padding si es necesario
+        # Decodificar payload - añadir padding si es necesario
         missing_padding = len(data) % 4
         if missing_padding:
             data += "=" * (4 - missing_padding)
 
         payload_json = base64.urlsafe_b64decode(data.encode()).decode()
         payload = json.loads(payload_json)
-        print(f"  Decoded payload keys: {list(payload.keys())}")
 
         # Verificar expiración
         if time.time() > payload.get("expires_at", 0):
-            logger.error(
-                f"URL expired. Current: {time.time()}, Expires: {payload.get('expires_at', 0)}"
-            )
+            logger.warning("Signed URL expired")
             raise ValueError("URL has expired")
 
         # Verificar firma usando el data ORIGINAL (sin padding añadido)
         secret_key = settings.SECRET_KEY.encode()
-        print(f"  Using SECRET_KEY: {settings.SECRET_KEY[:10]}... (first 10 chars)")
-
         expected_signature = hmac.new(
             secret_key,
-            original_data.encode(),  # Usar el data original, no el modificado con padding
+            original_data.encode(),
             hashlib.sha256,
         ).hexdigest()
 
-        print(f"  Expected signature: {expected_signature}")
-        print(f"  Received signature: {signature}")
-
         if not hmac.compare_digest(signature, expected_signature):
-            logger.error("Signature mismatch!")
+            logger.warning("Signed URL signature mismatch")
             raise ValueError("Invalid signature")
 
         # Remover expires_at del payload antes de devolver

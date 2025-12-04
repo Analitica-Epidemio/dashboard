@@ -50,8 +50,8 @@ class MainProcessor:
         self.diagnosticos_processor = DiagnosticosProcessor(context, logger)
         self.investigaciones_processor = InvestigacionesProcessor(context, logger)
 
-        # Progress tracking: ~18 operaciones totales
-        self.total_operations = 18
+        # Progress tracking: ~19 operaciones totales (incluyendo agentes_eventos)
+        self.total_operations = 19
         self.completed_operations = 0
 
     def _preprocess_dataframe(self, df: pl.DataFrame) -> pl.DataFrame:
@@ -301,8 +301,8 @@ class MainProcessor:
             # OPTIMIZACIÓN: Ejecutar en PARALELO con ThreadPoolExecutor
             # IMPORTANTE: Dividir en 2 fases por dependencias (estudios depende de muestras)
 
-            # FASE 1: Operaciones independientes (incluyendo muestras)
-            self.logger.info("🚀 Fase 1: Ejecutando 11 operaciones independientes en paralelo...")
+            # FASE 1: Operaciones independientes (incluyendo muestras y agentes)
+            self.logger.info("🚀 Fase 1: Ejecutando 12 operaciones independientes en paralelo...")
 
             phase1_operations = [
                 (
@@ -354,6 +354,11 @@ class MainProcessor:
                     self.investigaciones_processor.upsert_contactos_notificaciones,
                     (df_eventos_with_id,),
                     "contactos_notificaciones"
+                ),
+                (
+                    self.eventos_manager.upsert_agentes_eventos,
+                    (df_eventos_with_id, evento_mapping),
+                    "agentes_eventos"
                 ),
             ]
 
@@ -416,7 +421,16 @@ class MainProcessor:
         finally:
             # SIEMPRE restaurar FK checks, incluso si hay error
             self.logger.info("🔄 Restaurando FK checks...")
-            self.context.session.execute(text("SET session_replication_role = DEFAULT"))
+            try:
+                # Si la transacción está en estado de error, hacer rollback primero
+                self.context.session.rollback()
+            except Exception:
+                pass  # Ignorar si no hay transacción activa
+            try:
+                self.context.session.execute(text("SET session_replication_role = DEFAULT"))
+                self.context.session.commit()
+            except Exception as e:
+                self.logger.warning(f"No se pudo restaurar session_replication_role: {e}")
 
     def _log_summary(self, results: Dict[str, BulkOperationResult]) -> None:
         """Log a summary of all bulk operations."""

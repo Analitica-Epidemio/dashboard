@@ -129,7 +129,7 @@ def extraer_establecimientos_de_csvs(csv_dir: Path) -> dict:
                     if pd.notna(codigo):
                         try:
                             codigo = str(int(float(codigo))).strip()
-                        except:
+                        except (ValueError, TypeError):
                             continue
                     else:
                         continue
@@ -149,7 +149,7 @@ def extraer_establecimientos_de_csvs(csv_dir: Path) -> dict:
                     if pd.notna(row[col_loc]):
                         try:
                             loc_id = int(float(row[col_loc]))
-                        except:
+                        except (ValueError, TypeError):
                             pass
 
                     # Info geográfica
@@ -218,10 +218,6 @@ def cargar_establecimientos_ign(conn) -> dict:
 
             if not codigo_refes or not nombre:
                 continue
-
-            # Extraer coordenadas para reverse geocoding opcional
-            lat = row.geometry.y if row.geometry else None
-            lng = row.geometry.x if row.geometry else None
 
             # Por ahora, sin datos de localidad (se podrían agregar después con reverse geocoding)
             establecimientos[codigo_refes] = EstablecimientoIGN(

@@ -227,8 +227,26 @@ class SecurityTokens:
 
 
 class RateLimiter:
-    """Simple in-memory rate limiter for login attempts"""
-    _attempts = {}
+    """
+    Redis-based rate limiter for login attempts.
+
+    Funciona consistentemente entre múltiples workers/procesos.
+    REQUIERE Redis - sin fallback (Docker siempre disponible).
+    """
+    _redis_client = None
+    _PREFIX = "rate_limit:"
+
+    @classmethod
+    def _get_redis(cls):
+        """Get Redis connection lazily."""
+        if cls._redis_client is None:
+            import redis
+            cls._redis_client = redis.from_url(
+                settings.REDIS_URL,
+                decode_responses=True,
+                socket_connect_timeout=3
+            )
+        return cls._redis_client
 
     @classmethod
     def is_rate_limited(cls, identifier: str, max_attempts: int = None) -> bool:
@@ -236,45 +254,35 @@ class RateLimiter:
         if max_attempts is None:
             max_attempts = SecurityConfig.MAX_LOGIN_ATTEMPTS
 
-        now = datetime.now(timezone.utc)
+        redis_client = cls._get_redis()
+        key = f"{cls._PREFIX}{identifier}"
+        count = redis_client.get(key)
 
-        if identifier not in cls._attempts:
-            cls._attempts[identifier] = {"count": 0, "reset_time": now}
+        if count is None:
             return False
-
-        attempt_data = cls._attempts[identifier]
-
-        # Reset if lockout period has passed
-        if now > attempt_data["reset_time"]:
-            cls._attempts[identifier] = {"count": 0, "reset_time": now}
-            return False
-
-        return attempt_data["count"] >= max_attempts
+        return int(count) >= max_attempts
 
     @classmethod
     def record_attempt(cls, identifier: str, success: bool = False) -> None:
         """Record a login attempt"""
-        now = datetime.now(timezone.utc)
-
-        if identifier not in cls._attempts:
-            cls._attempts[identifier] = {"count": 0, "reset_time": now}
+        redis_client = cls._get_redis()
+        key = f"{cls._PREFIX}{identifier}"
 
         if success:
             # Reset on successful login
-            cls._attempts[identifier] = {"count": 0, "reset_time": now}
+            redis_client.delete(key)
         else:
-            # Increment failed attempts
-            cls._attempts[identifier]["count"] += 1
-            if cls._attempts[identifier]["count"] >= SecurityConfig.MAX_LOGIN_ATTEMPTS:
-                cls._attempts[identifier]["reset_time"] = now + timedelta(
-                    minutes=SecurityConfig.LOCKOUT_DURATION_MINUTES
-                )
+            # Increment failed attempts with expiry
+            pipe = redis_client.pipeline()
+            pipe.incr(key)
+            pipe.expire(key, SecurityConfig.LOCKOUT_DURATION_MINUTES * 60)
+            pipe.execute()
 
     @classmethod
     def clear_attempts(cls, identifier: str) -> None:
         """Clear rate limit for identifier"""
-        if identifier in cls._attempts:
-            del cls._attempts[identifier]
+        redis_client = cls._get_redis()
+        redis_client.delete(f"{cls._PREFIX}{identifier}")
 
 
 def create_credentials_exception(detail: str = "Could not validate credentials") -> HTTPException:

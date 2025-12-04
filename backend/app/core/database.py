@@ -1,11 +1,14 @@
 """Configuración de la base de datos."""
 
+import logging
 from typing import AsyncGenerator, Generator
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlmodel import Session, SQLModel, create_engine
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 # Para desarrollo, usar engines síncrono y asíncrono
 database_url_sync = settings.DATABASE_URL.replace(
@@ -39,5 +42,4 @@ def create_db_and_tables() -> None:
     try:
         SQLModel.metadata.create_all(engine)
     except Exception as e:
-        print(f"Warning: Could not create tables: {e}")
-        # En desarrollo, es OK si no hay tablas aún
+        logger.warning(f"Could not create tables: {e}")

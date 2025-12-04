@@ -9,10 +9,12 @@ import {
   MapaSidebar,
   type GrupoEventoResumen,
   type TimelineMode,
+  type TimelineDisplayMode,
 } from "@/features/mapa/components/mapa-sidebar-v2";
 import { DomicilioDetalleDialog } from "@/features/mapa/components/domicilio-detalle-dialog";
 import { EstablecimientoDetalleDialog } from "@/features/mapa/components/establecimiento-detalle-dialog";
 import { useDomiciliosMapa, type DomicilioMapaItem } from "@/features/mapa/api";
+import type { MapViewMode } from "@/features/mapa/components/mapa-simple";
 import { type EstablecimientoMapaItem } from "@/features/establecimientos/api";
 import { useTiposEno } from "@/features/eventos/api";
 import { apiClient } from "@/lib/api/client";
@@ -124,10 +126,16 @@ export default function MapaPage() {
   const [eventosList, setEventosList] = useState<EventoListItem[]>([]);
   const [eventosLoading, setEventosLoading] = useState(false);
   const [eventosError, setEventosError] = useState<string | null>(null);
+  const [timelineModeEnabled, setTimelineModeEnabled] = useState(false); // Timeline desactivado por defecto
+  const [timelineDataLoaded, setTimelineDataLoaded] = useState(false); // Si ya se cargaron los datos
   const [timelineMode, setTimelineMode] = useState<TimelineMode>("day");
   const [timelineIndex, setTimelineIndex] = useState(0);
   const [timelinePlaying, setTimelinePlaying] = useState(false);
   const [timelineSpeed, setTimelineSpeed] = useState(1);
+  const [mapViewMode, setMapViewMode] = useState<MapViewMode>("domicilios");
+  // Nuevos estados para modo de visualización temporal
+  const [displayMode, setDisplayMode] = useState<TimelineDisplayMode>("cumulative");
+  const [activeWindowDays, setActiveWindowDays] = useState(14); // Default: 14 días
 
   const { data, isLoading } = useDomiciliosMapa({
     limit: 50000,
@@ -140,7 +148,13 @@ export default function MapaPage() {
   const domicilios = data?.data?.items || [];
   const tiposEno = tiposEnoResponse?.data || [];
 
+  // Solo cargar eventos cuando el modo timeline está habilitado
   useEffect(() => {
+    // Si el timeline no está habilitado o ya cargamos los datos, no hacer nada
+    if (!timelineModeEnabled || timelineDataLoaded) {
+      return;
+    }
+
     let isMounted = true;
 
     async function fetchAllEvents() {
@@ -176,6 +190,7 @@ export default function MapaPage() {
 
         if (isMounted) {
           setEventosList(collected);
+          setTimelineDataLoaded(true); // Marcar como cargado
         }
       } catch (error) {
         console.error("Error cargando eventos para timeline", error);
@@ -195,7 +210,7 @@ export default function MapaPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [timelineModeEnabled, timelineDataLoaded]);
 
   const tipoGrupoMapping = useMemo(() => {
     const mapping: Record<string, { grupoId: string; grupoNombre: string }> = {};
@@ -386,16 +401,44 @@ export default function MapaPage() {
   const timelineActiveEvents = useMemo(() => {
     if (!timelineEnabled || !timelineBuckets.length) return [];
     const cappedIndex = Math.min(timelineIndex, timelineBuckets.length - 1);
-    const bucketsToInclude = timelineBuckets.slice(0, cappedIndex + 1);
+    const currentBucket = timelineBuckets[cappedIndex];
 
-    return bucketsToInclude
-      .flatMap((bucket) => bucket.events)
-      .filter((event) => selectedGruposSet.has(event.grupoId));
+    let eventsToInclude: NormalizedTimelineEvent[] = [];
+
+    switch (displayMode) {
+      case "cumulative":
+        // Acumulado: todos los eventos hasta el bucket actual (inclusive)
+        eventsToInclude = timelineBuckets
+          .slice(0, cappedIndex + 1)
+          .flatMap((bucket) => bucket.events);
+        break;
+
+      case "active":
+        // Activos: eventos dentro de la ventana temporal desde el bucket actual
+        // Calcular fecha límite inferior (bucket actual - ventana)
+        const windowStart = new Date(currentBucket.end);
+        windowStart.setDate(windowStart.getDate() - activeWindowDays);
+
+        eventsToInclude = timelineBuckets
+          .slice(0, cappedIndex + 1)
+          .flatMap((bucket) => bucket.events)
+          .filter((event) => event.fecha >= windowStart);
+        break;
+
+      case "period":
+        // Solo del período: eventos del bucket actual únicamente
+        eventsToInclude = currentBucket.events;
+        break;
+    }
+
+    return eventsToInclude.filter((event) => selectedGruposSet.has(event.grupoId));
   }, [
     timelineEnabled,
     timelineBuckets,
     timelineIndex,
     selectedGruposSet,
+    displayMode,
+    activeWindowDays,
   ]);
 
   const domicilioById = useMemo(() => {
@@ -532,6 +575,16 @@ export default function MapaPage() {
     speed: timelineSpeed,
     onSpeedChange: (value: number) => setTimelineSpeed(value),
     speedOptions: TIMELINE_SPEED_OPTIONS,
+    // Nuevas props para modo lazy
+    modeEnabled: timelineModeEnabled,
+    onToggleModeEnabled: () => setTimelineModeEnabled((prev) => !prev),
+    dataLoaded: timelineDataLoaded,
+    // Nuevas props para modo de visualización temporal
+    displayMode,
+    onDisplayModeChange: (mode: TimelineDisplayMode) => setDisplayMode(mode),
+    activeWindowDays,
+    onActiveWindowDaysChange: (days: number) => setActiveWindowDays(days),
+    suggestedWindowDays: null, // TODO: Obtener de grupo ENO seleccionado
   };
 
   const handleMarkerClick = (domicilio: DomicilioMapaItem) => {
@@ -566,7 +619,8 @@ export default function MapaPage() {
       }
     >
       <div className="relative h-full">
-        {isLoading && (
+        {/* Overlay de estadísticas solo en modo domicilios */}
+        {mapViewMode === "domicilios" && isLoading && (
           <div className="absolute left-1/2 top-4 z-[999] -translate-x-1/2 rounded-lg border bg-white px-4 py-3 shadow-lg">
             <div className="flex items-center gap-3">
               <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-blue-600"></div>
@@ -577,7 +631,7 @@ export default function MapaPage() {
           </div>
         )}
 
-        {!isLoading && (
+        {mapViewMode === "domicilios" && !isLoading && (
           <div className="absolute left-4 top-4 z-[999] rounded-lg border bg-white p-4 shadow-lg">
             <div className="space-y-1 text-sm">
               <div>
@@ -604,6 +658,7 @@ export default function MapaPage() {
           grupoColorMap={grupoColorMap}
           tipoGrupoMapping={tipoGrupoMapping}
           fallbackGrupoId={FALLBACK_GROUP_ID}
+          onViewModeChange={setMapViewMode}
         />
 
         <DomicilioDetalleDialog

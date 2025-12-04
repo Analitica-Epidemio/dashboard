@@ -342,7 +342,7 @@ def seed_refes(conn: Connection) -> int:
     print("="*70)
 
     # Cargar mapping SNVS → IGN
-    mapping_count = cargar_mapping_snvs(conn)
+    cargar_mapping_snvs(conn)
 
     return inserted_count
 

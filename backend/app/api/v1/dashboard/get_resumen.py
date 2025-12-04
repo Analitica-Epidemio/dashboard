@@ -321,7 +321,7 @@ async def get_dashboard_resumen(
         )
         .join(
             Departamento,
-            Localidad.id_departamento == Departamento.id
+            Localidad.id_departamento_indec == Departamento.id_departamento_indec
         )
         .join(
             Provincia,

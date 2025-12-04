@@ -118,10 +118,6 @@ class SimpleEpidemiologicalProcessor:
         - Multithreading automático
         - Mejor manejo de nulls
         """
-        from .config.columns import DATE_COLUMNS
-
-        all_date_columns = list(DATE_COLUMNS)
-
         # Leer archivo - UNA SOLA MANERA
         if file_path.suffix.lower() == ".csv":
             logger.info("⚡ Leyendo CSV con Polars...")

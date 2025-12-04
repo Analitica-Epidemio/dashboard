@@ -5,6 +5,7 @@ from sqlalchemy import JSON, BigInteger, Column, Index, Text, UniqueConstraint
 from sqlmodel import Field, Relationship
 
 from app.core.models import BaseModel
+from app.domains.eventos_epidemiologicos.clasificacion.models import TipoClasificacion
 
 if TYPE_CHECKING:
     from app.domains.atencion_medica.diagnosticos_models import (
@@ -21,6 +22,7 @@ if TYPE_CHECKING:
         Sintoma,
         VacunasCiudadano,
     )
+    from app.domains.eventos_epidemiologicos.agentes.models import EventoAgente
     from app.domains.eventos_epidemiologicos.ambitos_models import (
         AmbitosConcurrenciaEvento,
     )
@@ -42,17 +44,15 @@ class EventoGrupoEno(BaseModel, table=True):
 
     __tablename__ = "evento_grupo_eno"
     __table_args__ = (
-        UniqueConstraint('id_evento', 'id_grupo_eno', name='uq_evento_grupo_eno'),
+        UniqueConstraint("id_evento", "id_grupo_eno", name="uq_evento_grupo_eno"),
     )
 
     # Foreign Keys
     id_evento: int = Field(
-        foreign_key="evento.id",
-        description="ID del evento epidemiológico"
+        foreign_key="evento.id", description="ID del evento epidemiológico"
     )
     id_grupo_eno: int = Field(
-        foreign_key="grupo_eno.id",
-        description="ID del grupo ENO"
+        foreign_key="grupo_eno.id", description="ID del grupo ENO"
     )
 
     # Relaciones
@@ -71,17 +71,13 @@ class TipoEnoGrupoEno(BaseModel, table=True):
 
     __tablename__ = "tipo_eno_grupo_eno"
     __table_args__ = (
-        UniqueConstraint('id_tipo_eno', 'id_grupo_eno', name='uq_tipo_eno_grupo_eno'),
+        UniqueConstraint("id_tipo_eno", "id_grupo_eno", name="uq_tipo_eno_grupo_eno"),
     )
 
     # Foreign Keys
-    id_tipo_eno: int = Field(
-        foreign_key="tipo_eno.id",
-        description="ID del tipo ENO"
-    )
+    id_tipo_eno: int = Field(foreign_key="tipo_eno.id", description="ID del tipo ENO")
     id_grupo_eno: int = Field(
-        foreign_key="grupo_eno.id",
-        description="ID del grupo ENO"
+        foreign_key="grupo_eno.id", description="ID del grupo ENO"
     )
 
     # Relaciones
@@ -101,6 +97,14 @@ class GrupoEno(BaseModel, table=True):
     )
     codigo: Optional[str] = Field(
         None, max_length=200, unique=True, index=True, description="Código del grupo"
+    )
+
+    # Configuración de visualización temporal para el mapa
+    # NULL = usar acumulado (para enfermedades crónicas como VIH/Sífilis)
+    # Valor en días = ventana de casos "activos" (ej: 14 para dengue, 7 para IRA)
+    ventana_dias_default: Optional[int] = Field(
+        None,
+        description="Ventana temporal en días para considerar casos 'activos'. NULL = acumulado (sin ventana)",
     )
 
     # Relaciones
@@ -124,6 +128,20 @@ class TipoEno(BaseModel, table=True):
         None, max_length=200, unique=True, index=True, description="Código del tipo"
     )
 
+    # Datos epidemiológicos
+    # Período de incubación en días (NULL = no aplica, ej: condiciones congénitas, screening)
+    periodo_incubacion_min_dias: Optional[int] = Field(
+        None, description="Período de incubación mínimo en días. NULL = no aplica"
+    )
+    periodo_incubacion_max_dias: Optional[int] = Field(
+        None, description="Período de incubación máximo en días. NULL = no aplica"
+    )
+    fuente_referencia: Optional[str] = Field(
+        None,
+        max_length=500,
+        description="URL de fuente oficial (OMS, CDC, MSal) para verificar datos epidemiológicos",
+    )
+
     # Relaciones
     # Many-to-many con GrupoEno a través de TipoEnoGrupoEno
     tipo_grupos: List["TipoEnoGrupoEno"] = Relationship(back_populates="tipo_eno")
@@ -135,7 +153,9 @@ class AntecedenteEpidemiologico(BaseModel, table=True):
 
     __tablename__ = "antecedente_epidemiologico"
     __table_args__ = (
-        UniqueConstraint("descripcion", name="uq_antecedente_epidemiologico_descripcion"),
+        UniqueConstraint(
+            "descripcion", name="uq_antecedente_epidemiologico_descripcion"
+        ),
     )
 
     # Campos propios
@@ -158,11 +178,11 @@ class Evento(BaseModel, table=True):
     __tablename__ = "evento"
     __table_args__ = (
         # Índice para filtrado por fecha (crítico para mapa temporal)
-        Index('idx_evento_fecha_minima', 'fecha_minima_evento'),
+        Index("idx_evento_fecha_minima", "fecha_minima_evento"),
         # Índice compuesto para JOIN + filtro fecha
-        Index('idx_evento_domicilio_fecha', 'id_domicilio', 'fecha_minima_evento'),
+        Index("idx_evento_domicilio_fecha", "id_domicilio", "fecha_minima_evento"),
         # Índice compuesto para filtros comunes
-        Index('idx_evento_tipo_eno_fecha', 'id_tipo_eno', 'fecha_minima_evento'),
+        Index("idx_evento_tipo_eno_fecha", "id_tipo_eno", "fecha_minima_evento"),
     )
 
     # Campos propios
@@ -173,7 +193,19 @@ class Evento(BaseModel, table=True):
         description="ID único del evento caso epidemiológico",
     )
     fecha_minima_evento: Optional[date] = Field(
-        None, description="Fecha mínima registrada del evento (NULL si no hay fechas válidas)"
+        None,
+        description="Fecha mínima registrada del evento (NULL si no hay fechas válidas)",
+    )
+    # Semana/año epidemiológico basados en fecha_minima_evento (calculados al guardar, indexados)
+    fecha_minima_evento_semana_epi: int = Field(
+        ...,
+        index=True,
+        description="Semana epidemiológica calculada desde fecha_minima_evento",
+    )
+    fecha_minima_evento_anio_epi: int = Field(
+        ...,
+        index=True,
+        description="Año epidemiológico calculado desde fecha_minima_evento",
     )
     fecha_inicio_sintomas: Optional[date] = Field(
         None, description="Fecha de inicio de síntomas"
@@ -191,7 +223,8 @@ class Evento(BaseModel, table=True):
         None, description="Año epidemiológico de apertura del caso"
     )
     fecha_nacimiento: Optional[date] = Field(
-        None, description="Fecha de nacimiento del ciudadano al momento de apertura del caso"
+        None,
+        description="Fecha de nacimiento del ciudadano al momento de apertura del caso",
     )
     fecha_primera_consulta: Optional[date] = Field(
         None, description="Fecha de la primera consulta médica"
@@ -284,7 +317,7 @@ class Evento(BaseModel, table=True):
         max_length=500,
         description="Clasificación original del CSV antes del procesamiento",
     )
-    clasificacion_estrategia: Optional[str] = Field(
+    clasificacion_estrategia: Optional[TipoClasificacion] = Field(
         None,
         max_length=255,
         description="Clasificación aplicada por la estrategia (CONFIRMADOS, SOSPECHOSOS, etc.)",
@@ -356,6 +389,11 @@ class Evento(BaseModel, table=True):
     )
     # Domicilio del evento (inmutable)
     domicilio: Optional["Domicilio"] = Relationship(back_populates="eventos")
+    # Agentes etiológicos detectados (N:M)
+    agentes_detectados: List["EventoAgente"] = Relationship(
+        back_populates="evento",
+        sa_relationship_kwargs={"foreign_keys": "evento_agente.c.id_evento"}
+    )
 
 
 class DetalleEventoSintomas(BaseModel, table=True):
@@ -367,7 +405,7 @@ class DetalleEventoSintomas(BaseModel, table=True):
 
     __tablename__ = "detalle_evento_sintomas"
     __table_args__ = (
-        UniqueConstraint('id_evento', 'id_sintoma', name='uq_evento_sintoma'),
+        UniqueConstraint("id_evento", "id_sintoma", name="uq_evento_sintoma"),
     )
 
     # Campos propios
@@ -400,7 +438,9 @@ class AntecedentesEpidemiologicosEvento(BaseModel, table=True):
 
     __tablename__ = "antecedentes_epidemiologicos_evento"
     __table_args__ = (
-        UniqueConstraint('id_evento', 'id_antecedente_epidemiologico', name='uq_evento_antecedente'),
+        UniqueConstraint(
+            "id_evento", "id_antecedente_epidemiologico", name="uq_evento_antecedente"
+        ),
     )
 
     # Campos propios

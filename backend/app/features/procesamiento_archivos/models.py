@@ -13,11 +13,11 @@ from app.core.models import BaseModel
 class JobStatus(str, Enum):
     """Estados posibles de un trabajo de procesamiento."""
 
-    PENDING = "pending"
-    IN_PROGRESS = "in_progress"
-    COMPLETED = "completed"
-    FAILED = "failed"
-    CANCELLED = "cancelled"
+    PENDING = "PENDING"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
 
 
 class JobPriority(int, Enum):

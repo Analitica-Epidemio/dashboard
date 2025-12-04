@@ -10,6 +10,7 @@ import {
   ChevronRight,
   AlertTriangle,
   CheckCircle2,
+  FileText,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -62,6 +63,14 @@ export default function ConfiguracionPage() {
       icon: LinkIcon,
       status: "active",
       statusText: "Activo",
+    },
+    {
+      title: "Template de Boletines",
+      description: "Configurar contenido estático y bloques dinámicos del boletín epidemiológico",
+      href: "/dashboard/configuracion/boletines",
+      icon: FileText,
+      status: "active",
+      statusText: "Configurado",
     },
   ];
 

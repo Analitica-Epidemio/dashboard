@@ -4,9 +4,14 @@ import { BarChart3, Loader2, AlertCircle } from "lucide-react";
 import { UniversalChart } from "@/components/charts/universal-chart";
 import { $api } from "@/lib/api/client";
 import type { DynamicChartAttrs } from '../tiptap';
+import type { components } from "@/lib/api/types";
 
+type UniversalChartSpec = components["schemas"]["UniversalChartSpec"];
+
+// Mapeo de códigos de chart (slug → código backend)
+// Los códigos deben coincidir exactamente con los del backend
 const chartCodeMap: Record<string, string> = {
-  "curva-epidemiologica": "casos_por_semana",
+  "curva-epidemiologica": "curva_epidemiologica",
   "corredor-endemico": "corredor_endemico",
   "piramide-poblacional": "piramide_edad",
   "mapa-geografico": "mapa_chubut",
@@ -30,9 +35,15 @@ function DynamicChartComponent({ node, updateAttributes }: NodeViewProps) {
     eventoIds: string | number;
     fechaDesde: string;
     fechaHasta: string;
+    // Backend can embed spec directly for generated boletines
+    spec?: UniversalChartSpec;
+    height?: number;
   };
-  const { chartCode, title, grupoIds, eventoIds, fechaDesde, fechaHasta } = attrs;
+  const { chartCode, title, grupoIds, eventoIds, fechaDesde, fechaHasta, spec: embeddedSpec } = attrs;
   const apiChartCode = resolveChartCode(chartCode);
+
+  // Check if we have an embedded spec (from generated boletín)
+  const hasEmbeddedSpec = !!embeddedSpec && typeof embeddedSpec === 'object';
 
   // Parse IDs from comma-separated strings or numbers
   const parseIds = (value: string | number | undefined): number[] => {
@@ -47,8 +58,10 @@ function DynamicChartComponent({ node, updateAttributes }: NodeViewProps) {
   const selectedGrupoIds = parseIds(grupoIds);
   const selectedEventoIds = parseIds(eventoIds);
 
+  // Only fetch from API if we don't have an embedded spec
+  const shouldFetch = !hasEmbeddedSpec && !!apiChartCode && selectedEventoIds.length > 0;
+
   // Fetch chart spec using the /charts/spec endpoint
-  // Note: We use useQuery with POST because we want caching behavior
   const { data, isLoading, error } = $api.useQuery(
     'post',
     '/api/v1/charts/spec',
@@ -62,33 +75,15 @@ function DynamicChartComponent({ node, updateAttributes }: NodeViewProps) {
           fecha_hasta: fechaHasta || undefined,
         },
         config: undefined,
-      } as any, // Type assertion needed for POST body in useQuery
+      } as never,
     },
     {
-      enabled: !!apiChartCode && selectedEventoIds.length > 0, // Only fetch when we have chartCode and events
+      enabled: shouldFetch,
     }
   );
 
-  // Extract the chart spec from response
-  // The response structure from $api is already unwrapped: { spec: {...}, generated_at: "..." }
-  const chartSpec = data?.spec;
-
-  // Debug logging
-  if (process.env.NODE_ENV === 'development') {
-    console.log('DynamicChart Debug:', {
-      chartCode,
-      apiChartCode,
-      eventoIds: selectedEventoIds,
-      fechaDesde,
-      fechaHasta,
-      isLoading,
-      hasError: !!error,
-      hasData: !!data,
-      hasSpec: !!chartSpec,
-      dataStructure: data ? Object.keys(data) : [],
-      dataDataStructure: data?.spec?.data ? Object.keys(data.spec.data) : [],
-    });
-  }
+  // Use embedded spec if available, otherwise use fetched spec
+  const chartSpec = hasEmbeddedSpec ? embeddedSpec : data?.spec;
 
   const handleEdit = () => {
     // Emit custom event to open config dialog
@@ -98,6 +93,18 @@ function DynamicChartComponent({ node, updateAttributes }: NodeViewProps) {
     window.dispatchEvent(event);
   };
 
+  // If we have embedded spec, show it directly (no loading state)
+  if (hasEmbeddedSpec) {
+    return (
+      <NodeViewWrapper className="my-4">
+        <div className="border border-blue-100 rounded-lg bg-white shadow-sm">
+          <UniversalChart spec={embeddedSpec} />
+        </div>
+      </NodeViewWrapper>
+    );
+  }
+
+  // For editor mode (no embedded spec), show interactive component
   return (
     <NodeViewWrapper className="my-4">
       <div
@@ -184,6 +191,13 @@ export const DynamicChartExtension = Node.create({
       },
       fechaHasta: {
         default: "",
+      },
+      // Embedded spec from generated boletines
+      spec: {
+        default: null,
+      },
+      height: {
+        default: 400,
       },
     };
   },

@@ -20,14 +20,3 @@ export function getUploadPreviewUrl(): string {
 export function getUploadProcessUrl(): string {
   return `${API_BASE}/api/v1/uploads/process`;
 }
-
-/**
- * Job management endpoints
- */
-export function getJobStatusUrl(jobId: string): string {
-  return `${API_BASE}/api/v1/jobs/${jobId}/status`;
-}
-
-export function getCancelJobUrl(jobId: string): string {
-  return `${API_BASE}/api/v1/jobs/${jobId}/cancel`;
-}

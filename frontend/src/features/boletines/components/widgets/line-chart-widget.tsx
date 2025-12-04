@@ -70,6 +70,7 @@ export function LineChartWidget({ widget, data, isLoading, onEdit, onDelete }: W
                 backgroundColor: "hsl(var(--background))",
                 border: "1px solid hsl(var(--border))",
                 borderRadius: "6px",
+                color: "hsl(var(--foreground))",
               }}
             />
             {showLegend && <Legend />}

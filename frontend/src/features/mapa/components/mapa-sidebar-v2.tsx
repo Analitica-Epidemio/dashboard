@@ -18,7 +18,6 @@ import {
   TrendingUp,
   MapPin,
   AlertCircle,
-  CheckCircle2,
   Info,
   Search,
   Pause,
@@ -33,6 +32,14 @@ import {
 } from "@/components/ui/tooltip";
 
 export type TimelineMode = "day" | "week" | "month";
+
+/**
+ * Modo de visualización temporal para el timeline
+ * - cumulative: Acumulado histórico (todos los casos hasta la fecha)
+ * - active: Casos activos dentro de una ventana temporal (ej: últimos 14 días)
+ * - period: Solo casos nuevos del período actual
+ */
+export type TimelineDisplayMode = "cumulative" | "active" | "period";
 
 export interface GrupoEventoResumen {
   grupoId: string;
@@ -59,6 +66,18 @@ interface TimelineSidebarProps {
   speed: number;
   onSpeedChange: (value: number) => void;
   speedOptions: { label: string; value: number }[];
+  // Nuevas props para modo lazy
+  modeEnabled: boolean; // Si el modo timeline está activado
+  onToggleModeEnabled: () => void; // Callback para activar/desactivar
+  dataLoaded: boolean; // Si los datos ya fueron cargados
+  // Modo de visualización temporal
+  displayMode: TimelineDisplayMode;
+  onDisplayModeChange: (mode: TimelineDisplayMode) => void;
+  // Ventana de días para modo "active" (casos activos)
+  activeWindowDays: number;
+  onActiveWindowDaysChange: (days: number) => void;
+  // Ventana sugerida por el grupo ENO seleccionado (NULL = acumulado)
+  suggestedWindowDays?: number | null;
 }
 
 interface MapaSidebarProps {
@@ -81,6 +100,30 @@ const TIMELINE_MODE_LABELS: Record<TimelineMode, string> = {
   week: "Semanas",
   month: "Meses",
 };
+
+const DISPLAY_MODE_LABELS: Record<TimelineDisplayMode, { label: string; description: string }> = {
+  cumulative: {
+    label: "Acumulado",
+    description: "Todos los casos hasta la fecha (histórico total)",
+  },
+  active: {
+    label: "Activos",
+    description: "Casos dentro de la ventana temporal (brote activo)",
+  },
+  period: {
+    label: "Del período",
+    description: "Solo casos nuevos del período actual",
+  },
+};
+
+const WINDOW_OPTIONS = [
+  { label: "7 días", value: 7 },
+  { label: "14 días", value: 14 },
+  { label: "21 días", value: 21 },
+  { label: "30 días", value: 30 },
+  { label: "60 días", value: 60 },
+  { label: "90 días", value: 90 },
+];
 
 export function MapaSidebar({
   totalEventosGlobal,
@@ -344,113 +387,212 @@ export function MapaSidebar({
       </section>
 
       <section className="rounded-2xl border border-gray-200 bg-white/80 p-4 space-y-4">
-        <div>
-          <p className="text-sm font-semibold text-gray-900">
-            Timeline de aparición
-          </p>
-          <p className="text-xs text-gray-500">
-            Reproducí la evolución acumulada por día, semana o mes
-          </p>
-        </div>
-        <div className="flex items-center justify-between gap-2">
-          <Select
-            value={timeline.mode}
-            onValueChange={(value) => timeline.onModeChange(value as TimelineMode)}
-            disabled={!timeline.available || timeline.loading}
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold text-gray-900">
+              Timeline de aparición
+            </p>
+            <p className="text-xs text-gray-500">
+              Reproducí la evolución acumulada por día, semana o mes
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant={timeline.modeEnabled ? "default" : "outline"}
+            onClick={timeline.onToggleModeEnabled}
+            className="text-xs"
           >
-            <SelectTrigger className="w-full text-sm">
-              <SelectValue placeholder="Agrupar" />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(TIMELINE_MODE_LABELS).map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
-            value={String(timeline.speed)}
-            onValueChange={(value) => timeline.onSpeedChange(Number(value))}
-            disabled={!timeline.available || timeline.loading}
-          >
-            <SelectTrigger className="w-full text-sm">
-              <SelectValue placeholder="Velocidad" />
-            </SelectTrigger>
-            <SelectContent>
-              {timeline.speedOptions.map((option) => (
-                <SelectItem key={option.value} value={String(option.value)}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            {timeline.modeEnabled ? "Desactivar" : "Activar"}
+          </Button>
         </div>
 
-        {timeline.loading && (
-          <p className="text-xs text-gray-500">
-            Descargando eventos para animar el timeline...
-          </p>
+        {/* Mostrar mensaje si el modo timeline no está activado */}
+        {!timeline.modeEnabled && (
+          <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-3">
+            <p className="text-xs text-gray-500 text-center">
+              Activá el modo timeline para cargar los datos de eventos y visualizar la evolución temporal.
+            </p>
+          </div>
         )}
 
-        {!timeline.loading && !timeline.available && (
-          <p className="text-xs text-gray-500">
-            {timeline.disabledMessage ||
-              "Seleccioná una categoría para habilitar la animación."}
-          </p>
-        )}
-
-        {timeline.available && (
-          <div className="space-y-3">
+        {/* Mostrar loading cuando se están cargando datos */}
+        {timeline.modeEnabled && timeline.loading && (
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
             <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                variant={timeline.playing ? "secondary" : "default"}
-                onClick={timeline.onTogglePlay}
-                disabled={!timeline.enabled}
-                className="flex-1"
-              >
-                {timeline.playing ? (
-                  <>
-                    <Pause className="mr-2 h-4 w-4" />
-                    Pausar
-                  </>
-                ) : (
-                  <>
-                    <Play className="mr-2 h-4 w-4" />
-                    Reproducir
-                  </>
-                )}
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={timeline.onReset}
-                disabled={!timeline.enabled}
-              >
-                <RotateCcw className="mr-2 h-4 w-4" />
-                Reiniciar
-              </Button>
-            </div>
-
-            <div className="space-y-1">
-              <input
-                type="range"
-                min={0}
-                max={timelineSliderMax}
-                value={timelineSliderValue}
-                onChange={(e) => timeline.onStepChange(Number(e.target.value))}
-                disabled={!timeline.enabled}
-                className="w-full accent-blue-600"
-              />
-              <div className="flex items-center justify-between text-[10px] text-gray-500">
-                <span>{timeline.rangeLabel ?? "—"}</span>
-                <span className="font-semibold text-gray-800">
-                  {timeline.currentLabel ?? "Seleccioná un punto"}
-                </span>
-              </div>
+              <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-blue-600"></div>
+              <p className="text-xs text-blue-700">
+                Descargando eventos para el timeline...
+              </p>
             </div>
           </div>
+        )}
+
+        {/* Controles del timeline (solo si está activado y tiene datos) */}
+        {timeline.modeEnabled && !timeline.loading && (
+          <>
+            <div className="flex items-center justify-between gap-2">
+              <Select
+                value={timeline.mode}
+                onValueChange={(value) => timeline.onModeChange(value as TimelineMode)}
+                disabled={!timeline.available}
+              >
+                <SelectTrigger className="w-full text-sm">
+                  <SelectValue placeholder="Agrupar" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(TIMELINE_MODE_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={String(timeline.speed)}
+                onValueChange={(value) => timeline.onSpeedChange(Number(value))}
+                disabled={!timeline.available}
+              >
+                <SelectTrigger className="w-full text-sm">
+                  <SelectValue placeholder="Velocidad" />
+                </SelectTrigger>
+                <SelectContent>
+                  {timeline.speedOptions.map((option) => (
+                    <SelectItem key={option.value} value={String(option.value)}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Selector de modo de visualización (Acumulado/Activos/Período) */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-1 text-xs text-gray-500">
+                <span>Modo de visualización</span>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-3 w-3 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs">
+                      <div className="space-y-1 text-xs">
+                        <p><strong>Acumulado:</strong> Total histórico hasta la fecha</p>
+                        <p><strong>Activos:</strong> Casos dentro de la ventana temporal (brote activo)</p>
+                        <p><strong>Del período:</strong> Solo casos nuevos del período</p>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <div className="flex gap-1">
+                {(Object.keys(DISPLAY_MODE_LABELS) as TimelineDisplayMode[]).map((mode) => (
+                  <Button
+                    key={mode}
+                    size="sm"
+                    variant={timeline.displayMode === mode ? "default" : "outline"}
+                    onClick={() => timeline.onDisplayModeChange(mode)}
+                    className="flex-1 text-xs px-2"
+                    disabled={!timeline.available}
+                  >
+                    {DISPLAY_MODE_LABELS[mode].label}
+                  </Button>
+                ))}
+              </div>
+
+              {/* Selector de ventana para modo "active" */}
+              {timeline.displayMode === "active" && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500 whitespace-nowrap">Ventana:</span>
+                  <Select
+                    value={String(timeline.activeWindowDays)}
+                    onValueChange={(value) => timeline.onActiveWindowDaysChange(Number(value))}
+                    disabled={!timeline.available}
+                  >
+                    <SelectTrigger className="w-full text-xs h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {WINDOW_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={String(option.value)}>
+                          {option.label}
+                          {timeline.suggestedWindowDays === option.value && " (sugerido)"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Mensaje sobre ventana sugerida */}
+              {timeline.suggestedWindowDays && timeline.displayMode === "cumulative" && (
+                <p className="text-[10px] text-amber-600 bg-amber-50 px-2 py-1 rounded">
+                  💡 Para esta enfermedad se sugiere usar modo &quot;Activos&quot; con ventana de {timeline.suggestedWindowDays} días
+                </p>
+              )}
+            </div>
+
+            <Separator />
+
+            {!timeline.available && (
+              <p className="text-xs text-gray-500">
+                {timeline.disabledMessage ||
+                  "Seleccioná una categoría para habilitar la animación."}
+              </p>
+            )}
+
+            {timeline.available && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant={timeline.playing ? "secondary" : "default"}
+                    onClick={timeline.onTogglePlay}
+                    disabled={!timeline.enabled}
+                    className="flex-1"
+                  >
+                    {timeline.playing ? (
+                      <>
+                        <Pause className="mr-2 h-4 w-4" />
+                        Pausar
+                      </>
+                    ) : (
+                      <>
+                        <Play className="mr-2 h-4 w-4" />
+                        Reproducir
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={timeline.onReset}
+                    disabled={!timeline.enabled}
+                  >
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Reiniciar
+                  </Button>
+                </div>
+
+                <div className="space-y-1">
+                  <input
+                    type="range"
+                    min={0}
+                    max={timelineSliderMax}
+                    value={timelineSliderValue}
+                    onChange={(e) => timeline.onStepChange(Number(e.target.value))}
+                    disabled={!timeline.enabled}
+                    className="w-full accent-blue-600"
+                  />
+                  <div className="flex items-center justify-between text-[10px] text-gray-500">
+                    <span>{timeline.rangeLabel ?? "—"}</span>
+                    <span className="font-semibold text-gray-800">
+                      {timeline.currentLabel ?? "Seleccioná un punto"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </section>
     </div>

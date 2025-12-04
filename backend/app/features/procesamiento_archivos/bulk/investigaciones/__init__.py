@@ -6,8 +6,6 @@ Unified manager for:
 - Contactos y notificaciones
 """
 
-from typing import Dict
-
 import polars as pl
 
 from ..shared import BulkOperationResult
