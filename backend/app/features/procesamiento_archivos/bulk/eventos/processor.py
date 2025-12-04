@@ -1,25 +1,20 @@
 """Bulk processor for events and related entities - Optimizado con Polars puro."""
 
-from datetime import date, datetime
-from decimal import Decimal
-from typing import List, Optional
 import os
+from datetime import date
+from decimal import Decimal
+from typing import Optional
 
 import polars as pl
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.core.utils.codigo_generator import CodigoGenerator
-from app.domains.eventos_epidemiologicos.ambitos_models import AmbitosConcurrenciaEvento
 from app.domains.eventos_epidemiologicos.eventos.models import (
-    AntecedenteEpidemiologico,
-    AntecedentesEpidemiologicosEvento,
-    DetalleEventoSintomas,
     Evento,
     GrupoEno,
     TipoEno,
 )
-from app.domains.atencion_medica.salud_models import Sintoma
 from app.features.procesamiento_archivos.utils.epidemiological_calculations import (
     calcular_semana_epidemiologica,
 )
@@ -27,13 +22,10 @@ from app.features.procesamiento_archivos.utils.epidemiological_calculations impo
 from ...config.columns import Columns
 from ..shared import (
     BulkProcessorBase,
-    BulkOperationResult,
     get_or_create_catalog,
     is_valid_street_name,
-    pl_safe_int,
-    pl_safe_date,
-    pl_clean_string,
     pl_clean_numero_domicilio,
+    pl_clean_string,
 )
 
 
@@ -223,7 +215,9 @@ class EventosProcessor(BulkProcessorBase):
             tipo_grupos_mapping = dict(tipo_grupos_temp)
 
             # Crear relaciones tipo-grupo en la tabla de unión
-            from app.domains.eventos_epidemiologicos.eventos.models import TipoEnoGrupoEno
+            from app.domains.eventos_epidemiologicos.eventos.models import (
+                TipoEnoGrupoEno,
+            )
 
             timestamp = self._get_current_timestamp()
             relaciones_tipo_grupo = []
@@ -643,13 +637,18 @@ class EventosProcessor(BulkProcessorBase):
             # Procesar clasificación
             clasificacion_estrategia = agg_row.get("clasificacion_estrategia_first")
             if clasificacion_estrategia is None or not str(clasificacion_estrategia).strip():
-                from app.domains.eventos_epidemiologicos.clasificacion.models import TipoClasificacion
+                from app.domains.eventos_epidemiologicos.clasificacion.models import (
+                    TipoClasificacion,
+                )
                 clasificacion_estrategia = TipoClasificacion.REQUIERE_REVISION
 
             # Calcular semanas epidemiológicas
             semana_epidemiologica_apertura = None
             anio_epidemiologico_apertura = None
             semana_epidemiologica_sintomas = None
+            # Nuevos campos canónicos basados en fecha_minima_evento
+            fecha_minima_evento_semana_epi = None
+            fecha_minima_evento_anio_epi = None
 
             if fecha_minima_evento:
                 # Convertir a date si es datetime
@@ -663,6 +662,9 @@ class EventosProcessor(BulkProcessorBase):
                 semana_epi, anio_epi = calcular_semana_epidemiologica(fecha_minima_date)
                 semana_epidemiologica_apertura = semana_epi
                 anio_epidemiologico_apertura = anio_epi
+                # Calcular los nuevos campos canónicos
+                fecha_minima_evento_semana_epi = semana_epi
+                fecha_minima_evento_anio_epi = anio_epi
 
             if fecha_inicio_sintomas_mas_temprana:
                 if hasattr(fecha_inicio_sintomas_mas_temprana, "date"):
@@ -686,6 +688,9 @@ class EventosProcessor(BulkProcessorBase):
                 "fecha_minima_evento": fecha_minima_evento,
                 "semana_epidemiologica_apertura": semana_epidemiologica_apertura,
                 "anio_epidemiologico_apertura": anio_epidemiologico_apertura,
+                # Nuevos campos canónicos
+                "fecha_minima_evento_semana_epi": fecha_minima_evento_semana_epi,
+                "fecha_minima_evento_anio_epi": fecha_minima_evento_anio_epi,
                 "semana_epidemiologica_sintomas": semana_epidemiologica_sintomas,
                 "fecha_nacimiento": agg_row.get("fecha_nacimiento_first"),
                 "id_tipo_eno": id_tipo_eno,
@@ -741,6 +746,9 @@ class EventosProcessor(BulkProcessorBase):
             "fecha_minima_evento": stmt.excluded.fecha_minima_evento,
             "semana_epidemiologica_apertura": stmt.excluded.semana_epidemiologica_apertura,
             "anio_epidemiologico_apertura": stmt.excluded.anio_epidemiologico_apertura,
+            # Nuevos campos canónicos
+            "fecha_minima_evento_semana_epi": stmt.excluded.fecha_minima_evento_semana_epi,
+            "fecha_minima_evento_anio_epi": stmt.excluded.fecha_minima_evento_anio_epi,
             "semana_epidemiologica_sintomas": stmt.excluded.semana_epidemiologica_sintomas,
             "fecha_nacimiento": stmt.excluded.fecha_nacimiento,
             "id_tipo_eno": stmt.excluded.id_tipo_eno,

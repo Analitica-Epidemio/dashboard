@@ -15,7 +15,6 @@ from app.core.utils.codigo_generator import CodigoGenerator
 from app.domains.eventos_epidemiologicos.clasificacion.models import TipoClasificacion
 
 from .config import Columns
-from .config.constants import METADATA_EXTRACTION_TYPES
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +43,9 @@ class EventClassifier:
 
         # Importar extractor de metadata
         try:
-            from app.domains.eventos_epidemiologicos.clasificacion.detectors import TipoSujetoDetector
+            from app.domains.eventos_epidemiologicos.clasificacion.detectors import (
+                TipoSujetoDetector,
+            )
 
             self.tipo_sujeto_detector = TipoSujetoDetector()
         except ImportError:

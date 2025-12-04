@@ -94,7 +94,7 @@ class BulletinHTMLRenderer:
                     f"{html.escape(title)}</h4>"
                 )
 
-            return (
+            chart_html = (
                 '<div class="chart-block" style="margin: 1.5rem 0; text-align: center;">'
                 f"{title_html}"
                 f'<img src="data:image/png;base64,{b64_img}" '
@@ -105,6 +105,17 @@ class BulletinHTMLRenderer:
                 "</p>"
                 "</div>"
             )
+
+            # ═══════════════════════════════════════════════════════════════════
+            # Caso especial: mapa_chubut agrega tabla HTML nativa debajo
+            # ═══════════════════════════════════════════════════════════════════
+            if chart_code == "mapa_chubut":
+                from app.schemas.chart_spec import MapChartDataWrapper
+                if hasattr(spec, 'data') and isinstance(spec.data, MapChartDataWrapper):
+                    table_html = self._render_departamentos_table(spec.data)
+                    chart_html += table_html
+
+            return chart_html
         except Exception as exc:
             logger.exception("Error renderizando chart %s: %s", chart_code, exc)
             return self._error_block(f"No se pudo renderizar el gráfico '{chart_code}'.")
@@ -140,6 +151,45 @@ class BulletinHTMLRenderer:
             except ValueError:
                 logger.debug("ID inválido ignorado en lista de charts: %s", part)
         return ids or None
+
+    def _render_departamentos_table(self, data) -> str:
+        """
+        Genera tabla HTML con datos de departamentos para el mapa.
+        """
+        departamentos = sorted(data.data.departamentos, key=lambda x: x.casos, reverse=True)
+        total_casos = data.data.total_casos
+
+        if not departamentos:
+            return ""
+
+        rows_html = ""
+        for i, dept in enumerate(departamentos):
+            bg_color = "#f9fafb" if i % 2 == 1 else "white"
+            rows_html += (
+                f'<tr style="background-color: {bg_color};">'
+                f'<td style="border: 1px solid #e5e7eb; padding: 6px 10px; text-align: left;">{html.escape(dept.nombre)}</td>'
+                f'<td style="border: 1px solid #e5e7eb; padding: 6px 10px; text-align: center;">{dept.casos}</td>'
+                f'<td style="border: 1px solid #e5e7eb; padding: 6px 10px; text-align: center;">{dept.tasa_incidencia:.2f}</td>'
+                '</tr>'
+            )
+
+        return (
+            '<div style="margin: 1rem 0;">'
+            '<table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">'
+            '<thead>'
+            '<tr style="background-color: #3b82f6; color: white;">'
+            '<th style="border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; font-weight: bold;">Departamento</th>'
+            '<th style="border: 1px solid #e5e7eb; padding: 8px 10px; text-align: center; font-weight: bold;">Casos</th>'
+            '<th style="border: 1px solid #e5e7eb; padding: 8px 10px; text-align: center; font-weight: bold;">Tasa/100k hab.</th>'
+            '</tr>'
+            '</thead>'
+            '<tbody>'
+            f'{rows_html}'
+            '</tbody>'
+            '</table>'
+            f'<p style="margin-top: 0.5rem; font-weight: bold; color: #374151;">Total de casos en la provincia: {total_casos}</p>'
+            '</div>'
+        )
 
     def _error_block(self, message: str) -> str:
         return (

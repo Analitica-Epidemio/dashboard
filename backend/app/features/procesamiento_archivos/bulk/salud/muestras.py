@@ -12,8 +12,8 @@ from app.domains.atencion_medica.salud_models import (
 
 from ...config.columns import Columns
 from ..shared import (
-    BulkProcessorBase,
     BulkOperationResult,
+    BulkProcessorBase,
     get_or_create_catalog,
     pl_clean_string,
     pl_safe_date,

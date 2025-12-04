@@ -4,6 +4,7 @@ from typing import Any, Dict
 
 from fastapi import APIRouter, Depends
 
+from app.api.v1.agentes.router import router as agentes_router
 from app.api.v1.analytics.router import router as analytics_router
 from app.api.v1.auth.router import router as auth_router
 from app.api.v1.boletines.router import router as boletines_router
@@ -14,6 +15,7 @@ from app.api.v1.establecimientos.router import router as establecimientos_router
 from app.api.v1.estrategias.router import router as estrategias_router
 from app.api.v1.eventos.router import router as eventos_router
 from app.api.v1.geocoding.router import router as geocoding_router
+from app.api.v1.geografia.router import router as geografia_router
 from app.api.v1.grupos_eno.router import router as grupos_router
 from app.api.v1.personas.router import router as personas_router
 from app.api.v1.reports.router import router as reports_router
@@ -42,6 +44,8 @@ api_router.include_router(reports_router)
 api_router.include_router(analytics_router)  # Router de analytics
 api_router.include_router(boletines_router)  # Router de boletines
 api_router.include_router(gruposetarios_router)
+api_router.include_router(geografia_router)  # Router de geografía (GeoJSON)
+api_router.include_router(agentes_router)  # Router de agentes etiológicos
 
 
 # Endpoint raíz de la API

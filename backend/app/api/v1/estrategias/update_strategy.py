@@ -11,8 +11,13 @@ from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireSuperadmin
 from app.domains.autenticacion.models import User
-from app.domains.eventos_epidemiologicos.clasificacion.repositories import EventStrategyRepository
-from app.domains.eventos_epidemiologicos.clasificacion.schemas import EventStrategyResponse, EventStrategyUpdate
+from app.domains.eventos_epidemiologicos.clasificacion.repositories import (
+    EventStrategyRepository,
+)
+from app.domains.eventos_epidemiologicos.clasificacion.schemas import (
+    EventStrategyResponse,
+    EventStrategyUpdate,
+)
 
 logger = logging.getLogger(__name__)
 

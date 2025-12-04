@@ -10,17 +10,25 @@ from typing import List, Optional
 
 from fastapi import Depends, Path, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import select, or_, func
+from sqlalchemy import or_, select
 from sqlmodel import Session
 
 from app.core.database import get_session
 from app.core.schemas.response import SuccessResponse
-from app.domains.eventos_epidemiologicos.eventos.models import Evento, TipoEno, GrupoEno, EventoGrupoEno
+from app.domains.atencion_medica.diagnosticos_models import (
+    DiagnosticoEvento,
+    TratamientoEvento,
+)
+from app.domains.atencion_medica.salud_models import MuestraEvento
+from app.domains.eventos_epidemiologicos.eventos.models import (
+    Evento,
+    EventoGrupoEno,
+    GrupoEno,
+    TipoEno,
+)
 from app.domains.sujetos_epidemiologicos.ciudadanos_models import Ciudadano
 from app.domains.territorio.establecimientos_models import Establecimiento
-from app.domains.territorio.geografia_models import Localidad, Departamento, Provincia
-from app.domains.atencion_medica.salud_models import MuestraEvento
-from app.domains.atencion_medica.diagnosticos_models import DiagnosticoEvento, TratamientoEvento
+from app.domains.territorio.geografia_models import Departamento, Localidad, Provincia
 
 
 class PersonaRelacionada(BaseModel):

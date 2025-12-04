@@ -3,7 +3,6 @@ CRUD operations para instancias de boletines (boletines generados)
 """
 
 import logging
-from datetime import datetime
 from typing import List, Optional
 
 from fastapi import Depends, HTTPException, Query
@@ -52,7 +51,6 @@ async def create_instance(
         template_id=request_data.template_id,
         name=request_data.name,
         parameters=request_data.parameters,
-        status="pending",
         generated_by=current_user.id if current_user else None,
     )
 
@@ -67,7 +65,6 @@ async def create_instance(
 
 async def list_instances(
     template_id: Optional[int] = Query(None, description="Filtrar por template"),
-    status: Optional[str] = Query(None, description="Filtrar por estado"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_async_session),
@@ -81,9 +78,6 @@ async def list_instances(
     # Filtros
     if template_id:
         stmt = stmt.where(BoletinInstance.template_id == template_id)
-
-    if status:
-        stmt = stmt.where(BoletinInstance.status == status)
 
     # Si no es admin, solo mostrar propias instancias
     if current_user and not getattr(current_user, 'is_admin', False):
@@ -192,9 +186,10 @@ async def generate_instance_pdf(
     """
     Generar PDF de una instancia de boletín y retornarlo como descarga.
     """
-    from fastapi.responses import FileResponse
-    import tempfile
     import os
+    import tempfile
+
+    from fastapi.responses import FileResponse
 
     stmt = select(BoletinInstance).where(BoletinInstance.id == instance_id)
     result = await db.execute(stmt)
@@ -211,9 +206,22 @@ async def generate_instance_pdf(
         raise HTTPException(status_code=400, detail="La instancia no tiene contenido para generar PDF")
 
     try:
+        # Detectar si el contenido es JSON TipTap y convertirlo a HTML
+        content = instance.content.strip()
+        if content.startswith("{") or content.startswith("["):
+            try:
+                import json
+                parsed = json.loads(content)
+                if isinstance(parsed, dict) and parsed.get("type") == "doc":
+                    # Es JSON TipTap, convertir a HTML
+                    from app.features.boletines.tiptap_to_html import tiptap_to_html
+                    content = tiptap_to_html(parsed)
+            except json.JSONDecodeError:
+                pass  # No es JSON válido, usar como HTML
+
         # Renderizar el HTML con los gráficos convertidos a imágenes usando la misma sesión
         html_renderer = BulletinHTMLRenderer(db)
-        rendered_html = await html_renderer.render_html_with_charts(instance.content)
+        rendered_html = await html_renderer.render_html_with_charts(content)
 
         safe_name = (instance.name or f"boletin_{instance_id}").strip() or f"boletin_{instance_id}"
 
@@ -223,7 +231,9 @@ async def generate_instance_pdf(
         temp_pdf.close()
 
         # Generar PDF usando el servicio serverside
-        from app.features.reporteria.serverside_pdf_generator import ServerSidePDFGenerator
+        from app.features.reporteria.serverside_pdf_generator import (
+            ServerSidePDFGenerator,
+        )
 
         pdf_generator = ServerSidePDFGenerator()
         await pdf_generator.generate_pdf_from_html(
@@ -234,7 +244,6 @@ async def generate_instance_pdf(
         )
 
         # Actualizar la instancia con la ruta del PDF
-        instance.status = "completed"
         instance.pdf_path = temp_pdf_path
 
         # Obtener el tamaño del archivo
@@ -259,7 +268,6 @@ async def generate_instance_pdf(
 
     except Exception as e:
         logger.exception("Error generando PDF para instancia %s", instance_id)
-        instance.status = "error"
         instance.error_message = str(e)
         await db.commit()
         raise HTTPException(status_code=500, detail=f"Error generando PDF: {str(e)}")

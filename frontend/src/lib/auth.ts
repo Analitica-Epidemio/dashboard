@@ -103,11 +103,13 @@ export const authOptions: NextAuthOptions = {
         token.lastValidated = Date.now();
       }
 
-      // Validate token against backend every 5 minutes (even if not expired)
+      // Validate token against backend every 2 minutes (even if not expired)
       // This ensures deleted/disabled users are logged out promptly
+      // SEGURIDAD: Intervalo reducido para datos médicos sensibles
+      const VALIDATION_INTERVAL_MS = 2 * 60 * 1000; // 2 minutos
       const shouldValidate = trigger === 'update' ||
         !token.lastValidated ||
-        Date.now() - (token.lastValidated as number) > 5 * 60 * 1000;
+        Date.now() - (token.lastValidated as number) > VALIDATION_INTERVAL_MS;
 
       if (shouldValidate && token.accessToken) {
         try {

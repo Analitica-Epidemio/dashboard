@@ -4,7 +4,17 @@ Constantes de configuración del sistema.
 Incluye configuraciones generales y parámetros del sistema.
 """
 
-from .configuracion import *
+from .configuracion import (
+    AMBIENTE_DESARROLLO,
+    AMBIENTE_PRODUCCION,
+    CACHE_TTL_REPORTES,
+    CACHE_TTL_SEGUNDOS,
+    CODIGO_PROVINCIA_CHUBUT,
+    ITEMS_POR_PAGINA_DEFAULT,
+    ITEMS_POR_PAGINA_MAXIMO,
+    NOMBRE_SISTEMA,
+    VERSION_SISTEMA,
+)
 
 __all__ = [
     "VERSION_SISTEMA",
@@ -12,4 +22,8 @@ __all__ = [
     "CODIGO_PROVINCIA_CHUBUT",
     "AMBIENTE_DESARROLLO",
     "AMBIENTE_PRODUCCION",
+    "ITEMS_POR_PAGINA_DEFAULT",
+    "ITEMS_POR_PAGINA_MAXIMO",
+    "CACHE_TTL_SEGUNDOS",
+    "CACHE_TTL_REPORTES",
 ]

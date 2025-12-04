@@ -15,7 +15,7 @@ from sqlmodel import Session
 from .bulk import MainProcessor as MainBulkProcessor
 from .bulk.shared import BulkOperationResult
 from .classifier import EventClassifier
-from .config import ProcessingContext, Columns
+from .config import ProcessingContext
 from .validator import OptimizedDataValidator
 
 logger = logging.getLogger(__name__)
@@ -118,13 +118,9 @@ class SimpleEpidemiologicalProcessor:
         - Multithreading automático
         - Mejor manejo de nulls
         """
-        from .config.columns import DATE_COLUMNS
-
-        all_date_columns = list(DATE_COLUMNS)
-
         # Leer archivo - UNA SOLA MANERA
         if file_path.suffix.lower() == ".csv":
-            logger.info(f"⚡ Leyendo CSV con Polars...")
+            logger.info("⚡ Leyendo CSV con Polars...")
             df_polars = pl.read_csv(
                 file_path,
                 encoding="latin1",  # SNVS siempre usa Latin-1 (ISO-8859-1)
@@ -135,7 +131,7 @@ class SimpleEpidemiologicalProcessor:
                 quote_char='"',  # Manejar campos con comas dentro de comillas
             )
         elif file_path.suffix.lower() in [".xlsx", ".xls"]:
-            logger.info(f"⚡ Leyendo Excel con Polars...")
+            logger.info("⚡ Leyendo Excel con Polars...")
 
             # Polars requiere nombre de hoja, no índice
             if not sheet_name:
@@ -163,7 +159,7 @@ class SimpleEpidemiologicalProcessor:
         if columnas_extra:
             logger.warning(f"⚠️  COLUMNAS EXTRA en CSV (NO mapeadas): {len(columnas_extra)}")
             logger.warning(f"    Columnas: {sorted(columnas_extra)}")
-            logger.warning(f"    ⚠️  REVISAR: ¿Son columnas importantes que deberíamos mapear?")
+            logger.warning("    ⚠️  REVISAR: ¿Son columnas importantes que deberíamos mapear?")
 
         # Columnas mapeadas que NO están en el CSV (esperado - depende del tipo de evento)
         columnas_faltantes = columnas_mapeadas - columnas_csv
@@ -187,7 +183,7 @@ class SimpleEpidemiologicalProcessor:
             raise ValueError("Archivo vacío")
 
         # Usar el nuevo sistema de validación
-        from .config.columns import validate_dataframe, get_column_names
+        from .config.columns import get_column_names, validate_dataframe
 
         validation_result = validate_dataframe(df)
 

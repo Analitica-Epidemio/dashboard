@@ -1,18 +1,16 @@
 """Modelos de establecimientos de salud y su participación en eventos epidemiológicos."""
 
-from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import BigInteger, Column, DateTime, JSON, Text
-from sqlalchemy.sql import func
+from sqlalchemy import BigInteger, Column, Text
 from sqlmodel import Field, Relationship
 
 from app.core.models import BaseModel
 
 if TYPE_CHECKING:
+    from app.domains.atencion_medica.salud_models.models import MuestraEvento
     from app.domains.diagnosticos.models import DiagnosticoEvento
     from app.domains.territorio.geografia_models import Localidad
-    from app.domains.atencion_medica.salud_models.models import MuestraEvento
 
 
 class Establecimiento(BaseModel, table=True):

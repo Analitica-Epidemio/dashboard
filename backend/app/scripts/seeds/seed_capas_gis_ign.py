@@ -52,8 +52,6 @@ import sys
 from pathlib import Path
 
 import geopandas as gpd
-import requests
-from shapely.geometry import LineString, Polygon
 from sqlalchemy import Connection, text
 
 # Agregar el directorio raíz al path
@@ -81,9 +79,10 @@ def descargar_desde_wfs_chunked(capa_key: str, chunk_size: int = 5000, timeout: 
     Yields:
         GeoDataFrame con chunks de datos
     """
-    from app.scripts.seeds.cache_helper import download_with_cache
     import json
     from io import StringIO
+
+    from app.scripts.seeds.cache_helper import download_with_cache
 
     if capa_key not in WFS_URLS:
         print(f"❌ Capa desconocida: {capa_key}")
@@ -307,7 +306,6 @@ def seed_areas_urbanas(conn: Connection) -> int:
                     values_list.append(f"""(
                         {f"'{nombre}'" if nombre else 'NULL'},
                         NULL,
-                        NULL,
                         {poblacion if poblacion else 'NULL'},
                         ST_GeomFromText('{geom_wkt}', 4326),
                         'IGN',
@@ -318,7 +316,7 @@ def seed_areas_urbanas(conn: Connection) -> int:
             if values_list:
                 stmt = text(f"""
                     INSERT INTO capa_area_urbana (
-                        nombre, id_departamento_indec, id_departamento, poblacion,
+                        nombre, id_departamento_indec, poblacion,
                         geometria, fuente, created_at, updated_at
                     ) VALUES {','.join(values_list)}
                 """)
@@ -346,6 +344,7 @@ def seed_areas_urbanas(conn: Connection) -> int:
 
 if __name__ == "__main__":
     import os
+
     from sqlalchemy import create_engine
 
     DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://epidemiologia_user:epidemiologia_password@localhost:5432/epidemiologia_db")

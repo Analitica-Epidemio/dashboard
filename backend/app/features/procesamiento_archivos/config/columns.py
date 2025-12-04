@@ -9,7 +9,6 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import List
 
-
 # === TIPOS DE DATOS ===
 
 class ColumnType(Enum):

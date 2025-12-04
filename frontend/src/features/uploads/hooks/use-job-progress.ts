@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { getJobStatusUrl, getCancelJobUrl } from "@/lib/api/config";
+import { apiClient } from "@/lib/api/client";
 import type { components } from "@/lib/api/types";
 
-// Usar tipos generados automáticamente desde OpenAPI
 type JobStatus = components["schemas"]["JobStatusResponse"];
 
 interface JobProgressState {
@@ -26,13 +25,8 @@ interface UseJobProgressReturn {
 }
 
 /**
- * Hook moderno para tracking de progress de jobs asíncronos.
- * 
- * Características senior-level:
- * - Auto-polling con cleanup
- * - Error handling robusto  
- * - Cancelación de jobs
- * - Estado optimizado
+ * Hook para tracking de progress de jobs asíncronos.
+ * Usa el apiClient tipado con OpenAPI.
  */
 export function useJobProgress(): UseJobProgressReturn {
   const [state, setState] = useState<JobProgressState>({
@@ -58,50 +52,48 @@ export function useJobProgress(): UseJobProgressReturn {
     try {
       setState(prev => ({ ...prev, isLoading: true, error: null }));
 
-      // Obtener el token de la sesión
-      const { getSession } = await import('next-auth/react');
-      const session = await getSession();
+      const { data, error, response } = await apiClient.GET(
+        "/api/v1/uploads/jobs/{job_id}/status",
+        { params: { path: { job_id: jobId } } }
+      );
 
-      const response = await fetch(getJobStatusUrl(jobId), {
-        headers: {
-          ...(session?.accessToken && {
-            'Authorization': `Bearer ${session.accessToken}`
-          })
-        }
-      });
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error?.message || "Error fetching job status");
+      if (error || !response.ok) {
+        const err = error as { error?: { message?: string }; detail?: { msg: string }[] } | undefined;
+        const errorMsg = err?.error?.message || (Array.isArray(err?.detail) ? err.detail[0]?.msg : undefined);
+        throw new Error(
+          errorMsg ||
+          `Error obteniendo estado del job (${response.status})`
+        );
       }
 
-      const jobStatus = result.data as JobStatus;
-      setState(prev => ({ 
-        ...prev, 
-        status: jobStatus, 
+      const jobStatus = data?.data as JobStatus;
+      setState(prev => ({
+        ...prev,
+        status: jobStatus,
         isLoading: false,
-        error: null 
+        error: null
       }));
 
       // Detener polling si el job terminó
-      if (jobStatus.status === "completed" || 
-          jobStatus.status === "failed" || 
-          jobStatus.status === "cancelled") {
-        
+      if (
+        jobStatus.status === "completed" ||
+        jobStatus.status === "failed" ||
+        jobStatus.status === "cancelled"
+      ) {
         if (intervalRef.current) {
           clearInterval(intervalRef.current);
           intervalRef.current = null;
         }
-        
         setState(prev => ({ ...prev, isPolling: false }));
       }
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      setState(prev => ({ 
-        ...prev, 
-        error: errorMessage, 
-        isLoading: false 
+      const errorMessage = error instanceof Error ? error.message : "Error desconocido";
+      setState(prev => ({
+        ...prev,
+        error: errorMessage,
+        isLoading: false,
+        isPolling: false
       }));
 
       // Detener polling en caso de error
@@ -109,7 +101,6 @@ export function useJobProgress(): UseJobProgressReturn {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
-      setState(prev => ({ ...prev, isPolling: false }));
     }
   }, []);
 
@@ -120,9 +111,9 @@ export function useJobProgress(): UseJobProgressReturn {
     }
 
     currentJobIdRef.current = jobId;
-    setState(prev => ({ ...prev, isPolling: true }));
+    setState(prev => ({ ...prev, isPolling: true, error: null }));
 
-    // Fetch inicial inmediato
+    // Fetch inicial
     fetchJobStatus(jobId);
 
     // Polling cada 2 segundos
@@ -151,22 +142,17 @@ export function useJobProgress(): UseJobProgressReturn {
     try {
       setState(prev => ({ ...prev, isLoading: true, error: null }));
 
-      // Obtener el token de la sesión
-      const { getSession } = await import('next-auth/react');
-      const session = await getSession();
+      const { error, response } = await apiClient.DELETE(
+        "/api/v1/uploads/jobs/{job_id}",
+        { params: { path: { job_id: currentJobIdRef.current } } }
+      );
 
-      const response = await fetch(getCancelJobUrl(currentJobIdRef.current), {
-        method: "DELETE",
-        headers: {
-          ...(session?.accessToken && {
-            'Authorization': `Bearer ${session.accessToken}`
-          })
-        }
-      });
-
-      if (!response.ok) {
-        const result = await response.json();
-        throw new Error(result.error?.message || "Error canceling job");
+      if (error || !response.ok) {
+        const err = error as { error?: { message?: string }; detail?: { msg: string }[] } | undefined;
+        const errorMsg = err?.error?.message || (Array.isArray(err?.detail) ? err.detail[0]?.msg : undefined);
+        throw new Error(
+          errorMsg || "Error cancelando job"
+        );
       }
 
       // Actualizar estado local inmediatamente
@@ -177,16 +163,15 @@ export function useJobProgress(): UseJobProgressReturn {
         isPolling: false
       }));
 
-      // Detener polling
       stopPolling();
       return true;
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      setState(prev => ({ 
-        ...prev, 
-        error: errorMessage, 
-        isLoading: false 
+      const errorMessage = error instanceof Error ? error.message : "Error desconocido";
+      setState(prev => ({
+        ...prev,
+        error: errorMessage,
+        isLoading: false
       }));
       return false;
     }

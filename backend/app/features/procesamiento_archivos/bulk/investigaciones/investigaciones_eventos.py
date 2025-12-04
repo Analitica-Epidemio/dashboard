@@ -10,7 +10,12 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from app.domains.atencion_medica.investigaciones_models import InvestigacionEvento
 
 from ...config.columns import Columns
-from ..shared import BulkProcessorBase, BulkOperationResult, get_current_timestamp, pl_col_or_null
+from ..shared import (
+    BulkOperationResult,
+    BulkProcessorBase,
+    get_current_timestamp,
+    pl_col_or_null,
+)
 
 
 def pl_map_origen_financiamiento(col_name: str) -> pl.Expr:

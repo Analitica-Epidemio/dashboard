@@ -13,7 +13,10 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.domains.eventos_epidemiologicos.clasificacion.models import TipoClasificacion, TipoFiltro
+from app.domains.eventos_epidemiologicos.clasificacion.models import (
+    TipoClasificacion,
+    TipoFiltro,
+)
 
 
 class FilterConditionRequest(BaseModel):

@@ -10,9 +10,10 @@ from app.core.models import BaseModel
 from app.core.shared.enums import SexoBiologico, TipoDocumento
 
 if TYPE_CHECKING:
-    from app.domains.eventos_epidemiologicos.eventos.models import Evento
-    from app.domains.territorio.geografia_models import Localidad, Domicilio
     from app.domains.atencion_medica.salud_models import Comorbilidad, VacunasCiudadano
+    from app.domains.eventos_epidemiologicos.eventos.models import Evento
+    from app.domains.territorio.geografia_models import Domicilio
+
     from .viajes_models import ViajesCiudadano
 
 

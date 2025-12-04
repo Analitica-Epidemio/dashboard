@@ -5,12 +5,14 @@ Investiga hospitales importantes que no fueron mapeados automáticamente.
 
 import sys
 from pathlib import Path
+
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from sqlalchemy import create_engine, text
 import os
 import unicodedata
 from difflib import SequenceMatcher
+
+from sqlalchemy import create_engine, text
 
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://epidemiologia_user:epidemiologia_password@localhost:5432/epidemiologia_db")
 if "postgresql+asyncpg" in DATABASE_URL:

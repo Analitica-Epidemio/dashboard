@@ -18,7 +18,9 @@ from app.domains.eventos_epidemiologicos.clasificacion.models import (
     TipoClasificacion,
     TipoFiltro,
 )
-from app.domains.eventos_epidemiologicos.clasificacion.services import EventClassificationService
+from app.domains.eventos_epidemiologicos.clasificacion.services import (
+    EventClassificationService,
+)
 from tests.domains.estrategias.fixtures.csv_samples import RABIA_SAMPLES
 
 

@@ -12,9 +12,9 @@ from app.features.procesamiento_archivos.schemas import (
 
 from .cancel_job import cancel_job
 from .get_job_status import get_job_status
-from .upload_csv import upload_csv_async
 from .preview_file import preview_uploaded_file
-from .process_from_preview import process_file_from_preview, ProcessFromPreviewRequest
+from .process_from_preview import process_file_from_preview
+from .upload_csv import upload_csv_async
 
 router = APIRouter(prefix="/uploads", tags=["Uploads Async"])
 

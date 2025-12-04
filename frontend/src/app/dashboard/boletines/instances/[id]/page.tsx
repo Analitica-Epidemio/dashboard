@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useEffect } from "react";
 import { ArrowLeft, Save, FileDown, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -18,7 +18,7 @@ export default function InstanceEditorPage({ params }: PageProps) {
   const resolvedParams = use(params);
   const instanceId = parseInt(resolvedParams.id);
 
-  const [content, setContent] = useState("");
+  const [content, setContent] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
@@ -29,6 +29,13 @@ export default function InstanceEditorPage({ params }: PageProps) {
   );
 
   const instance = instanceResponse?.data;
+
+  // Inicializar content cuando se carga la instancia
+  useEffect(() => {
+    if (instance?.content && content === null) {
+      setContent(instance.content);
+    }
+  }, [instance, content]);
 
   // Guardar contenido
   const handleSave = async () => {
@@ -137,9 +144,6 @@ export default function InstanceEditorPage({ params }: PageProps) {
           </Link>
           <div className="flex-1">
             <h1 className="text-xl font-semibold">{instance.name}</h1>
-            <p className="text-sm text-muted-foreground">
-              Estado: {instance.status}
-            </p>
           </div>
           <div className="flex gap-2">
             <Button

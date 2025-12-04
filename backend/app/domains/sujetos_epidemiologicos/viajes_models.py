@@ -10,6 +10,7 @@ from app.core.models import BaseModel
 
 if TYPE_CHECKING:
     from app.domains.territorio.geografia_models import Localidad
+
     from .ciudadanos_models import Ciudadano
 
 

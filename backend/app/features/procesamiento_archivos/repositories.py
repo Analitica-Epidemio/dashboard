@@ -8,7 +8,6 @@ Características:
 """
 
 import logging
-import traceback
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 

@@ -4,13 +4,16 @@ Genera especificaciones universales de charts con datos REALES de la BD
 Estas specs pueden usarse tanto en frontend (renderizado interactivo) como en backend (reportes)
 """
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.schemas.chart_spec import ChartSpecRequest, ChartSpecResponse, UniversalChartSpec
+from app.schemas.chart_spec import ChartSpecRequest, ChartSpecResponse
 from app.services.chart_spec_generator import ChartSpecGenerator
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -40,15 +43,10 @@ async def generate_chart_spec(
         )
 
     except ValueError as e:
-        import traceback
-        print(f"❌ ValueError en generate_chart_spec: {str(e)}")
-        print(traceback.format_exc())
+        logger.warning(f"ValueError en generate_chart_spec: {e}")
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        import traceback
-        print(f"❌ Exception en generate_chart_spec: {str(e)}")
-        print(f"Request data: chart_code={request.chart_code}, filters={request.filters}, config={request.config}")
-        print(traceback.format_exc())
+        logger.error(f"Error generando chart spec: {e}", exc_info=True)
         raise HTTPException(
             status_code=500,
             detail=f"Error generando chart spec: {str(e)}"

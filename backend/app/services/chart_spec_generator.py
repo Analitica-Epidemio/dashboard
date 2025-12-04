@@ -4,41 +4,41 @@ Genera especificaciones universales de charts desde datos REALES de la BD
 Reutiliza ChartDataProcessor para obtener los datos
 """
 
-from typing import Optional, Dict, Any, List
-from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime
 import uuid
+from typing import Any, Dict, List, Optional
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.features.dashboard.processors import ChartDataProcessor
 from app.schemas.chart_spec import (
-    UniversalChartSpec,
-    ChartFilters,
-    BaseChartData,
-    Dataset,
-    WeekMetadata,
-    MapChartData,
-    MapDepartmentData,
-    PyramidDataPoint,
-    LineChartConfig,
-    BarChartConfig,
     AreaChartConfig,
-    PieChartConfig,
-    PyramidChartConfig,
-    MapChartConfig,
+    AreaChartConfigWrapper,
+    AreaChartData,
+    BarChartConfig,
+    BarChartConfigWrapper,
+    BarChartData,
+    BaseChartData,
+    ChartFilters,
+    Dataset,
+    LineChartConfig,
+    LineChartConfigWrapper,
     # Discriminated union wrappers
     LineChartData,
-    BarChartData,
-    AreaChartData,
-    PieChartData,
-    PyramidChartData,
-    MapChartDataWrapper,
-    LineChartConfigWrapper,
-    BarChartConfigWrapper,
-    AreaChartConfigWrapper,
-    PieChartConfigWrapper,
-    PyramidChartConfigWrapper,
+    MapChartConfig,
     MapChartConfigWrapper,
+    MapChartData,
+    MapChartDataWrapper,
+    MapDepartmentData,
+    PieChartConfig,
+    PieChartConfigWrapper,
+    PieChartData,
+    PyramidChartConfig,
+    PyramidChartConfigWrapper,
+    PyramidChartData,
+    PyramidDataPoint,
+    UniversalChartSpec,
+    WeekMetadata,
 )
-from app.features.dashboard.processors import ChartDataProcessor
 
 
 class ChartSpecGenerator:
@@ -62,14 +62,13 @@ class ChartSpecGenerator:
         """
         # Mapeo de códigos de charts a generadores
         generators = {
-            "casos_por_semana": self._generate_casos_por_semana,
+            "curva_epidemiologica": self._generate_curva_epidemiologica,
             "corredor_endemico": self._generate_corredor_endemico,
             "piramide_edad": self._generate_piramide_edad,
             "mapa_chubut": self._generate_mapa_chubut,
             "estacionalidad": self._generate_estacionalidad,
             "casos_edad": self._generate_casos_edad,
             "distribucion_clasificacion": self._generate_distribucion_clasificacion,
-            # Agregar más charts según sea necesario
         }
 
         generator = generators.get(chart_code)
@@ -89,16 +88,38 @@ class ChartSpecGenerator:
             "fecha_hasta": filters.fecha_hasta,
         }
 
-    async def _generate_casos_por_semana(
-        self, filters: ChartFilters, config: Optional[Dict[str, Any]] = None
+    async def _generate_curva_epidemiologica(
+        self,
+        filters: ChartFilters,
+        config: Optional[Dict[str, Any]] = None,
+        series_config: Optional[List[Dict[str, Any]]] = None,
+        agrupar_por: Optional[str] = None
     ) -> UniversalChartSpec:
         """
         Genera spec para curva epidemiológica (casos por semana)
         Usa datos REALES del processor
+
+        Args:
+            filters: Filtros de chart
+            config: Configuración de visualización
+            series_config: Config de series (si no se pasa, se construye desde filters.tipo_eno_ids)
+            agrupar_por: "evento" | "agente" | None - cómo agrupar las series
         """
-        # Convertir filtros y obtener datos reales
         filtros_dict = self._convert_filters_to_dict(filters)
-        result = await self.processor.process_curva_epidemiologica(filtros_dict)
+
+        # Construir series_config si no se pasó
+        if series_config is None:
+            tipo_eno_ids = filters.tipo_eno_ids or []
+            if tipo_eno_ids:
+                series_config = [
+                    {"tipo_eno_id": id, "label": "Casos", "color": "rgb(75, 192, 192)"}
+                    for id in tipo_eno_ids
+                ]
+            else:
+                # Sin tipo_eno_ids, no hay series
+                series_config = []
+
+        result = await self.processor.process_curva_epidemiologica(filtros_dict, series_config, agrupar_por=agrupar_por)
 
         # Convertir resultado del processor al formato UniversalChartSpec
         raw_data = result.get("data", {})
@@ -128,22 +149,45 @@ class ChartSpecGenerator:
             metadata=metadata
         )
 
-        chart_config = LineChartConfig(
-            height=config.get("height", 400) if config else 400,
-            showLegend=True,
-            showGrid=True,
-            showPoints=True,
-        )
+        # Determinar tipo de chart basado en config.chart_type
+        chart_type = config.get("chart_type", "line") if config else "line"
+        is_stacked = chart_type == "stacked_bar"
+        is_bar = chart_type in ("bar", "stacked_bar", "grouped_bar")
 
-        return UniversalChartSpec(
-            id=str(uuid.uuid4()),
-            title="Casos por Semana Epidemiológica",
-            codigo="casos_por_semana",
-            type="line",
-            data=LineChartData(type="line", data=base_data),
-            config=LineChartConfigWrapper(type="line", config=chart_config),
-            filters=filters,
-        )
+        if is_bar:
+            # Renderizar como bar chart (stacked o no)
+            bar_config = BarChartConfig(
+                height=config.get("height", 400) if config else 400,
+                showLegend=True,
+                showGrid=True,
+                stacked=is_stacked,
+            )
+            return UniversalChartSpec(
+                id=str(uuid.uuid4()),
+                title="Casos por Semana Epidemiológica",
+                codigo="curva_epidemiologica",
+                type="bar",
+                data=BarChartData(type="bar", data=base_data),
+                config=BarChartConfigWrapper(type="bar", config=bar_config),
+                filters=filters,
+            )
+        else:
+            # Renderizar como line chart (default)
+            line_config = LineChartConfig(
+                height=config.get("height", 400) if config else 400,
+                showLegend=True,
+                showGrid=True,
+                showPoints=True,
+            )
+            return UniversalChartSpec(
+                id=str(uuid.uuid4()),
+                title="Casos por Semana Epidemiológica",
+                codigo="curva_epidemiologica",
+                type="line",
+                data=LineChartData(type="line", data=base_data),
+                config=LineChartConfigWrapper(type="line", config=line_config),
+                filters=filters,
+            )
 
     async def _generate_corredor_endemico(
         self, filters: ChartFilters, config: Optional[Dict[str, Any]] = None
@@ -152,10 +196,24 @@ class ChartSpecGenerator:
         Genera spec para corredor endémico
         Usa datos REALES del processor
         """
+        from app.schemas.chart_spec import ChartError
+
         filtros_dict = self._convert_filters_to_dict(filters)
         result = await self.processor.process_corredor_endemico(filtros_dict)
 
         raw_data = result.get("data", {})
+
+        # Verificar si hay error del processor
+        chart_error = None
+        if result.get("error"):
+            error_data = result["error"]
+            chart_error = ChartError(
+                code=error_data.get("code", "UNKNOWN_ERROR"),
+                title=error_data.get("title", "Error"),
+                message=error_data.get("message", "No se pudo generar el gráfico"),
+                details=error_data.get("details"),
+                suggestion=error_data.get("suggestion"),
+            )
 
         datasets = []
         for ds in raw_data.get("datasets", []):
@@ -193,6 +251,7 @@ class ChartSpecGenerator:
             data=AreaChartData(type="area", data=base_data),
             config=AreaChartConfigWrapper(type="area", config=chart_config),
             filters=filters,
+            error=chart_error,
         )
 
     async def _generate_piramide_edad(
@@ -317,15 +376,37 @@ class ChartSpecGenerator:
             filters=filters,
         )
 
-    async def _generate_casos_edad(
-        self, filters: ChartFilters, config: Optional[Dict[str, Any]] = None
+    async def _generate_casos_por_edad(
+        self,
+        filters: ChartFilters,
+        config: Optional[Dict[str, Any]] = None,
+        series_config: Optional[List[Dict[str, Any]]] = None,
+        agrupar_por: Optional[str] = None
     ) -> UniversalChartSpec:
         """
-        Genera spec para casos por grupo de edad
+        Genera spec para casos por grupo de edad (con soporte para múltiples series)
         Usa datos REALES del processor
+
+        Args:
+            filters: Filtros de chart
+            config: Configuración de visualización
+            series_config: Config de series (si no se pasa, se construye desde filters.tipo_eno_ids)
+            agrupar_por: "evento" | "agente" | None - cómo agrupar las series
         """
         filtros_dict = self._convert_filters_to_dict(filters)
-        result = await self.processor.process_casos_edad(filtros_dict)
+
+        # Construir series_config si no se pasó
+        if series_config is None:
+            tipo_eno_ids = filters.tipo_eno_ids or []
+            if tipo_eno_ids:
+                series_config = [
+                    {"tipo_eno_id": id, "label": "Casos", "color": "#4CAF50"}
+                    for id in tipo_eno_ids
+                ]
+            else:
+                series_config = []
+
+        result = await self.processor.process_casos_edad(filtros_dict, series_config=series_config, agrupar_por=agrupar_por)
 
         raw_data = result.get("data", {})
 
@@ -335,7 +416,7 @@ class ChartSpecGenerator:
                 Dataset(
                     label=ds.get("label"),
                     data=ds.get("data", []),
-                    color=ds.get("backgroundColor"),
+                    color=ds.get("backgroundColor") or ds.get("color"),
                 )
             )
 
@@ -344,10 +425,19 @@ class ChartSpecGenerator:
             datasets=datasets,
         )
 
+        # Mostrar leyenda si hay múltiples series
+        show_legend = len(datasets) > 1
+
+        # Determinar si debe ser stacked - puede venir como flag "stacked" o como chart_type "stacked_bar"
+        is_stacked = False
+        if config:
+            is_stacked = config.get("stacked", False) or config.get("chart_type") == "stacked_bar"
+
         chart_config = BarChartConfig(
             height=config.get("height", 400) if config else 400,
-            showLegend=False,
+            showLegend=show_legend,
             showGrid=True,
+            stacked=is_stacked,
         )
 
         return UniversalChartSpec(
@@ -359,6 +449,15 @@ class ChartSpecGenerator:
             config=BarChartConfigWrapper(type="bar", config=chart_config),
             filters=filters,
         )
+
+    async def _generate_casos_edad(
+        self, filters: ChartFilters, config: Optional[Dict[str, Any]] = None
+    ) -> UniversalChartSpec:
+        """
+        Genera spec para casos por grupo de edad (versión simple, sin series)
+        Usa datos REALES del processor
+        """
+        return await self._generate_casos_por_edad(filters, config)
 
     async def _generate_distribucion_clasificacion(
         self, filters: ChartFilters, config: Optional[Dict[str, Any]] = None

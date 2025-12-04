@@ -8,7 +8,7 @@ Almacena información geoespacial complementaria útil para análisis epidemiol�
 from typing import Optional
 
 from geoalchemy2 import Geometry
-from sqlalchemy import BigInteger, Column, Index
+from sqlalchemy import Column, Index
 from sqlmodel import Field
 
 from app.core.models import BaseModel
@@ -73,11 +73,6 @@ class CapaAreaUrbana(BaseModel, table=True):
     id_departamento_indec: Optional[int] = Field(
         None,
         description="Código INDEC del departamento al que pertenece"
-    )
-    id_departamento: Optional[int] = Field(
-        None,
-        foreign_key="departamento.id",
-        description="ID del departamento (FK)"
     )
 
     # Datos poblacionales

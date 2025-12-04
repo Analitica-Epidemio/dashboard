@@ -15,8 +15,7 @@ from app.core.utils.codigo_generator import CodigoGenerator
 from app.domains.eventos_epidemiologicos.eventos.models import GrupoEno, TipoEno
 
 from ...config.columns import Columns
-from ..shared import get_or_create_catalog, get_current_timestamp
-
+from ..shared import get_current_timestamp, get_or_create_catalog
 
 logger = logging.getLogger(__name__)
 
@@ -181,7 +180,6 @@ class CatalogsProcessor:
             timestamp = get_current_timestamp()
             nuevos_tipos = []
             for row in tipo_faltantes_df.iter_rows(named=True):
-                tipo_codigo = row["codigo_tipo"]
                 nombre_original = row["tipo_nombre_original"]
 
                 tipo_data = CodigoGenerator.generar_par_tipo(nombre_original)

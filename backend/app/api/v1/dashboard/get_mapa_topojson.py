@@ -7,14 +7,11 @@ Endpoint para servir datos geoespaciales TopoJSON con optimizaciones
 """
 
 import logging
-from datetime import datetime, timedelta
-from typing import Optional
 
 from fastapi import Query, Response
-from fastapi.responses import StreamingResponse
 
-from app.utils.topojson_optimizer import TopoJSONOptimizer
 from app.core.config import settings
+from app.utils.topojson_optimizer import TopoJSONOptimizer
 
 logger = logging.getLogger(__name__)
 

@@ -45,18 +45,17 @@ USO:
 TIEMPO ESTIMADO: 2-3 minutos (~8,300 registros + descarga WFS)
 """
 
-import io
 import json
 import sys
-from pathlib import Path
 import warnings
+from pathlib import Path
 
 import pandas as pd
-import requests
 from sqlalchemy import Connection, text
 
 # Suprimir warnings de SSL inseguro
 from urllib3.exceptions import InsecureRequestWarning
+
 warnings.simplefilter('ignore', InsecureRequestWarning)
 
 # Agregar el directorio raíz al path
@@ -74,12 +73,13 @@ def descargar_establecimientos_wfs():
         GeoDataFrame con los datos de establecimientos y geometrías
     """
     import geopandas as gpd
+
     from app.scripts.seeds.cache_helper import download_with_cache
 
     # URL WFS del IGN para establecimientos de salud
     url = "https://wms.ign.gob.ar/geoserver/ign/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=ign:salud_020801&outputFormat=application/json"
 
-    print(f"📥 Descargando establecimientos de salud (IGN WFS)...")
+    print("📥 Descargando establecimientos de salud (IGN WFS)...")
     print(f"   URL: {url[:80]}...")
 
     try:
@@ -248,7 +248,7 @@ def seed_refes(conn: Connection) -> int:
     # 4. Limpiar y preparar datos
     establecimientos = []
 
-    print(f"\n🗺️  Asignando localidades con reverse geocoding...")
+    print("\n🗺️  Asignando localidades con reverse geocoding...")
     localidades_asignadas = 0
 
     for idx, row in df_renamed.iterrows():
@@ -273,7 +273,7 @@ def seed_refes(conn: Connection) -> int:
                 id_localidad = asignar_localidad_por_coordenadas(conn, latitud, longitud)
                 if id_localidad:
                     localidades_asignadas += 1
-            except Exception as e:
+            except Exception:
                 # Si falla el reverse geocoding, seguir sin localidad
                 pass
 
@@ -342,7 +342,7 @@ def seed_refes(conn: Connection) -> int:
     print("="*70)
 
     # Cargar mapping SNVS → IGN
-    mapping_count = cargar_mapping_snvs(conn)
+    cargar_mapping_snvs(conn)
 
     return inserted_count
 
@@ -442,6 +442,7 @@ def cargar_mapping_snvs(conn: Connection) -> int:
 
 if __name__ == "__main__":
     import os
+
     from sqlalchemy import create_engine
 
     DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://epidemiologia_user:epidemiologia_password@localhost:5432/epidemiologia_db")

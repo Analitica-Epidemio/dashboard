@@ -4,18 +4,19 @@ Router para endpoints de boletines epidemiológicos
 
 from typing import List
 
-from fastapi import APIRouter, Depends, Query
-from fastapi.responses import FileResponse
+from fastapi import APIRouter
 
-from app.api.v1.boletines import instances_crud, templates_crud
+from app.api.v1.boletines import config, instances_crud, preview, templates_crud
 from app.api.v1.boletines.generate_draft import generate_draft
+from app.api.v1.boletines.preview import (
+    AgenteDisponible,
+    EventoDisponible,
+    SectionPreviewResponse,
+)
 from app.api.v1.boletines.schemas import (
-    BoletinGenerateRequest,
     BoletinInstanceResponse,
-    BoletinTemplateCreate,
+    BoletinTemplateConfigResponse,
     BoletinTemplateResponse,
-    BoletinTemplateUpdate,
-    GenerateDraftRequest,
     GenerateDraftResponse,
 )
 from app.core.schemas.response import ErrorResponse, SuccessResponse
@@ -210,6 +211,162 @@ router.add_api_route(
     description="Genera un boletín epidemiológico automático usando datos de analytics y snippets",
     responses={
         400: {"model": ErrorResponse, "description": "Datos inválidos"},
+        500: {"model": ErrorResponse, "description": "Error interno"},
+    },
+)
+
+
+# ============================================================================
+# Template Configuration Endpoints (Singleton - BoletinTemplateConfig)
+# ============================================================================
+
+router.add_api_route(
+    "/config",
+    config.get_template_config,
+    methods=["GET"],
+    response_model=SuccessResponse[BoletinTemplateConfigResponse],
+    name="get_boletin_template_config",
+    summary="Obtener configuración del template de boletines",
+    description="Obtiene la configuración singleton (id=1) del template de boletines",
+    responses={
+        404: {"model": ErrorResponse, "description": "Configuración no encontrada"},
+        500: {"model": ErrorResponse, "description": "Error interno"},
+    },
+)
+
+router.add_api_route(
+    "/config/static-content",
+    config.update_static_content,
+    methods=["PUT"],
+    response_model=SuccessResponse[BoletinTemplateConfigResponse],
+    name="update_static_content",
+    summary="Actualizar contenido estático del template",
+    description="Actualiza el campo static_content_template (TipTap JSON)",
+    responses={
+        404: {"model": ErrorResponse, "description": "Configuración no encontrada"},
+        403: {"model": ErrorResponse, "description": "Sin permisos (requiere admin)"},
+        500: {"model": ErrorResponse, "description": "Error interno"},
+    },
+)
+
+router.add_api_route(
+    "/config/event-section-template",
+    config.update_event_section_template,
+    methods=["PUT"],
+    response_model=SuccessResponse[BoletinTemplateConfigResponse],
+    name="update_event_section_template",
+    summary="Actualizar template de sección de evento",
+    description="Actualiza el campo event_section_template (TipTap JSON que se repite por cada evento)",
+    responses={
+        404: {"model": ErrorResponse, "description": "Configuración no encontrada"},
+        403: {"model": ErrorResponse, "description": "Sin permisos (requiere admin)"},
+        500: {"model": ErrorResponse, "description": "Error interno"},
+    },
+)
+
+router.add_api_route(
+    "/config/dynamic-blocks",
+    config.update_dynamic_blocks,
+    methods=["PUT"],
+    response_model=SuccessResponse[BoletinTemplateConfigResponse],
+    name="update_dynamic_blocks",
+    summary="Actualizar array completo de bloques dinámicos",
+    description="Reemplaza el array completo de bloques (útil para reordenar)",
+    responses={
+        404: {"model": ErrorResponse, "description": "Configuración no encontrada"},
+        400: {"model": ErrorResponse, "description": "Datos inválidos"},
+        403: {"model": ErrorResponse, "description": "Sin permisos (requiere admin)"},
+        500: {"model": ErrorResponse, "description": "Error interno"},
+    },
+)
+
+router.add_api_route(
+    "/config/dynamic-blocks",
+    config.create_dynamic_block,
+    methods=["POST"],
+    response_model=SuccessResponse[BoletinTemplateConfigResponse],
+    name="create_dynamic_block",
+    summary="Agregar un nuevo bloque dinámico",
+    description="Agrega un bloque al final del array de bloques dinámicos",
+    responses={
+        404: {"model": ErrorResponse, "description": "Configuración no encontrada"},
+        400: {"model": ErrorResponse, "description": "Bloque con ID duplicado o datos inválidos"},
+        403: {"model": ErrorResponse, "description": "Sin permisos (requiere admin)"},
+        500: {"model": ErrorResponse, "description": "Error interno"},
+    },
+)
+
+router.add_api_route(
+    "/config/dynamic-blocks/{block_id}",
+    config.update_dynamic_block,
+    methods=["PUT"],
+    response_model=SuccessResponse[BoletinTemplateConfigResponse],
+    name="update_dynamic_block",
+    summary="Actualizar un bloque dinámico específico",
+    description="Actualiza la configuración de un bloque existente por su ID",
+    responses={
+        404: {"model": ErrorResponse, "description": "Configuración o bloque no encontrado"},
+        403: {"model": ErrorResponse, "description": "Sin permisos (requiere admin)"},
+        500: {"model": ErrorResponse, "description": "Error interno"},
+    },
+)
+
+router.add_api_route(
+    "/config/dynamic-blocks/{block_id}",
+    config.delete_dynamic_block,
+    methods=["DELETE"],
+    response_model=SuccessResponse[BoletinTemplateConfigResponse],
+    name="delete_dynamic_block",
+    summary="Eliminar un bloque dinámico",
+    description="Elimina un bloque del array de bloques dinámicos por su ID",
+    responses={
+        404: {"model": ErrorResponse, "description": "Configuración o bloque no encontrado"},
+        403: {"model": ErrorResponse, "description": "Sin permisos (requiere admin)"},
+        500: {"model": ErrorResponse, "description": "Error interno"},
+    },
+)
+
+
+# ============================================================================
+# Preview Endpoints (for section data preview in the generator UI)
+# ============================================================================
+
+router.add_api_route(
+    "/preview/evento",
+    preview.get_evento_preview,
+    methods=["GET"],
+    response_model=SuccessResponse[SectionPreviewResponse],
+    name="preview_evento",
+    summary="Preview genérico de datos para cualquier evento",
+    description="Recibe el código de un TipoEno o GrupoEno y genera un resumen de datos",
+    responses={
+        404: {"model": ErrorResponse, "description": "Evento no encontrado"},
+        500: {"model": ErrorResponse, "description": "Error interno"},
+    },
+)
+
+router.add_api_route(
+    "/preview/eventos-disponibles",
+    preview.list_available_eventos,
+    methods=["GET"],
+    response_model=SuccessResponse[List[EventoDisponible]],
+    name="list_available_eventos",
+    summary="Listar eventos disponibles para preview",
+    description="Retorna todos los TipoEno y GrupoEno con código para usar en el selector",
+    responses={
+        500: {"model": ErrorResponse, "description": "Error interno"},
+    },
+)
+
+router.add_api_route(
+    "/preview/agentes-disponibles",
+    preview.list_available_agentes,
+    methods=["GET"],
+    response_model=SuccessResponse[List[AgenteDisponible]],
+    name="list_available_agentes",
+    summary="Listar agentes etiológicos disponibles",
+    description="Retorna todos los agentes etiológicos activos para usar en selectores de bloques dinámicos",
+    responses={
         500: {"model": ErrorResponse, "description": "Error interno"},
     },
 )

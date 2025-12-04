@@ -7,10 +7,10 @@ from app.domains.atencion_medica.diagnosticos_models import TratamientoEvento
 
 from ...config.columns import Columns
 from ..shared import (
-    BulkProcessorBase,
     BulkOperationResult,
-    pl_safe_date,
+    BulkProcessorBase,
     pl_clean_string,
+    pl_safe_date,
 )
 
 

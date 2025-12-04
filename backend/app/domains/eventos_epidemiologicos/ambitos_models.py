@@ -11,6 +11,7 @@ from app.core.shared.enums import FrecuenciaOcurrencia
 
 if TYPE_CHECKING:
     from app.domains.territorio.geografia_models import Localidad
+
     from .eventos.models import Evento
 
 

@@ -32,7 +32,7 @@ class SyncEventClassificationService:
         """
         self.session = session
         self._cache: Dict[int, EventStrategy] = {}
-    
+
     @staticmethod
     def normalize_text(text: str) -> str:
         """
@@ -43,22 +43,22 @@ class SyncEventClassificationService:
         - Trim espacios al inicio y final
         """
         import unicodedata
-        
+
         if not text or not isinstance(text, str):
             return ""
-        
+
         # Convertir a minúsculas
         text = text.lower().strip()
-        
+
         # Eliminar acentos
         text = ''.join(
             c for c in unicodedata.normalize('NFD', text)
             if unicodedata.category(c) != 'Mn'
         )
-        
+
         # Reemplazar múltiples espacios por uno solo
         text = ' '.join(text.split())
-        
+
         return text
 
     def classify_events(
@@ -199,7 +199,7 @@ class SyncEventClassificationService:
         result = self.session.execute(
             select(EventStrategy)
             .where(EventStrategy.tipo_eno_id == tipo_eno_id)
-            .where(EventStrategy.is_active == True)
+            .where(EventStrategy.is_active.is_(True))
         ).scalars().first()
 
         if result and use_cache:
@@ -359,7 +359,7 @@ class SyncEventClassificationService:
         if condition.filter_type == TipoFiltro.CAMPO_IGUAL:
             value = config.get('value', '')
             strict_mode = config.get('strict', False)
-            
+
             if strict_mode:
                 return column == value
             else:
@@ -370,7 +370,7 @@ class SyncEventClassificationService:
         elif condition.filter_type == TipoFiltro.CAMPO_CONTIENE:
             value = config.get('value', '')
             strict_mode = config.get('strict', False)
-            
+
             if column.dtype == "object":
                 if strict_mode:
                     case_sensitive = config.get('case_sensitive', True)
@@ -387,9 +387,9 @@ class SyncEventClassificationService:
             if not isinstance(values, list):
                 # Si viene como string separado por comas (retrocompatibilidad)
                 values = [v.strip() for v in str(values).split(",")]
-            
+
             strict_mode = config.get('strict', False)
-            
+
             if strict_mode:
                 return column.isin(values)
             else:
@@ -409,7 +409,7 @@ class SyncEventClassificationService:
             if column.dtype == "object" and pattern:
                 try:
                     return column.str.match(pattern, na=False)
-                except:
+                except Exception:
                     return pd.Series([False] * len(df), index=df.index)
             return pd.Series([False] * len(df), index=df.index)
 

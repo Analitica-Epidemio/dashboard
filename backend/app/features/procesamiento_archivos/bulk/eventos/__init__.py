@@ -6,6 +6,7 @@ This package handles all event-related bulk operations:
 - Symptoms (sintomas.py)
 - Epidemiological backgrounds (antecedentes.py)
 - Places of occurrence (ambitos.py)
+- Etiological agents (agentes.py)
 - Catalogs (catalogs.py)
 
 USAGE:
@@ -14,10 +15,12 @@ USAGE:
   manager = EventosManager(context, logger)
   manager.upsert_eventos(df, establecimiento_mapping)
   manager.upsert_sintomas_eventos(df, sintoma_mapping)
+  manager.upsert_agentes_eventos(df, evento_mapping)
 """
 
-import polars as pl
 from typing import Dict
+
+import polars as pl
 
 from ..shared import BulkOperationResult
 
@@ -34,16 +37,18 @@ class EventosManager:
         self.logger = logger
 
         # Import here to avoid circular dependencies
+        from .agentes import AgentesExtractor
+        from .ambitos import AmbitosProcessor
+        from .antecedentes import AntecedentesProcessor
         from .processor import EventosProcessor
         from .sintomas import SintomasProcessor
-        from .antecedentes import AntecedentesProcessor
-        from .ambitos import AmbitosProcessor
 
         # Initialize all sub-processors
         self.eventos = EventosProcessor(context, logger)
         self.sintomas = SintomasProcessor(context, logger)
         self.antecedentes = AntecedentesProcessor(context, logger)
         self.ambitos = AmbitosProcessor(context, logger)
+        self.agentes = AgentesExtractor(context, logger)
 
     # Delegate methods to sub-processors
     def upsert_eventos(
@@ -69,6 +74,17 @@ class EventosManager:
     ) -> BulkOperationResult:
         """Bulk upsert places of occurrence."""
         return self.ambitos.upsert_ambitos_concurrencia(df)
+
+    def upsert_agentes_eventos(
+        self, df: pl.DataFrame, evento_mapping: Dict[int, int]
+    ) -> BulkOperationResult:
+        """
+        Bulk upsert etiological agents detected in events.
+
+        Extracts agents (viruses, bacteria, etc.) from CSV fields using
+        deterministic rules defined per TipoEno in REGLAS_POR_TIPO_ENO.
+        """
+        return self.agentes.upsert_agentes_eventos(df, evento_mapping)
 
     # Helper methods exposed publicly
     def _get_or_create_sintomas(self, df: pl.DataFrame) -> Dict[str, int]:

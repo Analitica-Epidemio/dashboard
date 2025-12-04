@@ -13,7 +13,7 @@ from sqlalchemy import func, select
 from sqlmodel import Session
 
 from app.core.database import get_session
-from app.core.schemas.response import PaginatedResponse, SuccessResponse
+from app.core.schemas.response import SuccessResponse
 from app.domains.eventos_epidemiologicos.eventos.models import Evento
 from app.domains.territorio.geografia_models import (
     Departamento,

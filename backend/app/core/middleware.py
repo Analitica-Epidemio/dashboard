@@ -80,10 +80,8 @@ class ExceptionHandlerMiddleware(BaseHTTPMiddleware):
             field=None,
         )
 
-        # Log para identificar dónde se están usando excepciones (no deberíamos)
-        print(
-            f"[WARNING] HTTPException detectada - deberíamos usar JSONResponse: {exc.detail}"
-        )
+        # Log para identificar excepciones HTTP no estructuradas
+        logger.warning(f"HTTPException no estructurada [{request_id}]: {exc.detail}")
 
         response = ErrorResponse(error=error_detail, request_id=request_id)
 
@@ -97,9 +95,9 @@ class ExceptionHandlerMiddleware(BaseHTTPMiddleware):
         Esto SOLO debería ocurrir con bugs reales.
         En producción, no exponer detalles del error.
         """
-        # Log completo para debugging
+        # Log completo para debugging (error crítico)
         error_traceback = traceback.format_exc()
-        print(f"[ERROR] Excepción no manejada [{request_id}]: {error_traceback}")
+        logger.error(f"Excepción no manejada [{request_id}]: {error_traceback}")
 
         error_detail = ErrorDetail(
             code="INTERNAL_SERVER_ERROR",
@@ -145,21 +143,29 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         """Procesa la request y registra información."""
         start_time = time.time()
 
-        # Log básico de la request
+        # Capturar info de request
         method = request.method
-        url = str(request.url)
+        path = request.url.path
         request_id = getattr(request.state, "request_id", "unknown")
-
-        print(f"[{request_id}] {method} {url} - Started")
 
         # Procesar request
         response: Response = await call_next(request)
 
-        # Log de la response
+        # Log de actividad (requerido por estándar DGT)
         process_time = time.time() - start_time
         status_code = response.status_code
 
-        print(f"[{request_id}] {method} {url} - {status_code} - {process_time:.3f}s")
+        # Log estructurado para monitoreo
+        logger.info(
+            f"{method} {path} - {status_code} - {process_time:.3f}s",
+            extra={
+                "request_id": request_id,
+                "method": method,
+                "path": path,
+                "status_code": status_code,
+                "duration_ms": int(process_time * 1000),
+            }
+        )
 
         # Agregar headers de response
         response.headers["X-Request-ID"] = request_id

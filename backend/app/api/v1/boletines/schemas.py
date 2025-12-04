@@ -3,10 +3,9 @@ Schemas Pydantic para el sistema de boletines
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Literal, Optional, Union, Annotated
+from typing import Annotated, Any, Dict, List, Literal, Optional, Union
 
-from pydantic import BaseModel, Field, Discriminator
-
+from pydantic import BaseModel, Discriminator, Field
 
 # ============================================================================
 # Schemas de Configuración de Widgets
@@ -195,8 +194,7 @@ class BoletinInstanceResponse(BaseModel):
     parameters: Dict[str, Any]
     content: Optional[str]
     pdf_path: Optional[str]
-    pdf_size: Optional[int]  # Debe coincidir con el nombre del campo en el modelo
-    status: str
+    pdf_size: Optional[int]
     error_message: Optional[str]
     generated_by: Optional[int]
     generated_at: Optional[datetime]
@@ -207,41 +205,8 @@ class BoletinInstanceResponse(BaseModel):
 
 
 # ============================================================================
-# Schemas de Query Definitions
-# ============================================================================
-
-class QueryDefinitionCreate(BaseModel):
-    """Schema para crear query definition"""
-    id: str = Field(..., description="ID único de la query")
-    name: str = Field(..., description="Nombre descriptivo")
-    description: Optional[str] = None
-    category: str = Field(..., description="Categoría de la query")
-    parameters_schema: Dict[str, Any] = Field(..., description="JSON Schema de parámetros")
-    endpoint: str = Field(..., description="Endpoint que ejecuta la query")
-    output_schema: Optional[Dict[str, Any]] = None
-    example_params: Optional[Dict[str, Any]] = None
-    example_output: Optional[Dict[str, Any]] = None
-
-
-class QueryDefinitionResponse(BaseModel):
-    """Schema de respuesta de query definition"""
-    id: str
-    name: str
-    description: Optional[str]
-    category: str
-    parameters_schema: Dict[str, Any]
-    endpoint: str
-    output_schema: Optional[Dict[str, Any]]
-    example_params: Optional[Dict[str, Any]]
-    example_output: Optional[Dict[str, Any]]
-    is_active: bool
-    created_at: datetime
-    updated_at: Optional[datetime]
-
-    class Config:
-        from_attributes = True
-
-
+# Schemas de Query Definitions - ELIMINADO (no usado)
+# Los schemas obsoletos QueryDefinitionCreate y QueryDefinitionResponse fueron eliminados
 # ============================================================================
 # Schemas de Queries Epidemiológicas (Responses)
 # ============================================================================
@@ -325,3 +290,44 @@ class GenerateDraftResponse(BaseModel):
     boletin_instance_id: int = Field(..., description="ID de la instancia de boletín creada")
     content: str = Field(..., description="Contenido HTML generado (TipTap compatible)")
     metadata: BoletinMetadata = Field(..., description="Metadatos del boletín")
+
+
+# ============================================================================
+# Schemas para configuración de Template (BoletinTemplateConfig)
+# ============================================================================
+
+class BoletinTemplateConfigResponse(BaseModel):
+    """Response de configuración de template de boletines"""
+    id: int
+    static_content_template: Dict[str, Any] = Field(..., description="Template base en formato TipTap JSON (incluye selectedEventsPlaceholder)")
+    event_section_template: Dict[str, Any] = Field(default_factory=dict, description="Template de sección de evento (se repite por cada evento seleccionado)")
+    updated_at: Optional[datetime] = Field(None, description="Última actualización")
+    updated_by: Optional[int] = Field(None, description="Usuario que actualizó")
+
+    class Config:
+        from_attributes = True
+
+
+class UpdateStaticContentRequest(BaseModel):
+    """Request para actualizar contenido estático"""
+    content: Dict[str, Any] = Field(..., description="Contenido TipTap JSON")
+
+
+class UpdateEventSectionTemplateRequest(BaseModel):
+    """Request para actualizar template de sección de evento"""
+    content: Dict[str, Any] = Field(..., description="Template TipTap JSON de sección de evento")
+
+
+class UpdateDynamicBlocksRequest(BaseModel):
+    """Request para actualizar array completo de bloques (reordenar)"""
+    blocks: List[Dict[str, Any]] = Field(..., description="Array completo de bloques dinámicos")
+
+
+class CreateDynamicBlockRequest(BaseModel):
+    """Request para crear un nuevo bloque dinámico"""
+    block: Dict[str, Any] = Field(..., description="Configuración del bloque a crear")
+
+
+class UpdateDynamicBlockRequest(BaseModel):
+    """Request para actualizar un bloque específico"""
+    block: Dict[str, Any] = Field(..., description="Nueva configuración del bloque")

@@ -36,16 +36,15 @@ USAGE:
   results = processor.process_all(dataframe)
 """
 
-from .main import MainProcessor
-from .shared import BulkOperationResult, BulkProcessorBase
-
 # Domain managers and processors (for direct access if needed)
 from .ciudadanos import CiudadanosManager
 from .diagnosticos import DiagnosticosProcessor
 from .establecimientos import EstablecimientosProcessor
 from .eventos import EventosManager
 from .investigaciones import InvestigacionesProcessor
+from .main import MainProcessor
 from .salud import SaludManager
+from .shared import BulkOperationResult, BulkProcessorBase
 
 __all__ = [
     # Main entry point

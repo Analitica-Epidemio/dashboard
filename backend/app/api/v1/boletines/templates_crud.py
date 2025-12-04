@@ -85,7 +85,7 @@ async def list_templates(
     # Si no es admin, solo mostrar templates públicos o propios
     if current_user and not getattr(current_user, 'is_admin', False):
         stmt = stmt.where(
-            (BoletinTemplate.is_public == True) |
+            (BoletinTemplate.is_public.is_(True)) |
             (BoletinTemplate.created_by == current_user.id)
         )
 

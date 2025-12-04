@@ -6,7 +6,7 @@ Renderiza snippets de boletines con placeholders usando Jinja2
 import logging
 from typing import Any, Dict, List, Optional
 
-from jinja2 import Environment, Template, TemplateSyntaxError
+from jinja2 import Environment, TemplateSyntaxError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 

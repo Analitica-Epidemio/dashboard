@@ -4,9 +4,11 @@ Dependencia de autenticación flexible que acepta JWT o URL firmada
 
 import logging
 from typing import Optional
+
 from fastapi import Depends, HTTPException, Request
-from app.domains.autenticacion.dependencies import get_current_user_optional
+
 from app.core.security.signed_url_auth import verify_signed_url_headers
+from app.domains.autenticacion.dependencies import get_current_user_optional
 from app.domains.autenticacion.models import User
 
 logger = logging.getLogger(__name__)
@@ -24,7 +26,7 @@ async def require_auth_or_signed_url(
     """
     # Log headers for debugging
     logger.debug(f"Request headers: {dict(request.headers)}")
-    logger.debug(f"Looking for signed URL headers: X-Signed-Data and X-Signed-Signature")
+    logger.debug("Looking for signed URL headers: X-Signed-Data and X-Signed-Signature")
 
     # Check for signed URL headers
     signed_url_data = await verify_signed_url_headers(request)

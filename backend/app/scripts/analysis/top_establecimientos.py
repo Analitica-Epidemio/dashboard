@@ -8,19 +8,19 @@ Este script:
 3. Sugiere mapeos automáticos entre establecimientos SNVS e IGN usando similitud de nombres
 """
 
-import sys
-from pathlib import Path
-from typing import List, Dict, Tuple, Optional
 import difflib
-from dataclasses import dataclass
+import sys
 from collections import defaultdict
+from dataclasses import dataclass
+from pathlib import Path
+from typing import List, Optional
 
 # Agregar el directorio raíz al path para imports
 backend_dir = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(backend_dir))
 
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import Session
+from sqlalchemy import create_engine, text  # noqa: E402
+from sqlalchemy.orm import Session  # noqa: E402
 
 
 @dataclass
@@ -307,7 +307,7 @@ def calcular_distancia_geografica(lat1: float, lon1: float,
     """
     Calcula distancia aproximada en km usando fórmula haversine simplificada.
     """
-    from math import radians, sin, cos, sqrt, atan2
+    from math import atan2, cos, radians, sin, sqrt
 
     R = 6371  # Radio de la Tierra en km
 
@@ -629,7 +629,7 @@ def main():
         output_path = backend_dir / "temp" / "establecimientos.txt"
         print(f"\nGenerando reporte en {output_path}...")
         generar_reporte(establecimientos, mapeos_sugeridos, str(output_path))
-        print(f"  ✓ Reporte generado exitosamente")
+        print("  ✓ Reporte generado exitosamente")
 
         # Resumen en consola
         print("\n" + "=" * 80)

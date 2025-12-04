@@ -8,8 +8,8 @@ import logging
 from typing import Optional
 
 from .base import GeocodingAdapter
-from .mapbox_adapter import MapboxAdapter
 from .google_maps_adapter import GoogleMapsAdapter
+from .mapbox_adapter import MapboxAdapter
 
 logger = logging.getLogger(__name__)
 

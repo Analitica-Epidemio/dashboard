@@ -16,20 +16,18 @@ from sqlalchemy.orm import selectinload
 from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAnyRole
+from app.domains.atencion_medica.salud_models import MuestraEvento
 from app.domains.autenticacion.models import User
-from app.domains.sujetos_epidemiologicos.ciudadanos_models import (
-    Ciudadano,
-    CiudadanoDomicilio,
-)
-from app.domains.sujetos_epidemiologicos.animales_models import Animal
 from app.domains.eventos_epidemiologicos.clasificacion.models import TipoClasificacion
 from app.domains.eventos_epidemiologicos.eventos.models import (
     DetalleEventoSintomas,
     Evento,
 )
-from app.domains.atencion_medica.salud_models import MuestraEvento
-from app.domains.atencion_medica.diagnosticos_models import EstudioEvento
-from app.domains.territorio.geografia_models import Departamento, Domicilio, Localidad, Provincia
+from app.domains.sujetos_epidemiologicos.animales_models import Animal
+from app.domains.sujetos_epidemiologicos.ciudadanos_models import (
+    Ciudadano,
+)
+from app.domains.territorio.geografia_models import Domicilio
 
 
 class CiudadanoInfo(BaseModel):
@@ -423,12 +421,9 @@ async def get_evento_detail(
                 selectinload(Evento.estrategia_aplicada),
                 # Sujetos del evento
                 selectinload(Evento.ciudadano).selectinload(Ciudadano.datos),
-                selectinload(Evento.animal)
-                .selectinload(Animal.localidad)
-                .selectinload(Localidad.departamento)
-                .selectinload(Departamento.provincia),
+                selectinload(Evento.animal).selectinload(Animal.localidad),
                 # Datos geográficos del evento (normalized domicilio)
-                selectinload(Evento.domicilio).selectinload(Domicilio.localidad).selectinload(Localidad.departamento).selectinload(Departamento.provincia),
+                selectinload(Evento.domicilio).selectinload(Domicilio.localidad),
                 # Establecimientos del evento
                 selectinload(Evento.establecimiento_consulta),
                 selectinload(Evento.establecimiento_notificacion),
@@ -534,13 +529,6 @@ async def get_evento_detail(
                 barrio_popular = getattr(evento.domicilio, 'barrio_popular', None)
                 if evento.domicilio.localidad:
                     localidad_nombre = evento.domicilio.localidad.nombre
-                    if (
-                        evento.domicilio.localidad.departamento
-                        and evento.domicilio.localidad.departamento.provincia
-                    ):
-                        provincia_nombre = (
-                            evento.domicilio.localidad.departamento.provincia.nombre
-                        )
 
             # Get contact info and additional data from first datos record
             telefono = None
@@ -626,10 +614,6 @@ async def get_evento_detail(
 
             if evento.domicilio.localidad:
                 localidad_nombre = evento.domicilio.localidad.nombre
-                if evento.domicilio.localidad.departamento:
-                    departamento_nombre = evento.domicilio.localidad.departamento.nombre
-                    if evento.domicilio.localidad.departamento.provincia:
-                        provincia_nombre = evento.domicilio.localidad.departamento.provincia.nombre
 
             response.domicilio_geografico = DomicilioGeograficoInfo(
                 latitud=evento.domicilio.latitud,

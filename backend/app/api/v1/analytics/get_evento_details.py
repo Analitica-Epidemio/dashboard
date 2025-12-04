@@ -9,6 +9,7 @@ from typing import Optional
 from fastapi import Depends, Path, Query
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.api.v1.analytics.period_utils import get_epi_week_dates
 from app.api.v1.analytics.schemas import (
@@ -22,8 +23,7 @@ from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAuthOrSignedUrl
 from app.domains.autenticacion.models import User
-from app.domains.eventos_epidemiologicos.eventos.models import TipoEno, GrupoEno
-from sqlalchemy.orm import selectinload
+from app.domains.eventos_epidemiologicos.eventos.models import TipoEno
 
 logger = logging.getLogger(__name__)
 

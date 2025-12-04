@@ -8,7 +8,12 @@ from app.domains.atencion_medica.diagnosticos_models import EstudioEvento
 from app.domains.atencion_medica.salud_models import MuestraEvento
 
 from ...config.columns import Columns
-from ..shared import BulkProcessorBase, BulkOperationResult, pl_safe_date, pl_clean_string
+from ..shared import (
+    BulkOperationResult,
+    BulkProcessorBase,
+    pl_clean_string,
+    pl_safe_date,
+)
 
 
 class EstudiosProcessor(BulkProcessorBase):

@@ -15,16 +15,19 @@ from sqlmodel import Session
 
 from app.core.database import get_session
 from app.core.schemas.response import SuccessResponse
-from app.domains.eventos_epidemiologicos.eventos.models import Evento
+from app.domains.eventos_epidemiologicos.eventos.models import (
+    Evento,
+    EventoGrupoEno,
+    GrupoEno,
+    TipoEno,
+)
 from app.domains.sujetos_epidemiologicos.ciudadanos_models import Ciudadano
 from app.domains.territorio.geografia_models import (
+    Departamento,
     Domicilio,
     Localidad,
-    Departamento,
     Provincia,
 )
-from app.domains.eventos_epidemiologicos.eventos.models import TipoEno, GrupoEno
-from app.domains.eventos_epidemiologicos.eventos.models import EventoGrupoEno
 
 
 class CasoDetalle(BaseModel):

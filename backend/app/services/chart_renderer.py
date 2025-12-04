@@ -8,24 +8,24 @@ import io
 import logging
 import os
 from typing import Optional
+
 import matplotlib
+
 matplotlib.use('Agg')  # Backend sin GUI
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.figure import Figure
-import matplotlib.patches as mpatches
-from svglib.svglib import svg2rlg
-from reportlab.graphics import renderPM
 from PIL import Image
+from reportlab.graphics import renderPM
+from svglib.svglib import svg2rlg
 
 from app.schemas.chart_spec import (
-    UniversalChartSpec,
-    LineChartData,
-    BarChartData,
     AreaChartData,
+    BarChartData,
+    LineChartData,
+    MapChartDataWrapper,
     PieChartData,
     PyramidChartData,
-    MapChartDataWrapper,
+    UniversalChartSpec,
 )
 
 logger = logging.getLogger(__name__)
@@ -425,7 +425,10 @@ class ChartRenderer:
         colors = colors_palette[:len(data.data.labels)]
 
         # Crear pie chart con formato mejorado
-        autopct = lambda pct: f'{pct:.1f}%' if pct > 3 else ''  # Solo mostrar % si es > 3%
+        def autopct(pct: float) -> str:
+            """Solo mostrar % si es > 3%"""
+            return f'{pct:.1f}%' if pct > 3 else ''
+
         wedges, texts, autotexts = ax.pie(
             dataset.data,
             labels=None,  # No poner labels directamente, usar leyenda
@@ -486,10 +489,10 @@ class ChartRenderer:
         female_color = '#EC4899'  # Pink-500
 
         # Crear barras horizontales con mejor estilo
-        bar1 = ax.barh(y_pos, males, height=0.8, color=male_color,
-                       label='Masculino', alpha=0.85, edgecolor='white', linewidth=0.5)
-        bar2 = ax.barh(y_pos, females, height=0.8, color=female_color,
-                       label='Femenino', alpha=0.85, edgecolor='white', linewidth=0.5)
+        ax.barh(y_pos, males, height=0.8, color=male_color,
+                label='Masculino', alpha=0.85, edgecolor='white', linewidth=0.5)
+        ax.barh(y_pos, females, height=0.8, color=female_color,
+                label='Femenino', alpha=0.85, edgecolor='white', linewidth=0.5)
 
         # Labels de grupos de edad EN EL CENTRO
         ax.set_yticks(y_pos)
@@ -532,14 +535,12 @@ class ChartRenderer:
 
     def _render_map_chart(self, spec: UniversalChartSpec, dpi: int) -> bytes:
         """
-        Renderiza mapa geográfico usando el SVG de Chubut
-        Muestra el mapa + tabla con datos por departamento
+        Renderiza mapa geográfico usando el SVG de Chubut.
+        Solo el mapa, sin tabla (la tabla se genera como HTML nativo).
         """
         data = spec.data
         if not isinstance(data, MapChartDataWrapper):
             raise ValueError("Data type mismatch for map chart")
-
-        config = spec.config.config if hasattr(spec.config, 'config') else {}
 
         # Path al SVG de Chubut
         svg_path = os.path.join(
@@ -556,60 +557,17 @@ class ChartRenderer:
                 svg_img_bytes = renderPM.drawToString(drawing, fmt='PNG', dpi=dpi)
                 svg_img = Image.open(io.BytesIO(svg_img_bytes))
 
-                # Crear figura MUCHO MÁS GRANDE (triple de alto) para el mapa
-                fig = plt.figure(figsize=(12, 20), dpi=dpi)
-                # Mayor spacing entre mapa y tabla
-                gs = fig.add_gridspec(2, 1, height_ratios=[4, 1], hspace=0.3)
+                # Crear figura solo para el mapa
+                fig, ax = plt.subplots(figsize=(12, 14), dpi=dpi)
 
-                # Subplot 1: Mapa SVG (sin título duplicado)
-                ax_map = fig.add_subplot(gs[0])
-                # Usar aspect='equal' para mantener proporciones originales del SVG
-                ax_map.imshow(svg_img, aspect='equal')
-                ax_map.axis('off')
-                # Título general de la figura
-                fig.suptitle(spec.title, fontsize=15, fontweight='600', color='#1F2937', y=0.98)
+                # Mostrar mapa
+                ax.imshow(svg_img, aspect='equal')
+                ax.axis('off')
 
-                # Subplot 2: Tabla con datos (sin título de texto adicional)
-                ax_table = fig.add_subplot(gs[1])
-                ax_table.axis('tight')
-                ax_table.axis('off')
+                # Título
+                ax.set_title(spec.title, fontsize=16, fontweight='600', color='#1F2937', pad=15)
 
-                # Preparar datos de la tabla (top 10 departamentos)
-                table_data = []
-                for dept in sorted(data.data.departamentos, key=lambda x: x.casos, reverse=True)[:10]:
-                    table_data.append([
-                        dept.nombre,
-                        f"{dept.casos:,}",
-                        f"{dept.tasa_incidencia:.2f}"
-                    ])
-
-                table = ax_table.table(
-                    cellText=table_data,
-                    colLabels=['Departamento', 'Casos', 'Tasa/100k hab.'],
-                    cellLoc='left',
-                    loc='center',
-                    colWidths=[0.5, 0.25, 0.25],
-                    bbox=[0, 0, 1, 0.9]  # Dejar espacio para el título
-                )
-                table.auto_set_font_size(False)
-                table.set_fontsize(9)
-                table.scale(1, 1.8)
-
-                # Estilizar header de tabla
-                for i in range(3):
-                    cell = table[(0, i)]
-                    cell.set_facecolor('#3B82F6')
-                    cell.set_text_props(weight='bold', color='white')
-
-                # Agregar total de casos como texto
-                fig.text(
-                    0.5, 0.02,
-                    f"Total de casos en la provincia: {data.data.total_casos:,}",
-                    ha='center',
-                    fontsize=11,
-                    fontweight='bold',
-                    color='#374151'
-                )
+                plt.tight_layout()
 
                 # Convertir a bytes
                 buf = io.BytesIO()
@@ -621,44 +579,108 @@ class ChartRenderer:
                 raise ValueError("No se pudo cargar el SVG")
 
         except Exception as e:
-            logger.warning(f"Error renderizando mapa SVG: {e}. Usando fallback con tabla.")
+            logger.warning(f"Error renderizando mapa SVG: {e}. Usando placeholder.")
 
-            # Fallback: solo tabla si el SVG falla
-            height = config.height / 100 if config.height else 6
-            width = height * 1.5
-
-            fig, ax = plt.subplots(figsize=(width, height), dpi=dpi)
-            ax.axis('tight')
+            # Fallback: placeholder si el SVG falla
+            fig, ax = plt.subplots(figsize=(10, 8), dpi=dpi)
+            ax.text(0.5, 0.5, 'Mapa no disponible',
+                   ha='center', va='center', fontsize=14, color='#6B7280')
             ax.axis('off')
-
-            table_data = []
-            for dept in data.data.departamentos[:10]:
-                table_data.append([
-                    dept.nombre,
-                    f"{dept.casos}",
-                    f"{dept.tasa_incidencia:.2f}"
-                ])
-
-            table = ax.table(
-                cellText=table_data,
-                colLabels=['Departamento', 'Casos', 'Tasa/100k'],
-                cellLoc='left',
-                loc='center'
-            )
-            table.auto_set_font_size(False)
-            table.set_fontsize(9)
-            table.scale(1, 2)
-
-            ax.set_title(f"{spec.title}\nTotal: {data.data.total_casos} casos",
-                        fontsize=14, fontweight='bold', pad=20)
-
-            plt.tight_layout()
+            ax.set_title(spec.title, fontsize=14, fontweight='bold', pad=20)
 
             buf = io.BytesIO()
-            fig.savefig(buf, format='png', dpi=dpi, bbox_inches='tight')
+            fig.savefig(buf, format='png', dpi=dpi, bbox_inches='tight', facecolor='white')
             plt.close(fig)
             buf.seek(0)
             return buf.read()
+
+    def render_departamentos_table(self, data: MapChartDataWrapper, title: str = "", dpi: int = 300) -> bytes:
+        """
+        Renderiza la tabla de departamentos como imagen separada.
+        Tabla ancha que ocupa todo el ancho disponible.
+
+        Args:
+            data: Datos del mapa con departamentos
+            title: Título opcional para la tabla
+            dpi: Resolución
+
+        Returns:
+            Bytes de la imagen PNG de la tabla
+        """
+        # Crear figura ancha para la tabla
+        fig_width = 14  # Ancho generoso
+        fig_height = 6  # Alto suficiente para ~10 filas
+
+        fig, ax = plt.subplots(figsize=(fig_width, fig_height), dpi=dpi)
+        ax.axis('off')
+
+        # Preparar datos de la tabla (todos los departamentos con casos, ordenados)
+        table_data = []
+        for dept in sorted(data.data.departamentos, key=lambda x: x.casos, reverse=True):
+            table_data.append([
+                dept.nombre,
+                f"{dept.casos:,}",
+                f"{dept.tasa_incidencia:.2f}"
+            ])
+
+        if not table_data:
+            ax.text(0.5, 0.5, 'Sin datos de departamentos',
+                   ha='center', va='center', fontsize=12, color='#6B7280')
+            buf = io.BytesIO()
+            fig.savefig(buf, format='png', dpi=dpi, bbox_inches='tight', facecolor='white')
+            plt.close(fig)
+            buf.seek(0)
+            return buf.read()
+
+        # Crear tabla ocupando todo el ancho
+        table = ax.table(
+            cellText=table_data,
+            colLabels=['Departamento', 'Casos', 'Tasa/100k hab.'],
+            cellLoc='center',
+            loc='center',
+            colWidths=[0.5, 0.25, 0.25],
+            bbox=[0.05, 0.1, 0.9, 0.85]
+        )
+        table.auto_set_font_size(False)
+        table.set_fontsize(12)
+        table.scale(1.0, 2.2)
+
+        # Estilizar header de tabla
+        for i in range(3):
+            cell = table[(0, i)]
+            cell.set_facecolor('#3B82F6')
+            cell.set_text_props(weight='bold', color='white', fontsize=13)
+
+        # Estilizar celdas de datos
+        for row_idx in range(1, len(table_data) + 1):
+            # Alinear departamento a la izquierda
+            table[(row_idx, 0)].set_text_props(ha='left')
+            # Alternar colores de fondo
+            if row_idx % 2 == 0:
+                for col_idx in range(3):
+                    table[(row_idx, col_idx)].set_facecolor('#F9FAFB')
+
+        # Título si existe
+        if title:
+            ax.set_title(title, fontsize=14, fontweight='600', color='#1F2937', pad=10, loc='left')
+
+        # Total de casos
+        fig.text(
+            0.5, 0.02,
+            f"Total de casos en la provincia: {data.data.total_casos:,}",
+            ha='center',
+            fontsize=12,
+            fontweight='bold',
+            color='#374151'
+        )
+
+        plt.tight_layout()
+
+        buf = io.BytesIO()
+        fig.savefig(buf, format='png', dpi=dpi, bbox_inches='tight', facecolor='white')
+        plt.close(fig)
+        buf.seek(0)
+        return buf.read()
 
 
 # Singleton instance

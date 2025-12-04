@@ -12,7 +12,7 @@ from sqlmodel import Session
 from app.core.database import get_session
 from app.core.schemas.response import SuccessResponse
 from app.domains.territorio.establecimientos_models import Establecimiento
-from app.domains.territorio.geografia_models import Localidad, Departamento, Provincia
+from app.domains.territorio.geografia_models import Departamento, Localidad, Provincia
 
 
 class EstablecimientoMapaItem(BaseModel):

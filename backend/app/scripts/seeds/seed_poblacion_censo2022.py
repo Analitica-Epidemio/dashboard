@@ -6,9 +6,12 @@ Fuente: https://www.indec.gob.ar/ftp/cuadros/poblacion/cnphv2022_resultados_prov
 Poblamos:
 - Población de provincias (Cuadro 1)
 - Población de departamentos (Cuadros 2.1 a 2.24)
+
+El archivo se descarga automáticamente si no existe.
 """
 import os
 import sys
+import urllib.request
 from pathlib import Path
 
 import pandas as pd
@@ -16,8 +19,46 @@ import pandas as pd
 # Agregar el directorio raíz al path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from sqlalchemy import create_engine, select, update, text
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
+
+# URL del archivo del Censo 2022
+CENSO_2022_URL = "https://www.indec.gob.ar/ftp/cuadros/poblacion/cnphv2022_resultados_provisionales.xlsx"
+
+
+def descargar_censo_si_no_existe(archivo_path: Path) -> bool:
+    """
+    Descarga el archivo del Censo 2022 si no existe localmente.
+
+    Returns:
+        True si el archivo existe o se descargó correctamente, False en caso de error.
+    """
+    if archivo_path.exists():
+        print(f"   ✓ Archivo censo ya existe: {archivo_path.name}")
+        return True
+
+    print("   Descargando Censo 2022 desde INDEC...")
+    print(f"   URL: {CENSO_2022_URL}")
+
+    try:
+        # Crear directorio si no existe
+        archivo_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Descargar archivo
+        urllib.request.urlretrieve(CENSO_2022_URL, archivo_path)
+
+        # Verificar que se descargó correctamente
+        if archivo_path.exists() and archivo_path.stat().st_size > 0:
+            size_kb = archivo_path.stat().st_size / 1024
+            print(f"   ✓ Descargado: {archivo_path.name} ({size_kb:.0f} KB)")
+            return True
+        else:
+            print("   ❌ Error: archivo descargado está vacío")
+            return False
+
+    except Exception as e:
+        print(f"   ❌ Error descargando censo: {e}")
+        return False
 
 
 # Mapeo de nombres de provincias del censo a códigos INDEC
@@ -240,7 +281,7 @@ def seed_poblacion_departamentos(session: Session, archivo_path: Path):
     session.commit()
 
     print(f"\n{'='*60}")
-    print(f"✅ RESUMEN DEPARTAMENTOS:")
+    print("✅ RESUMEN DEPARTAMENTOS:")
     print(f"   Actualizados: {total_updated}")
     print(f"   No encontrados: {total_not_found}")
     print(f"{'='*60}")
@@ -262,13 +303,12 @@ def main():
             "postgresql+asyncpg://", "postgresql://"
         )
 
-    # Verificar que existe el archivo
+    # Verificar/descargar archivo del censo
     data_dir = Path(__file__).parent / "data"
     archivo_censo = data_dir / "censo2022_poblacion.xlsx"
 
-    if not archivo_censo.exists():
-        print(f"❌ Archivo no encontrado: {archivo_censo}")
-        print("   Descárgalo de: https://www.indec.gob.ar/ftp/cuadros/poblacion/cnphv2022_resultados_provisionales.xlsx")
+    if not descargar_censo_si_no_existe(archivo_censo):
+        print("❌ No se pudo obtener el archivo del censo")
         return
 
     # Crear engine y sesión

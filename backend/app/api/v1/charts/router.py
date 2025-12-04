@@ -5,10 +5,10 @@ Charts router - UniversalChartSpec endpoints
 
 from fastapi import APIRouter
 
+from .generate_spec import router as chart_spec_router
 from .get_dashboard import get_dashboard_charts
 from .get_disponibles import get_charts_disponibles
 from .get_indicadores import get_indicadores
-from .generate_spec import router as chart_spec_router
 
 router = APIRouter(prefix="/charts", tags=["Charts"])
 

@@ -9,10 +9,16 @@ from sqlmodel import Field, Relationship
 from app.core.models import BaseModel
 
 if TYPE_CHECKING:
-    from app.domains.sujetos_epidemiologicos.ciudadanos_models import Ciudadano, CiudadanoComorbilidades
     from app.domains.atencion_medica.diagnosticos_models import EstudioEvento
+    from app.domains.eventos_epidemiologicos.eventos.models import (
+        DetalleEventoSintomas,
+        Evento,
+    )
+    from app.domains.sujetos_epidemiologicos.ciudadanos_models import (
+        Ciudadano,
+        CiudadanoComorbilidades,
+    )
     from app.domains.territorio.establecimientos_models import Establecimiento
-    from app.domains.eventos_epidemiologicos.eventos.models import DetalleEventoSintomas, Evento
 
 
 class Determinacion(BaseModel, table=True):
@@ -297,8 +303,8 @@ class VacunasCiudadano(BaseModel, table=True):
 
     # Foreign Keys
     codigo_ciudadano: int = Field(
-        sa_type=BigInteger, 
-        foreign_key="ciudadano.codigo_ciudadano", 
+        sa_type=BigInteger,
+        foreign_key="ciudadano.codigo_ciudadano",
         description="Código del ciudadano"
     )
     id_vacuna: int = Field(foreign_key="vacuna.id", description="ID de la vacuna")

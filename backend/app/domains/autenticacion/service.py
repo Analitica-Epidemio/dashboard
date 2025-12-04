@@ -3,7 +3,7 @@ Authentication service layer
 Handles user management, authentication, and session management
 """
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import List, Optional, Tuple
 
 from fastapi import HTTPException, Request, status
@@ -204,7 +204,7 @@ class AuthService:
             select(UserSession)
             .where(and_(
                 UserSession.user_id == user_id,
-                UserSession.is_active == True,
+                UserSession.is_active.is_(True),
                 UserSession.expires_at > datetime.now(timezone.utc)
             ))
             .order_by(UserSession.last_activity.desc())
@@ -352,7 +352,7 @@ class AuthService:
         # Keep only the most recent active sessions - use subquery to avoid loading objects
         subquery = select(UserSession.id).where(and_(
             UserSession.user_id == user_id,
-            UserSession.is_active == True
+            UserSession.is_active.is_(True)
         )).order_by(UserSession.last_activity.desc()).offset(SecurityConfig.MAX_SESSIONS_PER_USER - 1)
 
         # Deactivate old sessions using direct UPDATE

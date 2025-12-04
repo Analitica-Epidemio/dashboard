@@ -16,8 +16,11 @@ from sqlmodel import Session
 
 from app.core.database import get_session
 from app.core.schemas.response import SuccessResponse
-from app.domains.eventos_epidemiologicos.eventos.models import Evento, EventoGrupoEno
-from app.domains.eventos_epidemiologicos.eventos.models import TipoEno
+from app.domains.eventos_epidemiologicos.eventos.models import (
+    Evento,
+    EventoGrupoEno,
+    TipoEno,
+)
 from app.domains.territorio.geografia_models import (
     Departamento,
     Domicilio,
@@ -25,7 +28,6 @@ from app.domains.territorio.geografia_models import (
     Localidad,
     Provincia,
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +65,13 @@ class DomicilioMapaItem(BaseModel):
     )
     primer_evento_fecha: Optional[date] = Field(
         None, description="Fecha del primer evento registrado en el domicilio"
+    )
+
+    # Fechas de todos los eventos para animación temporal
+    # Lista de fechas (fecha_inicio_sintomas o fecha_minima_evento) para timeline
+    fechas_eventos: List[date] = Field(
+        default_factory=list,
+        description="Lista de fechas de eventos para animación temporal"
     )
 
 
@@ -237,6 +246,32 @@ async def get_domicilios_mapa(
 
             tipos_por_domicilio[dom_id][tipo_nombre] = count
 
+    # Query para obtener fechas de eventos por domicilio (para animación temporal)
+    fechas_por_domicilio: dict[int, List[date]] = {}
+
+    if domicilio_ids:
+        # Obtener fecha_minima_evento de cada evento por domicilio
+        fechas_query = (
+            select(
+                Evento.id_domicilio,
+                Evento.fecha_minima_evento,
+            )
+            .where(Evento.id_domicilio.in_(domicilio_ids))
+            .where(Evento.fecha_minima_evento.is_not(None))
+        )
+
+        fechas_result = session.exec(fechas_query).all()
+
+        # Organizar fechas por domicilio
+        for fecha_row in fechas_result:
+            dom_id = fecha_row.id_domicilio
+            fecha = fecha_row.fecha_minima_evento
+
+            if dom_id not in fechas_por_domicilio:
+                fechas_por_domicilio[dom_id] = []
+
+            fechas_por_domicilio[dom_id].append(fecha)
+
     # Construir items
     items: List[DomicilioMapaItem] = []
     total_eventos_global = 0
@@ -260,6 +295,9 @@ async def get_domicilios_mapa(
             # Encontrar el tipo con más casos
             tipo_predominante = max(tipos_dict.items(), key=lambda x: x[1])[0]
 
+        # Obtener fechas para este domicilio (ordenadas)
+        fechas_dom = sorted(fechas_por_domicilio.get(row.id, []))
+
         items.append(
             DomicilioMapaItem(
                 id=f"domicilio_{row.id}",
@@ -277,6 +315,7 @@ async def get_domicilios_mapa(
                 tipo_evento_predominante=tipo_predominante,
                 tipos_eventos=tipos_dict,
                 primer_evento_fecha=row.primer_evento_fecha,
+                fechas_eventos=fechas_dom,
             )
         )
 

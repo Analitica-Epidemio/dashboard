@@ -22,51 +22,6 @@ PRINCIPIOS APLICADOS:
 
 # Import all models for Alembic auto-detection
 # 🔐 AUTENTICACION DOMAIN
-from app.domains.autenticacion.models import User, UserSession, UserLogin
-
-# 👥 SUJETOS EPIDEMIOLOGICOS DOMAIN
-from app.domains.sujetos_epidemiologicos.ciudadanos_models import (
-    Ciudadano,
-    CiudadanoDatos,
-    CiudadanoDomicilio,
-    CiudadanoComorbilidades,
-)
-from app.domains.sujetos_epidemiologicos.animales_models import Animal
-from app.domains.sujetos_epidemiologicos.viajes_models import ViajesCiudadano
-
-# 🦠 EVENTOS EPIDEMIOLOGICOS DOMAIN
-from app.domains.eventos_epidemiologicos.eventos.models import (
-    Evento,
-    TipoEno,
-    GrupoEno,
-    DetalleEventoSintomas,
-    AntecedenteEpidemiologico,
-    AntecedentesEpidemiologicosEvento,
-)
-from app.domains.eventos_epidemiologicos.ambitos_models import (
-    AmbitosConcurrenciaEvento,
-)
-from app.domains.eventos_epidemiologicos.clasificacion.models import (
-    EventStrategy,
-    FilterCondition,
-    ClassificationRule,
-    EventClassificationAudit,
-    StrategyChangeLog,
-    TipoClasificacion,
-)
-
-# ⚕️ ATENCION MEDICA DOMAIN
-from app.domains.atencion_medica.salud_models import (
-    Sintoma,
-    Comorbilidad,
-    Vacuna,
-    VacunasCiudadano,
-    Muestra,
-    MuestraEvento,
-    Tecnica,
-    ResultadoTecnica,
-    Determinacion,
-)
 from app.domains.atencion_medica.diagnosticos_models import (
     DiagnosticoEvento,
     EstudioEvento,
@@ -74,30 +29,87 @@ from app.domains.atencion_medica.diagnosticos_models import (
     TratamientoEvento,
 )
 from app.domains.atencion_medica.investigaciones_models import (
-    InvestigacionEvento,
     ContactosNotificacion,
+    InvestigacionEvento,
 )
 
-# 🗺️ TERRITORIO DOMAIN
-from app.domains.territorio.geografia_models import (
-    Provincia,
-    Departamento,
-    Localidad,
-    Domicilio,
+# ⚕️ ATENCION MEDICA DOMAIN
+from app.domains.atencion_medica.salud_models import (
+    Comorbilidad,
+    Determinacion,
+    Muestra,
+    MuestraEvento,
+    ResultadoTecnica,
+    Sintoma,
+    Tecnica,
+    Vacuna,
+    VacunasCiudadano,
+)
+from app.domains.autenticacion.models import User, UserLogin, UserSession
+
+# 📋 BOLETINES DOMAIN
+from app.domains.boletines.models import (
+    BoletinInstance,
+    BoletinTemplate,
+    BoletinTemplateConfig,
+    CapacidadHospitalaria,
+    VirusRespiratorio,
+)
+
+# 🦠 EVENTOS EPIDEMIOLOGICOS DOMAIN
+# IMPORTANTE: agentes debe importarse ANTES de eventos para que SQLAlchemy pueda
+# resolver la relación Evento.agentes_detectados -> EventoAgente
+from app.domains.eventos_epidemiologicos.agentes.models import (
+    AgenteEtiologico,
+    AgenteExtraccionConfig,
+    EventoAgente,
+)
+from app.domains.eventos_epidemiologicos.ambitos_models import (
+    AmbitosConcurrenciaEvento,
+)
+from app.domains.eventos_epidemiologicos.clasificacion.models import (
+    ClassificationRule,
+    EventClassificationAudit,
+    EventStrategy,
+    FilterCondition,
+    StrategyChangeLog,
+    TipoClasificacion,
+)
+from app.domains.eventos_epidemiologicos.eventos.models import (
+    AntecedenteEpidemiologico,
+    AntecedentesEpidemiologicosEvento,
+    DetalleEventoSintomas,
+    Evento,
+    GrupoEno,
+    TipoEno,
+)
+from app.domains.sujetos_epidemiologicos.animales_models import Animal
+
+# 👥 SUJETOS EPIDEMIOLOGICOS DOMAIN
+from app.domains.sujetos_epidemiologicos.ciudadanos_models import (
+    Ciudadano,
+    CiudadanoComorbilidades,
+    CiudadanoDatos,
+    CiudadanoDomicilio,
+)
+from app.domains.sujetos_epidemiologicos.viajes_models import ViajesCiudadano
+from app.domains.territorio.capas_gis_models import (
+    CapaAreaUrbana,
+    CapaHidrografia,
 )
 from app.domains.territorio.establecimientos_models import (
     Establecimiento,
 )
-from app.domains.territorio.capas_gis_models import (
-    CapaHidrografia,
-    CapaAreaUrbana,
-)
 
-# 📋 BOLETINES DOMAIN
-from app.domains.boletines.models import (
-    BoletinTemplate,
-    BoletinInstance,
-    QueryDefinition,
+# 🗺️ TERRITORIO DOMAIN
+from app.domains.territorio.geografia_models import (
+    Departamento,
+    Domicilio,
+    Localidad,
+    Provincia,
+)
+from app.features.analitica.models import (
+    DatamartEpidemiologia,
 )
 
 # 📊 FEATURES MODELS (para detección de Alembic)
@@ -107,9 +119,6 @@ from app.features.dashboard.models import (
 )
 from app.features.procesamiento_archivos.models import (
     ProcessingJob,
-)
-from app.features.analitica.models import (
-    DatamartEpidemiologia,
 )
 
 # Export all models for external access
@@ -139,6 +148,9 @@ __all__ = [
     "EventClassificationAudit",
     "StrategyChangeLog",
     "TipoClasificacion",
+    "AgenteEtiologico",
+    "AgenteExtraccionConfig",
+    "EventoAgente",
     # Atencion medica
     "Sintoma",
     "Comorbilidad",
@@ -166,7 +178,9 @@ __all__ = [
     # Boletines
     "BoletinTemplate",
     "BoletinInstance",
-    "QueryDefinition",
+    "BoletinTemplateConfig",
+    "CapacidadHospitalaria",
+    "VirusRespiratorio",
     # Features
     "DashboardChart",
     "ProcessingJob",

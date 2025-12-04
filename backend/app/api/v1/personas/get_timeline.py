@@ -4,7 +4,7 @@ Timeline completo de TODOS los eventos y actividades de una persona.
 """
 
 import logging
-from datetime import date, datetime
+from datetime import date
 from typing import Any, Dict, List, Optional
 
 from fastapi import Depends, HTTPException, Path, status
@@ -17,12 +17,12 @@ from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User
-from app.domains.sujetos_epidemiologicos.ciudadanos_models import Ciudadano
-from app.domains.sujetos_epidemiologicos.animales_models import Animal
 from app.domains.eventos_epidemiologicos.eventos.models import (
     DetalleEventoSintomas,
     Evento,
 )
+from app.domains.sujetos_epidemiologicos.animales_models import Animal
+from app.domains.sujetos_epidemiologicos.ciudadanos_models import Ciudadano
 
 
 class TimelineItem(BaseModel):

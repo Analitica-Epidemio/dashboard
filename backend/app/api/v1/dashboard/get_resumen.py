@@ -7,7 +7,7 @@ from datetime import date
 from typing import Any, Dict, List, Optional
 
 from fastapi import Depends, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,7 +17,7 @@ from app.core.security import RequireAuthOrSignedUrl
 from app.domains.autenticacion.models import User
 from app.domains.eventos_epidemiologicos.eventos.models import Evento, GrupoEno, TipoEno
 from app.domains.sujetos_epidemiologicos.ciudadanos_models import Ciudadano
-from app.domains.territorio.geografia_models import Provincia, Departamento, Localidad
+from app.domains.territorio.geografia_models import Departamento, Localidad, Provincia
 
 logger = logging.getLogger(__name__)
 
@@ -321,7 +321,7 @@ async def get_dashboard_resumen(
         )
         .join(
             Departamento,
-            Localidad.id_departamento == Departamento.id
+            Localidad.id_departamento_indec == Departamento.id_departamento_indec
         )
         .join(
             Provincia,

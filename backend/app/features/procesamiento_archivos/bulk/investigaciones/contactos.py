@@ -11,12 +11,11 @@ from app.domains.atencion_medica.investigaciones_models import ContactosNotifica
 
 from ...config.columns import Columns
 from ..shared import (
-    BulkProcessorBase,
     BulkOperationResult,
-    pl_safe_int,
-    pl_clean_string,
-    pl_map_boolean,
+    BulkProcessorBase,
     get_current_timestamp,
+    pl_map_boolean,
+    pl_safe_int,
 )
 
 

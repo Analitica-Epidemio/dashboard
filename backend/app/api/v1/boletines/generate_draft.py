@@ -1,12 +1,16 @@
 """
-Generate draft boletin - genera borrador de boletín basado en analytics
+Generate draft boletin - genera borrador de boletín basado en configuración DB.
+
+REFACTORIZADO: Sistema configurable con queries y renderers reutilizables.
 """
 
+import json
 import logging
-from datetime import datetime
-from typing import Optional
+from datetime import date, datetime
+from typing import Any, Optional
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.analytics.period_utils import get_epi_week_dates
@@ -19,9 +23,9 @@ from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAuthOrSignedUrl
 from app.domains.autenticacion.models import User
-from app.domains.boletines.models import BoletinInstance
-from app.services.snippet_renderer import snippet_renderer
-from sqlalchemy import select, text
+from app.domains.boletines.models import BoletinInstance, BoletinTemplateConfig
+from app.services.boletin_block_renderer import BoletinBlockRenderer
+from app.services.boletin_query_service import BoletinQueryService
 
 logger = logging.getLogger(__name__)
 
@@ -32,23 +36,751 @@ async def generate_draft(
     current_user: Optional[User] = RequireAuthOrSignedUrl
 ) -> SuccessResponse[GenerateDraftResponse]:
     """
-    Genera un borrador de boletín epidemiológico automático.
+    Genera un borrador de boletín epidemiológico usando configuración desde DB.
+
+    El template usa formato unificado: bloques dinámicos embebidos en
+    static_content_template como nodos TipTap tipo 'dynamicBlock'.
 
     Proceso:
-    1. Calcula período de análisis
-    2. Para cada evento seleccionado, obtiene sus datos
-    3. Renderiza snippets correspondientes
-    4. Ensambla contenido HTML compatible con TipTap
-    5. Crea BoletinInstance en DB con status 'draft'
-    6. Retorna ID + contenido generado
+    1. Cargar BoletinTemplateConfig (singleton)
+    2. Construir contexto con variables Jinja2
+    3. Procesar template: reemplazar variables y ejecutar bloques dinámicos
+    4. Validar contenido generado
+    5. Crear BoletinInstance en DB
+
+    Args:
+        request: Parámetros de generación (semana, año, eventos)
+        db: Sesión de base de datos
+        current_user: Usuario autenticado
+
+    Returns:
+        SuccessResponse con boletin_instance_id, content y warnings
     """
 
     logger.info(
-        f"Generando borrador de boletín - Semana {request.semana}/{request.anio}, "
+        f"Generando borrador de boletín - SE {request.semana}/{request.anio}, "
         f"{len(request.eventos_seleccionados)} eventos"
     )
 
-    # 1. Calcular período de análisis
+    try:
+        # 1. Cargar configuración del template
+        config = await get_template_config(db)
+        if not config:
+            raise HTTPException(
+                status_code=500,
+                detail="No se encontró configuración de template. Ejecute el seed primero."
+            )
+
+        # 2. Construir contexto Jinja2
+        context = build_context(request)
+
+        # 3. Procesar template unificado
+        static_template = config.static_content_template or {"type": "doc", "content": []}
+        event_template = config.event_section_template or None
+        final_content, validation_warnings = await process_unified_template(
+            db=db,
+            template=static_template,
+            request=request,
+            context=context,
+            event_template=event_template
+        )
+
+        # 7. Guardar instancia
+        boletin = await save_boletin_instance(
+            db=db,
+            request=request,
+            content=final_content,
+            context=context,
+            current_user=current_user
+        )
+
+        logger.info(f"✓ Boletín generado exitosamente: ID {boletin.id}")
+
+        # 8. Preparar metadata
+        metadata = BoletinMetadata(
+            periodo_analisis={
+                "semana_inicio": context["semana_inicio"],
+                "semana_fin": context["semana"],
+                "anio": context["anio"],
+                "fecha_inicio": context["fecha_inicio"],
+                "fecha_fin": context["fecha_fin"],
+                "num_semanas": request.num_semanas
+            },
+            eventos_incluidos=[
+                {
+                    "tipo_eno_id": e.tipo_eno_id,
+                    "incluir_charts": e.incluir_charts
+                }
+                for e in request.eventos_seleccionados
+            ],
+            fecha_generacion=datetime.utcnow()
+        )
+
+        return SuccessResponse(
+            data=GenerateDraftResponse(
+                boletin_instance_id=boletin.id,
+                content=json.dumps(final_content),  # TipTap JSON como string
+                metadata=metadata,
+                warnings=validation_warnings
+            )
+        )
+
+    except Exception as e:
+        logger.error(f"Error generando borrador: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al generar borrador: {str(e)}"
+        )
+
+
+# ==================== HELPER FUNCTIONS ====================
+
+
+def _calculate_previous_period(
+    fecha_inicio: "date",
+    fecha_fin: "date"
+) -> tuple["date", "date"]:
+    """
+    Calcula el período anterior equivalente al período dado.
+
+    Por ejemplo, si el período actual es de 4 semanas (28 días),
+    el período anterior serán las 4 semanas inmediatamente anteriores.
+
+    Args:
+        fecha_inicio: Fecha inicio del período actual
+        fecha_fin: Fecha fin del período actual
+
+    Returns:
+        Tuple (fecha_inicio_anterior, fecha_fin_anterior)
+    """
+    from datetime import timedelta
+
+    dias_periodo = (fecha_fin - fecha_inicio).days + 1
+    fecha_fin_anterior = fecha_inicio - timedelta(days=1)
+    fecha_inicio_anterior = fecha_fin_anterior - timedelta(days=dias_periodo - 1)
+
+    return (fecha_inicio_anterior, fecha_fin_anterior)
+
+
+async def process_unified_template(
+    db: AsyncSession,
+    template: dict[str, Any],
+    request: "GenerateDraftRequest",
+    context: dict[str, Any],
+    event_template: Optional[dict[str, Any]] = None
+) -> tuple[dict[str, Any], list[str]]:
+    """
+    Procesa un template en formato unificado (bloques embebidos en TipTap).
+
+    Recorre el documento TipTap y reemplaza cada nodo 'dynamicBlock'
+    con el contenido renderizado correspondiente.
+
+    También maneja `selectedEventsPlaceholder`: lo reemplaza con secciones
+    renderizadas para cada evento seleccionado usando `event_template`.
+
+    Args:
+        db: Sesión de base de datos
+        template: TipTap JSON con bloques embebidos
+        request: Parámetros de generación
+        context: Contexto con variables
+        event_template: Template de sección de evento (se repite por cada evento)
+
+    Returns:
+        Tuple de (contenido procesado, warnings)
+    """
+    from copy import deepcopy
+
+    query_service = BoletinQueryService()
+    renderer = BoletinBlockRenderer()
+    warnings = []
+
+    logger.info("=" * 60)
+    logger.info("PROCESANDO TEMPLATE UNIFICADO")
+    logger.info(f"  - Contexto disponible: {list(context.keys())}")
+    logger.info(f"  - Eventos seleccionados: {len(request.eventos_seleccionados)}")
+    logger.info(f"  - Event template presente: {event_template is not None}")
+    logger.info("=" * 60)
+
+    # Trabajar con una copia
+    result = deepcopy(template)
+    new_content = []
+
+    total_nodes = len(result.get("content", []))
+    for idx, node in enumerate(result.get("content", [])):
+        node_type = node.get("type")
+
+        logger.debug(f"[{idx+1}/{total_nodes}] Procesando nodo tipo: {node_type}")
+
+        if node_type == "selectedEventsPlaceholder":
+            # ════════════════════════════════════════════════════════════════
+            # PLACEHOLDER: Expandir template de evento para cada evento seleccionado
+            # ════════════════════════════════════════════════════════════════
+            logger.info("─" * 50)
+            logger.info("📋 ENCONTRADO: selectedEventsPlaceholder")
+
+            if not event_template:
+                logger.warning("⚠️  No hay event_template definido - saltando placeholder")
+                new_content.append({
+                    "type": "paragraph",
+                    "content": [{"type": "text", "text": "⚠️ No hay template de evento configurado"}]
+                })
+                warnings.append("No hay template de evento configurado")
+                continue
+
+            if not request.eventos_seleccionados:
+                logger.warning("⚠️  No hay eventos seleccionados - saltando placeholder")
+                new_content.append({
+                    "type": "paragraph",
+                    "content": [{"type": "text", "text": "ℹ️ No se seleccionaron eventos para incluir"}]
+                })
+                continue
+
+            logger.info(f"🔄 Expandiendo placeholder para {len(request.eventos_seleccionados)} eventos")
+
+            for evento_idx, evento in enumerate(request.eventos_seleccionados):
+                logger.info(f"  [{evento_idx+1}/{len(request.eventos_seleccionados)}] Procesando evento ID: {evento.tipo_eno_id}")
+                try:
+                    # Obtener info del evento
+                    evento_info = await get_evento_info(db, evento.tipo_eno_id)
+                    if not evento_info:
+                        logger.warning(f"    ⚠️ Evento {evento.tipo_eno_id} no encontrado en DB")
+                        warnings.append(f"Evento {evento.tipo_eno_id} no encontrado")
+                        new_content.append({
+                            "type": "paragraph",
+                            "content": [{"type": "text", "text": f"⚠️ Evento ID {evento.tipo_eno_id} no encontrado"}]
+                        })
+                        continue
+
+                    logger.info(f"    ✓ Evento: {evento_info.get('nombre')} (código: {evento_info.get('codigo')})")
+
+                    # Crear contexto específico para este evento
+                    evento_context = context.copy()
+                    evento_context.update({
+                        # Variables con nombres explícitos para templates
+                        "nombre_evento_sanitario": evento_info.get("nombre", f"Evento {evento.tipo_eno_id}"),
+                        "codigo_evento_snvs": evento_info.get("codigo", str(evento.tipo_eno_id)),
+                        # Variables internas (compatibilidad)
+                        "tipo_evento": evento_info.get("nombre", f"Evento {evento.tipo_eno_id}"),
+                        "evento_codigo": evento_info.get("codigo", str(evento.tipo_eno_id)),
+                        "evento_id": evento.tipo_eno_id,
+                    })
+
+                    # Obtener análisis de tendencia para este evento
+                    logger.info("    📊 Analizando tendencia...")
+                    trend_analysis = await analyze_event_trend(
+                        db=db,
+                        query_service=query_service,
+                        evento_id=evento.tipo_eno_id,
+                        context=evento_context
+                    )
+                    evento_context.update(trend_analysis)
+                    logger.info(f"    ✓ Tendencia: {trend_analysis.get('tendencia_tipo', 'N/A')} ({trend_analysis.get('casos_semana_actual', 0)} casos)")
+
+                    # Log de variables disponibles para este evento
+                    logger.info("    📝 Variables de evento disponibles:")
+                    for key in ['nombre_evento_sanitario', 'codigo_evento_snvs', 'descripcion_tendencia_casos',
+                                'casos_semana_actual', 'casos_semana_anterior', 'porcentaje_cambio']:
+                        val = evento_context.get(key, '[NO DEFINIDA]')
+                        logger.info(f"       - {key}: {str(val)[:60]}{'...' if len(str(val)) > 60 else ''}")
+
+                    # Procesar template de evento recursivamente
+                    logger.info("    🔧 Procesando template de evento...")
+                    event_content, event_warnings = await process_event_template(
+                        db=db,
+                        event_template=event_template,
+                        evento_context=evento_context,
+                        query_service=query_service,
+                        renderer=renderer
+                    )
+
+                    if event_content:
+                        logger.info(f"    ✓ Template procesado: {len(event_content)} nodos generados")
+                        new_content.extend(event_content)
+                    else:
+                        logger.warning("    ⚠️ Template no generó contenido")
+                        new_content.append({
+                            "type": "paragraph",
+                            "content": [{"type": "text", "text": f"ℹ️ Sin datos para {evento_info.get('nombre')}"}]
+                        })
+
+                    if event_warnings:
+                        logger.warning(f"    ⚠️ Warnings: {event_warnings}")
+                    warnings.extend(event_warnings)
+
+                except Exception as e:
+                    logger.error(f"    ❌ Error procesando evento {evento.tipo_eno_id}: {e}", exc_info=True)
+                    warnings.append(f"Error en evento {evento.tipo_eno_id}: {str(e)}")
+                    new_content.append({
+                        "type": "paragraph",
+                        "content": [{"type": "text", "text": f"⚠️ Error procesando evento: {str(e)}"}]
+                    })
+
+        elif node_type == "dynamicBlock":
+            # Extraer configuración del bloque
+            attrs = node.get("attrs", {})
+            block_id = attrs.get("blockId", f"block_{id(node)}")
+            query_type = attrs.get("queryType", "")
+            render_type = attrs.get("renderType", "table")
+            query_params = attrs.get("queryParams", {})
+            render_config = attrs.get("config", {})
+
+            logger.info("─" * 50)
+            logger.info(f"📊 BLOQUE DINÁMICO: {block_id}")
+            logger.info(f"   Query: {query_type}, Render: {render_type}")
+
+            try:
+                # Actualizar context con tipo_evento del bloque si aplica
+                block_context = context.copy()
+                if "tipo_evento" in query_params:
+                    block_context["tipo_evento"] = query_params["tipo_evento"]
+                if "num_semanas" in query_params:
+                    block_context["num_semanas"] = query_params["num_semanas"]
+
+                # Merge render_config into query_params so execute_query can access chart_type, series, etc.
+                merged_query_params = query_params.copy()
+                merged_query_params["config"] = render_config
+
+                # Ejecutar query
+                logger.info("   Ejecutando query...")
+                data = await execute_query(
+                    db=db,
+                    query_service=query_service,
+                    query_type=query_type,
+                    query_params=merged_query_params,
+                    context=block_context
+                )
+
+                # Verificar si hay data
+                if not data or (isinstance(data, (list, dict)) and len(data) == 0):
+                    logger.warning("   ⚠️ Query no retornó datos")
+                    titulo = render_config.get("titulo", block_id)
+                    # Reemplazar variables en el título
+                    titulo = replace_template_variables_in_string(titulo, block_context)
+                    new_content.append({
+                        "type": "paragraph",
+                        "content": [{"type": "text", "text": f"ℹ️ {titulo}: Sin datos disponibles para el período seleccionado"}]
+                    })
+                    continue
+
+                logger.info(f"   ✓ Query retornó datos: {type(data).__name__}")
+
+                # Renderizar bloque
+                rendered = render_block(
+                    renderer=renderer,
+                    render_type=render_type,
+                    data=data,
+                    render_config=render_config,
+                    context=block_context
+                )
+
+                # Extraer contenido del bloque renderizado y agregar al documento
+                if isinstance(rendered, dict) and "content" in rendered:
+                    logger.info(f"   ✓ Renderizado: {len(rendered['content'])} nodos")
+                    new_content.extend(rendered["content"])
+                elif isinstance(rendered, dict):
+                    logger.info("   ✓ Renderizado como nodo único")
+                    new_content.append(rendered)
+                else:
+                    logger.warning("   ⚠️ Bloque no generó contenido válido")
+                    warnings.append(f"Bloque '{block_id}' no generó contenido válido")
+
+            except Exception as e:
+                logger.error(f"   ❌ Error procesando bloque '{block_id}': {e}", exc_info=True)
+                warnings.append(f"Error en bloque '{block_id}': {str(e)}")
+                # Agregar un placeholder de error
+                new_content.append({
+                    "type": "paragraph",
+                    "content": [{"type": "text", "text": f"⚠️ Error en {block_id}: {str(e)}"}]
+                })
+        else:
+            # Nodo normal: aplicar reemplazo de variables si es texto
+            processed_node = replace_template_variables_in_node(node, context, log_replacements=True)
+            new_content.append(processed_node)
+
+    logger.info("=" * 60)
+    logger.info(f"✓ TEMPLATE PROCESADO: {len(new_content)} nodos finales")
+    if warnings:
+        logger.warning(f"⚠️ Warnings totales: {len(warnings)}")
+    logger.info("=" * 60)
+
+    result["content"] = new_content
+    return result, warnings
+
+
+async def get_evento_info(db: AsyncSession, evento_id: int) -> Optional[dict[str, Any]]:
+    """
+    Obtiene información de un evento/tipo ENO.
+
+    Args:
+        db: Sesión de base de datos
+        evento_id: ID del tipo de ENO
+
+    Returns:
+        Dict con nombre, código, etc. del evento
+    """
+    from app.domains.eventos_epidemiologicos.eventos.models import TipoEno
+
+    stmt = select(TipoEno).where(TipoEno.id == evento_id)
+    result = await db.execute(stmt)
+    tipo_eno = result.scalar_one_or_none()
+
+    if tipo_eno:
+        return {
+            "id": tipo_eno.id,
+            "nombre": tipo_eno.nombre,
+            "codigo": tipo_eno.codigo if hasattr(tipo_eno, "codigo") else str(tipo_eno.id),
+        }
+    return None
+
+
+async def analyze_event_trend(
+    db: AsyncSession,
+    query_service: BoletinQueryService,
+    evento_id: int,
+    context: dict[str, Any]
+) -> dict[str, Any]:
+    """
+    Analiza la tendencia de un evento comparando semana actual vs anterior.
+
+    Genera texto descriptivo como:
+    - "Se observa un incremento del 25% respecto a la semana anterior"
+    - "Los casos disminuyeron un 10% comparado con SE {{ semana_anterior }}"
+
+    Args:
+        db: Sesión de base de datos
+        query_service: Servicio de queries
+        evento_id: ID del evento
+        context: Contexto con semana, año, etc.
+
+    Returns:
+        Dict con variables de tendencia para usar en templates
+    """
+    try:
+        # Obtener casos de semana actual
+        casos_actual = await query_service.query_casos_semana(
+            db=db,
+            evento_id=evento_id,
+            semana=context["semana"],
+            anio=context["anio"]
+        )
+
+        # Calcular semana anterior
+        semana_anterior = context["semana"] - 1
+        anio_anterior = context["anio"]
+        if semana_anterior < 1:
+            semana_anterior = 52
+            anio_anterior -= 1
+
+        # Obtener casos de semana anterior
+        casos_anterior = await query_service.query_casos_semana(
+            db=db,
+            evento_id=evento_id,
+            semana=semana_anterior,
+            anio=anio_anterior
+        )
+
+        # Calcular diferencia y porcentaje
+        diferencia = casos_actual - casos_anterior
+        if casos_anterior > 0:
+            porcentaje_cambio = ((casos_actual - casos_anterior) / casos_anterior) * 100
+        else:
+            porcentaje_cambio = 100 if casos_actual > 0 else 0
+
+        # Generar texto descriptivo
+        if abs(porcentaje_cambio) < 5:
+            tendencia_texto = f"Se mantiene estable respecto a la SE {semana_anterior} ({casos_anterior} casos)"
+            tendencia_tipo = "estable"
+        elif porcentaje_cambio > 0:
+            tendencia_texto = (
+                f"Se observa un incremento del {abs(porcentaje_cambio):.0f}% respecto a la "
+                f"SE {semana_anterior} ({casos_anterior} → {casos_actual} casos)"
+            )
+            tendencia_tipo = "aumento"
+        else:
+            tendencia_texto = (
+                f"Se observa una disminución del {abs(porcentaje_cambio):.0f}% respecto a la "
+                f"SE {semana_anterior} ({casos_anterior} → {casos_actual} casos)"
+            )
+            tendencia_tipo = "descenso"
+
+        return {
+            "casos_semana_actual": casos_actual,
+            "casos_semana_anterior": casos_anterior,
+            "semana_anterior": semana_anterior,
+            "anio_semana_anterior": anio_anterior,
+            "diferencia_casos": diferencia,
+            "porcentaje_cambio": porcentaje_cambio,
+            # Variable con nombre explícito para templates
+            "descripcion_tendencia_casos": tendencia_texto,
+            # Mantener compatibilidad
+            "tendencia_texto": tendencia_texto,
+            "tendencia_tipo": tendencia_tipo,
+        }
+
+    except Exception as e:
+        logger.warning(f"Error analizando tendencia para evento {evento_id}: {e}")
+        return {
+            "casos_semana_actual": 0,
+            "casos_semana_anterior": 0,
+            "descripcion_tendencia_casos": "Datos de tendencia no disponibles",
+            "tendencia_texto": "Datos de tendencia no disponibles",
+            "tendencia_tipo": "desconocido",
+        }
+
+
+async def process_event_template(
+    db: AsyncSession,
+    event_template: dict[str, Any],
+    evento_context: dict[str, Any],
+    query_service: BoletinQueryService,
+    renderer: BoletinBlockRenderer
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """
+    Procesa el template de un evento específico.
+
+    Args:
+        db: Sesión de base de datos
+        event_template: Template TipTap de la sección de evento
+        evento_context: Contexto con variables del evento
+        query_service: Servicio de queries
+        renderer: Renderer de bloques
+
+    Returns:
+        Tuple de (lista de nodos procesados, warnings)
+    """
+    from copy import deepcopy
+
+    warnings = []
+    processed_nodes = []
+
+    template_content = event_template.get("content", [])
+    evento_nombre = evento_context.get("nombre_evento_sanitario", "Evento")
+
+    logger.info(f"      📄 Procesando {len(template_content)} nodos del template para '{evento_nombre}'")
+
+    for node_idx, node in enumerate(template_content):
+        node_type = node.get("type")
+        logger.debug(f"      [{node_idx+1}/{len(template_content)}] Nodo tipo: {node_type}")
+
+        if node_type == "dynamicBlock":
+            attrs = node.get("attrs", {})
+            block_id = attrs.get("blockId", "")
+            query_type = attrs.get("queryType", "")
+            render_type = attrs.get("renderType", "table")
+            query_params = attrs.get("queryParams", {})
+            render_config = attrs.get("config", {})
+
+            # Reemplazar variables en block_id y config
+            block_id = replace_template_variables_in_string(block_id, evento_context)
+            render_config = replace_template_variables_in_node(render_config, evento_context)
+
+            logger.info(f"      📊 Bloque dinámico: {block_id} (query: {query_type})")
+
+            # Agregar evento_id a query_params y merge render_config
+            query_params = query_params.copy()
+            query_params["tipo_evento"] = evento_context.get("tipo_evento")
+            query_params["evento_id"] = evento_context.get("evento_id")
+            query_params["config"] = render_config  # Include config for chart_type, series, etc.
+
+            try:
+                data = await execute_query(
+                    db=db,
+                    query_service=query_service,
+                    query_type=query_type,
+                    query_params=query_params,
+                    context=evento_context,
+                    evento_id=evento_context.get("evento_id")
+                )
+
+                # Verificar si hay data
+                if not data or (isinstance(data, (list, dict)) and len(data) == 0):
+                    logger.warning(f"      ⚠️ Sin datos para {block_id}")
+                    titulo = render_config.get("titulo", block_id) if isinstance(render_config, dict) else block_id
+                    # Reemplazar variables Jinja2 en el título
+                    titulo = replace_template_variables_in_string(titulo, evento_context)
+                    processed_nodes.append({
+                        "type": "paragraph",
+                        "content": [{"type": "text", "text": f"ℹ️ {titulo}: Sin datos disponibles"}]
+                    })
+                    continue
+
+                rendered = render_block(
+                    renderer=renderer,
+                    render_type=render_type,
+                    data=data,
+                    render_config=render_config,
+                    context=evento_context,
+                    evento_id=evento_context.get("evento_id")
+                )
+
+                if isinstance(rendered, dict) and "content" in rendered:
+                    logger.info(f"      ✓ Bloque renderizado: {len(rendered['content'])} nodos")
+                    processed_nodes.extend(rendered["content"])
+                elif isinstance(rendered, dict):
+                    processed_nodes.append(rendered)
+                else:
+                    logger.warning("      ⚠️ Bloque no generó contenido")
+
+            except Exception as e:
+                logger.error(f"      ❌ Error en bloque {block_id}: {e}", exc_info=True)
+                warnings.append(f"Error en {block_id}: {str(e)}")
+                processed_nodes.append({
+                    "type": "paragraph",
+                    "content": [{"type": "text", "text": f"⚠️ Error en {block_id}: {str(e)}"}]
+                })
+        else:
+            # Nodo normal - reemplazar variables
+            logger.debug(f"      Procesando nodo {node_type} con reemplazo de variables")
+            processed_node = replace_template_variables_in_node(deepcopy(node), evento_context, log_replacements=True)
+            processed_nodes.append(processed_node)
+
+    logger.info(f"      ✓ Template de evento procesado: {len(processed_nodes)} nodos resultantes")
+    return processed_nodes, warnings
+
+
+def replace_template_variables_in_string(text: str, context: dict[str, Any]) -> str:
+    """Reemplaza variables Jinja2 en un string."""
+    from jinja2 import BaseLoader, Environment
+
+    if "{{" not in text and "{%" not in text:
+        return text
+
+    try:
+        env = Environment(loader=BaseLoader(), autoescape=False)
+        template = env.from_string(text)
+        return template.render(**context)
+    except Exception:
+        return text
+
+
+def replace_template_variables_in_node(node: dict[str, Any], context: dict[str, Any], log_replacements: bool = False) -> dict[str, Any]:
+    """
+    Reemplaza variables Jinja2 en un nodo TipTap recursivamente.
+
+    También convierte nodos `variableNode` a texto con el valor real de la variable.
+
+    Args:
+        node: Nodo TipTap
+        context: Contexto con variables
+        log_replacements: Si es True, loguea cada reemplazo de variable
+
+    Returns:
+        Nodo con variables reemplazadas
+    """
+    from copy import deepcopy
+
+    from jinja2 import BaseLoader, Environment
+
+    env = Environment(loader=BaseLoader(), autoescape=False)
+    replacements_made = []
+
+    def process_node(n: dict[str, Any]) -> dict[str, Any]:
+        """Procesa un nodo, convirtiendo variableNode a texto."""
+        if not isinstance(n, dict):
+            return n
+
+        node_type = n.get("type")
+
+        # ═══════════════════════════════════════════════════════════════════
+        # Caso especial: variableNode -> convertir a texto con valor real
+        # ═══════════════════════════════════════════════════════════════════
+        if node_type == "variableNode":
+            attrs = n.get("attrs", {})
+            variable_key = attrs.get("variableKey", "")
+
+            # Buscar el valor en el contexto
+            value = context.get(variable_key)
+
+            if value is not None:
+                # Convertir a string si no lo es
+                value_str = str(value)
+                replacements_made.append((variable_key, value_str[:50]))
+                logger.debug(f"   🔄 variableNode '{variable_key}' → '{value_str[:50]}{'...' if len(value_str) > 50 else ''}'")
+                return {
+                    "type": "text",
+                    "text": value_str
+                }
+            else:
+                # Variable no encontrada - dejar placeholder legible
+                logger.warning(f"   ⚠️ variableNode '{variable_key}' NO encontrada en contexto. Claves disponibles: {list(context.keys())[:10]}...")
+                return {
+                    "type": "text",
+                    "text": f"[{variable_key}]"
+                }
+
+        # ═══════════════════════════════════════════════════════════════════
+        # Nodos normales: procesar recursivamente
+        # ═══════════════════════════════════════════════════════════════════
+        result = {}
+        for key, value in n.items():
+            if key == "content" and isinstance(value, list):
+                # Procesar lista de nodos hijos
+                result[key] = [process_node(child) if isinstance(child, dict) else child for child in value]
+            elif key == "text" and isinstance(value, str):
+                # Reemplazar variables Jinja2 en texto
+                if "{{" in value or "{%" in value:
+                    try:
+                        template = env.from_string(value)
+                        rendered = template.render(**context)
+                        if rendered != value:
+                            logger.debug(f"   🔄 Jinja2: '{value[:30]}...' → '{rendered[:30]}...'")
+                        result[key] = rendered
+                    except Exception as e:
+                        logger.warning(f"   ⚠️ Error Jinja2 en '{value[:30]}': {e}")
+                        result[key] = value
+                else:
+                    result[key] = value
+            elif isinstance(value, dict):
+                result[key] = process_node(value)
+            elif isinstance(value, list):
+                result[key] = [process_node(item) if isinstance(item, dict) else item for item in value]
+            else:
+                result[key] = value
+
+        return result
+
+    processed = process_node(deepcopy(node))
+
+    if log_replacements and replacements_made:
+        logger.info(f"   📝 Variables reemplazadas: {len(replacements_made)}")
+
+    return processed
+
+
+async def get_template_config(db: AsyncSession) -> Optional[BoletinTemplateConfig]:
+    """
+    Obtiene la configuración del template (singleton, id=1).
+
+    Args:
+        db: Sesión de base de datos
+
+    Returns:
+        BoletinTemplateConfig o None si no existe
+    """
+    stmt = select(BoletinTemplateConfig).where(BoletinTemplateConfig.id == 1)
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()
+
+
+def build_context(request: GenerateDraftRequest) -> dict[str, Any]:
+    """
+    Construye el contexto con variables para templates.
+
+    Args:
+        request: Parámetros de generación
+
+    Returns:
+        Dict con todas las variables disponibles para reemplazo.
+
+        Variables generadas (con ejemplos):
+        - anio_epidemiologico: "2025"
+        - semana_epidemiologica_actual: "45"
+        - semana_epidemiologica_inicio: "1"
+        - fecha_inicio_semana_epidemiologica: "04/11/2025"
+        - fecha_fin_semana_epidemiologica: "10/11/2025"
+        - num_semanas_analizadas: 4
+    """
+    # Calcular período de análisis
     semana_inicio = request.semana - request.num_semanas + 1
     anio_inicio = request.anio
 
@@ -59,69 +791,799 @@ async def generate_draft(
     fecha_inicio, _ = get_epi_week_dates(semana_inicio, anio_inicio)
     _, fecha_fin = get_epi_week_dates(request.semana, request.anio)
 
-    periodo_analisis = {
-        "semana_inicio": semana_inicio,
-        "semana_fin": request.semana,
+    # Formato de fecha legible (DD/MM/YYYY)
+    fecha_inicio_str = fecha_inicio.strftime("%d/%m/%Y")
+    fecha_fin_str = fecha_fin.strftime("%d/%m/%Y")
+
+    return {
+        # Variables con nombres explícitos (nuevas)
+        "anio_epidemiologico": request.anio,
+        "semana_epidemiologica_actual": request.semana,
+        "semana_epidemiologica_inicio": semana_inicio,
+        "fecha_inicio_semana_epidemiologica": fecha_inicio_str,
+        "fecha_fin_semana_epidemiologica": fecha_fin_str,
+        "num_semanas_analizadas": request.num_semanas,
+
+        # Variables internas (para queries, no para templates)
+        "semana": request.semana,  # Mantener para compatibilidad con queries
         "anio": request.anio,
+        "semana_inicio": semana_inicio,
+        "anio_inicio": anio_inicio,
+        "num_semanas": request.num_semanas,
         "fecha_inicio": fecha_inicio.isoformat(),
         "fecha_fin": fecha_fin.isoformat(),
-        "num_semanas": request.num_semanas
+        "fecha_inicio_obj": fecha_inicio,
+        "fecha_fin_obj": fecha_fin,
+        "titulo_custom": request.titulo_custom,
+        "eventos_seleccionados": request.eventos_seleccionados
     }
 
-    # 2. Obtener datos de cada evento seleccionado
-    eventos_data = []
 
-    for evento_sel in request.eventos_seleccionados:
-        # Query para obtener datos del evento
-        query = text("""
-            SELECT
-                te.id as tipo_eno_id,
-                te.nombre as tipo_eno_nombre,
-                ge.id as grupo_eno_id,
-                ge.nombre as grupo_eno_nombre,
-                COUNT(DISTINCT e.id) as casos_actuales
-            FROM evento e
-            INNER JOIN tipo_eno te ON e.id_tipo_eno = te.id
-            INNER JOIN tipo_eno_grupo_eno tege ON te.id = tege.id_tipo_eno
-            INNER JOIN grupo_eno ge ON tege.id_grupo_eno = ge.id
-            WHERE te.id = :tipo_eno_id
-                AND e.fecha_minima_evento >= :fecha_inicio
-                AND e.fecha_minima_evento <= :fecha_fin
-            GROUP BY te.id, te.nombre, ge.id, ge.nombre
-        """)
+async def resolve_tipo_eno_codigos(
+    db: AsyncSession,
+    codigos: list[str]
+) -> list[int]:
+    """
+    Resuelve códigos kebab-case de tipo_eno a IDs numéricos.
 
-        result = await db.execute(query, {
-            "tipo_eno_id": evento_sel.tipo_eno_id,
-            "fecha_inicio": fecha_inicio,
-            "fecha_fin": fecha_fin
-        })
-        row = result.fetchone()
+    Args:
+        db: Sesión de base de datos
+        codigos: Lista de códigos (ej: ["dengue", "fiebre-chikungunya"])
 
-        if row:
-            eventos_data.append({
-                "tipo_eno_id": row.tipo_eno_id,
-                "tipo_eno_nombre": row.tipo_eno_nombre,
-                "grupo_eno_id": row.grupo_eno_id,
-                "grupo_eno_nombre": row.grupo_eno_nombre,
-                "casos_actuales": int(row.casos_actuales),
-                "incluir_charts": evento_sel.incluir_charts
+    Returns:
+        Lista de IDs correspondientes
+    """
+    from app.domains.eventos_epidemiologicos.eventos.models import TipoEno
+
+    if not codigos:
+        return []
+
+    stmt = select(TipoEno.id, TipoEno.codigo).where(TipoEno.codigo.in_(codigos))
+    result = await db.execute(stmt)
+    rows = result.fetchall()
+
+    # Mapear código → id
+    codigo_to_id = {row.codigo: row.id for row in rows}
+
+    # Mantener orden original y advertir sobre códigos no encontrados
+    ids = []
+    for codigo in codigos:
+        if codigo in codigo_to_id:
+            ids.append(codigo_to_id[codigo])
+        else:
+            logger.warning(f"Código tipo_eno no encontrado: '{codigo}'")
+
+    return ids
+
+
+async def resolve_series_config(
+    db: AsyncSession,
+    series_config: list[dict[str, Any]],
+    agrupar_por: Optional[str],
+) -> list[dict[str, Any]]:
+    """
+    Resuelve la configuración de series con estructura "valores".
+
+    Estructura de serie:
+    {
+        "label": "Influenza A",
+        "color": "#F44336",
+        "valores": ["influenza-a-h1n1", "influenza-a-h3n2"]  # Se suman estos
+    }
+
+    Args:
+        db: Sesión de base de datos
+        series_config: Configuración de series del seed
+        agrupar_por: "evento" | "agente" | None
+
+    Returns:
+        Lista de series resueltas con IDs numéricos (tipo_eno_ids) o códigos (agente_codigos)
+    """
+    resolved_series = []
+
+    if not series_config:
+        return resolved_series
+
+    for serie in series_config:
+        valores = serie.get("valores", [])
+        label = serie.get("label", "Serie")
+        color = serie.get("color", "#4CAF50")
+
+        if not valores:
+            continue
+
+        if agrupar_por == "agente":
+            # Para agentes, los valores son códigos de agente directamente
+            resolved_series.append({
+                "agente_codigos": valores,
+                "label": label,
+                "color": color,
+            })
+        else:
+            # Para eventos, resolver códigos a IDs
+            tipo_eno_ids = await resolve_tipo_eno_codigos(db, valores)
+            if tipo_eno_ids:
+                resolved_series.append({
+                    "tipo_eno_ids": tipo_eno_ids,
+                    "label": label,
+                    "color": color,
+                })
+
+    return resolved_series
+
+
+async def execute_query(
+    db: AsyncSession,
+    query_service: BoletinQueryService,
+    query_type: str,
+    query_params: dict[str, Any],
+    context: dict[str, Any],
+    evento_id: Optional[int] = None
+) -> Any:
+    """
+    Ejecuta una query según el tipo configurado.
+
+    Args:
+        db: Sesión de base de datos
+        query_service: Servicio de queries
+        query_type: Tipo de query ("top_enos", "evento_detail", etc.)
+        query_params: Parámetros adicionales de la query
+        context: Contexto con variables
+        evento_id: ID del evento (si aplica)
+
+    Returns:
+        Datos de la query
+    """
+    # ═══════════════════════════════════════════════════════════════════════════
+    # Resolver códigos tipo_eno a IDs (permite usar códigos legibles en templates)
+    # ═══════════════════════════════════════════════════════════════════════════
+    if "tipo_eno_codigos" in query_params:
+        codigos = query_params["tipo_eno_codigos"]
+        if isinstance(codigos, str):
+            codigos = [codigos]
+        resolved_ids = await resolve_tipo_eno_codigos(db, codigos)
+        query_params = query_params.copy()
+        query_params["tipo_eno_ids"] = resolved_ids
+        logger.info(f"Resueltos códigos {codigos} → IDs {resolved_ids}")
+    if query_type == "top_enos":
+        return await query_service.query_top_enos(
+            db=db,
+            limit=query_params.get("limit", 10),
+            fecha_inicio=context["fecha_inicio_obj"],
+            fecha_fin=context["fecha_fin_obj"]
+        )
+
+    elif query_type == "evento_detail":
+        if not evento_id:
+            raise ValueError("evento_id requerido para query_evento_detail")
+        return await query_service.query_evento_detail(
+            db=db,
+            evento_id=evento_id,
+            fecha_inicio=context["fecha_inicio_obj"],
+            fecha_fin=context["fecha_fin_obj"]
+        )
+
+    elif query_type == "capacidad_hospitalaria":
+        return await query_service.query_capacidad_hospitalaria(
+            db=db,
+            semana=context["semana"],
+            anio=context["anio"]
+        )
+
+    elif query_type == "virus_respiratorios":
+        return await query_service.query_virus_respiratorios(
+            db=db,
+            semana=context["semana"],
+            anio=context["anio"]
+        )
+
+    elif query_type == "eventos_agrupados":
+        return await query_service.query_eventos_agrupados(
+            db=db,
+            tipo_evento=query_params.get("tipo_evento", "ETI"),
+            semana=context["semana"],
+            anio=context["anio"],
+            num_semanas=query_params.get("num_semanas", 4)
+        )
+
+    elif query_type == "distribucion_edad":
+        # ═══════════════════════════════════════════════════════════════════════
+        # Distribución por edad (una o múltiples series, agrupado por evento o agente)
+        # Usa series_config con estructura "valores" (array) para agrupar códigos
+        # ═══════════════════════════════════════════════════════════════════════
+        from app.schemas.chart_spec import ChartFilters
+        from app.services.chart_spec_generator import ChartSpecGenerator
+
+        agrupar_por = query_params.get("agrupar_por")  # "evento" | "agente" | None
+
+        # Leer series desde config (render_config)
+        render_config = query_params.get("config", {})
+        series_config = render_config.get("series", []) if isinstance(render_config, dict) else []
+
+        # Resolver series usando estructura con "valores"
+        resolved_series = await resolve_series_config(
+            db=db,
+            series_config=series_config,
+            agrupar_por=agrupar_por,
+        )
+
+        # Si no hay series resueltas y tenemos evento_id, crear serie simple
+        if not resolved_series and evento_id:
+            resolved_series = [{"tipo_eno_ids": [evento_id], "label": "Casos", "color": "#4CAF50"}]
+
+        logger.info(f"distribucion_edad: agrupar_por={agrupar_por}, {len(resolved_series)} series")
+
+        generator = ChartSpecGenerator(db)
+
+        # Extraer todos los IDs de tipo_eno para el filtro (aplanar arrays)
+        all_tipo_eno_ids = []
+        for s in resolved_series:
+            if s.get("tipo_eno_ids"):
+                all_tipo_eno_ids.extend(s["tipo_eno_ids"])
+
+        # Determinar fechas según periodo
+        periodo = query_params.get("periodo", "semana")
+        if periodo == "anual":
+            anio = context.get("anio", 2024)
+            fecha_desde = date(anio, 1, 1).isoformat()
+            fecha_hasta = context.get("fecha_fin")
+        else:
+            fecha_desde = context.get("fecha_inicio")
+            fecha_hasta = context.get("fecha_fin")
+
+        filters = ChartFilters(
+            tipo_eno_ids=all_tipo_eno_ids if all_tipo_eno_ids else ([evento_id] if evento_id else None),
+            fecha_desde=fecha_desde,
+            fecha_hasta=fecha_hasta,
+        )
+
+        try:
+            spec = await generator._generate_casos_por_edad(
+                filters,
+                config=query_params.get("config"),
+                series_config=resolved_series if resolved_series else None,
+                agrupar_por=agrupar_por
+            )
+            return {"spec": spec.model_dump(), "chart_code": "casos_edad"}
+        except Exception as e:
+            logger.warning(f"Error generando spec distribucion_edad: {e}")
+            return {}
+
+    elif query_type == "distribucion_geografica":
+        # Usa ChartSpecGenerator para obtener datos del mapa
+        from app.schemas.chart_spec import ChartFilters
+        from app.services.chart_spec_generator import ChartSpecGenerator
+
+        generator = ChartSpecGenerator(db)
+        filters = ChartFilters(
+            tipo_eno_ids=[evento_id] if evento_id else None,
+            fecha_desde=context.get("fecha_inicio"),
+            fecha_hasta=context.get("fecha_fin"),
+        )
+        try:
+            spec = await generator.generate_spec("mapa_chubut", filters)
+            return {"spec": spec.model_dump(), "chart_code": "mapa_chubut"}
+        except Exception as e:
+            logger.warning(f"Error generando spec distribucion_geografica: {e}")
+            return {}
+
+    elif query_type == "corredor_endemico_chart":
+        # Genera spec para corredor endémico
+        from app.schemas.chart_spec import ChartFilters
+        from app.services.chart_spec_generator import ChartSpecGenerator
+
+        generator = ChartSpecGenerator(db)
+        # Para corredor anual, usar todo el año (SE 1-52)
+        periodo = query_params.get("periodo", "anual")
+        if periodo == "anual":
+            # Corredor de todo el año - calcular fechas de SE 1 a SE actual
+            anio = context.get("anio")
+            semana_actual = context.get("semana", 52)
+            fecha_inicio_anual, _ = get_epi_week_dates(1, anio)
+            _, fecha_fin_anual = get_epi_week_dates(semana_actual, anio)
+            filters = ChartFilters(
+                tipo_eno_ids=[evento_id] if evento_id else None,
+                fecha_desde=fecha_inicio_anual.isoformat(),
+                fecha_hasta=fecha_fin_anual.isoformat(),
+            )
+        else:
+            # Corredor del período seleccionado
+            filters = ChartFilters(
+                tipo_eno_ids=[evento_id] if evento_id else None,
+                fecha_desde=context.get("fecha_inicio"),
+                fecha_hasta=context.get("fecha_fin"),
+            )
+        try:
+            spec = await generator.generate_spec("corredor_endemico", filters)
+            return {"spec": spec.model_dump(), "chart_code": "corredor_endemico"}
+        except Exception as e:
+            logger.warning(f"Error generando spec corredor_endemico: {e}")
+            return {}
+
+    elif query_type == "comparacion_periodos":
+        # Comparación del período actual vs período anterior
+        return await query_service.query_comparacion_periodos(
+            db=db,
+            evento_id=evento_id,
+            periodo_actual=(context["fecha_inicio_obj"], context["fecha_fin_obj"]),
+            periodo_anterior=_calculate_previous_period(
+                context["fecha_inicio_obj"],
+                context["fecha_fin_obj"]
+            )
+        )
+
+    elif query_type == "comparacion_anual":
+        # Comparación año actual vs año anterior (acumulado hasta semana actual)
+        from app.schemas.chart_spec import ChartFilters
+        from app.services.chart_spec_generator import ChartSpecGenerator
+
+        generator = ChartSpecGenerator(db)
+        anio = context.get("anio", date.today().year)
+        semana = context.get("semana", 1)
+
+        # Generar spec de curva epidemiológica comparando años
+        filters = ChartFilters(
+            tipo_eno_ids=[evento_id] if evento_id else None,
+            anio=anio,
+            semana_hasta=semana,
+            comparar_anio_anterior=True
+        )
+        try:
+            spec = await generator.generate_spec("curva_epidemiologica", filters)
+            return {"spec": spec.model_dump(), "chart_code": "curva_epidemiologica_comparada"}
+        except Exception as e:
+            logger.warning(f"Error generando spec comparacion_anual: {e}")
+            # Fallback a datos de query service
+            return await query_service.query_comparacion_periodos(
+                db=db,
+                evento_id=evento_id,
+                periodo_actual=(date(anio, 1, 1), context["fecha_fin_obj"]),
+                periodo_anterior=(date(anio - 1, 1, 1), date(anio - 1, context["fecha_fin_obj"].month, context["fecha_fin_obj"].day))
+            )
+
+    elif query_type == "curva_epidemiologica":
+        # ═══════════════════════════════════════════════════════════════════════
+        # Curva epidemiológica (una o múltiples series, agrupado por evento o agente)
+        # Usa series_config con estructura "valores" (array) para agrupar códigos
+        # ═══════════════════════════════════════════════════════════════════════
+        from app.schemas.chart_spec import ChartFilters
+        from app.services.chart_spec_generator import ChartSpecGenerator
+
+        agrupar_por = query_params.get("agrupar_por")  # "evento" | "agente" | None
+
+        # Leer series desde config (render_config)
+        render_config = query_params.get("config", {})
+        series_config = render_config.get("series", []) if isinstance(render_config, dict) else []
+
+        logger.info(f"curva_epidemiologica: render_config.series={series_config}, agrupar_por={agrupar_por}")
+
+        # Resolver series usando estructura con "valores"
+        resolved_series = await resolve_series_config(
+            db=db,
+            series_config=series_config,
+            agrupar_por=agrupar_por,
+        )
+
+        logger.info(f"curva_epidemiologica: resolved_series={resolved_series}")
+
+        # Si no hay series resueltas y tenemos evento_id, crear serie simple
+        if not resolved_series and evento_id:
+            resolved_series = [{"tipo_eno_ids": [evento_id], "label": "Casos", "color": "rgb(75, 192, 192)"}]
+
+        if not resolved_series:
+            logger.warning("curva_epidemiologica: No hay series válidas (series_config was empty or unresolved)")
+            return {}
+
+        logger.info(f"curva_epidemiologica: agrupar_por={agrupar_por}, {len(resolved_series)} series")
+        logger.info(f"curva_epidemiologica: resolved_series={resolved_series}")
+
+        # Extraer todos los IDs de tipo_eno para el filtro (aplanar arrays)
+        all_tipo_eno_ids = []
+        for s in resolved_series:
+            if s.get("tipo_eno_ids"):
+                all_tipo_eno_ids.extend(s["tipo_eno_ids"])
+
+        # Determinar fechas según periodo
+        periodo = query_params.get("periodo", "semana")
+        if periodo == "anual":
+            # Usar todo el año hasta la fecha actual del boletín
+            anio = context.get("anio", 2024)
+            fecha_desde = date(anio, 1, 1).isoformat()
+            fecha_hasta = context.get("fecha_fin")
+        else:
+            # Usar las fechas del contexto (semana específica)
+            fecha_desde = context.get("fecha_inicio")
+            fecha_hasta = context.get("fecha_fin")
+
+        generator = ChartSpecGenerator(db)
+        filters = ChartFilters(
+            tipo_eno_ids=all_tipo_eno_ids if all_tipo_eno_ids else ([evento_id] if evento_id else None),
+            fecha_desde=fecha_desde,
+            fecha_hasta=fecha_hasta,
+            agrupacion_temporal=query_params.get("agrupacion_temporal", "semana"),
+        )
+
+        try:
+            spec = await generator._generate_curva_epidemiologica(
+                filters,
+                config=query_params.get("config"),
+                series_config=resolved_series,
+                agrupar_por=agrupar_por
+            )
+            return {"spec": spec.model_dump(), "chart_code": "curva_epidemiologica"}
+        except Exception as e:
+            logger.warning(f"Error generando spec curva_epidemiologica: {e}")
+            return {}
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # INSIGHTS AUTO-GENERADOS
+    # Generan texto descriptivo basado en datos estadísticos
+    # ═══════════════════════════════════════════════════════════════════════════
+    elif query_type == "insight_distribucion_edad":
+        from app.services.boletin_insights_service import BoletinInsightsService
+
+        insights_service = BoletinInsightsService(db)
+        return await insights_service.generate_distribucion_edad_insight(
+            evento_id=evento_id,
+            fecha_inicio=context["fecha_inicio_obj"],
+            fecha_fin=context["fecha_fin_obj"],
+            evento_nombre=context.get("nombre_evento_sanitario")
+        )
+
+    elif query_type == "insight_distribucion_geografica":
+        from app.services.boletin_insights_service import BoletinInsightsService
+
+        insights_service = BoletinInsightsService(db)
+        return await insights_service.generate_distribucion_geografica_insight(
+            evento_id=evento_id,
+            fecha_inicio=context["fecha_inicio_obj"],
+            fecha_fin=context["fecha_fin_obj"],
+            evento_nombre=context.get("nombre_evento_sanitario")
+        )
+
+    elif query_type == "insight_tendencia":
+        from app.services.boletin_insights_service import BoletinInsightsService
+
+        insights_service = BoletinInsightsService(db)
+        return await insights_service.generate_tendencia_insight(
+            evento_id=evento_id,
+            semana_actual=context["semana"],
+            anio=context["anio"],
+            num_semanas=query_params.get("num_semanas", context.get("num_semanas", 4)),
+            evento_nombre=context.get("nombre_evento_sanitario")
+        )
+
+    elif query_type == "insight_resumen":
+        from app.services.boletin_insights_service import BoletinInsightsService
+
+        insights_service = BoletinInsightsService(db)
+        return await insights_service.generate_resumen_insight(
+            evento_id=evento_id,
+            fecha_inicio=context["fecha_inicio_obj"],
+            fecha_fin=context["fecha_fin_obj"],
+            evento_nombre=context.get("nombre_evento_sanitario")
+        )
+
+    else:
+        logger.warning(f"Query type desconocido: {query_type}")
+        return {}
+
+
+def render_chart_block(
+    data: dict[str, Any],
+    render_config: dict[str, Any],
+    context: dict[str, Any]
+) -> dict[str, Any]:
+    """
+    Renderiza un bloque de chart con el spec embebido.
+
+    Args:
+        data: Datos que incluyen {"spec": ..., "chart_code": ...}
+        render_config: Configuración con título, altura, etc.
+        context: Contexto con variables
+
+    Returns:
+        TipTap JSON con nodo dynamicChart
+    """
+    spec = data.get("spec")
+    chart_code = data.get("chart_code", "unknown")
+    titulo = render_config.get("titulo", f"Chart: {chart_code}")
+
+    # Reemplazar variables Jinja2 en el título
+    titulo = replace_template_variables_in_string(titulo, context)
+
+    if not spec:
+        return {
+            "type": "doc",
+            "content": [{
+                "type": "paragraph",
+                "content": [{"type": "text", "text": f"ℹ️ {titulo}: Sin datos disponibles para generar el gráfico"}]
+            }]
+        }
+
+    # Obtener evento_id del contexto para pasarlo al chart
+    evento_id = context.get("evento_id")
+    evento_ids_str = str(evento_id) if evento_id else ""
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # Caso especial: mapa_chubut genera imagen + tabla HTML nativa debajo
+    # ═══════════════════════════════════════════════════════════════════════════
+    if chart_code == "mapa_chubut":
+        # Extraer datos de departamentos del spec
+        departamentos_data = spec.get("data", {}).get("data", {}).get("departamentos", [])
+        total_casos = spec.get("data", {}).get("data", {}).get("total_casos", 0)
+
+        # Ordenar por casos descendente
+        departamentos_sorted = sorted(departamentos_data, key=lambda x: x.get("casos", 0), reverse=True)
+
+        # Construir tabla TipTap nativa
+        table_rows = [
+            # Header row
+            {
+                "type": "tableRow",
+                "content": [
+                    {
+                        "type": "tableHeader",
+                        "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Departamento"}]}]
+                    },
+                    {
+                        "type": "tableHeader",
+                        "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Casos"}]}]
+                    },
+                    {
+                        "type": "tableHeader",
+                        "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Tasa/100k hab."}]}]
+                    },
+                ]
+            }
+        ]
+
+        # Data rows
+        for dept in departamentos_sorted:
+            table_rows.append({
+                "type": "tableRow",
+                "content": [
+                    {
+                        "type": "tableCell",
+                        "content": [{"type": "paragraph", "content": [{"type": "text", "text": dept.get("nombre", "")}]}]
+                    },
+                    {
+                        "type": "tableCell",
+                        "content": [{"type": "paragraph", "content": [{"type": "text", "text": str(dept.get("casos", 0))}]}]
+                    },
+                    {
+                        "type": "tableCell",
+                        "content": [{"type": "paragraph", "content": [{"type": "text", "text": f"{dept.get('tasa_incidencia', 0):.2f}"}]}]
+                    },
+                ]
             })
 
-    logger.info(f"Datos obtenidos para {len(eventos_data)} eventos")
+        content_nodes = [
+            # Título del mapa
+            {
+                "type": "heading",
+                "attrs": {"level": 3},
+                "content": [{"type": "text", "text": titulo}]
+            },
+            # Imagen del mapa
+            {
+                "type": "dynamicChart",
+                "attrs": {
+                    "chartCode": chart_code,
+                    "eventoIds": evento_ids_str,
+                    "title": titulo,
+                    "spec": spec,
+                    "height": render_config.get("height", 400),
+                }
+            },
+            # Espacio
+            {
+                "type": "paragraph",
+                "content": []
+            },
+            # Tabla HTML nativa con datos de departamentos
+            {
+                "type": "table",
+                "content": table_rows
+            },
+            # Total de casos
+            {
+                "type": "paragraph",
+                "content": [
+                    {"type": "text", "marks": [{"type": "bold"}], "text": f"Total de casos en la provincia: {total_casos}"}
+                ]
+            },
+            # Espacio después
+            {
+                "type": "paragraph",
+                "content": []
+            }
+        ]
 
-    # 3. Generar contenido HTML del boletín
-    content_html = await _generate_boletin_content(
-        db=db,
-        request=request,
-        periodo_analisis=periodo_analisis,
-        eventos_data=eventos_data
-    )
+        logger.info(f"✓ Mapa + Tabla departamentos (HTML nativo) renderizados")
 
-    # 4. Crear BoletinInstance en DB
+        return {
+            "type": "doc",
+            "content": content_nodes
+        }
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # Caso normal: un solo chart
+    # ═══════════════════════════════════════════════════════════════════════════
+    content_nodes = [
+        # Título del chart
+        {
+            "type": "heading",
+            "attrs": {"level": 3},
+            "content": [{"type": "text", "text": titulo}]
+        },
+        # Chart embebido con spec y eventoIds
+        {
+            "type": "dynamicChart",
+            "attrs": {
+                "chartCode": chart_code,
+                "eventoIds": evento_ids_str,
+                "title": titulo,
+                "spec": spec,
+                "height": render_config.get("height", 400),
+            }
+        },
+        # Espacio después
+        {
+            "type": "paragraph",
+            "content": []
+        }
+    ]
+
+    logger.info(f"✓ Chart renderizado: {chart_code}")
+
+    return {
+        "type": "doc",
+        "content": content_nodes
+    }
+
+
+def render_block(
+    renderer: BoletinBlockRenderer,
+    render_type: str,
+    data: Any,
+    render_config: dict[str, Any],
+    context: dict[str, Any],
+    evento_id: Optional[int] = None
+) -> dict[str, Any]:
+    """
+    Renderiza un bloque según el tipo configurado.
+
+    Args:
+        renderer: Servicio de renderizado
+        render_type: Tipo de render ("table", "evento_section", etc.)
+        data: Datos a renderizar
+        render_config: Configuración de renderizado
+        context: Contexto con variables (semana, anio, num_semanas, etc.)
+        evento_id: ID del evento (si aplica)
+
+    Returns:
+        TipTap JSON del bloque renderizado
+    """
+    if render_type == "table":
+        # Determinar qué tipo de tabla
+        if "top_enos" in render_config.get("titulo", "").lower():
+            return renderer.render_top_enos_table(data, render_config, context)
+        else:
+            # Tabla genérica
+            return renderer.render_top_enos_table(data, render_config, context)
+
+    elif render_type == "evento_section":
+        return renderer.render_evento_section(data, render_config, context)
+
+    elif render_type == "capacidad_table":
+        return renderer.render_capacidad_table(data, render_config, context)
+
+    elif render_type == "virus_table":
+        return renderer.render_virus_table(data, render_config, context)
+
+    elif render_type == "eventos_agrupados_table":
+        return renderer.render_eventos_agrupados_table(data, render_config, context)
+
+    elif render_type == "corredor_endemico":
+        # Alias para eventos_agrupados_table
+        return renderer.render_eventos_agrupados_table(data, render_config, context)
+
+    elif render_type == "chart":
+        # Renderiza un chart embebido con el spec
+        return render_chart_block(data, render_config, context)
+
+    elif render_type == "insight_text":
+        # Renderiza un insight como párrafo de texto
+        return render_insight_text(data, render_config, context)
+
+    else:
+        logger.warning(f"Render type desconocido: {render_type}")
+        return {
+            "type": "paragraph",
+            "content": [{
+                "type": "text",
+                "text": f"⚠️ Bloque no renderizado: {render_type}"
+            }]
+        }
+
+
+def render_insight_text(
+    data: dict[str, Any],
+    render_config: dict[str, Any],
+    context: dict[str, Any]
+) -> dict[str, Any]:
+    """
+    Renderiza un insight como párrafo de texto TipTap.
+
+    Args:
+        data: Datos del insight con campo "texto"
+        render_config: Configuración con título opcional
+        context: Contexto con variables
+
+    Returns:
+        TipTap JSON con párrafo de texto
+    """
+    texto = data.get("texto", "")
+
+    if not texto:
+        return {
+            "type": "doc",
+            "content": [{
+                "type": "paragraph",
+                "content": [{"type": "text", "text": "ℹ️ Sin datos disponibles para generar insight."}]
+            }]
+        }
+
+    content_nodes = []
+
+    # Agregar título si está configurado
+    titulo = render_config.get("titulo")
+    if titulo:
+        titulo = replace_template_variables_in_string(titulo, context)
+        content_nodes.append({
+            "type": "heading",
+            "attrs": {"level": render_config.get("nivel_titulo", 4)},
+            "content": [{"type": "text", "text": titulo}]
+        })
+
+    # Agregar el texto del insight como párrafo
+    content_nodes.append({
+        "type": "paragraph",
+        "content": [{"type": "text", "text": texto}]
+    })
+
+    logger.info(f"✓ Insight renderizado: {texto[:50]}...")
+
+    return {
+        "type": "doc",
+        "content": content_nodes
+    }
+
+
+async def save_boletin_instance(
+    db: AsyncSession,
+    request: GenerateDraftRequest,
+    content: dict[str, Any],
+    context: dict[str, Any],
+    current_user: Optional[User]
+) -> BoletinInstance:
+    """
+    Guarda la instancia del boletín en DB.
+
+    Args:
+        db: Sesión de base de datos
+        request: Parámetros de generación
+        content: TipTap JSON generado
+        context: Contexto con variables
+        current_user: Usuario actual
+
+    Returns:
+        BoletinInstance guardado
+    """
     titulo = request.titulo_custom or f"Boletín Epidemiológico SE {request.semana}/{request.anio}"
 
-    # Crear instancia (sin template_id ya que es generado automáticamente)
-    boletin_instance = BoletinInstance(
+    boletin = BoletinInstance(
         name=titulo,
         template_id=None,  # None para boletines generados automáticamente
         parameters={
@@ -129,914 +1591,27 @@ async def generate_draft(
             "anio": request.anio,
             "num_semanas": request.num_semanas,
             "eventos_seleccionados": [e.tipo_eno_id for e in request.eventos_seleccionados],
-            "generado_automaticamente": True
+            "generado_automaticamente": True,
+            "version": "2.0"  # Nueva versión con sistema configurable
         },
         template_snapshot={
-            "tipo": "generacion_automatica",
-            "periodo": periodo_analisis,
-            "eventos": eventos_data
+            "tipo": "generacion_configurable_v2",
+            "periodo": {
+                "semana_inicio": context["semana_inicio"],
+                "semana_fin": context["semana"],
+                "anio": context["anio"],
+                "fecha_inicio": context["fecha_inicio"],
+                "fecha_fin": context["fecha_fin"]
+            }
         },
-        content=content_html,  # Guardar el contenido HTML generado
-        status="draft"
+        content=json.dumps(content),  # Guardar como JSON string
     )
 
     if current_user:
-        boletin_instance.generated_by = current_user.id
+        boletin.generated_by = current_user.id
 
-    db.add(boletin_instance)
+    db.add(boletin)
     await db.commit()
-    await db.refresh(boletin_instance)
+    await db.refresh(boletin)
 
-    logger.info(f"Boletín instance creado: ID {boletin_instance.id}")
-
-    # 5. Preparar metadata
-    metadata = BoletinMetadata(
-        periodo_analisis=periodo_analisis,
-        eventos_incluidos=eventos_data,
-        fecha_generacion=datetime.utcnow()
-    )
-
-    # 6. Retornar response
-    response = GenerateDraftResponse(
-        boletin_instance_id=boletin_instance.id,
-        content=content_html,
-        metadata=metadata
-    )
-
-    return SuccessResponse(data=response)
-
-
-async def _generate_boletin_content(
-    db: AsyncSession,
-    request: GenerateDraftRequest,
-    periodo_analisis: dict,
-    eventos_data: list
-) -> str:
-    """
-    Genera el contenido HTML del boletín epidemiológico completo.
-    Estructura basada en el formato oficial de boletines de Chubut.
-    """
-    from datetime import datetime
-
-    html_parts = []
-
-    # ========== PORTADA ==========
-    html_parts.append(f"""
-<div class="boletin-portada" style="text-align: center; padding: 4rem 2rem; background: linear-gradient(135deg, #1e5a7d 0%, #2d7a9e 100%); color: white; border-radius: 8px; margin-bottom: 2rem;">
-    <div style="margin-bottom: 2rem;">
-        <p style="font-size: 0.9rem; margin: 0;">Año {request.anio}</p>
-        <p style="font-size: 0.9rem; margin: 0;">SE {request.semana}</p>
-    </div>
-
-    <h1 style="font-size: 2.5rem; font-weight: bold; margin: 2rem 0; letter-spacing: 2px;">EPI CHUBUT</h1>
-
-    <h2 style="font-size: 3rem; font-weight: bold; margin: 1rem 0;">BOLETÍN</h2>
-    <h2 style="font-size: 3rem; font-weight: bold; margin: 0;">EPIDEMIOLÓGICO</h2>
-
-    <div style="margin-top: 3rem;">
-        <p style="font-size: 1.1rem; font-weight: 600;">DIRECCIÓN PROVINCIAL DE PATOLOGÍAS</p>
-        <p style="font-size: 1.1rem; font-weight: 600;">PREVALENTES Y EPIDEMIOLOGÍA</p>
-        <p style="font-size: 1.3rem; font-weight: bold; margin-top: 1rem;">Residencia de Epidemiología</p>
-    </div>
-
-    <div style="margin-top: 3rem; padding: 2rem; background: white; color: #1e5a7d; border-radius: 50%; display: inline-block; width: 200px; height: 200px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
-        <p style="font-size: 1.5rem; font-weight: bold; margin: 0;">Año {request.anio}</p>
-        <p style="font-size: 3rem; font-weight: bold; margin: 0;">SE {request.semana}</p>
-    </div>
-
-    <div style="margin-top: 3rem;">
-        <p style="font-size: 1.2rem; font-weight: bold;">Secretaría de Salud</p>
-        <p style="font-size: 1rem;">Gobierno del Chubut</p>
-    </div>
-</div>
-
-<div style="page-break-after: always;"></div>
-""")
-
-    # ========== NOTA INFORMATIVA ==========
-    fecha_fin_display = periodo_analisis['fecha_fin']
-    semana_fin_agrupados = request.semana - 1 if request.semana > 1 else 52
-
-    html_parts.append(f"""
-<div class="boletin-intro" style="background: #1e5a7d; color: white; padding: 2rem; border-radius: 8px; margin-bottom: 2rem;">
-    <p style="line-height: 1.8; margin-bottom: 1rem;">
-        Este boletín es el resultado de la información proporcionada de manera sistemática por parte de los efectores
-        de las cuatro Unidades de Gestión Descentralizadas (UGD) que conforman la provincia de Chubut
-        (Norte, Noroeste, Noreste y Sur), del laboratorio provincial de referencia, los referentes jurisdiccionales
-        de vigilancia clínica y laboratorio que colaboran en la configuración, gestión y usos de la información SNVS 2.0.
-    </p>
-
-    <p style="line-height: 1.8; margin-bottom: 1rem; font-weight: 600;">
-        Esta publicación de periodicidad semanal es elaborada por la Residencia de Epidemiología.
-    </p>
-
-    <p style="line-height: 1.8; margin-bottom: 1rem;">
-        En este boletín se muestran los eventos agrupados notificados hasta SE {semana_fin_agrupados} del año {request.anio}
-        y los eventos de notificación nominal hasta la SE {request.semana} del año {request.anio} (hasta el {fecha_fin_display}).
-    </p>
-
-    <p style="text-align: center; font-size: 1.2rem; font-weight: bold; margin-top: 2rem; text-decoration: underline;">
-        NOTA:
-    </p>
-
-    <p style="line-height: 1.8;">
-        A partir de la SE 18 del año {request.anio} se consideran todos los establecimientos de salud que notifican
-        los eventos agrupados: Corredores de ETI, Neumonía, Bronquiolitis y Diarreas.
-    </p>
-
-    <h2 style="text-align: center; font-size: 1.5rem; font-weight: bold; margin-top: 2rem; letter-spacing: 1px;">
-        PUBLICACIÓN SEMANA EPIDEMIOLÓGICA {request.semana}
-    </h2>
-    <p style="text-align: center; font-size: 1.1rem;">
-        ({periodo_analisis['fecha_inicio']} al {periodo_analisis['fecha_fin']})
-    </p>
-</div>
-
-<div style="page-break-after: always;"></div>
-""")
-
-    # ========== AUTORIDADES PROVINCIALES ==========
-    html_parts.append("""
-<div class="autoridades" style="margin-bottom: 2rem;">
-    <h2 style="color: #1e5a7d; border-bottom: 3px solid #1e5a7d; padding-bottom: 0.5rem; margin-bottom: 1.5rem;">
-        AUTORIDADES PROVINCIALES
-    </h2>
-
-    <p style="margin: 0.5rem 0;"><strong>Dirección Provincial de Patologías Prevalentes y Epidemiología:</strong> Julieta D'Andrea</p>
-    <p style="margin: 0.5rem 0;"><strong>Departamento Provincial de Zooantroponosis:</strong> Alejandra Sandoval</p>
-    <p style="margin: 0.5rem 0;"><strong>Departamento Provincial de Control de Enfermedades Inmunoprevenibles:</strong> Sandra Villaroel</p>
-    <p style="margin: 0.5rem 0;"><strong>Referente del Programa Provincial de Tuberculosis:</strong> Alejandra Saavedra</p>
-    <p style="margin: 0.5rem 0;"><strong>Referente del Programa Provincial de VIH:</strong> Julieta Sabatino</p>
-    <p style="margin: 0.5rem 0;"><strong>Departamento Laboratorial de Epidemiología:</strong> Sebastián Podestá</p>
-    <p style="margin: 0.5rem 0;"><strong>Área de Vigilancia Epidemiológica:</strong> Marina Westtein, Paula Martínez</p>
-
-    <h3 style="color: #1e5a7d; margin-top: 2rem; font-size: 1.3rem;">AUTORÍA DE ESTE BOLETÍN</h3>
-    <p style="margin: 1rem 0;">
-        Este boletín está elaborado por residentes de epidemiología y equipo de la Dirección Provincial de Epidemiología.
-    </p>
-    <p style="margin: 0.5rem 0;"><strong>Residentes:</strong> Clarisa López, Valerya Ortega, Yesica Torres</p>
-    <p style="margin: 0.5rem 0;"><strong>Técnica en gestión de la Información de la salud:</strong> Daiana Fernández</p>
-
-    <h3 style="color: #1e5a7d; margin-top: 2rem; font-size: 1.3rem;">REVISIÓN DE ESTE BOLETÍN</h3>
-    <p style="margin: 0.5rem 0;"><strong>Coordinación de Residencia:</strong> Julieta Levite</p>
-    <p style="margin: 0.5rem 0;"><strong>Área de vigilancia:</strong> Marina Westtein</p>
-</div>
-
-<div style="page-break-after: always;"></div>
-""")
-
-    # ========== TABLA DE ENOs MÁS FRECUENTES ==========
-    # Query para obtener los eventos más frecuentes del período
-    # Convert ISO string dates to date objects for the query
-    # Need to recalculate anio_inicio based on periodo_analisis
-    semana_inicio_calc = periodo_analisis['semana_inicio']
-    anio_inicio_calc = periodo_analisis['anio']
-    if semana_inicio_calc < 1:
-        semana_inicio_calc += 52
-        anio_inicio_calc -= 1
-
-    from app.api.v1.analytics.period_utils import get_epi_week_dates as get_dates
-    fecha_inicio_obj, _ = get_dates(semana_inicio_calc, anio_inicio_calc)
-    _, fecha_fin_obj = get_dates(request.semana, request.anio)
-
-    query_top_enos = text("""
-        SELECT
-            te.nombre as evento,
-            COUNT(DISTINCT e.id) as n_casos
-        FROM evento e
-        INNER JOIN tipo_eno te ON e.id_tipo_eno = te.id
-        WHERE e.fecha_minima_evento >= :fecha_inicio
-            AND e.fecha_minima_evento <= :fecha_fin
-        GROUP BY te.id, te.nombre
-        ORDER BY n_casos DESC
-        LIMIT 15
-    """)
-
-    result_top = await db.execute(query_top_enos, {
-        "fecha_inicio": fecha_inicio_obj,
-        "fecha_fin": fecha_fin_obj
-    })
-    top_enos = result_top.fetchall()
-
-    html_parts.append(f"""
-<div class="tabla-enos-frecuentes" style="margin-bottom: 2rem;">
-    <h2 style="color: #1e5a7d; border-bottom: 3px solid #1e5a7d; padding-bottom: 0.5rem; margin-bottom: 1.5rem;">
-        EVENTOS DE NOTIFICACIÓN OBLIGATORIA MÁS FRECUENTES
-    </h2>
-
-    <p style="line-height: 1.8; margin-bottom: 1rem;">
-        Durante el período comprendido entre las SE {periodo_analisis['semana_inicio']} y {periodo_analisis['semana_fin']} del {request.anio},
-        los eventos de notificación obligatoria (ENO) más frecuentemente notificados fueron:
-    </p>
-
-    <table style="width: 100%; border-collapse: collapse; margin: 1.5rem 0;">
-        <caption style="caption-side: top; text-align: left; font-weight: bold; color: #1e5a7d; margin-bottom: 0.5rem;">
-            Tabla N°1: ENOs más frecuentes - SE {periodo_analisis['semana_inicio']} a {periodo_analisis['semana_fin']} {request.anio}
-        </caption>
-        <thead>
-            <tr style="background: #1e5a7d; color: white;">
-                <th style="padding: 0.75rem; text-align: left; border: 1px solid #ddd;">Evento</th>
-                <th style="padding: 0.75rem; text-align: center; border: 1px solid #ddd;">N° Casos</th>
-            </tr>
-        </thead>
-        <tbody>
-""")
-
-    for idx, eno in enumerate(top_enos):
-        bg_color = "#f8f9fa" if idx % 2 == 0 else "white"
-        html_parts.append(f"""
-            <tr style="background: {bg_color};">
-                <td style="padding: 0.5rem; border: 1px solid #ddd;">{eno.evento}</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd; font-weight: bold;">{eno.n_casos}</td>
-            </tr>
-""")
-
-    html_parts.append("""
-        </tbody>
-    </table>
-</div>
-
-<div style="page-break-after: always;"></div>
-""")
-
-    # ========== ÍNDICE / TABLA DE CONTENIDOS ==========
-    html_parts.append(f"""
-<div class="boletin-indice" style="margin-bottom: 3rem;">
-    <h2 style="color: #1e5a7d; border-bottom: 3px solid #1e5a7d; padding-bottom: 0.5rem; margin-bottom: 1.5rem;">
-        ÍNDICE
-    </h2>
-    <ol style="line-height: 2;">
-""")
-    for idx, evento in enumerate(eventos_data, 1):
-        html_parts.append(f"""        <li><strong>{evento['tipo_eno_nombre']}</strong> - {evento['grupo_eno_nombre']}</li>""")
-
-    html_parts.append("""
-    </ol>
-</div>
-
-<div style="page-break-after: always;"></div>
-""")
-
-    # ========== RESUMEN EJECUTIVO ==========
-    total_casos = sum(e['casos_actuales'] for e in eventos_data)
-    html_parts.append(f"""
-<div class="boletin-resumen" style="margin-bottom: 3rem;">
-    <h2 style="color: #1e5a7d; border-bottom: 3px solid #1e5a7d; padding-bottom: 0.5rem; margin-bottom: 1.5rem;">
-        RESUMEN EJECUTIVO
-    </h2>
-
-    <p style="line-height: 1.8; margin-bottom: 1.5rem; text-align: justify;">
-        Durante el período comprendido entre las semanas epidemiológicas {periodo_analisis['semana_inicio']}
-        y {periodo_analisis['semana_fin']} del año {request.anio} ({periodo_analisis['fecha_inicio']} al {periodo_analisis['fecha_fin']}),
-        se registró un total de <strong>{total_casos} casos</strong> correspondientes a los {len(eventos_data)} eventos
-        de notificación obligatoria bajo vigilancia intensificada en la provincia de Chubut.
-    </p>
-
-    <h3 style="color: #1e5a7d; margin-top: 2rem; margin-bottom: 1rem;">Panorama General de Eventos</h3>
-
-    <div data-type="dynamic-chart"
-         chartid="9000"
-         chartcode="casos_por_semana"
-         title="Evolución Temporal - Todos los Eventos Seleccionados"
-         grupoids=""
-         eventoids="{','.join(str(e['tipo_eno_id']) for e in eventos_data)}"
-         fechadesde="{periodo_analisis['fecha_inicio']}"
-         fechahasta="{periodo_analisis['fecha_fin']}">
-    </div>
-
-    <h3 style="color: #1e5a7d; margin-top: 2rem; margin-bottom: 1rem;">Distribución Geográfica General</h3>
-
-    <div data-type="dynamic-chart"
-         chartid="9001"
-         chartcode="mapa_chubut"
-         title="Distribución Provincial - Todos los Eventos"
-         grupoids=""
-         eventoids="{','.join(str(e['tipo_eno_id']) for e in eventos_data)}"
-         fechadesde="{periodo_analisis['fecha_inicio']}"
-         fechahasta="{periodo_analisis['fecha_fin']}">
-    </div>
-</div>
-
-<div style="page-break-after: always;"></div>
-""")
-
-    # ========== EVENTOS SELECCIONADOS ==========
-    for idx, evento in enumerate(eventos_data):
-        # Calcular datos del evento para el período anterior
-        semana_inicio_anterior = periodo_analisis['semana_inicio'] - request.num_semanas
-        anio_anterior = request.anio
-        if semana_inicio_anterior < 1:
-            semana_inicio_anterior += 52
-            anio_anterior -= 1
-
-        # Query para obtener casos del período anterior
-        from app.api.v1.analytics.period_utils import get_epi_week_dates
-        fecha_inicio_ant, _ = get_epi_week_dates(semana_inicio_anterior, anio_anterior)
-        semana_fin_ant = semana_inicio_anterior + request.num_semanas - 1
-        _, fecha_fin_ant = get_epi_week_dates(semana_fin_ant, anio_anterior)
-
-        query_anterior = text("""
-            SELECT COUNT(DISTINCT e.id) as casos
-            FROM evento e
-            INNER JOIN tipo_eno te ON e.id_tipo_eno = te.id
-            WHERE te.id = :tipo_eno_id
-                AND e.fecha_minima_evento >= :fecha_inicio
-                AND e.fecha_minima_evento <= :fecha_fin
-        """)
-
-        result_ant = await db.execute(query_anterior, {
-            "tipo_eno_id": evento['tipo_eno_id'],
-            "fecha_inicio": fecha_inicio_ant,
-            "fecha_fin": fecha_fin_ant
-        })
-        casos_anteriores = result_ant.scalar() or 0
-
-        # Calcular cambio
-        diferencia = evento['casos_actuales'] - casos_anteriores
-        diferencia_pct = ((diferencia / casos_anteriores) * 100) if casos_anteriores > 0 else (100 if evento['casos_actuales'] > 0 else 0)
-
-        tipo_cambio = "incremento" if diferencia > 0 else "disminución" if diferencia < 0 else "sin cambios"
-        color_badge = "#d9534f" if diferencia > 0 else "#5cb85c" if diferencia < 0 else "#f0ad4e"
-
-        html_parts.append(f"""
-<div class="boletin-evento" style="margin-bottom: 3rem;">
-    <h2 style="color: #1e5a7d; border-bottom: 2px solid #1e5a7d; padding-bottom: 0.5rem; margin-bottom: 1rem;">
-        {evento['tipo_eno_nombre']}
-    </h2>
-
-    <p style="margin: 0.5rem 0;"><strong>Grupo Epidemiológico:</strong> <span style="background: #e3f2fd; padding: 0.25rem 0.75rem; border-radius: 4px; color: #1565c0;">{evento['grupo_eno_nombre']}</span></p>
-
-    <div style="background: {'#fff3cd' if diferencia > 0 else '#d4edda'}; padding: 1.5rem; border-radius: 6px; margin: 1.5rem 0; border-left: 4px solid {color_badge};">
-        <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: #333;">
-            {'⚠️ ' if diferencia > 0 else '✓ '}{tipo_cambio.capitalize()} de casos detectado
-        </p>
-        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-top: 1rem;">
-            <div>
-                <p style="margin: 0.25rem 0; color: #666; font-size: 0.9rem;">Casos en período actual (SE {periodo_analisis['semana_inicio']}-{periodo_analisis['semana_fin']} {request.anio}):</p>
-                <p style="margin: 0; font-size: 2rem; font-weight: bold; color: {color_badge};">{evento['casos_actuales']}</p>
-            </div>
-            <div>
-                <p style="margin: 0.25rem 0; color: #666; font-size: 0.9rem;">Casos en período anterior (SE {semana_inicio_anterior}-{semana_fin_ant} {anio_anterior}):</p>
-                <p style="margin: 0; font-size: 2rem; font-weight: bold; color: #666;">{casos_anteriores}</p>
-            </div>
-        </div>
-        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #ddd;">
-            <p style="margin: 0; font-size: 1.2rem;">
-                <strong>Cambio:</strong>
-                <span style="color: {color_badge}; font-weight: bold;">
-                    {'+' if diferencia > 0 else ''}{diferencia_pct:.1f}%
-                </span>
-                <span style="color: #666;">
-                    ({'+' if diferencia > 0 else ''}{diferencia} casos)
-                </span>
-            </p>
-        </div>
-    </div>
-
-    <p style="line-height: 1.8; margin: 1.5rem 0; text-align: justify;">
-        Durante el período analizado (Semanas {periodo_analisis['semana_inicio']} a {periodo_analisis['semana_fin']} del {request.anio})
-        se registraron <strong>{evento['casos_actuales']} casos</strong> de {evento['tipo_eno_nombre']},
-        lo que representa {'un incremento' if diferencia > 0 else 'una disminución' if diferencia < 0 else 'un nivel similar'}
-        {'del ' + f"{abs(diferencia_pct):.1f}%" if diferencia != 0 else ''}
-        respecto al período anterior (SE {semana_inicio_anterior}-{semana_fin_ant} {anio_anterior}: {casos_anteriores} casos).
-        {'Este aumento requiere continuar con las medidas de vigilancia epidemiológica y reforzar las acciones de prevención.' if diferencia > 0 else 'Esta tendencia es favorable y debe mantenerse mediante las acciones preventivas vigentes.' if diferencia < 0 else 'Se mantiene la vigilancia continua del evento.'}
-    </p>
-
-    <h3 style="color: #1e5a7d; margin-top: 2rem; margin-bottom: 1rem;">1. Evolución Temporal (Curva Epidemiológica)</h3>
-    <p style="margin-bottom: 1rem;">
-        La siguiente gráfica muestra la evolución semanal de casos durante el período analizado.
-    </p>
-
-    <div data-type="dynamic-chart"
-         chartid="{idx * 10}"
-         chartcode="casos_por_semana"
-         title="Casos por Semana Epidemiológica - {evento['tipo_eno_nombre']}"
-         grupoids=""
-         eventoids="{evento['tipo_eno_id']}"
-         fechadesde="{periodo_analisis['fecha_inicio']}"
-         fechahasta="{periodo_analisis['fecha_fin']}">
-    </div>
-
-    <h3 style="color: #1e5a7d; margin-top: 2rem; margin-bottom: 1rem;">2. Corredor Endémico</h3>
-    <p style="margin-bottom: 1rem;">
-        El corredor endémico permite identificar si la situación actual se encuentra en zona de éxito,
-        seguridad, alerta o epidemia según el comportamiento histórico del evento.
-    </p>
-
-    <div data-type="dynamic-chart"
-         chartid="{idx * 10 + 1}"
-         chartcode="corredor_endemico"
-         title="Corredor Endémico - {evento['tipo_eno_nombre']}"
-         grupoids=""
-         eventoids="{evento['tipo_eno_id']}"
-         fechadesde="{periodo_analisis['fecha_inicio']}"
-         fechahasta="{periodo_analisis['fecha_fin']}">
-    </div>
-
-    <div style="background: #f0f8ff; padding: 1.5rem; border-radius: 6px; border-left: 4px solid #1e5a7d; margin: 1.5rem 0;">
-        <p style="margin: 0; line-height: 1.8; font-style: italic;">
-            <strong>Interpretación del Corredor Endémico:</strong>
-            El corredor endémico de {evento['tipo_eno_nombre']} en las últimas {request.num_semanas} semanas del {request.anio}
-            (SE {periodo_analisis['semana_inicio']} a SE {periodo_analisis['semana_fin']}) se encuentra en evaluación.
-            El análisis del comportamiento epidemiológico permite identificar si nos encontramos en zona de <strong>éxito</strong>
-            (por debajo del percentil 25), zona de <strong>seguridad</strong> (entre percentiles 25-50), zona de <strong>alerta</strong>
-            (entre percentiles 50-75), o zona de <strong>epidemia/brote</strong> (por encima del percentil 75).
-        </p>
-        <p style="margin: 1rem 0 0 0; line-height: 1.8; font-style: italic; color: #666; font-size: 0.9rem;">
-            <em>Nota: Esta interpretación debe ser actualizada manualmente según el gráfico mostrado. Por favor, edite este texto
-            para reflejar la zona específica en la que se ubica el corredor según la visualización.</em>
-        </p>
-    </div>
-
-    <h3 style="color: #1e5a7d; margin-top: 2rem; margin-bottom: 1rem;">3. Distribución por Grupo Etario</h3>
-    <p style="margin-bottom: 1rem;">
-        Pirámide poblacional que muestra la distribución de casos por edad y sexo.
-    </p>
-
-    <div data-type="dynamic-chart"
-         chartid="{idx * 10 + 2}"
-         chartcode="piramide_edad"
-         title="Distribución por Edad y Sexo - {evento['tipo_eno_nombre']}"
-         grupoids=""
-         eventoids="{evento['tipo_eno_id']}"
-         fechadesde="{periodo_analisis['fecha_inicio']}"
-         fechahasta="{periodo_analisis['fecha_fin']}">
-    </div>
-
-    <h3 style="color: #1e5a7d; margin-top: 2rem; margin-bottom: 1rem;">4. Casos por Grupo Etario</h3>
-    <p style="margin-bottom: 1rem;">
-        Distribución de casos según grupos de edad definidos.
-    </p>
-
-    <div data-type="dynamic-chart"
-         chartid="{idx * 10 + 3}"
-         chartcode="casos_edad"
-         title="Casos por Grupo Etario - {evento['tipo_eno_nombre']}"
-         grupoids=""
-         eventoids="{evento['tipo_eno_id']}"
-         fechadesde="{periodo_analisis['fecha_inicio']}"
-         fechahasta="{periodo_analisis['fecha_fin']}">
-    </div>
-
-    <h3 style="color: #1e5a7d; margin-top: 2rem; margin-bottom: 1rem;">5. Distribución Geográfica</h3>
-    <p style="margin-bottom: 1rem;">
-        Mapa coroplético de la provincia de Chubut mostrando la incidencia por departamento.
-    </p>
-
-    <div data-type="dynamic-chart"
-         chartid="{idx * 10 + 4}"
-         chartcode="mapa_chubut"
-         title="Distribución por Departamento - {evento['tipo_eno_nombre']}"
-         grupoids=""
-         eventoids="{evento['tipo_eno_id']}"
-         fechadesde="{periodo_analisis['fecha_inicio']}"
-         fechahasta="{periodo_analisis['fecha_fin']}">
-    </div>
-
-    <h3 style="color: #1e5a7d; margin-top: 2rem; margin-bottom: 1rem;">6. Estacionalidad</h3>
-    <p style="margin-bottom: 1rem;">
-        Patrón estacional del evento a lo largo del año.
-    </p>
-
-    <div data-type="dynamic-chart"
-         chartid="{idx * 10 + 5}"
-         chartcode="estacionalidad"
-         title="Patrón Estacional - {evento['tipo_eno_nombre']}"
-         grupoids=""
-         eventoids="{evento['tipo_eno_id']}"
-         fechadesde="{periodo_analisis['fecha_inicio']}"
-         fechahasta="{periodo_analisis['fecha_fin']}">
-    </div>
-
-    <h3 style="color: #1e5a7d; margin-top: 2rem; margin-bottom: 1rem;">7. Distribución por Clasificación</h3>
-    <p style="margin-bottom: 1rem;">
-        Distribución de casos según clasificación clínica (confirmado, probable, sospechoso).
-    </p>
-
-    <div data-type="dynamic-chart"
-         chartid="{idx * 10 + 6}"
-         chartcode="distribucion_clasificacion"
-         title="Distribución por Clasificación - {evento['tipo_eno_nombre']}"
-         grupoids=""
-         eventoids="{evento['tipo_eno_id']}"
-         fechadesde="{periodo_analisis['fecha_inicio']}"
-         fechahasta="{periodo_analisis['fecha_fin']}">
-    </div>
-</div>
-
-<div style="page-break-after: always;"></div>
-""")
-
-    # ========== SECCIÓN DE VIGILANCIA IRA - CAPACIDAD HOSPITALARIA ==========
-    html_parts.append(f"""
-<div class="seccion-capacidad-hospitalaria" style="margin-bottom: 3rem;">
-    <h2 style="color: #1e5a7d; border-bottom: 3px solid #1e5a7d; padding-bottom: 0.5rem; margin-bottom: 1.5rem;">
-        VIGILANCIA DE INFECCIONES RESPIRATORIAS AGUDAS (IRA)
-    </h2>
-
-    <h3 style="color: #1e5a7d; margin-top: 2rem; margin-bottom: 1rem;">Capacidad y Ocupación Hospitalaria</h3>
-
-    <p style="line-height: 1.8; margin-bottom: 1.5rem;">
-        A continuación se presenta la información de dotación y ocupación de camas en los principales hospitales
-        de la provincia durante la SE {request.semana} del {request.anio}. Esta información es fundamental para
-        el monitoreo de la capacidad del sistema de salud frente a la demanda por infecciones respiratorias agudas.
-    </p>
-
-    <table style="width: 100%; border-collapse: collapse; margin: 1.5rem 0;">
-        <caption style="caption-side: top; text-align: left; font-weight: bold; color: #1e5a7d; margin-bottom: 0.5rem;">
-            Tabla N°2: Dotación de camas - Hospital Zonal de Puerto Madryn (HZPM)
-        </caption>
-        <thead>
-            <tr style="background: #1e5a7d; color: white;">
-                <th style="padding: 0.75rem; text-align: left; border: 1px solid #ddd;">Servicio</th>
-                <th style="padding: 0.75rem; text-align: center; border: 1px solid #ddd;">Dotación</th>
-                <th style="padding: 0.75rem; text-align: center; border: 1px solid #ddd;">Ocupación IRA</th>
-                <th style="padding: 0.75rem; text-align: center; border: 1px solid #ddd;">% Ocupación</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr style="background: #f8f9fa;">
-                <td style="padding: 0.5rem; border: 1px solid #ddd;">Clínica Médica</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">30</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">18</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd; font-weight: bold;">60%</td>
-            </tr>
-            <tr style="background: white;">
-                <td style="padding: 0.5rem; border: 1px solid #ddd;">Pediatría</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">25</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">10</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd; font-weight: bold;">40%</td>
-            </tr>
-            <tr style="background: #f8f9fa;">
-                <td style="padding: 0.5rem; border: 1px solid #ddd;">UTI Adultos</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">8</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">6</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd; font-weight: bold; color: #d9534f;">75%</td>
-            </tr>
-            <tr style="background: white;">
-                <td style="padding: 0.5rem; border: 1px solid #ddd;">UTI Pediátrica</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">6</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">3</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd; font-weight: bold;">50%</td>
-            </tr>
-        </tbody>
-    </table>
-
-    <table style="width: 100%; border-collapse: collapse; margin: 1.5rem 0;">
-        <caption style="caption-side: top; text-align: left; font-weight: bold; color: #1e5a7d; margin-bottom: 0.5rem;">
-            Tabla N°3: Dotación de camas - Hospital Zonal de Trelew (HZTW)
-        </caption>
-        <thead>
-            <tr style="background: #1e5a7d; color: white;">
-                <th style="padding: 0.75rem; text-align: left; border: 1px solid #ddd;">Servicio</th>
-                <th style="padding: 0.75rem; text-align: center; border: 1px solid #ddd;">Dotación</th>
-                <th style="padding: 0.75rem; text-align: center; border: 1px solid #ddd;">Ocupación IRA</th>
-                <th style="padding: 0.75rem; text-align: center; border: 1px solid #ddd;">% Ocupación</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr style="background: #f8f9fa;">
-                <td style="padding: 0.5rem; border: 1px solid #ddd;">Clínica Médica</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">45</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">23</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd; font-weight: bold;">51%</td>
-            </tr>
-            <tr style="background: white;">
-                <td style="padding: 0.5rem; border: 1px solid #ddd;">Pediatría</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">35</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">8</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd; font-weight: bold;">23%</td>
-            </tr>
-            <tr style="background: #f8f9fa;">
-                <td style="padding: 0.5rem; border: 1px solid #ddd;">UTI Adultos</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">10</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">7</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd; font-weight: bold; color: #d9534f;">70%</td>
-            </tr>
-            <tr style="background: white;">
-                <td style="padding: 0.5rem; border: 1px solid #ddd;">UTI Pediátrica</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">8</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">4</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd; font-weight: bold;">50%</td>
-            </tr>
-        </tbody>
-    </table>
-
-    <table style="width: 100%; border-collapse: collapse; margin: 1.5rem 0;">
-        <caption style="caption-side: top; text-align: left; font-weight: bold; color: #1e5a7d; margin-bottom: 0.5rem;">
-            Tabla N°4: Dotación de camas - Hospital Regional de Comodoro Rivadavia (HRCR)
-        </caption>
-        <thead>
-            <tr style="background: #1e5a7d; color: white;">
-                <th style="padding: 0.75rem; text-align: left; border: 1px solid #ddd;">Servicio</th>
-                <th style="padding: 0.75rem; text-align: center; border: 1px solid #ddd;">Dotación</th>
-                <th style="padding: 0.75rem; text-align: center; border: 1px solid #ddd;">Ocupación IRA</th>
-                <th style="padding: 0.75rem; text-align: center; border: 1px solid #ddd;">% Ocupación</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr style="background: #f8f9fa;">
-                <td style="padding: 0.5rem; border: 1px solid #ddd;">Clínica Médica</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">60</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">32</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd; font-weight: bold;">53%</td>
-            </tr>
-            <tr style="background: white;">
-                <td style="padding: 0.5rem; border: 1px solid #ddd;">Pediatría</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">40</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">15</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd; font-weight: bold;">38%</td>
-            </tr>
-            <tr style="background: #f8f9fa;">
-                <td style="padding: 0.5rem; border: 1px solid #ddd;">UTI Adultos</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">12</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">9</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd; font-weight: bold; color: #d9534f;">75%</td>
-            </tr>
-            <tr style="background: white;">
-                <td style="padding: 0.5rem; border: 1px solid #ddd;">UTI Pediátrica</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">10</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">5</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd; font-weight: bold;">50%</td>
-            </tr>
-        </tbody>
-    </table>
-
-    <div style="background: #fff3cd; padding: 1.5rem; border-radius: 6px; border-left: 4px solid #f0ad4e; margin: 1.5rem 0;">
-        <p style="margin: 0; line-height: 1.8;">
-            <strong>Nota importante:</strong> Los valores de dotación y ocupación de camas presentados son estimados
-            y deben ser actualizados con la información real proporcionada por cada efector. Por favor, edite estas
-            tablas con los datos oficiales de la SE {request.semana}/{request.anio}.
-        </p>
-    </div>
-
-    <h3 style="color: #1e5a7d; margin-top: 3rem; margin-bottom: 1rem;">Vigilancia de Virus Respiratorios</h3>
-
-    <p style="line-height: 1.8; margin-bottom: 1.5rem;">
-        El siguiente cuadro presenta la distribución de virus respiratorios identificados mediante técnicas
-        de diagnóstico molecular (PCR) en muestras procesadas por el laboratorio provincial durante las últimas
-        semanas epidemiológicas.
-    </p>
-
-    <table style="width: 100%; border-collapse: collapse; margin: 1.5rem 0;">
-        <caption style="caption-side: top; text-align: left; font-weight: bold; color: #1e5a7d; margin-bottom: 0.5rem;">
-            Tabla N°5: Identificación de virus respiratorios - SE {periodo_analisis['semana_inicio']} a {periodo_analisis['semana_fin']} {request.anio}
-        </caption>
-        <thead>
-            <tr style="background: #1e5a7d; color: white;">
-                <th style="padding: 0.75rem; text-align: left; border: 1px solid #ddd;">Virus</th>
-                <th style="padding: 0.75rem; text-align: center; border: 1px solid #ddd;">Muestras Positivas</th>
-                <th style="padding: 0.75rem; text-align: center; border: 1px solid #ddd;">% del Total</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr style="background: #f8f9fa;">
-                <td style="padding: 0.5rem; border: 1px solid #ddd;">VSR (Virus Sincicial Respiratorio)</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd; font-weight: bold;">45</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">38%</td>
-            </tr>
-            <tr style="background: white;">
-                <td style="padding: 0.5rem; border: 1px solid #ddd;">Influenza A</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd; font-weight: bold;">28</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">24%</td>
-            </tr>
-            <tr style="background: #f8f9fa;">
-                <td style="padding: 0.5rem; border: 1px solid #ddd;">Adenovirus</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd; font-weight: bold;">18</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">15%</td>
-            </tr>
-            <tr style="background: white;">
-                <td style="padding: 0.5rem; border: 1px solid #ddd;">Metaneumovirus</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd; font-weight: bold;">15</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">13%</td>
-            </tr>
-            <tr style="background: #f8f9fa;">
-                <td style="padding: 0.5rem; border: 1px solid #ddd;">SARS-CoV-2 (COVID-19)</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd; font-weight: bold;">8</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">7%</td>
-            </tr>
-            <tr style="background: white;">
-                <td style="padding: 0.5rem; border: 1px solid #ddd;">Parainfluenza</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd; font-weight: bold;">4</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">3%</td>
-            </tr>
-            <tr style="background: #f8f9fa; font-weight: bold;">
-                <td style="padding: 0.5rem; border: 1px solid #ddd;">TOTAL</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">118</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">100%</td>
-            </tr>
-        </tbody>
-    </table>
-
-    <div style="background: #fff3cd; padding: 1.5rem; border-radius: 6px; border-left: 4px solid #f0ad4e; margin: 1.5rem 0;">
-        <p style="margin: 0; line-height: 1.8;">
-            <strong>Nota:</strong> Los datos de virus respiratorios son estimados. Por favor, actualice con los
-            resultados oficiales del laboratorio provincial de la SE {request.semana}/{request.anio}.
-        </p>
-    </div>
-</div>
-
-<div style="page-break-after: always;"></div>
-""")
-
-    # ========== VIGILANCIA DE DIARREAS Y AGENTES ETIOLÓGICOS ==========
-    html_parts.append(f"""
-<div class="seccion-diarreas" style="margin-bottom: 3rem;">
-    <h2 style="color: #1e5a7d; border-bottom: 3px solid #1e5a7d; padding-bottom: 0.5rem; margin-bottom: 1.5rem;">
-        VIGILANCIA DE DIARREAS AGUDAS
-    </h2>
-
-    <h3 style="color: #1e5a7d; margin-top: 2rem; margin-bottom: 1rem;">Agentes Etiológicos Identificados</h3>
-
-    <p style="line-height: 1.8; margin-bottom: 1.5rem;">
-        Se presenta el detalle de agentes etiológicos identificados en muestras de pacientes con cuadros diarreicos
-        procesadas durante el período de análisis.
-    </p>
-
-    <table style="width: 100%; border-collapse: collapse; margin: 1.5rem 0;">
-        <caption style="caption-side: top; text-align: left; font-weight: bold; color: #1e5a7d; margin-bottom: 0.5rem;">
-            Tabla N°6: Agentes etiológicos en diarreas - SE {periodo_analisis['semana_inicio']} a {periodo_analisis['semana_fin']} {request.anio}
-        </caption>
-        <thead>
-            <tr style="background: #1e5a7d; color: white;">
-                <th style="padding: 0.75rem; text-align: left; border: 1px solid #ddd;">Agente Etiológico</th>
-                <th style="padding: 0.75rem; text-align: center; border: 1px solid #ddd;">Tipo</th>
-                <th style="padding: 0.75rem; text-align: center; border: 1px solid #ddd;">Muestras Positivas</th>
-                <th style="padding: 0.75rem; text-align: center; border: 1px solid #ddd;">%</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr style="background: #f8f9fa;">
-                <td style="padding: 0.5rem; border: 1px solid #ddd;">Rotavirus</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">Virus</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd; font-weight: bold;">12</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">35%</td>
-            </tr>
-            <tr style="background: white;">
-                <td style="padding: 0.5rem; border: 1px solid #ddd;">Norovirus</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">Virus</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd; font-weight: bold;">8</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">23%</td>
-            </tr>
-            <tr style="background: #f8f9fa;">
-                <td style="padding: 0.5rem; border: 1px solid #ddd;">E. coli enterotoxigénica (ETEC)</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">Bacteria</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd; font-weight: bold;">6</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">18%</td>
-            </tr>
-            <tr style="background: white;">
-                <td style="padding: 0.5rem; border: 1px solid #ddd;">Salmonella spp.</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">Bacteria</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd; font-weight: bold;">5</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">15%</td>
-            </tr>
-            <tr style="background: #f8f9fa;">
-                <td style="padding: 0.5rem; border: 1px solid #ddd;">Campylobacter spp.</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">Bacteria</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd; font-weight: bold;">3</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">9%</td>
-            </tr>
-            <tr style="background: white; font-weight: bold;">
-                <td style="padding: 0.5rem; border: 1px solid #ddd;" colspan="2">TOTAL</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">34</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">100%</td>
-            </tr>
-        </tbody>
-    </table>
-
-    <div style="background: #fff3cd; padding: 1.5rem; border-radius: 6px; border-left: 4px solid #f0ad4e; margin: 1.5rem 0;">
-        <p style="margin: 0; line-height: 1.8;">
-            <strong>Nota:</strong> Los datos son estimados. Actualice con los resultados del laboratorio provincial.
-        </p>
-    </div>
-</div>
-
-<div style="page-break-after: always;"></div>
-""")
-
-    # ========== SÍNDROME URÉMICO HEMOLÍTICO (SUH) ==========
-    html_parts.append(f"""
-<div class="seccion-suh" style="margin-bottom: 3rem;">
-    <h2 style="color: #1e5a7d; border-bottom: 3px solid #1e5a7d; padding-bottom: 0.5rem; margin-bottom: 1.5rem;">
-        SÍNDROME URÉMICO HEMOLÍTICO (SUH)
-    </h2>
-
-    <p style="line-height: 1.8; margin-bottom: 1.5rem;">
-        El Síndrome Urémico Hemolítico (SUH) es una enfermedad de notificación obligatoria que requiere vigilancia
-        epidemiológica intensificada. A continuación se presenta el detalle de casos notificados durante el período.
-    </p>
-
-    <table style="width: 100%; border-collapse: collapse; margin: 1.5rem 0;">
-        <caption style="caption-side: top; text-align: left; font-weight: bold; color: #1e5a7d; margin-bottom: 0.5rem;">
-            Tabla N°7: Casos de SUH - SE {periodo_analisis['semana_inicio']} a {periodo_analisis['semana_fin']} {request.anio}
-        </caption>
-        <thead>
-            <tr style="background: #1e5a7d; color: white;">
-                <th style="padding: 0.75rem; text-align: center; border: 1px solid #ddd;">Edad</th>
-                <th style="padding: 0.75rem; text-align: center; border: 1px solid #ddd;">Sexo</th>
-                <th style="padding: 0.75rem; text-align: left; border: 1px solid #ddd;">Localidad</th>
-                <th style="padding: 0.75rem; text-align: center; border: 1px solid #ddd;">Hospitalizado</th>
-                <th style="padding: 0.75rem; text-align: center; border: 1px solid #ddd;">Diálisis</th>
-                <th style="padding: 0.75rem; text-align: center; border: 1px solid #ddd;">Evolución</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr style="background: #f8f9fa;">
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">2 años</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">M</td>
-                <td style="padding: 0.5rem; border: 1px solid #ddd;">Comodoro Rivadavia</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">Sí</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">Sí</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">En tratamiento</td>
-            </tr>
-            <tr style="background: white;">
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">4 años</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">F</td>
-                <td style="padding: 0.5rem; border: 1px solid #ddd;">Trelew</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">Sí</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">No</td>
-                <td style="padding: 0.5rem; text-align: center; border: 1px solid #ddd;">Favorable</td>
-            </tr>
-            <tr style="background: #f8f9fa;">
-                <td colspan="6" style="padding: 0.75rem; text-align: center; border: 1px solid #ddd; font-style: italic; color: #666;">
-                    Actualizar con casos reales del período
-                </td>
-            </tr>
-        </tbody>
-    </table>
-
-    <div style="background: #fff3cd; padding: 1.5rem; border-radius: 6px; border-left: 4px solid #f0ad4e; margin: 1.5rem 0;">
-        <p style="margin: 0; line-height: 1.8;">
-            <strong>Nota:</strong> Los casos presentados son ejemplos. Actualice con los casos reales notificados
-            durante la SE {request.semana}/{request.anio}.
-        </p>
-    </div>
-</div>
-
-<div style="page-break-after: always;"></div>
-""")
-
-    # ========== METODOLOGÍA ==========
-    html_parts.append("""
-<div class="seccion-metodologia" style="margin-bottom: 3rem;">
-    <h2 style="color: #1e5a7d; border-bottom: 3px solid #1e5a7d; padding-bottom: 0.5rem; margin-bottom: 1.5rem;">
-        METODOLOGÍA
-    </h2>
-
-    <h3 style="color: #1e5a7d; margin-top: 2rem; margin-bottom: 1rem;">Fuentes de Información</h3>
-    <p style="line-height: 1.8; margin-bottom: 1rem;">
-        Los datos presentados en este boletín provienen del Sistema Nacional de Vigilancia de la Salud (SNVS 2.0),
-        donde los efectores de salud de las cuatro Unidades de Gestión Descentralizadas (UGD) de la provincia
-        de Chubut notifican de manera sistemática los eventos de notificación obligatoria.
-    </p>
-
-    <h3 style="color: #1e5a7d; margin-top: 2rem; margin-bottom: 1rem;">Procesamiento de Datos</h3>
-    <p style="line-height: 1.8; margin-bottom: 1rem;">
-        Los datos son procesados y analizados por el equipo de la Residencia de Epidemiología de la Dirección
-        Provincial de Patologías Prevalentes y Epidemiología. Se aplican técnicas de análisis descriptivo,
-        cálculo de tasas, y comparación de períodos epidemiológicos.
-    </p>
-
-    <h3 style="color: #1e5a7d; margin-top: 2rem; margin-bottom: 1rem;">Corredor Endémico</h3>
-    <p style="line-height: 1.8; margin-bottom: 1rem;">
-        El corredor endémico se construye utilizando datos históricos de los últimos 5 años, calculando
-        percentiles 25, 50 y 75 para definir las zonas de éxito, seguridad, alerta y epidemia respectivamente.
-    </p>
-
-    <h3 style="color: #1e5a7d; margin-top: 2rem; margin-bottom: 1rem;">Definiciones de Caso</h3>
-    <p style="line-height: 1.8; margin-bottom: 1rem;">
-        Se utilizan las definiciones de caso establecidas por el Ministerio de Salud de la Nación para cada
-        evento de notificación obligatoria, diferenciando entre casos sospechosos, probables y confirmados.
-    </p>
-
-    <h3 style="color: #1e5a7d; margin-top: 2rem; margin-bottom: 1rem;">Consideraciones</h3>
-    <ul style="line-height: 1.8; margin-bottom: 1rem;">
-        <li>Los datos son provisionales y están sujetos a actualización.</li>
-        <li>Las tasas se calculan por 100,000 habitantes utilizando proyecciones poblacionales del INDEC.</li>
-        <li>Los mapas coropléticos utilizan la división departamental de la provincia de Chubut.</li>
-        <li>Los gráficos presentados se generan de manera dinámica a partir de los datos del SNVS 2.0.</li>
-    </ul>
-</div>
-
-<div style="page-break-after: always;"></div>
-""")
-
-    # ========== FOOTER ==========
-    fecha_generacion = datetime.now().strftime("%d/%m/%Y %H:%M")
-
-    html_parts.append(f"""
-<div class="boletin-footer" style="margin-top: 4rem; padding-top: 2rem; border-top: 2px solid #1e5a7d;">
-    <div style="text-align: center; color: #666;">
-        <hr style="border: none; border-top: 1px solid #ccc; margin: 2rem 0;">
-        <p style="margin: 0.5rem 0; font-style: italic;"><strong>Boletín Epidemiológico - Provincia del Chubut</strong></p>
-        <p style="margin: 0.5rem 0;">Sistema de Vigilancia Epidemiológica</p>
-        <p style="margin: 0.5rem 0;">Ministerio de Salud - Provincia del Chubut</p>
-        <p style="margin: 0.5rem 0; font-size: 0.9rem;">Generado: {fecha_generacion}</p>
-        <p style="margin-top: 1rem; font-size: 0.85rem; color: #999;">
-            🤖 Boletín generado automáticamente por el Sistema de Vigilancia Epidemiológica
-        </p>
-    </div>
-</div>
-""")
-
-    return "\n".join(html_parts)
+    return boletin
