@@ -1,6 +1,6 @@
 "use client";
 
-import { useEditor, EditorContent } from "@tiptap/react";
+import { useEditor, EditorContent, type JSONContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { Table } from "@tiptap/extension-table";
 import { TableRow } from "@tiptap/extension-table-row";
@@ -10,7 +10,7 @@ import { Image } from "@tiptap/extension-image";
 import { TextAlign } from "@tiptap/extension-text-align";
 import { Underline } from "@tiptap/extension-underline";
 import { Placeholder } from "@tiptap/extension-placeholder";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 import { DynamicTableExtension } from "./extensions/dynamic-table-extension";
 import { DynamicChartExtension } from "./extensions/dynamic-chart-extension";
@@ -19,11 +19,39 @@ import { SlashCommandExtension } from "./extensions/slash-command-extension";
 import { BoletinMenuBar } from "./boletin-menu-bar";
 import { ChartConfigDialog } from "./dialogs/chart-config-dialog";
 import { TableConfigDialog } from "./dialogs/table-config-dialog";
+// Extensions from config (for templates created there)
+import { VariableNodeExtension } from "../config/extensions/variable-node";
+import { DynamicBlockExtension } from "../config/extensions/dynamic-block-extension";
+import { SelectedEventsPlaceholderExtension } from "../config/extensions/selected-events-placeholder";
 
 interface BoletinTiptapEditorProps {
+  /** Initial content - can be HTML string or TipTap JSON string */
   initialHtml?: string;
   onChange?: (html: string) => void;
   className?: string;
+}
+
+/**
+ * Parse initial content - detects if it's JSON or HTML
+ */
+function parseInitialContent(content: string | undefined): string | JSONContent {
+  if (!content) return "";
+
+  // Try to parse as JSON first
+  const trimmed = content.trim();
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      // Check if it looks like TipTap JSON
+      if (parsed && typeof parsed === "object" && parsed.type === "doc") {
+        return parsed as JSONContent;
+      }
+    } catch {
+      // Not valid JSON, treat as HTML
+    }
+  }
+
+  return content;
 }
 
 // Extensión de Table con estilos minimalistas tipo Google Docs
@@ -73,6 +101,12 @@ export function BoletinTiptapEditor({
     updateAttributes: (attrs: Record<string, unknown>) => void;
   } | null>(null);
 
+  // Parse initial content (handles both HTML and JSON)
+  const parsedInitialContent = useMemo(
+    () => parseInitialContent(initialHtml),
+    [initialHtml]
+  );
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -110,12 +144,16 @@ export function BoletinTiptapEditor({
       DynamicTableExtension,
       DynamicChartExtension,
       PageBreakExtension,
+      // Extensions from config (for templates created there)
+      VariableNodeExtension,
+      DynamicBlockExtension,
+      SelectedEventsPlaceholderExtension,
       // Slash command extension
       SlashCommandExtension(
         () => setChartDialogOpen(true)
       ),
     ],
-    content: initialHtml || "",
+    content: parsedInitialContent,
     editorProps: {
       attributes: {
         class:
@@ -211,10 +249,20 @@ export function BoletinTiptapEditor({
   // Actualizar contenido cuando cambia initialHtml
   useEffect(() => {
     if (editor && initialHtml !== undefined) {
-      const currentContent = editor.getHTML();
-      // Solo actualizar si el contenido es diferente
-      if (currentContent !== initialHtml) {
-        editor.commands.setContent(initialHtml);
+      // Use parsed content for comparison and update
+      const newParsedContent = parseInitialContent(initialHtml);
+
+      // For JSON content, compare JSON; for HTML, compare strings
+      if (typeof newParsedContent === "object") {
+        const currentJson = editor.getJSON();
+        if (JSON.stringify(currentJson) !== JSON.stringify(newParsedContent)) {
+          editor.commands.setContent(newParsedContent);
+        }
+      } else {
+        const currentContent = editor.getHTML();
+        if (currentContent !== newParsedContent) {
+          editor.commands.setContent(newParsedContent);
+        }
       }
     }
   }, [editor, initialHtml]);

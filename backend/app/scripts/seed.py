@@ -32,6 +32,9 @@ FUENTES DE DATOS:
 6. **Charts**: Configuración de gráficos del dashboard
    - Cargados desde seeds/charts.py
 
+7. **Boletines**: Template de configuración de boletines epidemiológicos
+   - Cargado desde domains/boletines/seeds.py
+
 REQUISITOS:
 -----------
 - Base de datos vacía (las tablas deben existir pero estar vacías)
@@ -59,7 +62,7 @@ from sqlalchemy.orm import Session
 
 
 def truncate_tables():
-    """Limpia las tablas geográficas y establecimientos"""
+    """Limpia las tablas geográficas, establecimientos y agentes"""
     print("\n" + "=" * 70)
     print("🗑️  LIMPIANDO BASE DE DATOS")
     print("=" * 70)
@@ -73,13 +76,20 @@ def truncate_tables():
 
     engine = create_engine(DATABASE_URL)
     with engine.connect() as conn:
+        # Tablas geográficas y establecimientos
         conn.execute(
             text(
                 "TRUNCATE establecimiento, localidad, departamento, provincia RESTART IDENTITY CASCADE"
             )
         )
+        # Tablas de agentes etiológicos
+        conn.execute(
+            text(
+                "TRUNCATE agente_extraccion_config, agente_etiologico RESTART IDENTITY CASCADE"
+            )
+        )
         conn.commit()
-        print("✅ Tablas truncadas")
+        print("✅ Tablas truncadas (geografía, establecimientos, agentes)")
 
 
 def main():
@@ -91,9 +101,9 @@ def main():
     print("  📍 Geografía completa de Argentina (API Georef)")
     print("  📊 Población del Censo 2022 (INDEC)")
     print("  🏥 Establecimientos de Salud (~8,300 desde IGN WFS)")
-    print("  🗺️  Capas GIS (~77,000 features desde IGN WFS)")
+    print("  🦠 Grupos/Tipos ENO y Agentes Etiológicos")
     print("  🎯 Estrategias epidemiológicas")
-    print("  📈 Configuración de gráficos")
+    print("  📈 Configuración de gráficos y boletines")
     print("  🔐 Usuario superadmin (admin@admin.com)")
     print("\n⏱️  Tiempo estimado: 8-12 minutos (incluye descargas WFS)")
     print("=" * 70)
@@ -126,11 +136,30 @@ def main():
             dept_count = seed_departamentos_desde_georef(conn)
             loc_count = seed_localidades_desde_georef(conn, max_localidades=5000)
 
+        # Paso 1.5: Geometrías de provincias y departamentos
+        print("\n" + "=" * 70)
+        print("PASO 1.5/8: GEOMETRÍAS (GeoJSON desde Georef)")
+        print("=" * 70)
+        try:
+            from app.scripts.seeds.seed_geometrias_georef import (
+                seed_geometrias_departamentos,
+                seed_geometrias_provincias,
+            )
+
+            with engine.connect() as conn:
+                seed_geometrias_provincias(conn)
+                seed_geometrias_departamentos(conn)
+        except Exception as e:
+            print(f"⚠️  Error cargando geometrías: {e}")
+            import traceback
+            traceback.print_exc()
+
         # Paso 2: Población del Censo 2022
         print("\n" + "=" * 70)
-        print("PASO 2/7: POBLACIÓN (Censo 2022)")
+        print("PASO 2/8: POBLACIÓN (Censo 2022)")
         print("=" * 70)
         from app.scripts.seeds.seed_poblacion_censo2022 import (
+            descargar_censo_si_no_existe,
             seed_poblacion_departamentos,
             seed_poblacion_provincias,
         )
@@ -138,12 +167,13 @@ def main():
         data_dir = Path(__file__).parent / "seeds" / "data"
         archivo_censo = data_dir / "censo2022_poblacion.xlsx"
 
-        if archivo_censo.exists():
+        # Descargar automáticamente si no existe
+        if descargar_censo_si_no_existe(archivo_censo):
             with Session(engine) as session:
                 seed_poblacion_provincias(session, archivo_censo)
                 seed_poblacion_departamentos(session, archivo_censo)
         else:
-            print("⚠️  Archivo censo2022_poblacion.xlsx no encontrado, omitiendo...")
+            print("⚠️  No se pudo obtener archivo del censo, omitiendo...")
 
         # Paso 3: Establecimientos REFES
         print("\n" + "=" * 70)
@@ -183,9 +213,58 @@ def main():
 
             traceback.print_exc()
 
+        # Paso 4.5: Grupos ENO y Tipos ENO
+        print("\n" + "=" * 70)
+        print("PASO 4.5/10: GRUPOS Y TIPOS ENO")
+        print("=" * 70)
+        try:
+            from app.scripts.seeds.seed_grupos_eno import seed_grupos_eno
+            from app.scripts.seeds.seed_tipos_eno import seed_tipos_eno
+
+            with Session(engine) as session:
+                seed_grupos_eno(session)
+                seed_tipos_eno(session)
+                session.commit()
+                print("✅ Grupos y Tipos ENO cargados")
+        except Exception as e:
+            print(f"⚠️  Error cargando Grupos/Tipos ENO: {e}")
+            import traceback
+
+            traceback.print_exc()
+
+        # Paso 4.6: Agentes Etiológicos
+        print("\n" + "=" * 70)
+        print("PASO 4.6/10: AGENTES ETIOLÓGICOS")
+        print("=" * 70)
+        try:
+            import asyncio
+
+            from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+
+            from app.scripts.seeds.seed_agentes_etiologicos import (
+                seed_agentes_etiologicos,
+            )
+
+            # Crear engine dedicado para este seed (evita problemas de event loop)
+            async_db_url = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
+            temp_engine = create_async_engine(async_db_url)
+
+            async def seed_agentes_async():
+                async with AsyncSession(temp_engine) as session:
+                    await seed_agentes_etiologicos(session)
+                await temp_engine.dispose()
+
+            asyncio.run(seed_agentes_async())
+            print("✅ Agentes etiológicos cargados")
+        except Exception as e:
+            print(f"⚠️  Error cargando agentes etiológicos: {e}")
+            import traceback
+
+            traceback.print_exc()
+
         # Paso 5: Estrategias
         print("\n" + "=" * 70)
-        print("PASO 5/7: ESTRATEGIAS")
+        print("PASO 5/10: ESTRATEGIAS")
         print("=" * 70)
         try:
             from app.scripts.seeds.strategies import seed_all_strategies
@@ -201,7 +280,7 @@ def main():
 
         # Paso 6: Charts
         print("\n" + "=" * 70)
-        print("PASO 6/7: GRÁFICOS")
+        print("PASO 6/10: GRÁFICOS")
         print("=" * 70)
         try:
             from app.scripts.seeds.charts import seed_charts
@@ -215,9 +294,37 @@ def main():
 
             traceback.print_exc()
 
-        # Paso 7: Usuarios
+        # Paso 7: Configuración de Boletines
         print("\n" + "=" * 70)
-        print("PASO 7/7: USUARIOS")
+        print("PASO 7/10: CONFIGURACIÓN DE BOLETINES")
+        print("=" * 70)
+        try:
+            import asyncio
+
+            from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+
+            from app.domains.boletines.seeds import seed_boletin_template_config
+
+            # Crear engine dedicado para este seed (evita problemas de event loop)
+            async_db_url = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
+            temp_engine = create_async_engine(async_db_url)
+
+            async def seed_boletin_async():
+                async with AsyncSession(temp_engine) as session:
+                    await seed_boletin_template_config(session)
+                await temp_engine.dispose()
+
+            asyncio.run(seed_boletin_async())
+            print("✅ Configuración de boletines cargada")
+        except Exception as e:
+            print(f"⚠️  Error cargando configuración de boletines: {e}")
+            import traceback
+
+            traceback.print_exc()
+
+        # Paso 8: Usuarios
+        print("\n" + "=" * 70)
+        print("PASO 8/10: USUARIOS")
         print("=" * 70)
         try:
             from app.scripts.seeds.seed_users import seed_superadmin
@@ -239,13 +346,11 @@ def main():
         print(f"  ✅ {loc_count} Localidades con coordenadas")
         print("  ✅ Población del Censo 2022")
         print(f"  ✅ {estab_count:,} Establecimientos de Salud (REFES)")
-        # if gis_hidro_count > 0 or gis_areas_count > 0:
-        #     print(f"  ✅ {gis_hidro_count:,} Cursos de agua (GIS)")
-        #     print(f"  ✅ {gis_areas_count:,} Áreas urbanas (GIS)")
-        # else:
-        #     print(f"  ⚠️  Capas GIS no cargadas (archivos no disponibles)")
+        print("  ✅ Grupos y Tipos ENO")
+        print("  ✅ Agentes etiológicos (respiratorios, entéricos, vectoriales)")
         print("  ✅ Estrategias epidemiológicas")
         print("  ✅ Configuración de gráficos")
+        print("  ✅ Configuración de boletines (template)")
         print("  ✅ Usuario superadmin (admin@admin.com)")
         print("=" * 70)
 

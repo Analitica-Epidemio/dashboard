@@ -9,9 +9,11 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
-# Directorio de caché (relativo a este archivo)
-CACHE_DIR = Path(__file__).parent / "cache"
-CACHE_DIR.mkdir(exist_ok=True)
+# Directorio de caché (en .cache/seeds/ en la raíz del proyecto)
+# Esto mantiene el cache fuera de app/ para builds de Docker más rápidos
+_PROJECT_ROOT = Path(__file__).parent.parent.parent.parent  # backend/
+CACHE_DIR = _PROJECT_ROOT / ".cache" / "seeds"
+CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def get_cached_response(

@@ -32,6 +32,7 @@ export default function ModernUploadPage() {
 
   const [selectedSheet, setSelectedSheet] = useState<string | null>(null);
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
+  const [jobFailed, setJobFailed] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState<{
     sheetName: string;
     totalRows: number;
@@ -88,15 +89,23 @@ export default function ModernUploadPage() {
           totalRows: resultData.total_rows,
         });
       }
+      setJobFailed(false);
       setCurrentJobId(null);
     },
     [selectedSheet]
   );
 
-  // Handle job error
+  // Handle job error - NO limpiar currentJobId para que el componente siga mostrando el error
   const handleJobError = useCallback((error: string) => {
     console.error("Job error:", error);
-    setCurrentJobId(null);
+    // Si es "retry", volver a intentar con el mismo archivo
+    if (error === "retry") {
+      setJobFailed(false);
+      setCurrentJobId(null);
+      return;
+    }
+    setJobFailed(true);
+    // NO limpiar currentJobId - dejar que UploadProgress muestre el error
   }, []);
 
   // Reset everything
@@ -104,6 +113,7 @@ export default function ModernUploadPage() {
     reset();
     setSelectedSheet(null);
     setCurrentJobId(null);
+    setJobFailed(false);
     setUploadSuccess(null);
   }, [reset]);
 

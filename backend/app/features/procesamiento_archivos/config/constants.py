@@ -137,7 +137,6 @@ BOOLEAN_MAPPING: Dict[str, bool] = {
     "N": False,
     "0": False,
     "FALSE": False,
-    "NO": False,
 }
 
 # === VALIDACIÓN ===

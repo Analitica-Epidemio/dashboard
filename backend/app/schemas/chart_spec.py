@@ -226,6 +226,9 @@ ChartConfigUnion = Annotated[
 # Filtros (para reproducibilidad)
 # ============================================================================
 
+AgrupacionTemporal = Literal["semana", "mes", "anio"]
+
+
 class ChartFilters(BaseModel):
     """Filtros aplicados al chart (para reproducibilidad)"""
     grupo_eno_ids: Optional[List[int]] = None
@@ -237,12 +240,30 @@ class ChartFilters(BaseModel):
     edad_min: Optional[int] = None
     edad_max: Optional[int] = None
     tipo_sujeto: Optional[Literal["humano", "animal"]] = None
+    # Filtros de período epidemiológico
+    anio: Optional[int] = None  # Año epidemiológico
+    semana_desde: Optional[int] = None  # Semana epidemiológica inicio
+    semana_hasta: Optional[int] = None  # Semana epidemiológica fin
+    # Agrupación temporal
+    agrupacion_temporal: Optional[AgrupacionTemporal] = "semana"  # Agrupar por semana, mes o año
+    # Comparaciones
+    comparar_anio_anterior: Optional[bool] = False  # Incluir línea de año anterior
+    comparar_periodo_anterior: Optional[bool] = False  # Incluir período anterior
     extra: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
 
 # ============================================================================
 # Especificación Universal
 # ============================================================================
+
+class ChartError(BaseModel):
+    """Error estructurado para charts que no pueden generarse"""
+    code: str  # Código de error (ej: "INSUFFICIENT_HISTORICAL_DATA")
+    title: str  # Título corto para mostrar
+    message: str  # Mensaje descriptivo para el usuario
+    details: Optional[Dict[str, Any]] = None  # Detalles técnicos opcionales
+    suggestion: Optional[str] = None  # Sugerencia de cómo resolver
+
 
 class UniversalChartSpec(BaseModel):
     """
@@ -266,6 +287,9 @@ class UniversalChartSpec(BaseModel):
 
     # Filtros aplicados (para reproducibilidad)
     filters: Optional[ChartFilters] = None
+
+    # Error (si el chart no pudo generarse correctamente)
+    error: Optional[ChartError] = None
 
     # Timestamp
     generated_at: Optional[str] = Field(

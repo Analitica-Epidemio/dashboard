@@ -150,7 +150,7 @@ class EventStrategyRepository:
         )
 
         if active_only:
-            query = query.where(EventStrategy.is_active == True)
+            query = query.where(EventStrategy.is_active.is_(True))
 
         # Filtrar por validez temporal:
         # La estrategia es válida si:
@@ -159,7 +159,7 @@ class EventStrategyRepository:
         query = query.where(
             and_(
                 EventStrategy.valid_from <= fecha,
-                (EventStrategy.valid_until == None) | (EventStrategy.valid_until > fecha),
+                (EventStrategy.valid_until.is_(None)) | (EventStrategy.valid_until > fecha),
             )
         )
 
@@ -481,7 +481,7 @@ class EventStrategyRepository:
                         and_(
                             EventStrategy.tipo_eno_id == strategy.tipo_eno_id,
                             EventStrategy.id != strategy_id,
-                            EventStrategy.is_active == True,
+                            EventStrategy.is_active.is_(True),
                         )
                     )
                 )
@@ -586,7 +586,7 @@ class EventStrategyRepository:
                     valid_until > EventStrategy.valid_from,
                     # El nuevo período empieza antes de que termine el existente (o el existente no tiene fin)
                     and_(
-                        (EventStrategy.valid_until == None)
+                        (EventStrategy.valid_until.is_(None))
                         | (valid_from < EventStrategy.valid_until)
                     ),
                 )
@@ -596,7 +596,7 @@ class EventStrategyRepository:
             # Hay solapamiento si el período existente termina después de que empiece el nuevo
             # o si el período existente tampoco tiene fin
             query = query.where(
-                (EventStrategy.valid_until == None)
+                (EventStrategy.valid_until.is_(None))
                 | (EventStrategy.valid_until > valid_from)
             )
 
@@ -674,7 +674,7 @@ class ClassificationRuleRepository:
             query = query.where(ClassificationRule.classification == classification)
 
         if active_only:
-            query = query.where(ClassificationRule.is_active == True)
+            query = query.where(ClassificationRule.is_active.is_(True))
 
         query = query.options(selectinload(ClassificationRule.filters)).order_by(
             ClassificationRule.priority

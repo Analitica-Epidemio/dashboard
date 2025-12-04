@@ -383,7 +383,6 @@ class DomiciliosProcessor(BulkProcessorBase):
                         "latitud": None,
                         "longitud": None,
                         "id_departamento_indec": None,  # Sin departamento conocido
-                        "id_departamento": None,
                         "created_at": timestamp,
                         "updated_at": timestamp,
                     }

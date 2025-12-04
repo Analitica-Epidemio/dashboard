@@ -27,7 +27,7 @@ from app.domains.sujetos_epidemiologicos.animales_models import Animal
 from app.domains.sujetos_epidemiologicos.ciudadanos_models import (
     Ciudadano,
 )
-from app.domains.territorio.geografia_models import Departamento, Domicilio, Localidad
+from app.domains.territorio.geografia_models import Domicilio
 
 
 class EventoSortBy(str, Enum):
@@ -202,15 +202,9 @@ async def list_eventos(
                 # Relaciones con sujetos (ciudadano/animal)
                 selectinload(Evento.ciudadano),
                 selectinload(Evento.ciudadano).selectinload(Ciudadano.datos),
-                selectinload(Evento.animal)
-                .selectinload(Animal.localidad)
-                .selectinload(Localidad.departamento)
-                .selectinload(Departamento.provincia),
+                selectinload(Evento.animal).selectinload(Animal.localidad),
                 # Domicilio del evento (no del ciudadano!)
-                selectinload(Evento.domicilio)
-                .selectinload(Domicilio.localidad)
-                .selectinload(Localidad.departamento)
-                .selectinload(Departamento.provincia),
+                selectinload(Evento.domicilio).selectinload(Domicilio.localidad),
                 # Relaciones con establecimientos
                 selectinload(Evento.establecimiento_consulta),
                 selectinload(Evento.establecimiento_notificacion),
@@ -363,15 +357,9 @@ async def list_eventos(
                         selectinload(Evento.tipo_eno),
                         selectinload(Evento.ciudadano),
                         selectinload(Evento.ciudadano).selectinload(Ciudadano.datos),
-                        selectinload(Evento.animal)
-                        .selectinload(Animal.localidad)
-                        .selectinload(Localidad.departamento)
-                        .selectinload(Departamento.provincia),
+                        selectinload(Evento.animal).selectinload(Animal.localidad),
                         # Domicilio del evento (no del ciudadano!)
-                        selectinload(Evento.domicilio)
-                        .selectinload(Domicilio.localidad)
-                        .selectinload(Localidad.departamento)
-                        .selectinload(Departamento.provincia),
+                        selectinload(Evento.domicilio).selectinload(Domicilio.localidad),
                         selectinload(Evento.establecimiento_consulta),
                         selectinload(Evento.establecimiento_notificacion),
                         selectinload(Evento.establecimiento_carga),
@@ -445,18 +433,8 @@ async def list_eventos(
                 # Get location from evento domicilio (not ciudadano!)
                 if evento.domicilio and evento.domicilio.localidad:
                     localidad_res = evento.domicilio.localidad.nombre
-                    if (
-                        evento.domicilio.localidad.departamento
-                        and evento.domicilio.localidad.departamento.provincia
-                    ):
-                        provincia_res = (
-                            evento.domicilio.localidad.departamento.provincia.nombre
-                        )
-                    else:
-                        provincia_res = None
                 else:
                     localidad_res = None
-                    provincia_res = None
             elif evento.animal:
                 tipo_sujeto = "animal"
                 nombre_sujeto = (
@@ -467,18 +445,8 @@ async def list_eventos(
                 # Get location from animal's localidad
                 if evento.animal.localidad:
                     localidad_res = evento.animal.localidad.nombre
-                    if (
-                        evento.animal.localidad.departamento
-                        and evento.animal.localidad.departamento.provincia
-                    ):
-                        provincia_res = (
-                            evento.animal.localidad.departamento.provincia.nombre
-                        )
-                    else:
-                        provincia_res = None
                 else:
                     localidad_res = None
-                    provincia_res = None
 
             eventos_list.append(
                 EventoListItem(

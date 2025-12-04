@@ -10,6 +10,7 @@ import {
   IconTrendingUp,
   IconBuildingHospital,
   IconBook,
+  IconDatabase,
 } from "@tabler/icons-react";
 
 export interface NavItem {
@@ -119,6 +120,13 @@ export const navigationConfig = {
       id: "header-sistema",
       title: "Sistema",
       type: "header",
+    },
+    {
+      id: "catalogos",
+      title: "Catálogos",
+      icon: IconDatabase,
+      url: "/dashboard/catalogos",
+      type: "link",
     },
     {
       id: "settings",

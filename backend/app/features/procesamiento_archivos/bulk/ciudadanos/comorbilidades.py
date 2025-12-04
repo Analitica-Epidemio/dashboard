@@ -11,11 +11,7 @@ from app.domains.sujetos_epidemiologicos.ciudadanos_models import (
 )
 
 from ...config.columns import Columns
-from ..shared import (
-    BulkOperationResult,
-    BulkProcessorBase,
-    pl_safe_int,
-)
+from ..shared import BulkOperationResult, BulkProcessorBase, pl_safe_int
 
 
 class ComorbilidadesProcessor(BulkProcessorBase):

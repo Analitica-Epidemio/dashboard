@@ -124,7 +124,6 @@ class MapboxAdapter(GeocodingAdapter):
 
             # Extraer componentes de la dirección
             context = feature.get("context", [])
-            place_name = feature.get("place_name", "")
 
             # Parsear context para obtener componentes
             resultado_provincia = None
@@ -206,9 +205,6 @@ class MapboxAdapter(GeocodingAdapter):
             resultado_localidad = None
             resultado_barrio = None
             resultado_codigo_postal = None
-
-            # Extraer dirección del place_name
-            place_name = feature.get("place_name", "")
 
             for ctx in context:
                 ctx_id = ctx.get("id", "")

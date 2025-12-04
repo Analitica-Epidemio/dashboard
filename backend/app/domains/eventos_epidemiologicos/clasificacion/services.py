@@ -298,8 +298,7 @@ class EventClassificationService:
             == "SI",
             "es_caso_importado": lambda df: df.get(
                 "CASO_IMPORTADO", pd.Series([False] * len(df))
-            )
-            == True,
+            ).eq(True),
             "tiene_nexo_epidemiologico": lambda df: df.get(
                 "CLASIFICACION_MANUAL", pd.Series([""] * len(df))
             ).str.contains("nexo", case=False, na=False),

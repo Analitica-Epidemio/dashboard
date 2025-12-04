@@ -41,14 +41,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Conexión a base de datos (sin crear tablas automáticamente)
     logger.info("🗄️ Base de datos lista - usa migraciones manuales con 'make migrate'")
-    
+
     # Initialize Celery connection and log Redis status
     logger.info("🔄 Initializing Celery and testing Redis connection...")
     try:
         from app.core.celery_app import celery_app
         logger.info(f"📡 Celery broker configured: {celery_app.conf.broker_url}")
         logger.info(f"🗄️ Celery result backend configured: {celery_app.conf.result_backend}")
-        
+
         # Test Redis connection
         import redis
         redis_url_parts = settings.REDIS_URL.replace('redis://', '').split(':')
@@ -56,12 +56,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         redis_port_db = redis_url_parts[1].split('/')
         redis_port = int(redis_port_db[0])
         redis_db = int(redis_port_db[1]) if len(redis_port_db) > 1 else 0
-        
+
         logger.info(f"🔍 Testing Redis connection to {redis_host}:{redis_port}, DB: {redis_db}")
         redis_client = redis.Redis(host=redis_host, port=redis_port, db=redis_db, socket_connect_timeout=3)
         redis_client.ping()
         logger.info("✅ Redis connection successful on startup!")
-        
+
     except Exception as e:
         logger.error(f"❌ Redis/Celery initialization failed: {str(e)}")
         logger.error(f"❌ Error type: {type(e).__name__}")

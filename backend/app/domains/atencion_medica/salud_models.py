@@ -303,8 +303,8 @@ class VacunasCiudadano(BaseModel, table=True):
 
     # Foreign Keys
     codigo_ciudadano: int = Field(
-        sa_type=BigInteger, 
-        foreign_key="ciudadano.codigo_ciudadano", 
+        sa_type=BigInteger,
+        foreign_key="ciudadano.codigo_ciudadano",
         description="Código del ciudadano"
     )
     id_vacuna: int = Field(foreign_key="vacuna.id", description="ID de la vacuna")

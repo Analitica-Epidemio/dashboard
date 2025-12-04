@@ -99,6 +99,11 @@ export interface MapChartConfig extends BaseChartConfig {
 // Filtros (para reproducibilidad)
 // ============================================================================
 
+export type AgrupacionTemporal = 'semana' | 'mes' | 'anio';
+
+/** Tipo de agrupación para series en gráficos stacked */
+export type AgruparPor = 'agente' | 'evento';
+
 export interface ChartFilters {
   grupo_eno_ids?: number[] | null;
   tipo_eno_ids?: number[] | null;
@@ -109,7 +114,79 @@ export interface ChartFilters {
   edad_min?: number | null;
   edad_max?: number | null;
   tipo_sujeto?: 'humano' | 'animal' | null;
+  agrupacion_temporal?: AgrupacionTemporal | null; // Agrupar por semana, mes o año
   [key: string]: unknown; // Filtros adicionales
+}
+
+// ============================================================================
+// Configuración de Series para Bloques Dinámicos
+// ============================================================================
+
+/**
+ * Configuración de una serie individual en un gráfico stacked.
+ * Permite customizar el label y color de cada agente o evento.
+ */
+export interface SeriesConfig {
+  /** Código del agente o evento (debe coincidir con agentes_codigos o eventos_codigos) */
+  codigo: string;
+  /** Texto a mostrar en la leyenda */
+  label: string;
+  /** Color hex para la serie (ej: "#2196F3") */
+  color: string;
+}
+
+/**
+ * Parámetros de query para bloques dinámicos genéricos.
+ * Usados por curva_epidemiologica, distribucion_edad, distribucion_agentes.
+ */
+export interface DynamicBlockQueryParams {
+  /** Código de un solo evento */
+  evento_codigo?: string;
+  /** Lista de códigos de eventos (para comparaciones) */
+  eventos_codigos?: string[];
+  /** Lista de códigos de agentes a incluir */
+  agentes_codigos?: string[];
+  /** Filtro por resultado de detección */
+  resultado?: 'positivo' | 'negativo' | 'indeterminado';
+  /** Filtrar solo casos internados */
+  solo_internados?: boolean;
+  /** Tipo de agrupación para series (agente o evento) */
+  agrupar_por?: AgruparPor;
+}
+
+/**
+ * Configuración visual para bloques dinámicos.
+ */
+export interface DynamicBlockConfig {
+  /** Título del gráfico */
+  titulo?: string;
+  /** Altura en píxeles */
+  height?: number;
+  /** Tipo de gráfico */
+  chart_type?: 'bar' | 'stacked_bar' | 'line' | 'pie';
+  /** Mostrar leyenda */
+  show_legend?: boolean;
+  /** Configuración de series (labels y colores) */
+  series?: SeriesConfig[];
+}
+
+// ============================================================================
+// Error de Chart
+// ============================================================================
+
+export interface ChartError {
+  code: string; // Código de error (ej: "INSUFFICIENT_HISTORICAL_DATA")
+  title: string; // Título corto para mostrar
+  message: string; // Mensaje descriptivo para el usuario
+  details?: {
+    years_found?: number[];
+    records_found?: number;
+    records_required?: number;
+    selected_period?: string;
+    historical_search_range?: string;
+    [key: string]: unknown;
+  } | null;
+  suggestion?: string | null; // Sugerencia de cómo resolver
 }
 
 // ============================================================================
@@ -130,6 +207,9 @@ export interface UniversalChartSpec {
 
   // Filtros aplicados (para reproducibilidad)
   filters?: ChartFilters | null;
+
+  // Error (si el chart no pudo generarse correctamente)
+  error?: ChartError | null;
 
   // Timestamp de generación
   generated_at?: string | null;

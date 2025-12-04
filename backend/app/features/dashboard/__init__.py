@@ -9,6 +9,6 @@ Este dominio gestiona:
 """
 
 # Importar modelos para que Alembic los detecte
-from .models import *  # noqa: F403, F401
+from .models import DashboardChart
 
-__all__ = ["models"]
+__all__ = ["DashboardChart"]

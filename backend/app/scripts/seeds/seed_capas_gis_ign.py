@@ -306,7 +306,6 @@ def seed_areas_urbanas(conn: Connection) -> int:
                     values_list.append(f"""(
                         {f"'{nombre}'" if nombre else 'NULL'},
                         NULL,
-                        NULL,
                         {poblacion if poblacion else 'NULL'},
                         ST_GeomFromText('{geom_wkt}', 4326),
                         'IGN',
@@ -317,7 +316,7 @@ def seed_areas_urbanas(conn: Connection) -> int:
             if values_list:
                 stmt = text(f"""
                     INSERT INTO capa_area_urbana (
-                        nombre, id_departamento_indec, id_departamento, poblacion,
+                        nombre, id_departamento_indec, poblacion,
                         geometria, fuente, created_at, updated_at
                     ) VALUES {','.join(values_list)}
                 """)

@@ -29,7 +29,7 @@ from app.domains.sujetos_epidemiologicos.ciudadanos_models import (
     Ciudadano,
     CiudadanoDomicilio,
 )
-from app.domains.territorio.geografia_models import Departamento, Domicilio, Localidad
+from app.domains.territorio.geografia_models import Domicilio
 
 # =============================================================================
 # SCHEMAS PARA DATOS DEL EVENTO (similares a eventos/get_detail.py)
@@ -253,9 +253,7 @@ async def get_persona_detail(
                 .where(Ciudadano.codigo_ciudadano == persona_id)
                 .options(
                     selectinload(Ciudadano.domicilios)
-                    .selectinload(CiudadanoDomicilio.localidad)
-                    .selectinload(Localidad.departamento)
-                    .selectinload(Departamento.provincia),
+                    .selectinload(CiudadanoDomicilio.localidad),
                     selectinload(Ciudadano.datos),
                 )
             )
@@ -276,9 +274,7 @@ async def get_persona_detail(
                     selectinload(Evento.tipo_eno),
                     selectinload(Evento.evento_grupos).selectinload(EventoGrupoEno.grupo_eno),
                     selectinload(Evento.domicilio)
-                    .selectinload(Domicilio.localidad)
-                    .selectinload(Localidad.departamento)
-                    .selectinload(Departamento.provincia),
+                    .selectinload(Domicilio.localidad),
                     selectinload(Evento.sintomas).selectinload(
                         DetalleEventoSintomas.sintoma
                     ),
@@ -301,13 +297,6 @@ async def get_persona_detail(
                 localidad_nombre = None
                 if primer_domicilio.localidad:
                     localidad_nombre = primer_domicilio.localidad.nombre
-                    if (
-                        primer_domicilio.localidad.departamento
-                        and primer_domicilio.localidad.departamento.provincia
-                    ):
-                        provincia_nombre = (
-                            primer_domicilio.localidad.departamento.provincia.nombre
-                        )
 
                 domicilio_info = DomicilioInfo(
                     calle=primer_domicilio.calle_domicilio,
@@ -356,9 +345,7 @@ async def get_persona_detail(
                 select(Animal)
                 .where(Animal.id == persona_id)
                 .options(
-                    selectinload(Animal.localidad)
-                    .selectinload(Localidad.departamento)
-                    .selectinload(Departamento.provincia),
+                    selectinload(Animal.localidad),
                 )
             )
             result = await db.execute(query)
@@ -378,9 +365,7 @@ async def get_persona_detail(
                     selectinload(Evento.tipo_eno),
                     selectinload(Evento.evento_grupos).selectinload(EventoGrupoEno.grupo_eno),
                     selectinload(Evento.domicilio)
-                    .selectinload(Domicilio.localidad)
-                    .selectinload(Localidad.departamento)
-                    .selectinload(Departamento.provincia),
+                    .selectinload(Domicilio.localidad),
                     selectinload(Evento.sintomas).selectinload(
                         DetalleEventoSintomas.sintoma
                     ),
@@ -432,12 +417,6 @@ async def get_persona_detail(
 
                 if evento.domicilio.localidad:
                     localidad_nombre = evento.domicilio.localidad.nombre
-                    if evento.domicilio.localidad.departamento:
-                        departamento_nombre = evento.domicilio.localidad.departamento.nombre
-                        if evento.domicilio.localidad.departamento.provincia:
-                            provincia_nombre = (
-                                evento.domicilio.localidad.departamento.provincia.nombre
-                            )
 
                 domicilio_evento = DomicilioGeograficoInfo(
                     latitud=evento.domicilio.latitud,
