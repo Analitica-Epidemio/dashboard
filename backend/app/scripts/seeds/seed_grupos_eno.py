@@ -17,8 +17,15 @@ FUENTE: Sistema Nacional de Vigilancia de la Salud (SNVS) - Argentina
 
 from typing import List, TypedDict
 
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+from sqlmodel import delete
+
+from app.domains.vigilancia_nominal.models.enfermedad import (
+    EnfermedadGrupo,
+    GrupoDeEnfermedades,
+)
 
 
 class GrupoEnoData(TypedDict):
@@ -398,56 +405,72 @@ def seed_grupos_eno(session: Session) -> int:
 
     # Primero eliminar el grupo "Vigilancia Epidemiológica" si existe (era un hack)
     # Primero eliminar referencias en enfermedad_grupo
-    delete_refs = text("""
-        DELETE FROM enfermedad_grupo
-        WHERE id_grupo IN (SELECT id FROM grupo_de_enfermedades WHERE slug = 'vigilancia-epidemiologica')
-    """)
-    session.execute(delete_refs)
+    # Primero eliminar el grupo "Vigilancia Epidemiológica" si existe (era un hack)
+    # Primero eliminar referencias en enfermedad_grupo
+    # Subquery para obtener el ID del grupo
+    # SELECT id FROM grupo_de_enfermedades WHERE slug = 'vigilancia-epidemiologica'
+    # Como delete con subquery es complejo en ORM puro para delete masivo,
+    # podemos hacerlo en dos pasos o usar la subquery explícita si el driver lo soporta.
+    # Dado que es un script de seed, lo hacemos simple:
 
-    # Luego eliminar el grupo
-    delete_group = text("""
-        DELETE FROM grupo_de_enfermedades
-        WHERE slug = 'vigilancia-epidemiologica'
-    """)
-    result = session.execute(delete_group)
-    if result.rowcount > 0:
+    from sqlmodel import select
+
+    grupo_hack = session.exec(
+        select(GrupoDeEnfermedades).where(
+            GrupoDeEnfermedades.slug == "vigilancia-epidemiologica"
+        )
+    ).first()
+
+    if grupo_hack:
+        # Delete references
+        session.execute(
+            delete(EnfermedadGrupo).where(EnfermedadGrupo.id_grupo == grupo_hack.id)
+        )
+        # Delete group
+        session.delete(grupo_hack)
         print("  🗑️  Eliminado grupo hack 'vigilancia-epidemiologica'")
+
+
 
     inserted = 0
     updated = 0
 
     for grupo in GRUPOS_ENO:
-        # UPSERT usando ON CONFLICT
-        stmt = text("""
-            INSERT INTO grupo_de_enfermedades (nombre, slug, descripcion, ventana_dias_visualizacion, created_at, updated_at)
-            VALUES (:nombre, :slug, :descripcion, :ventana_dias, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-            ON CONFLICT (slug) DO UPDATE SET
-                nombre = EXCLUDED.nombre,
-                descripcion = EXCLUDED.descripcion,
-                ventana_dias_visualizacion = EXCLUDED.ventana_dias_visualizacion,
-                updated_at = CURRENT_TIMESTAMP
-            RETURNING (xmax = 0) AS inserted
-        """)
+        # Check if exists for stats
+        existing = session.exec(
+            select(GrupoDeEnfermedades).where(GrupoDeEnfermedades.slug == grupo["codigo"])
+        ).first()
 
-        result = session.execute(
-            stmt,
-            {
-                "nombre": grupo["nombre"],
-                "slug": grupo["codigo"],
-                "descripcion": grupo["descripcion"],
-                "ventana_dias": grupo["ventana_dias_default"],
-            },
+        # UPSERT usando ON CONFLICT
+        stmt = (
+            insert(GrupoDeEnfermedades)
+            .values(
+                nombre=grupo["nombre"],
+                slug=grupo["codigo"],
+                descripcion=grupo["descripcion"],
+                ventana_dias_visualizacion=grupo["ventana_dias_default"],
+            )
+            .on_conflict_do_update(
+                index_elements=["slug"],
+                set_={
+                    "nombre": grupo["nombre"],
+                    "descripcion": grupo["descripcion"],
+                    "ventana_dias_visualizacion": grupo["ventana_dias_default"],
+                    "updated_at": text("CURRENT_TIMESTAMP"),
+                },
+            )
         )
 
-        row = result.fetchone()
-        if row and row[0]:  # xmax = 0 means INSERT
-            inserted += 1
-            ventana_str = (
+        session.execute(stmt)
+
+        if not existing:
+             inserted += 1
+             ventana_str = (
                 f"{grupo['ventana_dias_default']} días"
                 if grupo["ventana_dias_default"]
                 else "acumulado"
             )
-            print(f"  ✓ {grupo['codigo']} ({ventana_str})")
+             print(f"  ✓ {grupo['codigo']} ({ventana_str})")
         else:
             updated += 1
 

@@ -52,8 +52,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
-from sqlalchemy import text
+from sqlalchemy import case, func, text
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.engine import Connection
+from sqlmodel import select, update
+
+from app.domains.territorio.establecimientos_models import Establecimiento
+from app.domains.territorio.geografia_models import Departamento, Localidad
 
 if TYPE_CHECKING:
     import geopandas as gpd
@@ -158,19 +163,24 @@ def asignar_localidad_por_coordenadas(
     """
     # Paso 1: Encontrar departamento más cercano
     # Buffer de 0.5 grados (~55km) para limitar búsqueda
-    dept_result = conn.execute(
-        text("""
-        SELECT id_departamento_indec
-        FROM departamento
-        WHERE latitud BETWEEN :lat - 0.5 AND :lat + 0.5
-          AND longitud BETWEEN :lng - 0.5 AND :lng + 0.5
-        ORDER BY
-            (latitud - :lat) * (latitud - :lat) +
-            (longitud - :lng) * (longitud - :lng)
-        LIMIT 1
-    """),
-        {"lat": lat, "lng": lng},
+    # Paso 1: Encontrar departamento más cercano
+    # Buffer de 0.5 grados (~55km) para limitar búsqueda
+    # SELECT id_departamento_indec FROM departamento ...
+    lat_min, lat_max = lat - 0.5, lat + 0.5
+    lng_min, lng_max = lng - 0.5, lng + 0.5
+
+    stmt_dept = (
+        select(Departamento.id_departamento_indec)
+        .where(Departamento.latitud.between(lat_min, lat_max))
+        .where(Departamento.longitud.between(lng_min, lng_max))
+        .order_by(
+            (Departamento.latitud - lat) * (Departamento.latitud - lat)
+            + (Departamento.longitud - lng) * (Departamento.longitud - lng)
+        )
+        .limit(1)
     )
+    
+    dept_result = conn.execute(stmt_dept)
 
     dept_row = dept_result.first()
     if not dept_row:
@@ -180,24 +190,19 @@ def asignar_localidad_por_coordenadas(
 
     # Paso 2: Dentro de ese departamento, buscar localidad más cercana
     # Priorizar localidades con coordenadas válidas
-    loc_result = conn.execute(
-        text("""
-        SELECT
-            id_localidad_indec,
-            latitud,
-            longitud,
-            (latitud - :lat) * (latitud - :lat) +
-            (longitud - :lng) * (longitud - :lng) as distancia
-        FROM localidad
-        WHERE id_departamento_indec = :dept_id
-          AND latitud IS NOT NULL
-          AND longitud IS NOT NULL
-        ORDER BY distancia
-        LIMIT 1
-    """),
-        {"lat": lat, "lng": lng, "dept_id": id_departamento},
+    stmt_loc = (
+        select(Localidad.id_localidad_indec)
+        .where(Localidad.id_departamento_indec == id_departamento)
+        .where(Localidad.latitud.is_not(None))
+        .where(Localidad.longitud.is_not(None))
+        .order_by(
+            (Localidad.latitud - lat) * (Localidad.latitud - lat)
+            + (Localidad.longitud - lng) * (Localidad.longitud - lng)
+        )
+        .limit(1)
     )
-
+    
+    loc_result = conn.execute(stmt_loc)
     loc_row = loc_result.first()
 
     # Si encontramos localidad con coordenadas, usarla
@@ -205,15 +210,12 @@ def asignar_localidad_por_coordenadas(
         return int(loc_row[0])
 
     # Fallback: Si ninguna localidad tiene coordenadas, usar la primera del departamento
-    fallback_result = conn.execute(
-        text("""
-        SELECT id_localidad_indec
-        FROM localidad
-        WHERE id_departamento_indec = :dept_id
-        LIMIT 1
-    """),
-        {"dept_id": id_departamento},
+    stmt_fallback = (
+        select(Localidad.id_localidad_indec)
+        .where(Localidad.id_departamento_indec == id_departamento)
+        .limit(1)
     )
+    fallback_result = conn.execute(stmt_fallback)
 
     fallback_row = fallback_result.first()
     return fallback_row[0] if fallback_row else None
@@ -329,28 +331,22 @@ def seed_refes(conn: Connection) -> int:
             end=" ",
         )
 
-        # Construir valores para INSERT (incluye localidad y source)
+        # Construir lista de diccionarios para INSERT
+        # Usa insert() de SQLAlchemy para bulk
         values_list = []
         for est in batch:
-            values = f"""(
-                {f"'{est['codigo_refes']}'" if est["codigo_refes"] else "NULL"},
-                {f"'{est['nombre']}'" if est["nombre"] else "NULL"},
-                {est["latitud"] if est["latitud"] is not None else "NULL"},
-                {est["longitud"] if est["longitud"] is not None else "NULL"},
-                {est["id_localidad_indec"] if est.get("id_localidad_indec") else "NULL"},
-                {f"'{est['source']}'" if est.get("source") else "NULL"},
-                CURRENT_TIMESTAMP,
-                CURRENT_TIMESTAMP
-            )"""
-            values_list.append(values)
+            values_list.append({
+                "codigo_refes": est["codigo_refes"],
+                "nombre": est["nombre"],
+                "latitud": est["latitud"],
+                "longitud": est["longitud"],
+                "id_localidad_indec": est["id_localidad_indec"],
+                "source": est.get("source"),
+                "created_at": func.current_timestamp(),
+                "updated_at": func.current_timestamp()
+            })
 
-        stmt = text(f"""
-            INSERT INTO establecimiento (
-                codigo_refes, nombre,
-                latitud, longitud, id_localidad_indec, source,
-                created_at, updated_at
-            ) VALUES {",".join(values_list)}
-        """)
+        stmt = insert(Establecimiento).values(values_list)
 
         try:
             conn.execute(stmt)
@@ -427,35 +423,29 @@ def cargar_mapping_snvs(conn: Connection) -> int:
             end=" ",
         )
 
-        # Construir CASE para UPDATE masivo
-        case_parts = []
-        codigo_refes_list = []
+        # Construir expresión CASE
+        
+        # Primero, necesitamos una lista de tuplas para el case
+        # case_parts ya contiene strings "WHEN ... THEN ...", 
+        # pero para SQLAlchemy ORM usamos case() expression object.
+        
+        case_map = {ign_data["codigo_refes"]: codigo_snvs for codigo_snvs, ign_data in batch if ign_data.get("codigo_refes")}
 
-        for codigo_snvs, ign_data in batch:
-            codigo_refes = ign_data.get("codigo_refes")
+        if not case_map:
+             print("⏭️  (sin mappings válidos)")
+             continue
 
-            if not codigo_refes or not codigo_snvs:
-                continue
-
-            # Guardar el código SNVS del CSV en el establecimiento IGN
-            case_parts.append(
-                f"WHEN codigo_refes = '{codigo_refes}' THEN '{codigo_snvs}'"
+        stmt = (
+            update(Establecimiento)
+            .where(Establecimiento.codigo_refes.in_(case_map.keys()))
+            .values(
+                codigo_snvs=case(
+                    case_map,
+                    value=Establecimiento.codigo_refes
+                ),
+                updated_at=func.current_timestamp()
             )
-            codigo_refes_list.append(f"'{codigo_refes}'")
-
-        if not case_parts:
-            print("⏭️  (sin mappings válidos)")
-            continue
-
-        # UPDATE usando CASE para actualizar múltiples registros
-        stmt = text(f"""
-            UPDATE establecimiento
-            SET codigo_snvs = CASE
-                {" ".join(case_parts)}
-            END,
-            updated_at = CURRENT_TIMESTAMP
-            WHERE codigo_refes IN ({",".join(codigo_refes_list)})
-        """)
+        )
 
         try:
             result = conn.execute(stmt)

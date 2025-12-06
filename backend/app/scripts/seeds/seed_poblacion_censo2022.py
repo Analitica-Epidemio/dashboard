@@ -20,8 +20,11 @@ import pandas as pd
 # Agregar el directorio raíz al path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
+from sqlmodel import select, update
+
+from app.domains.territorio.geografia_models import Departamento, Provincia
 
 # URL del archivo del Censo 2022
 CENSO_2022_URL = "https://www.indec.gob.ar/ftp/cuadros/poblacion/cnphv2022_resultados_provisionales.xlsx"
@@ -155,14 +158,13 @@ def seed_poblacion_provincias(session: Session, archivo_path: Path) -> None:
 
         # Actualizar provincia (en caso de que ya exista por otro seed previo)
         # O insertar si no existe
-        stmt = text("""
-            UPDATE provincia
-            SET poblacion = :poblacion
-            WHERE id_provincia_indec = :codigo
-        """)
-        result = session.execute(
-            stmt, {"poblacion": poblacion_total, "codigo": codigo_indec}
+        # Actualizar provincia
+        stmt = (
+            update(Provincia)
+            .where(Provincia.id_provincia_indec == codigo_indec)
+            .values(poblacion=poblacion_total)
         )
+        result = session.execute(stmt)
 
         if result.rowcount > 0:
             updated_count += 1
@@ -217,18 +219,23 @@ def seed_poblacion_departamentos(session: Session, archivo_path: Path) -> None:
             df = pd.read_excel(archivo_path, sheet_name=cuadro, header=2)
 
             # Obtener nombre de provincia
-            stmt_prov = text(
-                "SELECT nombre FROM provincia WHERE id_provincia_indec = :codigo"
-            )
-            result_prov = session.execute(
-                stmt_prov, {"codigo": id_provincia_indec}
-            ).first()
+            stmt_prov = select(Provincia.nombre).where(Provincia.id_provincia_indec == id_provincia_indec)
+            result_prov = session.execute(stmt_prov).first()
 
             if not result_prov:
                 print(f"⚠️  Provincia no encontrada: código {id_provincia_indec}")
                 continue
 
             print(f"\n  Procesando {result_prov[0]}...")
+
+            # Pre-cargar departamentos de la provincia para normalizar en Python
+            # Esto evita la query compleja con REPLACE múltiples en SQL
+            deptos_bd = session.exec(
+                select(Departamento).where(Departamento.id_provincia_indec == id_provincia_indec)
+            ).all()
+
+            # Mapa: nombre_normalizado -> id_departamento
+            depto_map = {normalizar_nombre(d.nombre): d.id for d in deptos_bd}
 
             # La primera columna tiene el nombre del departamento/comuna/partido
             # La segunda columna tiene "Total" con la población
@@ -265,27 +272,17 @@ def seed_poblacion_departamentos(session: Session, archivo_path: Path) -> None:
                 )
                 nombre_norm = normalizar_nombre(nombre_depto)
 
-                # Buscar y actualizar departamento (normalizar ambos lados quitando tildes)
-                # Primero UPPER() para convertir todo a mayúsculas, luego quitar tildes
-                stmt_update = text("""
-                    UPDATE departamento
-                    SET poblacion = :poblacion
-                    WHERE id_provincia_indec = :id_prov
-                    AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
-                            UPPER(nombre),
-                            'Á', 'A'), 'É', 'E'), 'Í', 'I'), 'Ó', 'O'), 'Ú', 'U'), 'Ñ', 'N')
-                        = :nombre_norm
-                """)
-                result = session.execute(
-                    stmt_update,
-                    {
-                        "poblacion": poblacion,
-                        "id_prov": id_provincia_indec,
-                        "nombre_norm": nombre_norm,
-                    },
-                )
+                # Buscar en mapa
+                id_depto = depto_map.get(nombre_norm)
 
-                if result.rowcount > 0:
+                if id_depto:
+                    # UPDATE usando ID
+                    stmt_update = (
+                        update(Departamento)
+                        .where(Departamento.id == id_depto)
+                        .values(poblacion=poblacion)
+                    )
+                    session.execute(stmt_update)
                     total_updated += 1
                     print(f"    ✅ {nombre_depto}: {poblacion:,} hab")
                 else:
