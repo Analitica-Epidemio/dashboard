@@ -68,10 +68,10 @@ def seed_snippets():
             "orden": 2
         },
 
-        # Evento en crecimiento
+        # CasoEpidemiologico en crecimiento
         {
             "codigo": "evento_crecimiento",
-            "nombre": "Análisis de Evento en Crecimiento",
+            "nombre": "Análisis de CasoEpidemiologico en Crecimiento",
             "descripcion": "Template para evento con incremento de casos",
             "categoria": "evento",
             "template": """
@@ -105,10 +105,10 @@ def seed_snippets():
             "orden": 10
         },
 
-        # Evento en decrecimiento
+        # CasoEpidemiologico en decrecimiento
         {
             "codigo": "evento_decrecimiento",
-            "nombre": "Análisis de Evento en Decrecimiento",
+            "nombre": "Análisis de CasoEpidemiologico en Decrecimiento",
             "descripcion": "Template para evento con disminución de casos",
             "categoria": "evento",
             "template": """

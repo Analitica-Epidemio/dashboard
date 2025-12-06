@@ -19,13 +19,13 @@ from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User
-from app.domains.eventos_epidemiologicos.clasificacion.models import TipoClasificacion
-from app.domains.eventos_epidemiologicos.eventos.models import (
-    Evento,
-    TipoEno,
-    TipoEnoGrupoEno,
+from app.domains.vigilancia_nominal.clasificacion.models import TipoClasificacion
+from app.domains.vigilancia_nominal.models.enfermedad import (
+    Enfermedad,
+    EnfermedadGrupo,
 )
-from app.domains.sujetos_epidemiologicos.ciudadanos_models import Ciudadano
+from app.domains.vigilancia_nominal.models.caso import CasoEpidemiologico
+from app.domains.vigilancia_nominal.models.sujetos import Ciudadano
 from app.domains.territorio.establecimientos_models import Establecimiento
 from app.domains.territorio.geografia_models import Departamento, Localidad, Provincia
 
@@ -60,10 +60,10 @@ class PersonaListItem(BaseModel):
 
     # Estadísticas de eventos de esta persona
     total_eventos: int = Field(..., description="Total de eventos registrados")
-    eventos_confirmados: int = Field(0, description="Eventos confirmados")
-    eventos_sospechosos: int = Field(0, description="Eventos sospechosos")
-    eventos_probables: int = Field(0, description="Eventos probables")
-    eventos_descartados: int = Field(0, description="Eventos descartados")
+    eventos_confirmados: int = Field(0, description="CasoEpidemiologicos confirmados")
+    eventos_sospechosos: int = Field(0, description="CasoEpidemiologicos sospechosos")
+    eventos_probables: int = Field(0, description="CasoEpidemiologicos probables")
+    eventos_descartados: int = Field(0, description="CasoEpidemiologicos descartados")
 
     # Fechas relevantes
     primer_evento_fecha: Optional[date] = Field(
@@ -172,15 +172,15 @@ async def list_personas(
             # Subquery con TODAS las agregaciones en SQL (una sola query)
             # IMPORTANTE: Incluye JOINs para filtrar por provincia de ESTABLECIMIENTO DE NOTIFICACIÓN
             eventos_base_query = (
-                select(Evento)
-                .outerjoin(TipoEno, Evento.id_tipo_eno == TipoEno.id)
-                .outerjoin(TipoEnoGrupoEno, TipoEno.id == TipoEnoGrupoEno.id_tipo_eno)
+                select(CasoEpidemiologico)
+                .outerjoin(Enfermedad, CasoEpidemiologico.id_enfermedad == Enfermedad.id)
+                .outerjoin(EnfermedadGrupo, Enfermedad.id == EnfermedadGrupo.id_enfermedad)
                 # JOINs para filtro de provincia por ESTABLECIMIENTO DE NOTIFICACIÓN
-                .outerjoin(Establecimiento, Evento.id_establecimiento_notificacion == Establecimiento.id)
+                .outerjoin(Establecimiento, CasoEpidemiologico.id_establecimiento_notificacion == Establecimiento.id)
                 .outerjoin(Localidad, Establecimiento.id_localidad_indec == Localidad.id_localidad_indec)
                 .outerjoin(Departamento, Localidad.id_departamento_indec == Departamento.id_departamento_indec)
                 .outerjoin(Provincia, Departamento.id_provincia_indec == Provincia.id_provincia_indec)
-                .where(Evento.codigo_ciudadano.isnot(None))
+                .where(CasoEpidemiologico.codigo_ciudadano.isnot(None))
             )
 
             # Aplicar filtros de eventos
@@ -191,12 +191,12 @@ async def list_personas(
 
             if tipo_eno_ids:
                 eventos_base_query = eventos_base_query.where(
-                    Evento.id_tipo_eno.in_(tipo_eno_ids)
+                    CasoEpidemiologico.id_enfermedad.in_(tipo_eno_ids)
                 )
 
             if grupo_eno_ids:
                 eventos_base_query = eventos_base_query.where(
-                    TipoEnoGrupoEno.id_grupo_eno.in_(grupo_eno_ids)
+                    EnfermedadGrupo.id_grupo.in_(grupo_eno_ids)
                 )
 
             # Filtros de edad (calcular edad a partir de fecha_nacimiento y fecha_apertura_caso)
@@ -204,12 +204,12 @@ async def list_personas(
                 # Calcular edad usando AGE(fecha_apertura_caso, fecha_nacimiento)
                 edad_calculada = func.extract(
                     'year',
-                    func.age(Evento.fecha_apertura_caso, Evento.fecha_nacimiento)
+                    func.age(CasoEpidemiologico.fecha_apertura_caso, CasoEpidemiologico.fecha_nacimiento)
                 )
                 # Asegurarse de que ambas fechas existan
                 eventos_base_query = eventos_base_query.where(
-                    Evento.fecha_nacimiento.isnot(None),
-                    Evento.fecha_apertura_caso.isnot(None)
+                    CasoEpidemiologico.fecha_nacimiento.isnot(None),
+                    CasoEpidemiologico.fecha_apertura_caso.isnot(None)
                 )
 
                 if edad_min is not None:
@@ -254,11 +254,11 @@ async def list_personas(
                             else_=0,
                         )
                     ).label("descartados"),
-                    func.min(eventos_filtrados.c.fecha_minima_evento).label("primer_evento"),
-                    func.max(eventos_filtrados.c.fecha_minima_evento).label("ultimo_evento"),
+                    func.min(eventos_filtrados.c.fecha_minima_caso).label("primer_evento"),
+                    func.max(eventos_filtrados.c.fecha_minima_caso).label("ultimo_evento"),
                     func.sum(
                         case(
-                            (eventos_filtrados.c.fecha_minima_evento >= hace_30_dias, 1),
+                            (eventos_filtrados.c.fecha_minima_caso >= hace_30_dias, 1),
                             else_=0,
                         )
                     ).label("eventos_recientes"),
@@ -272,12 +272,12 @@ async def list_personas(
             ultimo_evento_subq = (
                 select(
                     eventos_filtrados.c.codigo_ciudadano,
-                    eventos_filtrados.c.id_tipo_eno,
+                    eventos_filtrados.c.id_enfermedad,
                     eventos_filtrados.c.clasificacion_estrategia,
                     func.row_number()
                     .over(
                         partition_by=eventos_filtrados.c.codigo_ciudadano,
-                        order_by=desc(eventos_filtrados.c.fecha_minima_evento),
+                        order_by=desc(eventos_filtrados.c.fecha_minima_caso),
                     )
                     .label("rn"),
                 )
@@ -288,7 +288,7 @@ async def list_personas(
             ultimo_evento_filtrado = (
                 select(
                     ultimo_evento_subq.c.codigo_ciudadano,
-                    ultimo_evento_subq.c.id_tipo_eno,
+                    ultimo_evento_subq.c.id_enfermedad,
                     ultimo_evento_subq.c.clasificacion_estrategia,
                 )
                 .where(ultimo_evento_subq.c.rn == 1)
@@ -310,7 +310,7 @@ async def list_personas(
                     ultimo_evento_filtrado.c.clasificacion_estrategia.label(
                         "ultimo_evento_clasificacion"
                     ),
-                    TipoEno.nombre.label("ultimo_evento_tipo"),
+                    Enfermedad.nombre.label("ultimo_evento_tipo"),
                 )
                 .outerjoin(
                     eventos_stats_subq,
@@ -322,7 +322,7 @@ async def list_personas(
                     == ultimo_evento_filtrado.c.codigo_ciudadano,
                 )
                 .outerjoin(
-                    TipoEno, ultimo_evento_filtrado.c.id_tipo_eno == TipoEno.id
+                    Enfermedad, ultimo_evento_filtrado.c.id_enfermedad == Enfermedad.id
                 )
                 .where(eventos_stats_subq.c.total_eventos.isnot(None))
             )

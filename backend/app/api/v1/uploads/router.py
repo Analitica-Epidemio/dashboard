@@ -5,13 +5,13 @@ Uploads router - Async file processing endpoints
 from fastapi import APIRouter
 
 from app.core.schemas.response import ErrorResponse, SuccessResponse
-from app.features.procesamiento_archivos.schemas import (
+from app.domains.jobs.schemas import (
     AsyncJobResponse,
     JobStatusResponse,
 )
 
-from .cancel_job import cancel_job
-from .get_job_status import get_job_status
+from .cancel_job import cancel_job_endpoint
+from .get_job_status import get_job_status_endpoint
 from .preview_file import preview_uploaded_file
 from .process_from_preview import process_file_from_preview
 from .upload_csv import upload_csv_async
@@ -36,7 +36,7 @@ router.add_api_route(
 # Get job status endpoint
 router.add_api_route(
     "/jobs/{job_id}/status",
-    get_job_status,
+    get_job_status_endpoint,
     methods=["GET"],
     response_model=SuccessResponse[JobStatusResponse],
     responses={404: {"model": ErrorResponse, "description": "Job no encontrado"}},
@@ -45,7 +45,7 @@ router.add_api_route(
 # Cancel job endpoint
 router.add_api_route(
     "/jobs/{job_id}",
-    cancel_job,
+    cancel_job_endpoint,
     methods=["DELETE"],
     responses={
         200: {"description": "Job cancelado exitosamente"},

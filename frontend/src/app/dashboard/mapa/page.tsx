@@ -20,8 +20,8 @@ import { useTiposEno } from "@/features/eventos/api";
 import { apiClient } from "@/lib/api/client";
 import type { components } from "@/lib/api/types";
 
-type EventoListItem = components["schemas"]["EventoListItem"];
-type EventoListResponse = components["schemas"]["EventoListResponse"];
+type EventoListItem = components["schemas"]["CasoEpidemiologicoListItem"];
+type EventoListResponse = components["schemas"]["CasoEpidemiologicoListResponse"];
 
 interface NormalizedTimelineEvent {
   id: number;
@@ -308,7 +308,7 @@ export default function MapaPage() {
 
     return eventosList
       .filter(
-        (evento) => evento.id_domicilio && evento.fecha_minima_evento !== null
+        (evento) => evento.id_domicilio && evento.fecha_minima_caso !== null
       )
       .map((evento) => {
         const tipoNombre = evento.tipo_eno_nombre || null;
@@ -317,7 +317,7 @@ export default function MapaPage() {
         return {
           id: evento.id,
           domicilioId: evento.id_domicilio!,
-          fecha: new Date(evento.fecha_minima_evento as string),
+          fecha: new Date(evento.fecha_minima_caso as string),
           tipoNombre,
           grupoId: grupoInfo?.grupoId || FALLBACK_GROUP_ID,
         };
@@ -527,12 +527,12 @@ export default function MapaPage() {
   const timelineRangeLabel =
     timelineBuckets.length > 0
       ? `${format(timelineBuckets[0].start, "d MMM yyyy", {
-          locale: es,
-        })} — ${format(
-          timelineBuckets[timelineBuckets.length - 1].end,
-          "d MMM yyyy",
-          { locale: es }
-        )}`
+        locale: es,
+      })} — ${format(
+        timelineBuckets[timelineBuckets.length - 1].end,
+        "d MMM yyyy",
+        { locale: es }
+      )}`
       : undefined;
 
   const timelineDisabledMessage = eventosLoading
@@ -553,8 +553,8 @@ export default function MapaPage() {
     currentLabel:
       timelineBuckets.length > 0
         ? timelineBuckets[
-            Math.min(timelineIndex, timelineBuckets.length - 1)
-          ]?.label
+          Math.min(timelineIndex, timelineBuckets.length - 1)
+        ]?.label
         : undefined,
     rangeLabel: timelineRangeLabel,
     mode: timelineMode,

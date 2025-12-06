@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.analytics.period_utils import get_epi_week_dates
 from app.api.v1.analytics.schemas import (
-    EventoCambio,
+    CasoEpidemiologicoCambio,
     PeriodoAnalisis,
     TopChangesByGroupResponse,
 )
@@ -85,12 +85,12 @@ async def get_top_changes_by_group(
                 te.nombre as tipo_eno_nombre,
                 STRING_AGG(DISTINCT ge.nombre, ', ' ORDER BY ge.nombre) as grupos_nombres,
                 COUNT(DISTINCT e.id) as casos
-            FROM evento e
-            INNER JOIN tipo_eno te ON e.id_tipo_eno = te.id
-            LEFT JOIN tipo_eno_grupo_eno tege ON te.id = tege.id_tipo_eno
-            LEFT JOIN grupo_eno ge ON tege.id_grupo_eno = ge.id
-            WHERE e.fecha_minima_evento >= :fecha_inicio_actual
-                AND e.fecha_minima_evento <= :fecha_fin_actual
+            FROM caso_epidemiologico e
+            INNER JOIN enfermedad te ON e.id_enfermedad = te.id
+            LEFT JOIN enfermedad_grupo tege ON te.id = tege.id_enfermedad
+            LEFT JOIN grupo_de_enfermedades ge ON tege.id_grupo = ge.id
+            WHERE e.fecha_minima_caso >= :fecha_inicio_actual
+                AND e.fecha_minima_caso <= :fecha_fin_actual
             GROUP BY te.id, te.nombre
         ),
         casos_anterior AS (
@@ -98,10 +98,10 @@ async def get_top_changes_by_group(
             SELECT
                 te.id as tipo_eno_id,
                 COUNT(DISTINCT e.id) as casos
-            FROM evento e
-            INNER JOIN tipo_eno te ON e.id_tipo_eno = te.id
-            WHERE e.fecha_minima_evento >= :fecha_inicio_anterior
-                AND e.fecha_minima_evento <= :fecha_fin_anterior
+            FROM caso_epidemiologico e
+            INNER JOIN enfermedad te ON e.id_enfermedad = te.id
+            WHERE e.fecha_minima_caso >= :fecha_inicio_anterior
+                AND e.fecha_minima_caso <= :fecha_fin_anterior
             GROUP BY te.id
         ),
         cambios AS (
@@ -190,7 +190,7 @@ async def get_top_changes_by_group(
     top_decrecimiento = []
 
     for row in rows:
-        evento = EventoCambio(
+        evento = CasoEpidemiologicoCambio(
             tipo_eno_id=row.tipo_eno_id,
             tipo_eno_nombre=row.tipo_eno_nombre,
             grupo_eno_id=0,  # No longer meaningful when evento can be in multiple groups

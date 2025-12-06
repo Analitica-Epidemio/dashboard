@@ -7,7 +7,7 @@ from sqlalchemy import func, or_, select
 from sqlmodel import Session
 
 from app.core.database import get_session
-from app.domains.eventos_epidemiologicos.eventos.models import Evento
+from app.domains.vigilancia_nominal.models.caso import CasoEpidemiologico
 from app.domains.territorio.establecimientos_models import Establecimiento
 from app.domains.territorio.geografia_models import Departamento, Localidad, Provincia
 
@@ -33,14 +33,14 @@ async def listar_mapeos_existentes(
     eventos_subquery = (
         select(
             Establecimiento.id.label("estab_id"),
-            func.count(Evento.id).label("total_eventos")
+            func.count(CasoEpidemiologico.id).label("total_eventos")
         )
         .outerjoin(
-            Evento,
+            CasoEpidemiologico,
             or_(
-                Evento.id_establecimiento_carga == Establecimiento.id,
-                Evento.id_establecimiento_consulta == Establecimiento.id,
-                Evento.id_establecimiento_notificacion == Establecimiento.id
+                CasoEpidemiologico.id_establecimiento_carga == Establecimiento.id,
+                CasoEpidemiologico.id_establecimiento_consulta == Establecimiento.id,
+                CasoEpidemiologico.id_establecimiento_notificacion == Establecimiento.id
             )
         )
         .group_by(Establecimiento.id)

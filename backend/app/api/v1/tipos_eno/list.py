@@ -15,11 +15,11 @@ from app.core.database import get_async_session
 from app.core.schemas.response import PaginatedResponse, PaginationMeta
 from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User
-from app.domains.eventos_epidemiologicos.eventos.models import (
-    Evento,
-    TipoEno,
-    TipoEnoGrupoEno,
+from app.domains.vigilancia_nominal.models.enfermedad import (
+    Enfermedad,
+    EnfermedadGrupo,
 )
+from app.domains.vigilancia_nominal.models.caso import CasoEpidemiologico
 
 
 class GrupoInfo(BaseModel):
@@ -28,7 +28,7 @@ class GrupoInfo(BaseModel):
     nombre: str
 
 
-class TipoEnoInfo(BaseModel):
+class EnfermedadInfo(BaseModel):
     id: int = Field(..., description="ID del tipo ENO")
     nombre: str = Field(..., max_length=200, description="Nombre del tipo ENO")
     descripcion: Optional[str] = Field(
@@ -60,48 +60,48 @@ async def list_tipos_eno(
     orden: str = Query("desc", description="Orden: asc o desc"),
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(RequireAnyRole()),
-) -> PaginatedResponse[TipoEnoInfo]:
+) -> PaginatedResponse[EnfermedadInfo]:
     try:
         # Subquery para contar casos por tipo_eno
         casos_subquery = (
             select(
-                Evento.id_tipo_eno,
-                func.count(Evento.id).label("total_casos")
+                CasoEpidemiologico.id_enfermedad,
+                func.count(CasoEpidemiologico.id).label("total_casos")
             )
-            .group_by(Evento.id_tipo_eno)
+            .group_by(CasoEpidemiologico.id_enfermedad)
             .subquery()
         )
 
         # Query principal
         query = (
             select(
-                TipoEno,
+                Enfermedad,
                 func.coalesce(casos_subquery.c.total_casos, 0).label("total_casos")
             )
-            .outerjoin(casos_subquery, TipoEno.id == casos_subquery.c.id_tipo_eno)
+            .outerjoin(casos_subquery, Enfermedad.id == casos_subquery.c.id_enfermedad)
             .options(
-                selectinload(TipoEno.tipo_grupos).selectinload(TipoEnoGrupoEno.grupo_eno)
+                selectinload(Enfermedad.enfermedad_grupos).selectinload(EnfermedadGrupo.grupo)
             )
         )
 
         # Aplicar filtros
         if nombre:
-            query = query.where(TipoEno.nombre.ilike(f"%{nombre}%"))
+            query = query.where(Enfermedad.nombre.ilike(f"%{nombre}%"))
 
         # Filtrar por grupo usando subquery en la tabla de unión
         if grupo_id:
             query = query.where(
-                TipoEno.id.in_(
-                    select(TipoEnoGrupoEno.id_tipo_eno).where(
-                        TipoEnoGrupoEno.id_grupo_eno == grupo_id
+                Enfermedad.id.in_(
+                    select(EnfermedadGrupo.id_enfermedad).where(
+                        EnfermedadGrupo.id_grupo == grupo_id
                     )
                 )
             )
         elif grupos:
             query = query.where(
-                TipoEno.id.in_(
-                    select(TipoEnoGrupoEno.id_tipo_eno).where(
-                        TipoEnoGrupoEno.id_grupo_eno.in_(grupos)
+                Enfermedad.id.in_(
+                    select(EnfermedadGrupo.id_enfermedad).where(
+                        EnfermedadGrupo.id_grupo.in_(grupos)
                     )
                 )
             )
@@ -109,9 +109,9 @@ async def list_tipos_eno(
         # Ordenamiento
         order_func = desc if orden.lower() == "desc" else asc
         if ordenar_por == "nombre":
-            query = query.order_by(order_func(TipoEno.nombre))
-        elif ordenar_por == "codigo":
-            query = query.order_by(order_func(TipoEno.codigo))
+            query = query.order_by(order_func(Enfermedad.nombre))
+        elif ordenar_por == "slug":
+            query = query.order_by(order_func(Enfermedad.slug))
         elif ordenar_por == "total_casos":
             query = query.order_by(order_func(func.coalesce(casos_subquery.c.total_casos, 0)))
         else:
@@ -119,22 +119,22 @@ async def list_tipos_eno(
             query = query.order_by(desc(func.coalesce(casos_subquery.c.total_casos, 0)))
 
         # Contar total de elementos con los mismos filtros
-        count_query = select(func.count(TipoEno.id.distinct()))
+        count_query = select(func.count(Enfermedad.id.distinct()))
         if nombre:
-            count_query = count_query.where(TipoEno.nombre.ilike(f"%{nombre}%"))
+            count_query = count_query.where(Enfermedad.nombre.ilike(f"%{nombre}%"))
         if grupo_id:
             count_query = count_query.where(
-                TipoEno.id.in_(
-                    select(TipoEnoGrupoEno.id_tipo_eno).where(
-                        TipoEnoGrupoEno.id_grupo_eno == grupo_id
+                Enfermedad.id.in_(
+                    select(EnfermedadGrupo.id_enfermedad).where(
+                        EnfermedadGrupo.id_grupo == grupo_id
                     )
                 )
             )
         elif grupos:
             count_query = count_query.where(
-                TipoEno.id.in_(
-                    select(TipoEnoGrupoEno.id_tipo_eno).where(
-                        TipoEnoGrupoEno.id_grupo_eno.in_(grupos)
+                Enfermedad.id.in_(
+                    select(EnfermedadGrupo.id_enfermedad).where(
+                        EnfermedadGrupo.id_grupo.in_(grupos)
                     )
                 )
             )
@@ -158,19 +158,19 @@ async def list_tipos_eno(
 
             # Extraer grupos desde la relación many-to-many
             grupos_list = []
-            if hasattr(tipo, 'tipo_grupos') and tipo.tipo_grupos:
+            if hasattr(tipo, 'tipo_grupos') and tipo.enfermedad_grupos:
                 grupos_list = [
-                    GrupoInfo(id=tg.grupo_eno.id, nombre=tg.grupo_eno.nombre)
-                    for tg in tipo.tipo_grupos
-                    if tg.grupo_eno
+                    GrupoInfo(id=tg.grupo.id, nombre=tg.grupo.nombre)
+                    for tg in tipo.enfermedad_grupos
+                    if tg.grupo
                 ]
 
             tipos_info.append(
-                TipoEnoInfo(
+                EnfermedadInfo(
                     id=tipo.id,
                     nombre=tipo.nombre,
                     descripcion=tipo.descripcion,
-                    codigo=tipo.codigo,
+                    codigo=tipo.slug,
                     grupos=grupos_list,
                     total_casos=total_casos,
                 )

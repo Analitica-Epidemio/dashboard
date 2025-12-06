@@ -84,7 +84,7 @@ async def query_casos_metrics(
     }
 
     # Base query
-    where_clauses = ["e.fecha_minima_evento >= :fecha_desde", "e.fecha_minima_evento <= :fecha_hasta"]
+    where_clauses = ["e.fecha_minima_caso >= :fecha_desde", "e.fecha_minima_caso <= :fecha_hasta"]
 
     if provincia_id:
         where_clauses.append("d.id_provincia_indec = :provincia_id")
@@ -92,14 +92,14 @@ async def query_casos_metrics(
 
     if grupo_id:
         where_clauses.append("""
-            e.id_tipo_eno IN (
-                SELECT id_tipo_eno FROM tipo_eno_grupo_eno WHERE id_grupo_eno = :grupo_id
+            e.id_enfermedad IN (
+                SELECT id_enfermedad FROM tipo_eno_grupo_eno WHERE id_grupo = :grupo_id
             )
         """)
         params["grupo_id"] = grupo_id
 
     if tipo_eno_ids and len(tipo_eno_ids) > 0:
-        where_clauses.append("e.id_tipo_eno = ANY(:tipo_eno_ids)")
+        where_clauses.append("e.id_enfermedad = ANY(:tipo_eno_ids)")
         params["tipo_eno_ids"] = tipo_eno_ids
 
     if clasificaciones:
@@ -135,8 +135,8 @@ async def query_casos_metrics(
     # Query casos por semana
     query_semanal = f"""
     SELECT
-        EXTRACT(ISOYEAR FROM e.fecha_minima_evento)::int as anio_epi,
-        EXTRACT(WEEK FROM e.fecha_minima_evento)::int as semana_epi,
+        EXTRACT(ISOYEAR FROM e.fecha_minima_caso)::int as anio_epi,
+        EXTRACT(WEEK FROM e.fecha_minima_caso)::int as semana_epi,
         COUNT(DISTINCT e.id) as casos
     FROM evento e
     LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
@@ -188,7 +188,7 @@ async def query_cobertura_metrics(
         "fecha_hasta": fecha_hasta
     }
 
-    where_clauses = ["e.fecha_minima_evento >= :fecha_desde", "e.fecha_minima_evento <= :fecha_hasta"]
+    where_clauses = ["e.fecha_minima_caso >= :fecha_desde", "e.fecha_minima_caso <= :fecha_hasta"]
 
     if provincia_id:
         where_clauses.append("d.id_provincia_indec = :provincia_id")
@@ -196,14 +196,14 @@ async def query_cobertura_metrics(
 
     if grupo_id:
         where_clauses.append("""
-            e.id_tipo_eno IN (
-                SELECT id_tipo_eno FROM tipo_eno_grupo_eno WHERE id_grupo_eno = :grupo_id
+            e.id_enfermedad IN (
+                SELECT id_enfermedad FROM tipo_eno_grupo_eno WHERE id_grupo = :grupo_id
             )
         """)
         params["grupo_id"] = grupo_id
 
     if tipo_eno_ids and len(tipo_eno_ids) > 0:
-        where_clauses.append("e.id_tipo_eno = ANY(:tipo_eno_ids)")
+        where_clauses.append("e.id_enfermedad = ANY(:tipo_eno_ids)")
         params["tipo_eno_ids"] = tipo_eno_ids
 
     if clasificaciones:
@@ -316,7 +316,7 @@ async def query_performance_metrics(
         "fecha_hasta": fecha_hasta
     }
 
-    where_clauses = ["e.fecha_minima_evento >= :fecha_desde", "e.fecha_minima_evento <= :fecha_hasta"]
+    where_clauses = ["e.fecha_minima_caso >= :fecha_desde", "e.fecha_minima_caso <= :fecha_hasta"]
 
     if provincia_id:
         where_clauses.append("d.id_provincia_indec = :provincia_id")
@@ -324,14 +324,14 @@ async def query_performance_metrics(
 
     if grupo_id:
         where_clauses.append("""
-            e.id_tipo_eno IN (
-                SELECT id_tipo_eno FROM tipo_eno_grupo_eno WHERE id_grupo_eno = :grupo_id
+            e.id_enfermedad IN (
+                SELECT id_enfermedad FROM tipo_eno_grupo_eno WHERE id_grupo = :grupo_id
             )
         """)
         params["grupo_id"] = grupo_id
 
     if tipo_eno_ids and len(tipo_eno_ids) > 0:
-        where_clauses.append("e.id_tipo_eno = ANY(:tipo_eno_ids)")
+        where_clauses.append("e.id_enfermedad = ANY(:tipo_eno_ids)")
         params["tipo_eno_ids"] = tipo_eno_ids
 
     # Para performance, no filtramos por clasificación inicialmente

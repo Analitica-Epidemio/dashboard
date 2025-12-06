@@ -499,10 +499,10 @@ export function PersonaDetailModern({ tipoSujeto, personaId, onClose }: PersonaD
 
                   {/* Fechas */}
                   <div className="grid gap-x-6 gap-y-2 md:grid-cols-3 text-sm">
-                    {evento.fecha_minima_evento && (
+                    {evento.fecha_minima_caso && (
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground">Fecha del evento</p>
-                        <p className="font-medium">{formatDate(evento.fecha_minima_evento)}</p>
+                        <p className="font-medium">{formatDate(evento.fecha_minima_caso)}</p>
                       </div>
                     )}
                     {evento.fecha_inicio_sintomas && (

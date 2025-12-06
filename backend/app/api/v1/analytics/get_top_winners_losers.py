@@ -81,14 +81,14 @@ async def get_top_winners_losers(
 
     if grupo_id:
         where_clauses_base.append("""
-            e.id_tipo_eno IN (
-                SELECT id_tipo_eno FROM tipo_eno_grupo_eno WHERE id_grupo_eno = :grupo_id
+            e.id_enfermedad IN (
+                SELECT id_enfermedad FROM tipo_eno_grupo_eno WHERE id_grupo = :grupo_id
             )
         """)
         params["grupo_id"] = grupo_id
 
     if tipo_eno_ids and len(tipo_eno_ids) > 0:
-        where_clauses_base.append("e.id_tipo_eno = ANY(:tipo_eno_ids)")
+        where_clauses_base.append("e.id_enfermedad = ANY(:tipo_eno_ids)")
         params["tipo_eno_ids"] = tipo_eno_ids
 
     if clasificaciones:
@@ -109,8 +109,8 @@ async def get_top_winners_losers(
             LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
             LEFT JOIN localidad l ON est.id_localidad_indec = l.id_localidad_indec
             LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
-            WHERE e.fecha_minima_evento >= :fecha_desde_actual
-                AND e.fecha_minima_evento <= :fecha_hasta_actual
+            WHERE e.fecha_minima_caso >= :fecha_desde_actual
+                AND e.fecha_minima_caso <= :fecha_hasta_actual
                 AND d.id_departamento_indec IS NOT NULL
                 AND {where_sql_base}
             GROUP BY d.id_departamento_indec, d.nombre
@@ -123,8 +123,8 @@ async def get_top_winners_losers(
             LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
             LEFT JOIN localidad l ON est.id_localidad_indec = l.id_localidad_indec
             LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
-            WHERE e.fecha_minima_evento >= :fecha_desde_comp
-                AND e.fecha_minima_evento <= :fecha_hasta_comp
+            WHERE e.fecha_minima_caso >= :fecha_desde_comp
+                AND e.fecha_minima_caso <= :fecha_hasta_comp
                 AND d.id_departamento_indec IS NOT NULL
                 AND {where_sql_base}
             GROUP BY d.id_departamento_indec
@@ -154,12 +154,12 @@ async def get_top_winners_losers(
                 te.nombre as entidad_nombre,
                 COUNT(DISTINCT e.id) as casos
             FROM evento e
-            INNER JOIN tipo_eno te ON e.id_tipo_eno = te.id
+            INNER JOIN tipo_eno te ON e.id_enfermedad = te.id
             LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
             LEFT JOIN localidad l ON est.id_localidad_indec = l.id_localidad_indec
             LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
-            WHERE e.fecha_minima_evento >= :fecha_desde_actual
-                AND e.fecha_minima_evento <= :fecha_hasta_actual
+            WHERE e.fecha_minima_caso >= :fecha_desde_actual
+                AND e.fecha_minima_caso <= :fecha_hasta_actual
                 AND {where_sql_base}
             GROUP BY te.id, te.nombre
         ),
@@ -168,12 +168,12 @@ async def get_top_winners_losers(
                 te.id as entidad_id,
                 COUNT(DISTINCT e.id) as casos
             FROM evento e
-            INNER JOIN tipo_eno te ON e.id_tipo_eno = te.id
+            INNER JOIN tipo_eno te ON e.id_enfermedad = te.id
             LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
             LEFT JOIN localidad l ON est.id_localidad_indec = l.id_localidad_indec
             LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
-            WHERE e.fecha_minima_evento >= :fecha_desde_comp
-                AND e.fecha_minima_evento <= :fecha_hasta_comp
+            WHERE e.fecha_minima_caso >= :fecha_desde_comp
+                AND e.fecha_minima_caso <= :fecha_hasta_comp
                 AND {where_sql_base}
             GROUP BY te.id
         ),
@@ -206,8 +206,8 @@ async def get_top_winners_losers(
             LEFT JOIN localidad l ON est.id_localidad_indec = l.id_localidad_indec
             LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
             LEFT JOIN provincia p ON d.id_provincia_indec = p.id_provincia_indec
-            WHERE e.fecha_minima_evento >= :fecha_desde_actual
-                AND e.fecha_minima_evento <= :fecha_hasta_actual
+            WHERE e.fecha_minima_caso >= :fecha_desde_actual
+                AND e.fecha_minima_caso <= :fecha_hasta_actual
                 AND p.id_provincia_indec IS NOT NULL
                 AND {where_sql_base}
             GROUP BY p.id_provincia_indec, p.nombre
@@ -221,8 +221,8 @@ async def get_top_winners_losers(
             LEFT JOIN localidad l ON est.id_localidad_indec = l.id_localidad_indec
             LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
             LEFT JOIN provincia p ON d.id_provincia_indec = p.id_provincia_indec
-            WHERE e.fecha_minima_evento >= :fecha_desde_comp
-                AND e.fecha_minima_evento <= :fecha_hasta_comp
+            WHERE e.fecha_minima_caso >= :fecha_desde_comp
+                AND e.fecha_minima_caso <= :fecha_hasta_comp
                 AND p.id_provincia_indec IS NOT NULL
                 AND {where_sql_base}
             GROUP BY p.id_provincia_indec

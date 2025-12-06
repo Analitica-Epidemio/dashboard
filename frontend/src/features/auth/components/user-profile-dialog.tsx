@@ -86,8 +86,8 @@ export function UserProfileDialog({ open, onOpenChange }: UserProfileDialogProps
 
               <AccountInfoSection
                 createdAt={profile.created_at}
-                lastLogin={profile.last_login}
-                role={profile.role}
+                lastLogin={profile.ultimo_login}
+                role={profile.rol}
               />
             </TabsContent>
 

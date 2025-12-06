@@ -83,7 +83,7 @@ def agregar_mappings(data):
         else:
             print(f"  ✓ Agregando: {mapping_data['nombre_snvs']}")
             print(f"    → {mapping_data['nombre_ign']} (REFES: {mapping_data['codigo_refes']})")
-            print(f"    → Similitud: {mapping_data['similitud_nombre']}% | Eventos: {mapping_data.get('eventos', 'N/A')}")
+            print(f"    → Similitud: {mapping_data['similitud_nombre']}% | CasoEpidemiologicos: {mapping_data.get('eventos', 'N/A')}")
             count_nuevos += 1
 
         data["mapping"][snvs_code] = mapping_data
@@ -154,7 +154,7 @@ def main():
         print(f"  • Mapeos actualizados: {actualizados}")
         print(f"  • Total mapeos ahora: {len(data['mapping'])}")
         print()
-        print("  • Eventos cubiertos por estos 3 hospitales: 2,467")
+        print("  • CasoEpidemiologicos cubiertos por estos 3 hospitales: 2,467")
         print("    - COMODORO RIVADAVIA: 2,439 eventos")
         print("    - CENTRO MATERNO INFANTIL: 14 eventos")
         print("    - LAGO PUELO: 14 eventos")

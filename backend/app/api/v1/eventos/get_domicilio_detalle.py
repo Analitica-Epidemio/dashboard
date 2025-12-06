@@ -15,13 +15,9 @@ from sqlmodel import Session
 
 from app.core.database import get_session
 from app.core.schemas.response import SuccessResponse
-from app.domains.eventos_epidemiologicos.eventos.models import (
-    Evento,
-    EventoGrupoEno,
-    GrupoEno,
-    TipoEno,
-)
-from app.domains.sujetos_epidemiologicos.ciudadanos_models import Ciudadano
+from app.domains.vigilancia_nominal.models.enfermedad import GrupoDeEnfermedades, Enfermedad
+from app.domains.vigilancia_nominal.models.caso import (    CasoEpidemiologico, CasoGrupoEnfermedad)
+from app.domains.vigilancia_nominal.models.sujetos import Ciudadano
 from app.domains.territorio.geografia_models import (
     Departamento,
     Domicilio,
@@ -132,35 +128,35 @@ async def get_domicilio_detalle(
     # Obtener eventos del domicilio con tipo y grupo
     query = (
         select(
-            Evento.id,
-            Evento.fecha_minima_evento,
-            Evento.fecha_nacimiento,
-            Evento.clasificacion_manual,
-            Evento.clasificacion_estrategia,
+            CasoEpidemiologico.id,
+            CasoEpidemiologico.fecha_minima_caso,
+            CasoEpidemiologico.fecha_nacimiento,
+            CasoEpidemiologico.clasificacion_manual,
+            CasoEpidemiologico.clasificacion_estrategia,
             Ciudadano.codigo_ciudadano,
             Ciudadano.numero_documento,
             Ciudadano.nombre,
             Ciudadano.apellido,
             Ciudadano.sexo_biologico,
-            TipoEno.nombre.label("tipo_nombre"),
-            GrupoEno.nombre.label("grupo_nombre"),
+            Enfermedad.nombre.label("tipo_nombre"),
+            GrupoDeEnfermedades.nombre.label("grupo_nombre"),
         )
-        .select_from(Evento)
-        .join(Ciudadano, Evento.codigo_ciudadano == Ciudadano.codigo_ciudadano)
-        .outerjoin(TipoEno, Evento.id_tipo_eno == TipoEno.id)
-        .outerjoin(EventoGrupoEno, Evento.id == EventoGrupoEno.id_evento)
-        .outerjoin(GrupoEno, EventoGrupoEno.id_grupo_eno == GrupoEno.id)
-        .where(Evento.id_domicilio == id_domicilio)
+        .select_from(CasoEpidemiologico)
+        .join(Ciudadano, CasoEpidemiologico.codigo_ciudadano == Ciudadano.codigo_ciudadano)
+        .outerjoin(Enfermedad, CasoEpidemiologico.id_enfermedad == Enfermedad.id)
+        .outerjoin(CasoGrupoEnfermedad, CasoEpidemiologico.id == CasoGrupoEnfermedad.id_caso)
+        .outerjoin(GrupoDeEnfermedades, CasoGrupoEnfermedad.id_grupo == GrupoDeEnfermedades.id)
+        .where(CasoEpidemiologico.id_domicilio == id_domicilio)
     )
 
     # Aplicar filtros temporales
     if fecha_desde is not None:
-        query = query.where(Evento.fecha_minima_evento >= fecha_desde)
+        query = query.where(CasoEpidemiologico.fecha_minima_caso >= fecha_desde)
     if fecha_hasta is not None:
-        query = query.where(Evento.fecha_minima_evento <= fecha_hasta)
+        query = query.where(CasoEpidemiologico.fecha_minima_caso <= fecha_hasta)
 
     # Ordenar por fecha más reciente primero
-    query = query.order_by(Evento.fecha_minima_evento.desc())
+    query = query.order_by(CasoEpidemiologico.fecha_minima_caso.desc())
 
     results = session.exec(query).all()
 
@@ -171,8 +167,8 @@ async def get_domicilio_detalle(
     for row in results:
         # Calcular edad al momento del evento
         edad = None
-        if row.fecha_nacimiento and row.fecha_minima_evento:
-            edad = (row.fecha_minima_evento - row.fecha_nacimiento).days // 365
+        if row.fecha_nacimiento and row.fecha_minima_caso:
+            edad = (row.fecha_minima_caso - row.fecha_nacimiento).days // 365
 
         # Construir nombre completo
         nombre_completo = None
@@ -186,7 +182,7 @@ async def get_domicilio_detalle(
 
         caso = CasoDetalle(
             id_evento=row.id,
-            fecha_evento=row.fecha_minima_evento,
+            fecha_evento=row.fecha_minima_caso,
             tipo_evento_nombre=row.tipo_nombre,
             grupo_evento_nombre=row.grupo_nombre,
             clasificacion_manual=row.clasificacion_manual,

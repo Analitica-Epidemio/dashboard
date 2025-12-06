@@ -15,7 +15,7 @@ from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAuthOrSignedUrl
 from app.domains.autenticacion.models import User
-from app.features.dashboard.models import DashboardChart
+from app.domains.dashboard.models import DashboardChart
 
 logger = logging.getLogger(__name__)
 

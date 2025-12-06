@@ -10,19 +10,19 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.schemas.chart_spec import ChartSpecRequest, ChartSpecResponse
-from app.services.chart_spec_generator import ChartSpecGenerator
+from app.domains.charts.schemas import SolicitudSpecGrafico, RespuestaSpecGrafico
+from app.domains.charts.services.spec_generator import ChartSpecGenerator
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.post("/spec", response_model=ChartSpecResponse)
+@router.post("/spec", response_model=RespuestaSpecGrafico)
 async def generate_chart_spec(
     *,
     db: AsyncSession = Depends(get_async_session),
-    request: ChartSpecRequest,
-) -> ChartSpecResponse:
+    request: SolicitudSpecGrafico,
+) -> RespuestaSpecGrafico:
     """
     Genera la especificación universal para un chart con datos REALES
 
@@ -31,15 +31,15 @@ async def generate_chart_spec(
     """
     try:
         generator = ChartSpecGenerator(db)
-        spec = await generator.generate_spec(
-            chart_code=request.chart_code,
-            filters=request.filters,
-            config=request.config,
+        spec = await generator.generar_spec(
+            codigo_grafico=request.codigo_grafico,
+            filtros=request.filtros,
+            configuracion=request.configuracion,
         )
 
-        return ChartSpecResponse(
+        return RespuestaSpecGrafico(
             spec=spec,
-            generated_at=spec.generated_at,
+            generado_en=spec.generado_en,
         )
 
     except ValueError as e:

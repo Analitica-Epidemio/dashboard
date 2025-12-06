@@ -39,11 +39,11 @@ export interface TopWinnersLosersFilters extends AnalyticsFilters {
 export type TopChangesByGroupResponse = components['schemas']['SuccessResponse_TopChangesByGroupResponse_'];
 export type CalculateChangesRequest = components['schemas']['CalculateChangesRequest'];
 export type CalculateChangesResponse = components['schemas']['SuccessResponse_CalculateChangesResponse_'];
-export type EventoDetailsResponse = components['schemas']['SuccessResponse_EventoDetailsResponse_'];
+export type EventoDetailsResponse = components["schemas"]["SuccessResponse_CasoEpidemiologicoDetailsResponse_"];
 export type GenerateDraftRequest = components['schemas']['GenerateDraftRequest'];
 export type GenerateDraftResponse = components['schemas']['SuccessResponse_GenerateDraftResponse_'];
 
-export type EventoCambio = components['schemas']['EventoCambio'];
+export type EventoCambio = components["schemas"]["CasoEpidemiologicoCambio"];
 
 // ============================================================================
 // QUERY HOOKS - Analytics data

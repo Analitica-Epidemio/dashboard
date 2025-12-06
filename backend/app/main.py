@@ -67,6 +67,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.error(f"❌ Error type: {type(e).__name__}")
         logger.warning("⚠️ File upload functionality will not work without Redis!")
 
+    # Registrar processors de cada dominio
+    # Al importar, cada módulo se registra automáticamente
+    logger.info("📦 Registrando processors de dominios...")
+    import app.domains.vigilancia_nominal.procesamiento  # noqa: F401
+    import app.domains.vigilancia_agregada.procesamiento  # noqa: F401
+
+    from app.domains.jobs.registry import list_processors
+    logger.info(f"✅ Processors registrados: {list_processors()}")
+
     logger.info("🏥 Sistema de Epidemiología listo para recibir requests")
 
     yield

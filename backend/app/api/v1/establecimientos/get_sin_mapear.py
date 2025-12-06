@@ -5,7 +5,7 @@ from sqlalchemy import func, or_, select
 from sqlmodel import Session
 
 from app.core.database import get_session
-from app.domains.eventos_epidemiologicos.eventos.models import Evento
+from app.domains.vigilancia_nominal.models.caso import CasoEpidemiologico
 from app.domains.territorio.establecimientos_models import Establecimiento
 from app.domains.territorio.geografia_models import Departamento, Localidad, Provincia
 
@@ -35,17 +35,17 @@ async def get_establecimientos_sin_mapear(
             Localidad.nombre.label("localidad_nombre"),
             Departamento.nombre.label("departamento_nombre"),
             Provincia.nombre.label("provincia_nombre"),
-            func.count(Evento.id).label("total_eventos")
+            func.count(CasoEpidemiologico.id).label("total_eventos")
         )
         .outerjoin(Localidad, Establecimiento.id_localidad_indec == Localidad.id_localidad_indec)
         .outerjoin(Departamento, Localidad.id_departamento_indec == Departamento.id_departamento_indec)
         .outerjoin(Provincia, Departamento.id_provincia_indec == Provincia.id_provincia_indec)
         .outerjoin(
-            Evento,
+            CasoEpidemiologico,
             or_(
-                Evento.id_establecimiento_carga == Establecimiento.id,
-                Evento.id_establecimiento_consulta == Establecimiento.id,
-                Evento.id_establecimiento_notificacion == Establecimiento.id
+                CasoEpidemiologico.id_establecimiento_carga == Establecimiento.id,
+                CasoEpidemiologico.id_establecimiento_consulta == Establecimiento.id,
+                CasoEpidemiologico.id_establecimiento_notificacion == Establecimiento.id
             )
         )
         .where(Establecimiento.source == "SNVS")
@@ -61,10 +61,10 @@ async def get_establecimientos_sin_mapear(
     )
 
     if con_eventos_solo:
-        base_query = base_query.having(func.count(Evento.id) > 0)
+        base_query = base_query.having(func.count(CasoEpidemiologico.id) > 0)
 
     # Ordenar por número de eventos descendente (más impacto primero)
-    base_query = base_query.order_by(func.count(Evento.id).desc())
+    base_query = base_query.order_by(func.count(CasoEpidemiologico.id).desc())
 
     # Contar total
     count_query = select(func.count()).select_from(base_query.subquery())
@@ -106,14 +106,14 @@ async def get_establecimientos_sin_mapear(
     stats_query = select(
         func.count(Establecimiento.id).label("sin_mapear_count"),
         func.coalesce(func.sum(
-            func.count(Evento.id)
+            func.count(CasoEpidemiologico.id)
         ), 0).label("eventos_sin_mapear_count")
     ).select_from(Establecimiento).outerjoin(
-        Evento,
+        CasoEpidemiologico,
         or_(
-            Evento.id_establecimiento_carga == Establecimiento.id,
-            Evento.id_establecimiento_consulta == Establecimiento.id,
-            Evento.id_establecimiento_notificacion == Establecimiento.id
+            CasoEpidemiologico.id_establecimiento_carga == Establecimiento.id,
+            CasoEpidemiologico.id_establecimiento_consulta == Establecimiento.id,
+            CasoEpidemiologico.id_establecimiento_notificacion == Establecimiento.id
         )
     ).where(
         Establecimiento.source == "SNVS",

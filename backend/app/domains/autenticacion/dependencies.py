@@ -12,7 +12,7 @@ from app.core.database import get_async_session
 
 from .models import User, UserRole, UserStatus
 from .schemas import TokenData
-from .security import SessionSecurity, TokenSecurity, create_credentials_exception
+from .security import SessionSecurity, TokenSecurity, crear_excepcion_credenciales
 from .service import AuthService
 
 logger = logging.getLogger(__name__)
@@ -41,30 +41,30 @@ async def get_current_user_token(
     logger.debug("Token validation attempt")
 
     # Verify token
-    token_data = TokenSecurity.verify_token(token_str, "access")
+    token_data = TokenSecurity.verificar_token(token_str, "access")
     if not token_data or not token_data.user_id:
         logger.warning("Token validation failed: Invalid or missing token data")
-        raise create_credentials_exception()
+        raise crear_excepcion_credenciales()
 
     # Validate session if present
-    if token_data.session_id:
+    if token_data.id_sesion:
         auth_service = AuthService(db)
-        session = await auth_service._get_session(token_data.session_id)
-        if not session or not session.is_active:
-            logger.warning(f"Session validation failed: Session {token_data.session_id} not found or inactive")
-            raise create_credentials_exception("Session expired")
+        session = await auth_service._obtener_sesion(token_data.id_sesion)
+        if not session or not session.es_activa:
+            logger.warning(f"Session validation failed: Session {token_data.id_sesion} not found or inactive")
+            raise crear_excepcion_credenciales("Session expired")
 
         # Check session expiry
-        if SessionSecurity.is_session_expired(session.expires_at):
+        if SessionSecurity.es_sesion_expirada(session.expira_en):
             from datetime import datetime, timezone
-            logger.warning(f"Session {token_data.session_id} expired. Expiry: {session.expires_at}, Current: {datetime.now(timezone.utc)}")
-            session.is_active = False
+            logger.warning(f"Session {token_data.id_sesion} expired. Expiry: {session.expira_en}, Current: {datetime.now(timezone.utc)}")
+            session.es_activa = False
             await db.commit()
-            raise create_credentials_exception("Session expired")
+            raise crear_excepcion_credenciales("Session expired")
 
         # Update last activity to current time
         from datetime import datetime, timezone
-        session.last_activity = datetime.now(timezone.utc)
+        session.ultima_actividad = datetime.now(timezone.utc)
         await db.commit()
 
     logger.debug(f"Token validated successfully for user_id: {token_data.user_id}")
@@ -80,15 +80,15 @@ async def get_current_user(
     Validates user exists and is active
     """
     auth_service = AuthService(db)
-    user = await auth_service._get_user_by_id(token_data.user_id)
+    user = await auth_service._obtener_usuario_por_id(token_data.user_id)
 
     if not user:
-        raise create_credentials_exception("User not found")
+        raise crear_excepcion_credenciales("User not found")
 
-    if user.status != UserStatus.ACTIVE:
+    if user.estado != UserStatus.ACTIVE:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"User account is {user.status.value}"
+            detail=f"User account is {user.estado.value}"
         )
 
     return user
@@ -111,15 +111,15 @@ async def get_current_user_optional(
         token = auth_header.replace("Bearer ", "")
 
         # Verify token
-        token_data = TokenSecurity.verify_token(token, "access")
+        token_data = TokenSecurity.verificar_token(token, "access")
         if not token_data or not token_data.user_id:
             return None
 
         # Get user
         auth_service = AuthService(db)
-        user = await auth_service._get_user_by_id(token_data.user_id)
+        user = await auth_service._obtener_usuario_por_id(token_data.user_id)
 
-        if not user or user.status != UserStatus.ACTIVE:
+        if not user or user.estado != UserStatus.ACTIVE:
             return None
 
         return user
@@ -142,7 +142,7 @@ def require_roles(allowed_roles: List[UserRole]):
     Usage: @router.get("/admin", dependencies=[Depends(require_roles([UserRole.ADMIN]))])
     """
     async def check_user_role(current_user: User = Depends(get_current_user)):
-        if current_user.role not in allowed_roles:
+        if current_user.rol not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Access denied. Required roles: {[role.value for role in allowed_roles]}"
@@ -154,7 +154,7 @@ def require_roles(allowed_roles: List[UserRole]):
 
 def require_superadmin(current_user: User = Depends(get_current_user)) -> User:
     """Require superadmin role"""
-    if current_user.role != UserRole.SUPERADMIN:
+    if current_user.rol != UserRole.SUPERADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Superadmin access required"
@@ -164,7 +164,7 @@ def require_superadmin(current_user: User = Depends(get_current_user)) -> User:
 
 def require_any_role(current_user: User = Depends(get_current_user)) -> User:
     """Require any valid role (epidemiologo or superadmin)"""
-    if current_user.role not in [UserRole.EPIDEMIOLOGO, UserRole.SUPERADMIN]:
+    if current_user.rol not in [UserRole.EPIDEMIOLOGO, UserRole.SUPERADMIN]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Valid role required"
@@ -186,13 +186,13 @@ async def get_optional_user(
             return None
 
         token = auth_header.split(" ")[1]
-        token_data = TokenSecurity.verify_token(token, "access")
+        token_data = TokenSecurity.verificar_token(token, "access")
         if not token_data:
             return None
 
         auth_service = AuthService(db)
-        user = await auth_service._get_user_by_id(token_data.user_id)
-        if not user or user.status != UserStatus.ACTIVE:
+        user = await auth_service._obtener_usuario_por_id(token_data.user_id)
+        if not user or user.estado != UserStatus.ACTIVE:
             return None
 
         return user
@@ -210,21 +210,21 @@ class AuthorizedUser:
 
     @property
     def is_superadmin(self) -> bool:
-        return self.user.role == UserRole.SUPERADMIN
+        return self.user.rol == UserRole.SUPERADMIN
 
     @property
     def is_epidemiologo(self) -> bool:
-        return self.user.role == UserRole.EPIDEMIOLOGO
+        return self.user.rol == UserRole.EPIDEMIOLOGO
 
     @property
     def can_write(self) -> bool:
         """Can create/modify data"""
-        return self.user.role in [UserRole.SUPERADMIN, UserRole.EPIDEMIOLOGO]
+        return self.user.rol in [UserRole.SUPERADMIN, UserRole.EPIDEMIOLOGO]
 
     @property
     def can_admin(self) -> bool:
         """Can perform admin functions"""
-        return self.user.role == UserRole.SUPERADMIN
+        return self.user.rol == UserRole.SUPERADMIN
 
     def can_access_organization(self, organization: str) -> bool:
         """Check if user can access specific organization data"""

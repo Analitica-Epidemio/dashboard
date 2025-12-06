@@ -15,15 +15,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.analytics.period_utils import get_epi_week_dates
 from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
-from app.domains.eventos_epidemiologicos.agentes.models import (
+from app.domains.catalogos.agentes.models import (
     AgenteEtiologico,
 )
-from app.domains.eventos_epidemiologicos.eventos.models import (
-    Evento,
-    EventoGrupoEno,
-    GrupoEno,
-    TipoEno,
-)
+from app.domains.vigilancia_nominal.models.enfermedad import GrupoDeEnfermedades, Enfermedad
+from app.domains.vigilancia_nominal.models.caso import (    CasoEpidemiologico, CasoGrupoEnfermedad)
 
 logger = logging.getLogger(__name__)
 
@@ -53,19 +49,19 @@ class SectionPreviewResponse(BaseModel):
     """Response de preview de sección"""
     evento_codigo: str
     evento_nombre: str
-    evento_tipo: Literal["tipo_eno", "grupo_eno"]
+    evento_tipo: Literal["tipo_eno", "grupo_de_enfermedades"]
     summary: Optional[str] = None
     metrics: list[MetricItem] = Field(default_factory=list)
     corredor: Optional[CorredorPreview] = None
     periodo: Optional[dict] = None
 
 
-class EventoDisponible(BaseModel):
-    """Evento disponible para selección en boletines"""
+class CasoEpidemiologicoDisponible(BaseModel):
+    """CasoEpidemiologico disponible para selección en boletines"""
     id: int
     codigo: str
     nombre: str
-    tipo: Literal["tipo_eno", "grupo_eno"]
+    tipo: Literal["tipo_eno", "grupo_de_enfermedades"]
 
 
 class AgenteDisponible(BaseModel):
@@ -122,26 +118,26 @@ def calculate_zona(casos: int, media_historica: int) -> Literal["exito", "seguri
 async def get_evento_info(
     db: AsyncSession,
     codigo: str
-) -> tuple[Optional[int], Optional[str], Literal["tipo_eno", "grupo_eno"]]:
+) -> tuple[Optional[int], Optional[str], Literal["tipo_eno", "grupo_de_enfermedades"]]:
     """
-    Busca un evento por código en TipoEno o GrupoEno.
+    Busca un evento por código en Enfermedad o GrupoDeEnfermedades.
     Retorna (id, nombre, tipo).
     """
-    # Primero buscar en TipoEno
-    stmt = select(TipoEno.id, TipoEno.nombre).where(TipoEno.codigo == codigo)
+    # Primero buscar en Enfermedad
+    stmt = select(Enfermedad.id, Enfermedad.nombre).where(Enfermedad.slug == codigo)
     result = await db.execute(stmt)
     tipo_eno = result.first()
 
     if tipo_eno:
         return tipo_eno.id, tipo_eno.nombre, "tipo_eno"
 
-    # Si no está en TipoEno, buscar en GrupoEno
-    stmt = select(GrupoEno.id, GrupoEno.nombre).where(GrupoEno.codigo == codigo)
+    # Si no está en Enfermedad, buscar en GrupoDeEnfermedades
+    stmt = select(GrupoDeEnfermedades.id, GrupoDeEnfermedades.nombre).where(GrupoDeEnfermedades.slug == codigo)
     result = await db.execute(stmt)
     grupo_eno = result.first()
 
     if grupo_eno:
-        return grupo_eno.id, grupo_eno.nombre, "grupo_eno"
+        return grupo_eno.id, grupo_eno.nombre, "grupo_de_enfermedades"
 
     return None, None, "tipo_eno"
 
@@ -149,32 +145,32 @@ async def get_evento_info(
 async def count_casos_periodo(
     db: AsyncSession,
     evento_id: int,
-    evento_tipo: Literal["tipo_eno", "grupo_eno"],
+    evento_tipo: Literal["tipo_eno", "grupo_de_enfermedades"],
     fecha_inicio: date,
     fecha_fin: date,
     solo_confirmados: bool = False,
 ) -> int:
     """Cuenta casos en un período dado"""
     if evento_tipo == "tipo_eno":
-        stmt = select(func.count(Evento.id)).where(
-            Evento.id_tipo_eno == evento_id,
-            Evento.fecha_minima_evento >= fecha_inicio,
-            Evento.fecha_minima_evento <= fecha_fin,
+        stmt = select(func.count(CasoEpidemiologico.id)).where(
+            CasoEpidemiologico.id_enfermedad == evento_id,
+            CasoEpidemiologico.fecha_minima_caso >= fecha_inicio,
+            CasoEpidemiologico.fecha_minima_caso <= fecha_fin,
         )
     else:
         # Para grupo, necesitamos JOIN con la tabla intermedia
         stmt = (
-            select(func.count(Evento.id))
-            .join(EventoGrupoEno, Evento.id == EventoGrupoEno.id_evento)
+            select(func.count(CasoEpidemiologico.id))
+            .join(CasoGrupoEnfermedad, CasoEpidemiologico.id == CasoGrupoEnfermedad.id_evento)
             .where(
-                EventoGrupoEno.id_grupo_eno == evento_id,
-                Evento.fecha_minima_evento >= fecha_inicio,
-                Evento.fecha_minima_evento <= fecha_fin,
+                CasoGrupoEnfermedad.id_grupo == evento_id,
+                CasoEpidemiologico.fecha_minima_caso >= fecha_inicio,
+                CasoEpidemiologico.fecha_minima_caso <= fecha_fin,
             )
         )
 
     if solo_confirmados:
-        stmt = stmt.where(Evento.clasificacion_manual == "Confirmado")
+        stmt = stmt.where(CasoEpidemiologico.clasificacion_manual == "Confirmado")
 
     result = await db.execute(stmt)
     return result.scalar() or 0
@@ -183,7 +179,7 @@ async def count_casos_periodo(
 async def get_casos_por_clasificacion(
     db: AsyncSession,
     evento_id: int,
-    evento_tipo: Literal["tipo_eno", "grupo_eno"],
+    evento_tipo: Literal["tipo_eno", "grupo_de_enfermedades"],
     fecha_inicio: date,
     fecha_fin: date,
 ) -> list[tuple[str, int]]:
@@ -191,31 +187,31 @@ async def get_casos_por_clasificacion(
     if evento_tipo == "tipo_eno":
         stmt = (
             select(
-                Evento.clasificacion_manual,
-                func.count(Evento.id).label("casos")
+                CasoEpidemiologico.clasificacion_manual,
+                func.count(CasoEpidemiologico.id).label("casos")
             )
             .where(
-                Evento.id_tipo_eno == evento_id,
-                Evento.fecha_minima_evento >= fecha_inicio,
-                Evento.fecha_minima_evento <= fecha_fin,
+                CasoEpidemiologico.id_enfermedad == evento_id,
+                CasoEpidemiologico.fecha_minima_caso >= fecha_inicio,
+                CasoEpidemiologico.fecha_minima_caso <= fecha_fin,
             )
-            .group_by(Evento.clasificacion_manual)
-            .order_by(func.count(Evento.id).desc())
+            .group_by(CasoEpidemiologico.clasificacion_manual)
+            .order_by(func.count(CasoEpidemiologico.id).desc())
         )
     else:
         stmt = (
             select(
-                Evento.clasificacion_manual,
-                func.count(Evento.id).label("casos")
+                CasoEpidemiologico.clasificacion_manual,
+                func.count(CasoEpidemiologico.id).label("casos")
             )
-            .join(EventoGrupoEno, Evento.id == EventoGrupoEno.id_evento)
+            .join(CasoGrupoEnfermedad, CasoEpidemiologico.id == CasoGrupoEnfermedad.id_evento)
             .where(
-                EventoGrupoEno.id_grupo_eno == evento_id,
-                Evento.fecha_minima_evento >= fecha_inicio,
-                Evento.fecha_minima_evento <= fecha_fin,
+                CasoGrupoEnfermedad.id_grupo == evento_id,
+                CasoEpidemiologico.fecha_minima_caso >= fecha_inicio,
+                CasoEpidemiologico.fecha_minima_caso <= fecha_fin,
             )
-            .group_by(Evento.clasificacion_manual)
-            .order_by(func.count(Evento.id).desc())
+            .group_by(CasoEpidemiologico.clasificacion_manual)
+            .order_by(func.count(CasoEpidemiologico.id).desc())
         )
 
     result = await db.execute(stmt)
@@ -227,7 +223,7 @@ async def get_casos_por_clasificacion(
 # ============================================================================
 
 async def get_evento_preview(
-    codigo: str = Query(..., description="Código del TipoEno o GrupoEno"),
+    codigo: str = Query(..., description="Código del Enfermedad o GrupoDeEnfermedades"),
     semana: int = Query(..., ge=1, le=53, description="Semana epidemiológica"),
     anio: int = Query(..., ge=2020, le=2030, description="Año"),
     num_semanas: int = Query(4, ge=1, le=52, description="Semanas a analizar"),
@@ -236,7 +232,7 @@ async def get_evento_preview(
     """
     Preview genérico de datos para cualquier evento epidemiológico.
 
-    Recibe el código del TipoEno o GrupoEno y genera un resumen con:
+    Recibe el código del Enfermedad o GrupoDeEnfermedades y genera un resumen con:
     - Total de casos en el período
     - Comparación con período anterior
     - Distribución por clasificación
@@ -367,40 +363,40 @@ async def get_evento_preview(
 
 async def list_available_eventos(
     db: AsyncSession = Depends(get_async_session),
-) -> SuccessResponse[list[EventoDisponible]]:
+) -> SuccessResponse[list[CasoEpidemiologicoDisponible]]:
     """
-    Lista todos los eventos disponibles (TipoEno y GrupoEno) para selección.
+    Lista todos los eventos disponibles (Enfermedad y GrupoDeEnfermedades) para selección.
     Útil para el frontend al construir el selector de secciones.
     """
     try:
         eventos = []
 
-        # Obtener TipoEno con código
-        stmt = select(TipoEno.id, TipoEno.codigo, TipoEno.nombre).where(
-            TipoEno.codigo.isnot(None)
-        ).order_by(TipoEno.nombre)
+        # Obtener Enfermedad con código
+        stmt = select(Enfermedad.id, Enfermedad.slug, Enfermedad.nombre).where(
+            Enfermedad.slug.isnot(None)
+        ).order_by(Enfermedad.nombre)
         result = await db.execute(stmt)
 
         for row in result.all():
-            eventos.append(EventoDisponible(
+            eventos.append(CasoEpidemiologicoDisponible(
                 id=row.id,
-                codigo=row.codigo,
+                codigo=row.slug,
                 nombre=row.nombre,
                 tipo="tipo_eno",
             ))
 
-        # Obtener GrupoEno con código
-        stmt = select(GrupoEno.id, GrupoEno.codigo, GrupoEno.nombre).where(
-            GrupoEno.codigo.isnot(None)
-        ).order_by(GrupoEno.nombre)
+        # Obtener GrupoDeEnfermedades con código
+        stmt = select(GrupoDeEnfermedades.id, GrupoDeEnfermedades.slug, GrupoDeEnfermedades.nombre).where(
+            GrupoDeEnfermedades.slug.isnot(None)
+        ).order_by(GrupoDeEnfermedades.nombre)
         result = await db.execute(stmt)
 
         for row in result.all():
-            eventos.append(EventoDisponible(
+            eventos.append(CasoEpidemiologicoDisponible(
                 id=row.id,
-                codigo=row.codigo,
+                codigo=row.slug,
                 nombre=row.nombre,
-                tipo="grupo_eno",
+                tipo="grupo_de_enfermedades",
             ))
 
         return SuccessResponse(data=eventos)
@@ -423,7 +419,7 @@ async def list_available_agentes(
         # Obtener agentes activos
         stmt = select(
             AgenteEtiologico.id,
-            AgenteEtiologico.codigo,
+            AgenteEtiologico.slug,
             AgenteEtiologico.nombre,
             AgenteEtiologico.nombre_corto,
             AgenteEtiologico.categoria,
@@ -437,7 +433,7 @@ async def list_available_agentes(
         for row in result.all():
             agentes.append(AgenteDisponible(
                 id=row.id,
-                codigo=row.codigo,
+                codigo=row.slug,
                 nombre=row.nombre,
                 nombre_corto=row.nombre_corto,
                 categoria=row.categoria,

@@ -16,15 +16,12 @@ from sqlalchemy.orm import selectinload
 from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAnyRole
-from app.domains.atencion_medica.salud_models import MuestraEvento
+from app.domains.vigilancia_nominal.models.salud import MuestraCasoEpidemiologico
 from app.domains.autenticacion.models import User
-from app.domains.eventos_epidemiologicos.clasificacion.models import TipoClasificacion
-from app.domains.eventos_epidemiologicos.eventos.models import (
-    DetalleEventoSintomas,
-    Evento,
-)
-from app.domains.sujetos_epidemiologicos.animales_models import Animal
-from app.domains.sujetos_epidemiologicos.ciudadanos_models import (
+from app.domains.vigilancia_nominal.clasificacion.models import TipoClasificacion
+from app.domains.vigilancia_nominal.models.caso import (    DetalleCasoSintomas, CasoEpidemiologico)
+from app.domains.vigilancia_nominal.models.sujetos import Animal
+from app.domains.vigilancia_nominal.models.sujetos import (
     Ciudadano,
 )
 from app.domains.territorio.geografia_models import Domicilio
@@ -238,7 +235,7 @@ class DomicilioGeograficoInfo(BaseModel):
     provincia: Optional[str] = Field(None, description="Provincia del domicilio")
 
 
-class EventoDetailResponse(BaseModel):
+class CasoEpidemiologicoDetailResponse(BaseModel):
     """Respuesta detallada de un evento (EVENT-CENTERED)"""
 
     # Datos básicos del evento
@@ -252,7 +249,7 @@ class EventoDetailResponse(BaseModel):
     enfermedad: Optional[str] = Field(None, description="Enfermedad relacionada")
 
     # Fechas importantes
-    fecha_minima_evento: date = Field(..., description="Fecha mínima del evento")
+    fecha_minima_caso: date = Field(..., description="Fecha mínima del evento")
     fecha_inicio_sintomas: Optional[date] = Field(
         None, description="Fecha de inicio de síntomas"
     )
@@ -395,7 +392,7 @@ async def get_evento_detail(
     include_relations: bool = Query(True, description="Incluir datos relacionados"),
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(RequireAnyRole()),
-) -> SuccessResponse[EventoDetailResponse]:
+) -> SuccessResponse[CasoEpidemiologicoDetailResponse]:
     """
     Obtiene el detalle completo de un evento.
 
@@ -413,63 +410,63 @@ async def get_evento_detail(
 
     try:
         # Query con TODAS las relaciones necesarias (EVENT-CENTERED)
-        query = select(Evento).where(Evento.id == evento_id)
+        query = select(CasoEpidemiologico).where(CasoEpidemiologico.id == evento_id)
 
         if include_relations:
             query = query.options(
-                selectinload(Evento.tipo_eno),
-                selectinload(Evento.estrategia_aplicada),
+                selectinload(CasoEpidemiologico.enfermedad),  # Cambiado de tipo_eno a enfermedad
+                selectinload(CasoEpidemiologico.estrategia_aplicada),
                 # Sujetos del evento
-                selectinload(Evento.ciudadano).selectinload(Ciudadano.datos),
-                selectinload(Evento.animal).selectinload(Animal.localidad),
+                selectinload(CasoEpidemiologico.ciudadano).selectinload(Ciudadano.datos),
+                selectinload(CasoEpidemiologico.animal).selectinload(Animal.localidad),
                 # Datos geográficos del evento (normalized domicilio)
-                selectinload(Evento.domicilio).selectinload(Domicilio.localidad),
+                selectinload(CasoEpidemiologico.domicilio).selectinload(Domicilio.localidad),
                 # Establecimientos del evento
-                selectinload(Evento.establecimiento_consulta),
-                selectinload(Evento.establecimiento_notificacion),
-                selectinload(Evento.establecimiento_carga),
+                selectinload(CasoEpidemiologico.establecimiento_consulta),
+                selectinload(CasoEpidemiologico.establecimiento_notificacion),
+                selectinload(CasoEpidemiologico.establecimiento_carga),
                 # Salud y diagnósticos del evento
-                selectinload(Evento.sintomas).selectinload(
-                    DetalleEventoSintomas.sintoma
+                selectinload(CasoEpidemiologico.sintomas).selectinload(
+                    DetalleCasoSintomas.sintoma
                 ),
-                selectinload(Evento.muestras).selectinload(MuestraEvento.muestra),
-                selectinload(Evento.muestras).selectinload(MuestraEvento.establecimiento),
-                selectinload(Evento.muestras).selectinload(MuestraEvento.estudios),
-                selectinload(Evento.diagnosticos),
-                selectinload(Evento.tratamientos),
-                selectinload(Evento.internaciones),
+                selectinload(CasoEpidemiologico.muestras).selectinload(MuestraCasoEpidemiologico.muestra),
+                selectinload(CasoEpidemiologico.muestras).selectinload(MuestraCasoEpidemiologico.establecimiento),
+                selectinload(CasoEpidemiologico.muestras).selectinload(MuestraCasoEpidemiologico.estudios),
+                selectinload(CasoEpidemiologico.diagnosticos),
+                selectinload(CasoEpidemiologico.tratamientos),
+                selectinload(CasoEpidemiologico.internaciones),
                 # Investigación epidemiológica del evento
-                selectinload(Evento.investigaciones),
-                selectinload(Evento.contactos),
-                selectinload(Evento.ambitos_concurrencia),
-                selectinload(Evento.antecedentes),
+                selectinload(CasoEpidemiologico.investigaciones),
+                selectinload(CasoEpidemiologico.contactos),
+                selectinload(CasoEpidemiologico.ambitos_concurrencia),
+                selectinload(CasoEpidemiologico.antecedentes),
                 # Prevención del evento
-                selectinload(Evento.vacunas),
+                selectinload(CasoEpidemiologico.vacunas),
             )
 
         result = await db.execute(query)
         evento = result.scalar_one_or_none()
 
         if not evento:
-            logger.warning(f"❌ Evento {evento_id} no encontrado")
+            logger.warning(f"❌ CasoEpidemiologico {evento_id} no encontrado")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Evento {evento_id} no encontrado",
+                detail=f"CasoEpidemiologico {evento_id} no encontrado",
             )
 
         # Preparar respuesta detallada (EVENT-CENTERED)
-        response = EventoDetailResponse(
+        response = CasoEpidemiologicoDetailResponse(
             # Datos básicos del evento
             id=evento.id,
-            id_evento_caso=evento.id_evento_caso,
-            tipo_eno_id=evento.id_tipo_eno,
-            tipo_eno_nombre=evento.tipo_eno.nombre if evento.tipo_eno else None,
+            id_evento_caso=evento.id_snvs,  # Cambiado de id_evento_caso a id_snvs
+            tipo_eno_id=evento.id_enfermedad,
+            tipo_eno_nombre=evento.enfermedad.nombre if evento.enfermedad else None,  # Cambiado de tipo_eno a enfermedad
             tipo_eno_descripcion=(
-                evento.tipo_eno.descripcion if evento.tipo_eno else None
+                evento.enfermedad.descripcion if evento.enfermedad else None  # Cambiado de tipo_eno a enfermedad
             ),
-            enfermedad=getattr(evento, "enfermedad", None),
+            enfermedad=evento.enfermedad.nombre if evento.enfermedad else None,  # Extraer nombre del objeto
             # Fechas importantes del evento
-            fecha_minima_evento=evento.fecha_minima_evento,
+            fecha_minima_caso=evento.fecha_minima_caso,  # Cambiado de fecha_minima_caso a fecha_minima_caso
             fecha_inicio_sintomas=evento.fecha_inicio_sintomas,
             fecha_apertura_caso=evento.fecha_apertura_caso,
             fecha_primera_consulta=evento.fecha_primera_consulta,

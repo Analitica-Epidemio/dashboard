@@ -12,10 +12,10 @@ from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User
-from app.domains.eventos_epidemiologicos.clasificacion.repositories import (
-    EventStrategyRepository,
+from app.domains.vigilancia_nominal.clasificacion.repositories import (
+    EstrategiaClasificacionRepository,
 )
-from app.domains.eventos_epidemiologicos.clasificacion.schemas import AuditLogResponse
+from app.domains.vigilancia_nominal.clasificacion.schemas import AuditLogResponse
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ async def get_strategy_audit_log(
     logger.info(f"📜 Getting audit log for strategy: {strategy_id}")
 
     try:
-        repo = EventStrategyRepository(db)
+        repo = EstrategiaClasificacionRepository(db)
 
         # Verificar que existe
         strategy = await repo.get_by_id(strategy_id)

@@ -11,7 +11,7 @@ import logging
 from fastapi import Query, Response
 
 from app.core.config import settings
-from app.utils.topojson_optimizer import TopoJSONOptimizer
+from app.domains.territorio.utils.topojson_optimizer import TopoJSONOptimizer
 
 logger = logging.getLogger(__name__)
 

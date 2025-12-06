@@ -1,7 +1,7 @@
 from typing import Any
 
 
-def create_event_section_template() -> dict[str, Any]:
+def crear_template_seccion_evento() -> dict[str, Any]:
     """
     Crea el template de sección de evento.
 

@@ -1,6 +1,6 @@
 """
 Get dashboard charts endpoint
-MIGRADO 100% a UniversalChartSpec con datos REALES
+MIGRADO 100% a EspecificacionGraficoUniversal con datos REALES
 """
 
 import logging
@@ -16,20 +16,20 @@ from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAuthOrSignedUrl
 from app.domains.autenticacion.models import User
-from app.features.dashboard.conditions import ChartConditionResolver
-from app.features.dashboard.models import DashboardChart
-from app.schemas.chart_spec import ChartFilters, UniversalChartSpec
-from app.services.chart_spec_generator import ChartSpecGenerator
+from app.domains.dashboard.conditions import ChartConditionResolver
+from app.domains.dashboard.models import DashboardChart
+from app.domains.charts.schemas import FiltrosGrafico, EspecificacionGraficoUniversal
+from app.domains.charts.services.spec_generator import ChartSpecGenerator
 
 logger = logging.getLogger(__name__)
 
 
 class DashboardChartsResponse(BaseModel):
-    """Response model para charts del dashboard usando UniversalChartSpec"""
+    """Response model para charts del dashboard usando EspecificacionGraficoUniversal"""
 
-    charts: List[UniversalChartSpec] = Field(..., description="Lista de charts como UniversalChartSpec")
+    charts: List[EspecificacionGraficoUniversal] = Field(..., description="Lista de charts como EspecificacionGraficoUniversal")
     total: int = Field(..., description="Total de charts aplicables")
-    filtros_aplicados: ChartFilters = Field(..., description="Filtros que se aplicaron")
+    filtros_aplicados: FiltrosGrafico = Field(..., description="Filtros que se aplicaron")
 
 
 # Mapeo de códigos de BD a códigos del generador
@@ -55,21 +55,21 @@ async def get_dashboard_charts(
     current_user: Optional[User] = RequireAuthOrSignedUrl
 ) -> SuccessResponse[DashboardChartsResponse]:
     """
-    Obtiene los charts aplicables como UniversalChartSpec con datos REALES
+    Obtiene los charts aplicables como EspecificacionGraficoUniversal con datos REALES
 
     Flujo:
     1. Busca qué charts aplican según las condiciones en BD
-    2. Convierte filtros a ChartFilters
+    2. Convierte filtros a FiltrosGrafico
     3. Usa ChartSpecGenerator para generar specs con datos REALES
-    4. Devuelve UniversalChartSpec listo para renderizar
+    4. Devuelve EspecificacionGraficoUniversal listo para renderizar
     """
 
-    # Convertir filtros a ChartFilters
-    filters = ChartFilters(
-        grupo_eno_ids=[grupo_id] if grupo_id else None,
-        tipo_eno_ids=tipo_eno_ids,
+    # Convertir filtros a FiltrosGrafico
+    filters = FiltrosGrafico(
+        ids_grupo_eno=[grupo_id] if grupo_id else None,
+        ids_tipo_eno=tipo_eno_ids,
         clasificacion=clasificaciones,
-        provincia_id=[provincia_id] if provincia_id else None,
+        id_provincia=[provincia_id] if provincia_id else None,
         fecha_desde=fecha_desde.isoformat() if fecha_desde else None,
         fecha_hasta=fecha_hasta.isoformat() if fecha_hasta else None,
     )
@@ -91,7 +91,7 @@ async def get_dashboard_charts(
 
     # Resolver condiciones
     condition_resolver = ChartConditionResolver(db)
-    charts_config = await condition_resolver.get_applicable_charts(filtros_dict, all_charts)
+    charts_config = await condition_resolver.obtener_graficos_aplicables(filtros_dict, all_charts)
 
     logger.info(f"Charts totales: {len(all_charts)}, Charts aplicables: {len(charts_config)}")
 
@@ -111,19 +111,19 @@ async def get_dashboard_charts(
             logger.debug(f"Generando spec para {chart_code}")
 
             # Generar spec con datos REALES
-            spec = await generator.generate_spec(
-                chart_code=chart_code,
-                filters=filters,
-                config={"height": 400}
+            spec = await generator.generar_spec(
+                codigo_grafico=chart_code,
+                filtros=filters,
+                configuracion={"height": 400}
             )
 
             # Actualizar título si viene de BD
             if chart_config.nombre:
-                spec.title = chart_config.nombre
+                spec.titulo = chart_config.nombre
 
             # Actualizar descripción si viene de BD
             if chart_config.descripcion:
-                spec.description = chart_config.descripcion
+                spec.descripcion = chart_config.descripcion
 
             charts_specs.append(spec)
 

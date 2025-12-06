@@ -24,8 +24,8 @@ from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAuthOrSignedUrl
 from app.domains.autenticacion.models import User
 from app.domains.boletines.models import BoletinInstance, BoletinTemplateConfig
-from app.services.boletin_block_renderer import BoletinBlockRenderer
-from app.services.boletin_query_service import BoletinQueryService
+from app.domains.boletines.services.block_renderer import BoletinBlockRenderer
+from app.domains.boletines.services.query import BoletinQueryService
 
 logger = logging.getLogger(__name__)
 
@@ -197,7 +197,7 @@ async def process_unified_template(
     logger.info("=" * 60)
     logger.info("PROCESANDO TEMPLATE UNIFICADO")
     logger.info(f"  - Contexto disponible: {list(context.keys())}")
-    logger.info(f"  - Eventos seleccionados: {len(request.eventos_seleccionados)}")
+    logger.info(f"  - CasoEpidemiologicos seleccionados: {len(request.eventos_seleccionados)}")
     logger.info(f"  - Event template presente: {event_template is not None}")
     logger.info("=" * 60)
 
@@ -243,24 +243,24 @@ async def process_unified_template(
                     # Obtener info del evento
                     evento_info = await get_evento_info(db, evento.tipo_eno_id)
                     if not evento_info:
-                        logger.warning(f"    ⚠️ Evento {evento.tipo_eno_id} no encontrado en DB")
-                        warnings.append(f"Evento {evento.tipo_eno_id} no encontrado")
+                        logger.warning(f"    ⚠️ CasoEpidemiologico {evento.tipo_eno_id} no encontrado en DB")
+                        warnings.append(f"CasoEpidemiologico {evento.tipo_eno_id} no encontrado")
                         new_content.append({
                             "type": "paragraph",
-                            "content": [{"type": "text", "text": f"⚠️ Evento ID {evento.tipo_eno_id} no encontrado"}]
+                            "content": [{"type": "text", "text": f"⚠️ CasoEpidemiologico ID {evento.tipo_eno_id} no encontrado"}]
                         })
                         continue
 
-                    logger.info(f"    ✓ Evento: {evento_info.get('nombre')} (código: {evento_info.get('codigo')})")
+                    logger.info(f"    ✓ CasoEpidemiologico: {evento_info.get('nombre')} (código: {evento_info.get('codigo')})")
 
                     # Crear contexto específico para este evento
                     evento_context = context.copy()
                     evento_context.update({
                         # Variables con nombres explícitos para templates
-                        "nombre_evento_sanitario": evento_info.get("nombre", f"Evento {evento.tipo_eno_id}"),
+                        "nombre_evento_sanitario": evento_info.get("nombre", f"CasoEpidemiologico {evento.tipo_eno_id}"),
                         "codigo_evento_snvs": evento_info.get("codigo", str(evento.tipo_eno_id)),
                         # Variables internas (compatibilidad)
-                        "tipo_evento": evento_info.get("nombre", f"Evento {evento.tipo_eno_id}"),
+                        "tipo_evento": evento_info.get("nombre", f"CasoEpidemiologico {evento.tipo_eno_id}"),
                         "evento_codigo": evento_info.get("codigo", str(evento.tipo_eno_id)),
                         "evento_id": evento.tipo_eno_id,
                     })
@@ -418,9 +418,9 @@ async def get_evento_info(db: AsyncSession, evento_id: int) -> Optional[dict[str
     Returns:
         Dict con nombre, código, etc. del evento
     """
-    from app.domains.eventos_epidemiologicos.eventos.models import TipoEno
+    from app.domains.vigilancia_nominal.models.enfermedad import Enfermedad
 
-    stmt = select(TipoEno).where(TipoEno.id == evento_id)
+    stmt = select(Enfermedad).where(Enfermedad.id == evento_id)
     result = await db.execute(stmt)
     tipo_eno = result.scalar_one_or_none()
 
@@ -428,7 +428,7 @@ async def get_evento_info(db: AsyncSession, evento_id: int) -> Optional[dict[str
         return {
             "id": tipo_eno.id,
             "nombre": tipo_eno.nombre,
-            "codigo": tipo_eno.codigo if hasattr(tipo_eno, "codigo") else str(tipo_eno.id),
+            "codigo": tipo_eno.slug if hasattr(tipo_eno, "slug") else str(tipo_eno.id),
         }
     return None
 
@@ -457,7 +457,7 @@ async def analyze_event_trend(
     """
     try:
         # Obtener casos de semana actual
-        casos_actual = await query_service.query_casos_semana(
+        casos_actual = await query_service.consultar_casos_semana(
             db=db,
             evento_id=evento_id,
             semana=context["semana"],
@@ -472,7 +472,7 @@ async def analyze_event_trend(
             anio_anterior -= 1
 
         # Obtener casos de semana anterior
-        casos_anterior = await query_service.query_casos_semana(
+        casos_anterior = await query_service.consultar_casos_semana(
             db=db,
             evento_id=evento_id,
             semana=semana_anterior,
@@ -554,7 +554,7 @@ async def process_event_template(
     processed_nodes = []
 
     template_content = event_template.get("content", [])
-    evento_nombre = evento_context.get("nombre_evento_sanitario", "Evento")
+    evento_nombre = evento_context.get("nombre_evento_sanitario", "CasoEpidemiologico")
 
     logger.info(f"      📄 Procesando {len(template_content)} nodos del template para '{evento_nombre}'")
 
@@ -833,17 +833,17 @@ async def resolve_tipo_eno_codigos(
     Returns:
         Lista de IDs correspondientes
     """
-    from app.domains.eventos_epidemiologicos.eventos.models import TipoEno
+    from app.domains.vigilancia_nominal.models.enfermedad import Enfermedad
 
     if not codigos:
         return []
 
-    stmt = select(TipoEno.id, TipoEno.codigo).where(TipoEno.codigo.in_(codigos))
+    stmt = select(Enfermedad.id, Enfermedad.slug).where(Enfermedad.slug.in_(codigos))
     result = await db.execute(stmt)
     rows = result.fetchall()
 
     # Mapear código → id
-    codigo_to_id = {row.codigo: row.id for row in rows}
+    codigo_to_id = {row.slug: row.id for row in rows}
 
     # Mantener orden original y advertir sobre códigos no encontrados
     ids = []
@@ -946,9 +946,9 @@ async def execute_query(
         query_params["tipo_eno_ids"] = resolved_ids
         logger.info(f"Resueltos códigos {codigos} → IDs {resolved_ids}")
     if query_type == "top_enos":
-        return await query_service.query_top_enos(
+        return await query_service.consultar_top_enos(
             db=db,
-            limit=query_params.get("limit", 10),
+            limite=query_params.get("limit", 10),
             fecha_inicio=context["fecha_inicio_obj"],
             fecha_fin=context["fecha_fin_obj"]
         )
@@ -956,7 +956,7 @@ async def execute_query(
     elif query_type == "evento_detail":
         if not evento_id:
             raise ValueError("evento_id requerido para query_evento_detail")
-        return await query_service.query_evento_detail(
+        return await query_service.consultar_detalle_evento(
             db=db,
             evento_id=evento_id,
             fecha_inicio=context["fecha_inicio_obj"],
@@ -964,21 +964,21 @@ async def execute_query(
         )
 
     elif query_type == "capacidad_hospitalaria":
-        return await query_service.query_capacidad_hospitalaria(
+        return await query_service.consultar_capacidad_hospitalaria(
             db=db,
             semana=context["semana"],
             anio=context["anio"]
         )
 
     elif query_type == "virus_respiratorios":
-        return await query_service.query_virus_respiratorios(
+        return await query_service.consultar_virus_respiratorios(
             db=db,
             semana=context["semana"],
             anio=context["anio"]
         )
 
     elif query_type == "eventos_agrupados":
-        return await query_service.query_eventos_agrupados(
+        return await query_service.consultar_eventos_agrupados(
             db=db,
             tipo_evento=query_params.get("tipo_evento", "ETI"),
             semana=context["semana"],
@@ -991,8 +991,8 @@ async def execute_query(
         # Distribución por edad (una o múltiples series, agrupado por evento o agente)
         # Usa series_config con estructura "valores" (array) para agrupar códigos
         # ═══════════════════════════════════════════════════════════════════════
-        from app.schemas.chart_spec import ChartFilters
-        from app.services.chart_spec_generator import ChartSpecGenerator
+        from app.domains.charts.schemas import FiltrosGrafico
+        from app.domains.charts.services.spec_generator import ChartSpecGenerator
 
         agrupar_por = query_params.get("agrupar_por")  # "evento" | "agente" | None
 
@@ -1031,46 +1031,46 @@ async def execute_query(
             fecha_desde = context.get("fecha_inicio")
             fecha_hasta = context.get("fecha_fin")
 
-        filters = ChartFilters(
-            tipo_eno_ids=all_tipo_eno_ids if all_tipo_eno_ids else ([evento_id] if evento_id else None),
+        filters = FiltrosGrafico(
+            ids_tipo_eno=all_tipo_eno_ids if all_tipo_eno_ids else ([evento_id] if evento_id else None),
             fecha_desde=fecha_desde,
             fecha_hasta=fecha_hasta,
         )
 
         try:
-            spec = await generator._generate_casos_por_edad(
-                filters,
-                config=query_params.get("config"),
-                series_config=resolved_series if resolved_series else None,
+            spec = await generator._generar_casos_por_edad(
+                filtros=filters,
+                configuracion=query_params.get("config"),
+                configuracion_series=resolved_series if resolved_series else None,
                 agrupar_por=agrupar_por
             )
-            return {"spec": spec.model_dump(), "chart_code": "casos_edad"}
+            return {"spec": spec.model_dump(by_alias=True), "chart_code": "casos_edad"}
         except Exception as e:
             logger.warning(f"Error generando spec distribucion_edad: {e}")
             return {}
 
     elif query_type == "distribucion_geografica":
         # Usa ChartSpecGenerator para obtener datos del mapa
-        from app.schemas.chart_spec import ChartFilters
-        from app.services.chart_spec_generator import ChartSpecGenerator
+        from app.domains.charts.schemas import FiltrosGrafico
+        from app.domains.charts.services.spec_generator import ChartSpecGenerator
 
         generator = ChartSpecGenerator(db)
-        filters = ChartFilters(
-            tipo_eno_ids=[evento_id] if evento_id else None,
+        filters = FiltrosGrafico(
+            ids_tipo_eno=[evento_id] if evento_id else None,
             fecha_desde=context.get("fecha_inicio"),
             fecha_hasta=context.get("fecha_fin"),
         )
         try:
-            spec = await generator.generate_spec("mapa_chubut", filters)
-            return {"spec": spec.model_dump(), "chart_code": "mapa_chubut"}
+            spec = await generator.generar_spec(codigo_grafico="mapa_chubut", filtros=filters)
+            return {"spec": spec.model_dump(by_alias=True), "chart_code": "mapa_chubut"}
         except Exception as e:
             logger.warning(f"Error generando spec distribucion_geografica: {e}")
             return {}
 
     elif query_type == "corredor_endemico_chart":
         # Genera spec para corredor endémico
-        from app.schemas.chart_spec import ChartFilters
-        from app.services.chart_spec_generator import ChartSpecGenerator
+        from app.domains.charts.schemas import FiltrosGrafico
+        from app.domains.charts.services.spec_generator import ChartSpecGenerator
 
         generator = ChartSpecGenerator(db)
         # Para corredor anual, usar todo el año (SE 1-52)
@@ -1081,28 +1081,28 @@ async def execute_query(
             semana_actual = context.get("semana", 52)
             fecha_inicio_anual, _ = get_epi_week_dates(1, anio)
             _, fecha_fin_anual = get_epi_week_dates(semana_actual, anio)
-            filters = ChartFilters(
-                tipo_eno_ids=[evento_id] if evento_id else None,
+            filters = FiltrosGrafico(
+                ids_tipo_eno=[evento_id] if evento_id else None,
                 fecha_desde=fecha_inicio_anual.isoformat(),
                 fecha_hasta=fecha_fin_anual.isoformat(),
             )
         else:
             # Corredor del período seleccionado
-            filters = ChartFilters(
-                tipo_eno_ids=[evento_id] if evento_id else None,
+            filters = FiltrosGrafico(
+                ids_tipo_eno=[evento_id] if evento_id else None,
                 fecha_desde=context.get("fecha_inicio"),
                 fecha_hasta=context.get("fecha_fin"),
             )
         try:
-            spec = await generator.generate_spec("corredor_endemico", filters)
-            return {"spec": spec.model_dump(), "chart_code": "corredor_endemico"}
+            spec = await generator.generar_spec(codigo_grafico="corredor_endemico", filtros=filters)
+            return {"spec": spec.model_dump(by_alias=True), "chart_code": "corredor_endemico"}
         except Exception as e:
             logger.warning(f"Error generando spec corredor_endemico: {e}")
             return {}
 
     elif query_type == "comparacion_periodos":
         # Comparación del período actual vs período anterior
-        return await query_service.query_comparacion_periodos(
+        return await query_service.consultar_comparacion_periodos(
             db=db,
             evento_id=evento_id,
             periodo_actual=(context["fecha_inicio_obj"], context["fecha_fin_obj"]),
@@ -1114,27 +1114,27 @@ async def execute_query(
 
     elif query_type == "comparacion_anual":
         # Comparación año actual vs año anterior (acumulado hasta semana actual)
-        from app.schemas.chart_spec import ChartFilters
-        from app.services.chart_spec_generator import ChartSpecGenerator
+        from app.domains.charts.schemas import FiltrosGrafico
+        from app.domains.charts.services.spec_generator import ChartSpecGenerator
 
         generator = ChartSpecGenerator(db)
         anio = context.get("anio", date.today().year)
         semana = context.get("semana", 1)
 
         # Generar spec de curva epidemiológica comparando años
-        filters = ChartFilters(
-            tipo_eno_ids=[evento_id] if evento_id else None,
+        filters = FiltrosGrafico(
+            ids_tipo_eno=[evento_id] if evento_id else None,
             anio=anio,
             semana_hasta=semana,
             comparar_anio_anterior=True
         )
         try:
-            spec = await generator.generate_spec("curva_epidemiologica", filters)
-            return {"spec": spec.model_dump(), "chart_code": "curva_epidemiologica_comparada"}
+            spec = await generator.generar_spec(codigo_grafico="curva_epidemiologica", filtros=filters)
+            return {"spec": spec.model_dump(by_alias=True), "chart_code": "curva_epidemiologica_comparada"}
         except Exception as e:
             logger.warning(f"Error generando spec comparacion_anual: {e}")
             # Fallback a datos de query service
-            return await query_service.query_comparacion_periodos(
+            return await query_service.consultar_comparacion_periodos(
                 db=db,
                 evento_id=evento_id,
                 periodo_actual=(date(anio, 1, 1), context["fecha_fin_obj"]),
@@ -1146,8 +1146,8 @@ async def execute_query(
         # Curva epidemiológica (una o múltiples series, agrupado por evento o agente)
         # Usa series_config con estructura "valores" (array) para agrupar códigos
         # ═══════════════════════════════════════════════════════════════════════
-        from app.schemas.chart_spec import ChartFilters
-        from app.services.chart_spec_generator import ChartSpecGenerator
+        from app.domains.charts.schemas import FiltrosGrafico
+        from app.domains.charts.services.spec_generator import ChartSpecGenerator
 
         agrupar_por = query_params.get("agrupar_por")  # "evento" | "agente" | None
 
@@ -1196,21 +1196,21 @@ async def execute_query(
             fecha_hasta = context.get("fecha_fin")
 
         generator = ChartSpecGenerator(db)
-        filters = ChartFilters(
-            tipo_eno_ids=all_tipo_eno_ids if all_tipo_eno_ids else ([evento_id] if evento_id else None),
+        filters = FiltrosGrafico(
+            ids_tipo_eno=all_tipo_eno_ids if all_tipo_eno_ids else ([evento_id] if evento_id else None),
             fecha_desde=fecha_desde,
             fecha_hasta=fecha_hasta,
             agrupacion_temporal=query_params.get("agrupacion_temporal", "semana"),
         )
 
         try:
-            spec = await generator._generate_curva_epidemiologica(
-                filters,
-                config=query_params.get("config"),
-                series_config=resolved_series,
+            spec = await generator._generar_curva_epidemiologica(
+                filtros=filters,
+                configuracion=query_params.get("config"),
+                configuracion_series=resolved_series,
                 agrupar_por=agrupar_por
             )
-            return {"spec": spec.model_dump(), "chart_code": "curva_epidemiologica"}
+            return {"spec": spec.model_dump(by_alias=True), "chart_code": "curva_epidemiologica"}
         except Exception as e:
             logger.warning(f"Error generando spec curva_epidemiologica: {e}")
             return {}
@@ -1220,10 +1220,10 @@ async def execute_query(
     # Generan texto descriptivo basado en datos estadísticos
     # ═══════════════════════════════════════════════════════════════════════════
     elif query_type == "insight_distribucion_edad":
-        from app.services.boletin_insights_service import BoletinInsightsService
+        from app.domains.boletines.services.insights import BoletinInsightsService
 
         insights_service = BoletinInsightsService(db)
-        return await insights_service.generate_distribucion_edad_insight(
+        return await insights_service.generar_insight_distribucion_edad(
             evento_id=evento_id,
             fecha_inicio=context["fecha_inicio_obj"],
             fecha_fin=context["fecha_fin_obj"],
@@ -1231,10 +1231,10 @@ async def execute_query(
         )
 
     elif query_type == "insight_distribucion_geografica":
-        from app.services.boletin_insights_service import BoletinInsightsService
+        from app.domains.boletines.services.insights import BoletinInsightsService
 
         insights_service = BoletinInsightsService(db)
-        return await insights_service.generate_distribucion_geografica_insight(
+        return await insights_service.generar_insight_distribucion_geografica(
             evento_id=evento_id,
             fecha_inicio=context["fecha_inicio_obj"],
             fecha_fin=context["fecha_fin_obj"],
@@ -1242,10 +1242,10 @@ async def execute_query(
         )
 
     elif query_type == "insight_tendencia":
-        from app.services.boletin_insights_service import BoletinInsightsService
+        from app.domains.boletines.services.insights import BoletinInsightsService
 
         insights_service = BoletinInsightsService(db)
-        return await insights_service.generate_tendencia_insight(
+        return await insights_service.generar_insight_tendencia(
             evento_id=evento_id,
             semana_actual=context["semana"],
             anio=context["anio"],
@@ -1254,10 +1254,10 @@ async def execute_query(
         )
 
     elif query_type == "insight_resumen":
-        from app.services.boletin_insights_service import BoletinInsightsService
+        from app.domains.boletines.services.insights import BoletinInsightsService
 
         insights_service = BoletinInsightsService(db)
-        return await insights_service.generate_resumen_insight(
+        return await insights_service.generar_insight_resumen(
             evento_id=evento_id,
             fecha_inicio=context["fecha_inicio_obj"],
             fecha_fin=context["fecha_fin_obj"],
@@ -1310,8 +1310,13 @@ def render_chart_block(
     # ═══════════════════════════════════════════════════════════════════════════
     if chart_code == "mapa_chubut":
         # Extraer datos de departamentos del spec
-        departamentos_data = spec.get("data", {}).get("data", {}).get("departamentos", [])
-        total_casos = spec.get("data", {}).get("data", {}).get("total_casos", 0)
+        # En el nuevo schema: spec.datos.datos.departamentos
+        # Pero aquí spec es un dict porque se hizo model_dump()
+        # spec["datos"]["datos"]["departamentos"]
+        
+        # Intentar acceder con la estructura nueva (datos -> datos -> departamentos)
+        departamentos_data = spec.get("datos", {}).get("datos", {}).get("departamentos", [])
+        total_casos = spec.get("datos", {}).get("datos", {}).get("total_casos", 0)
 
         # Ordenar por casos descendente
         departamentos_sorted = sorted(departamentos_data, key=lambda x: x.get("casos", 0), reverse=True)
@@ -1400,7 +1405,7 @@ def render_chart_block(
             }
         ]
 
-        logger.info(f"✓ Mapa + Tabla departamentos (HTML nativo) renderizados")
+        logger.info("✓ Mapa + Tabla departamentos (HTML nativo) renderizados")
 
         return {
             "type": "doc",

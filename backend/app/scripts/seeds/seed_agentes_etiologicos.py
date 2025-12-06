@@ -15,13 +15,15 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domains.eventos_epidemiologicos.agentes.models import (
+from app.domains.catalogos.agentes.models import (
     AgenteEtiologico,
-    AgenteExtraccionConfig,
     CategoriaAgente,
     GrupoAgente,
 )
-from app.domains.eventos_epidemiologicos.eventos.models import TipoEno
+from app.domains.vigilancia_nominal.models.agentes import (
+    AgenteExtraccionConfig,
+)
+from app.domains.vigilancia_nominal.models.enfermedad import Enfermedad
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +37,7 @@ AGENTES_CATALOGO: list[dict[str, Any]] = [
     # VIRUS RESPIRATORIOS
     # =========================================================================
     {
-        "codigo": "vsr",
+        "slug": "vsr",
         "nombre": "Virus Sincicial Respiratorio",
         "nombre_corto": "VSR",
         "categoria": CategoriaAgente.VIRUS,
@@ -43,7 +45,7 @@ AGENTES_CATALOGO: list[dict[str, Any]] = [
         "descripcion": "Principal causa de bronquiolitis en lactantes",
     },
     {
-        "codigo": "influenza-a",
+        "slug": "influenza-a",
         "nombre": "Influenza A",
         "nombre_corto": "Influenza A",
         "categoria": CategoriaAgente.VIRUS,
@@ -51,7 +53,7 @@ AGENTES_CATALOGO: list[dict[str, Any]] = [
         "descripcion": "Virus de la gripe tipo A (incluye subtipos H1N1, H3N2, etc.)",
     },
     {
-        "codigo": "influenza-b",
+        "slug": "influenza-b",
         "nombre": "Influenza B",
         "nombre_corto": "Influenza B",
         "categoria": CategoriaAgente.VIRUS,
@@ -59,7 +61,7 @@ AGENTES_CATALOGO: list[dict[str, Any]] = [
         "descripcion": "Virus de la gripe tipo B",
     },
     {
-        "codigo": "metaneumovirus",
+        "slug": "metaneumovirus",
         "nombre": "Metaneumovirus Humano",
         "nombre_corto": "Metaneumovirus",
         "categoria": CategoriaAgente.VIRUS,
@@ -67,7 +69,7 @@ AGENTES_CATALOGO: list[dict[str, Any]] = [
         "descripcion": "Causa infecciones respiratorias similares a VSR",
     },
     {
-        "codigo": "sars-cov-2",
+        "slug": "sars-cov-2",
         "nombre": "SARS-CoV-2",
         "nombre_corto": "SARS-CoV-2",
         "categoria": CategoriaAgente.VIRUS,
@@ -75,7 +77,7 @@ AGENTES_CATALOGO: list[dict[str, Any]] = [
         "descripcion": "Coronavirus causante de COVID-19",
     },
     {
-        "codigo": "adenovirus-respiratorio",
+        "slug": "adenovirus-respiratorio",
         "nombre": "Adenovirus (respiratorio)",
         "nombre_corto": "Adenovirus",
         "categoria": CategoriaAgente.VIRUS,
@@ -83,7 +85,7 @@ AGENTES_CATALOGO: list[dict[str, Any]] = [
         "descripcion": "Adenovirus causante de infecciones respiratorias",
     },
     {
-        "codigo": "parainfluenza-1",
+        "slug": "parainfluenza-1",
         "nombre": "Parainfluenza 1",
         "nombre_corto": "Parainfluenza 1",
         "categoria": CategoriaAgente.VIRUS,
@@ -91,7 +93,7 @@ AGENTES_CATALOGO: list[dict[str, Any]] = [
         "descripcion": "Virus parainfluenza tipo 1",
     },
     {
-        "codigo": "parainfluenza-2",
+        "slug": "parainfluenza-2",
         "nombre": "Parainfluenza 2",
         "nombre_corto": "Parainfluenza 2",
         "categoria": CategoriaAgente.VIRUS,
@@ -99,7 +101,7 @@ AGENTES_CATALOGO: list[dict[str, Any]] = [
         "descripcion": "Virus parainfluenza tipo 2",
     },
     {
-        "codigo": "parainfluenza-3",
+        "slug": "parainfluenza-3",
         "nombre": "Parainfluenza 3",
         "nombre_corto": "Parainfluenza 3",
         "categoria": CategoriaAgente.VIRUS,
@@ -110,7 +112,7 @@ AGENTES_CATALOGO: list[dict[str, Any]] = [
     # AGENTES ENTÉRICOS
     # =========================================================================
     {
-        "codigo": "stec-o157",
+        "slug": "stec-o157",
         "nombre": "E. coli productor de toxina Shiga O157",
         "nombre_corto": "STEC O157",
         "categoria": CategoriaAgente.BACTERIA,
@@ -118,7 +120,7 @@ AGENTES_CATALOGO: list[dict[str, Any]] = [
         "descripcion": "Principal causa de SUH en Argentina",
     },
     {
-        "codigo": "stec-no-o157",
+        "slug": "stec-no-o157",
         "nombre": "E. coli productor de toxina Shiga no-O157",
         "nombre_corto": "STEC no-O157",
         "categoria": CategoriaAgente.BACTERIA,
@@ -126,7 +128,7 @@ AGENTES_CATALOGO: list[dict[str, Any]] = [
         "descripcion": "Otros serotipos de STEC (O145, O121, etc.)",
     },
     {
-        "codigo": "salmonella-spp",
+        "slug": "salmonella-spp",
         "nombre": "Salmonella spp.",
         "nombre_corto": "Salmonella",
         "categoria": CategoriaAgente.BACTERIA,
@@ -134,7 +136,7 @@ AGENTES_CATALOGO: list[dict[str, Any]] = [
         "descripcion": "Bacteria causante de salmonelosis",
     },
     {
-        "codigo": "shigella-spp",
+        "slug": "shigella-spp",
         "nombre": "Shigella spp.",
         "nombre_corto": "Shigella",
         "categoria": CategoriaAgente.BACTERIA,
@@ -142,7 +144,7 @@ AGENTES_CATALOGO: list[dict[str, Any]] = [
         "descripcion": "Bacteria causante de shigelosis (disentería bacilar)",
     },
     {
-        "codigo": "shigella-flexneri",
+        "slug": "shigella-flexneri",
         "nombre": "Shigella flexneri",
         "nombre_corto": "S. flexneri",
         "categoria": CategoriaAgente.BACTERIA,
@@ -150,7 +152,7 @@ AGENTES_CATALOGO: list[dict[str, Any]] = [
         "descripcion": "Especie de Shigella más común en países en desarrollo",
     },
     {
-        "codigo": "shigella-sonnei",
+        "slug": "shigella-sonnei",
         "nombre": "Shigella sonnei",
         "nombre_corto": "S. sonnei",
         "categoria": CategoriaAgente.BACTERIA,
@@ -158,7 +160,7 @@ AGENTES_CATALOGO: list[dict[str, Any]] = [
         "descripcion": "Especie de Shigella más común en países desarrollados",
     },
     {
-        "codigo": "rotavirus",
+        "slug": "rotavirus",
         "nombre": "Rotavirus",
         "nombre_corto": "Rotavirus",
         "categoria": CategoriaAgente.VIRUS,
@@ -166,7 +168,7 @@ AGENTES_CATALOGO: list[dict[str, Any]] = [
         "descripcion": "Principal causa de diarrea viral en niños",
     },
     {
-        "codigo": "adenovirus-enterico",
+        "slug": "adenovirus-enterico",
         "nombre": "Adenovirus entérico (40/41)",
         "nombre_corto": "Adenovirus (DV)",
         "categoria": CategoriaAgente.VIRUS,
@@ -177,7 +179,7 @@ AGENTES_CATALOGO: list[dict[str, Any]] = [
     # SEROTIPOS DENGUE
     # =========================================================================
     {
-        "codigo": "dengue-1",
+        "slug": "dengue-1",
         "nombre": "Dengue serotipo 1",
         "nombre_corto": "DEN-1",
         "categoria": CategoriaAgente.VIRUS,
@@ -185,7 +187,7 @@ AGENTES_CATALOGO: list[dict[str, Any]] = [
         "descripcion": "Serotipo 1 del virus Dengue",
     },
     {
-        "codigo": "dengue-2",
+        "slug": "dengue-2",
         "nombre": "Dengue serotipo 2",
         "nombre_corto": "DEN-2",
         "categoria": CategoriaAgente.VIRUS,
@@ -193,7 +195,7 @@ AGENTES_CATALOGO: list[dict[str, Any]] = [
         "descripcion": "Serotipo 2 del virus Dengue",
     },
     {
-        "codigo": "dengue-3",
+        "slug": "dengue-3",
         "nombre": "Dengue serotipo 3",
         "nombre_corto": "DEN-3",
         "categoria": CategoriaAgente.VIRUS,
@@ -201,7 +203,7 @@ AGENTES_CATALOGO: list[dict[str, Any]] = [
         "descripcion": "Serotipo 3 del virus Dengue",
     },
     {
-        "codigo": "dengue-4",
+        "slug": "dengue-4",
         "nombre": "Dengue serotipo 4",
         "nombre_corto": "DEN-4",
         "categoria": CategoriaAgente.VIRUS,
@@ -209,7 +211,7 @@ AGENTES_CATALOGO: list[dict[str, Any]] = [
         "descripcion": "Serotipo 4 del virus Dengue",
     },
     {
-        "codigo": "dengue-sin-serotipo",
+        "slug": "dengue-sin-serotipo",
         "nombre": "Dengue sin serotipo especificado",
         "nombre_corto": "Dengue s/s",
         "categoria": CategoriaAgente.VIRUS,
@@ -500,10 +502,10 @@ async def seed_agentes_etiologicos(db: AsyncSession) -> None:
     agentes_map: dict[str, AgenteEtiologico] = {}
 
     for agente_data in AGENTES_CATALOGO:
-        codigo = agente_data["codigo"]
+        codigo = agente_data["slug"]
 
         # Buscar existente
-        stmt = select(AgenteEtiologico).where(AgenteEtiologico.codigo == codigo)
+        stmt = select(AgenteEtiologico).where(AgenteEtiologico.slug == codigo)
         result = await db.execute(stmt)
         existing = result.scalar_one_or_none()
 
@@ -532,7 +534,7 @@ async def seed_agentes_etiologicos(db: AsyncSession) -> None:
     configs_error = 0
 
     # Obtener mapa de tipo_eno por nombre
-    stmt = select(TipoEno)
+    stmt = select(Enfermedad)
     result = await db.execute(stmt)
     tipo_enos = {te.nombre: te for te in result.scalars().all()}
 
@@ -550,14 +552,14 @@ async def seed_agentes_etiologicos(db: AsyncSession) -> None:
         # Buscar tipo_eno
         tipo_eno = tipo_enos.get(evento_nombre)
         if not tipo_eno:
-            logger.warning(f"  ⚠ TipoEno no encontrado: {evento_nombre}")
+            logger.warning(f"  ⚠ Enfermedad no encontrado: {evento_nombre}")
             configs_error += 1
             continue
 
         # Buscar config existente
         stmt = select(AgenteExtraccionConfig).where(
             AgenteExtraccionConfig.id_agente == agente.id,
-            AgenteExtraccionConfig.id_tipo_eno == tipo_eno.id,
+            AgenteExtraccionConfig.id_enfermedad == tipo_eno.id,
             AgenteExtraccionConfig.campo_busqueda == config_data["campo_busqueda"],
         )
         result = await db.execute(stmt)
@@ -572,7 +574,7 @@ async def seed_agentes_etiologicos(db: AsyncSession) -> None:
             # Crear nueva
             config = AgenteExtraccionConfig(
                 id_agente=agente.id,
-                id_tipo_eno=tipo_eno.id,
+                id_enfermedad=tipo_eno.id,
                 **config_data
             )
             db.add(config)

@@ -14,9 +14,9 @@ from app.core.database import get_async_session
 from app.core.schemas.response import PaginatedResponse, PaginationMeta
 from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User
-from app.domains.eventos_epidemiologicos.agentes.models import (
-    AgenteEtiologico,
-    EventoAgente,
+from app.domains.catalogos.agentes.models import AgenteEtiologico
+from app.domains.vigilancia_nominal.models.agentes import (
+    CasoAgente,
     ResultadoDeteccion,
 )
 
@@ -35,8 +35,8 @@ class AgenteEtiologicoInfo(BaseModel):
     activo: bool = Field(..., description="Si está activo")
     # Estadísticas
     total_eventos: int = Field(0, description="Total de eventos donde se buscó/detectó")
-    eventos_positivos: int = Field(0, description="Eventos con resultado positivo")
-    eventos_negativos: int = Field(0, description="Eventos con resultado negativo")
+    eventos_positivos: int = Field(0, description="CasoEpidemiologicos con resultado positivo")
+    eventos_negativos: int = Field(0, description="CasoEpidemiologicos con resultado negativo")
     tasa_positividad: float = Field(0.0, description="Tasa de positividad (%)")
 
 
@@ -69,22 +69,22 @@ async def list_agentes(
         # Subquery para estadísticas por agente
         stats_subquery = (
             select(
-                EventoAgente.id_agente,
-                func.count(EventoAgente.id).label("total_eventos"),
+                CasoAgente.id_agente,
+                func.count(CasoAgente.id).label("total_eventos"),
                 func.sum(
                     case(
-                        (EventoAgente.resultado == ResultadoDeteccion.POSITIVO, 1),
+                        (CasoAgente.resultado == ResultadoDeteccion.POSITIVO, 1),
                         else_=0
                     )
                 ).label("eventos_positivos"),
                 func.sum(
                     case(
-                        (EventoAgente.resultado == ResultadoDeteccion.NEGATIVO, 1),
+                        (CasoAgente.resultado == ResultadoDeteccion.NEGATIVO, 1),
                         else_=0
                     )
                 ).label("eventos_negativos"),
             )
-            .group_by(EventoAgente.id_agente)
+            .group_by(CasoAgente.id_agente)
             .subquery()
         )
 
@@ -110,7 +110,7 @@ async def list_agentes(
             search_pattern = f"%{busqueda}%"
             query = query.where(
                 (AgenteEtiologico.nombre.ilike(search_pattern)) |
-                (AgenteEtiologico.codigo.ilike(search_pattern)) |
+                (AgenteEtiologico.slug.ilike(search_pattern)) |
                 (AgenteEtiologico.nombre_corto.ilike(search_pattern))
             )
 
@@ -118,8 +118,8 @@ async def list_agentes(
         order_func = desc if orden.lower() == "desc" else asc
         if ordenar_por == "nombre":
             query = query.order_by(order_func(AgenteEtiologico.nombre))
-        elif ordenar_por == "codigo":
-            query = query.order_by(order_func(AgenteEtiologico.codigo))
+        elif ordenar_por == "slug":
+            query = query.order_by(order_func(AgenteEtiologico.slug))
         elif ordenar_por == "total_eventos":
             query = query.order_by(order_func(func.coalesce(stats_subquery.c.total_eventos, 0)))
         elif ordenar_por == "eventos_positivos":
@@ -152,7 +152,7 @@ async def list_agentes(
             search_pattern = f"%{busqueda}%"
             count_query = count_query.where(
                 (AgenteEtiologico.nombre.ilike(search_pattern)) |
-                (AgenteEtiologico.codigo.ilike(search_pattern)) |
+                (AgenteEtiologico.slug.ilike(search_pattern)) |
                 (AgenteEtiologico.nombre_corto.ilike(search_pattern))
             )
 
@@ -182,7 +182,7 @@ async def list_agentes(
             agentes_info.append(
                 AgenteEtiologicoInfo(
                     id=agente.id,
-                    codigo=agente.codigo,
+                    codigo=agente.slug,
                     nombre=agente.nombre,
                     nombre_corto=agente.nombre_corto,
                     categoria=agente.categoria,

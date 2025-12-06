@@ -135,3 +135,24 @@ Con los servicios corriendo:
 ## 📝 Licencia
 
 Propiedad del Ministerio de Salud.
+
+## 📝 Estándar de Código (Hybrid Spanglish)
+
+Para mantener la consistencia y facilitar la comunicación con expertos del dominio, utilizamos un estándar híbrido:
+
+### 1. Dominio y Negocio → ESPAÑOL 🇪🇸
+Todo lo que represente conceptos del negocio debe estar en español.
+- **Clases de Dominio**: `CasoEpidemiologico`, `NotificacionSemanal`, `Paciente`
+- **Variables de Negocio**: `fecha_inicio_sintomas`, `edad_paciente`, `tipo_evento`
+- **Métodos de Negocio**: `calcular_riesgo()`, `clasificar_caso()`, `iniciar_procesamiento()`
+
+### 2. Infraestructura y Patrones → INGLÉS 🇺🇸
+Los componentes puramente técnicos o patrones de diseño se mantienen en inglés.
+- **Sufijos de Patrones**: `Repository`, `Service`, `Handler`, `Router`, `DTO`
+- **Infraestructura**: `Job`, `Task`, `Cache`, `Session`, `Upload`
+- **Ejemplo Combinado**: `CasoEpidemiologicoRepository`, `NotificacionService`
+
+### 3. Documentación y Comentarios → ESPAÑOL 🇪🇸
+Todo lo que explica el *qué* y el *por qué* debe estar en el idioma del equipo.
+- **Docstrings**: `"""Calcula la tasa de incidencia acumulada."""`
+- **Comentarios**: `# Validar si el paciente tiene antecedentes`

@@ -33,7 +33,7 @@ import { $api } from "@/lib/api/client";
 import type { components } from "@/lib/api/types";
 
 // Types from OpenAPI
-type TipoEnoInfo = components["schemas"]["TipoEnoInfo"];
+type TipoEnoInfo = components["schemas"]["EnfermedadInfo"];
 type AgenteEtiologicoInfo = components["schemas"]["AgenteEtiologicoInfo"];
 type AgentesCategoriasResponse = components["schemas"]["AgentesCategoriasResponse"];
 
@@ -485,13 +485,12 @@ function AgentesTab() {
                   </TableCell>
                   <TableCell className="text-right">
                     <span
-                      className={`font-mono ${
-                        agente.tasa_positividad > 50
+                      className={`font-mono ${agente.tasa_positividad > 50
                           ? "text-red-600"
                           : agente.tasa_positividad > 20
                             ? "text-amber-600"
                             : "text-muted-foreground"
-                      }`}
+                        }`}
                     >
                       {agente.tasa_positividad.toFixed(1)}%
                     </span>

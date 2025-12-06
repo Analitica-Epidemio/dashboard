@@ -262,8 +262,8 @@ class SUHResponse(BaseModel):
 # Schemas para el nuevo sistema de generación automática con snippets
 # ============================================================================
 
-class EventoSeleccionado(BaseModel):
-    """Evento seleccionado para incluir en el boletín"""
+class CasoEpidemiologicoSeleccionado(BaseModel):
+    """CasoEpidemiologico seleccionado para incluir en el boletín"""
     tipo_eno_id: int = Field(..., description="ID del tipo de evento")
     incluir_charts: bool = Field(True, description="Incluir charts del evento")
     snippets_custom: Optional[List[str]] = Field(None, description="Códigos de snippets custom adicionales")
@@ -274,14 +274,14 @@ class GenerateDraftRequest(BaseModel):
     semana: int = Field(..., description="Semana epidemiológica", ge=1, le=53)
     anio: int = Field(..., description="Año epidemiológico")
     num_semanas: int = Field(4, description="Número de semanas de análisis", ge=1, le=52)
-    eventos_seleccionados: List[EventoSeleccionado] = Field(..., description="Eventos a incluir en el boletín")
+    eventos_seleccionados: List[CasoEpidemiologicoSeleccionado] = Field(..., description="CasoEpidemiologicos a incluir en el boletín")
     titulo_custom: Optional[str] = Field(None, description="Título personalizado (opcional)")
 
 
 class BoletinMetadata(BaseModel):
     """Metadatos del boletín generado"""
     periodo_analisis: Dict[str, Any] = Field(..., description="Información del período analizado")
-    eventos_incluidos: List[Dict[str, Any]] = Field(..., description="Eventos incluidos con sus datos")
+    eventos_incluidos: List[Dict[str, Any]] = Field(..., description="CasoEpidemiologicos incluidos con sus datos")
     fecha_generacion: datetime = Field(..., description="Fecha de generación del borrador")
 
 

@@ -86,9 +86,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.boletines.models import BoletinTemplateConfig
 from app.domains.boletines.seed_event_section_template import (
-    create_event_section_template,
+    crear_template_seccion_evento,
 )
-from app.domains.boletines.seed_static_section import create_static_content_template
+from app.domains.boletines.seed_static_section import crear_template_contenido_estatico
 
 logger = logging.getLogger(__name__)
 
@@ -109,8 +109,8 @@ async def seed_boletin_template_config(db: AsyncSession) -> None:
     result = await db.execute(stmt)
     existing_config = result.scalar_one_or_none()
 
-    static_template = create_static_content_template()
-    event_template = create_event_section_template()
+    static_template = crear_template_contenido_estatico()
+    event_template = crear_template_seccion_evento()
 
     if existing_config:
         logger.info("  ↻ Actualizando configuración existente (id=1)")
@@ -152,7 +152,7 @@ async def seed_boletin_template_config(db: AsyncSession) -> None:
     logger.info("       - Gráfico N°8: Corredor Diarrea")
     logger.info("       - Gráfico N°9: Agentes etiológicos en Diarreas")
     logger.info("    8. SUH (Gráfico N°10)")
-    logger.info("    9. Análisis por Evento (placeholder para loop)")
+    logger.info("    9. Análisis por CasoEpidemiologico (placeholder para loop)")
     logger.info("   10. Anexos, Metodología, Material de Consulta")
     logger.info("")
     logger.info("✅ Configuración de boletines guardada")

@@ -18,7 +18,7 @@ async def get_user(
     """
     Get user by ID (Superadmin only)
     """
-    user = await auth_service._get_user_by_id(user_id)
+    user = await auth_service._obtener_usuario_por_id(user_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

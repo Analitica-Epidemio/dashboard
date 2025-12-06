@@ -62,7 +62,7 @@ async def trigger_geocoding(
         )
 
     # Encolar tarea de geocodificación
-    from app.features.geocoding.tasks import geocode_pending_domicilios
+    from app.domains.territorio.geocoding_tasks import geocode_pending_domicilios
 
     try:
         task_result = geocode_pending_domicilios.apply_async(

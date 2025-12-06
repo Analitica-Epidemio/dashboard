@@ -17,12 +17,9 @@ from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User
-from app.domains.eventos_epidemiologicos.eventos.models import (
-    DetalleEventoSintomas,
-    Evento,
-)
-from app.domains.sujetos_epidemiologicos.animales_models import Animal
-from app.domains.sujetos_epidemiologicos.ciudadanos_models import Ciudadano
+from app.domains.vigilancia_nominal.models.caso import (    DetalleCasoSintomas, CasoEpidemiologico)
+from app.domains.vigilancia_nominal.models.sujetos import Animal
+from app.domains.vigilancia_nominal.models.sujetos import Ciudadano
 
 
 class TimelineItem(BaseModel):
@@ -142,42 +139,42 @@ async def get_persona_timeline(
         # Obtener TODOS los eventos de la persona con TODAS sus relaciones
         if tipo_sujeto == "humano":
             eventos_query = (
-                select(Evento)
-                .where(Evento.codigo_ciudadano == persona_id)
+                select(CasoEpidemiologico)
+                .where(CasoEpidemiologico.codigo_ciudadano == persona_id)
                 .options(
-                    selectinload(Evento.tipo_eno),
-                    selectinload(Evento.sintomas).selectinload(
-                        DetalleEventoSintomas.sintoma
+                    selectinload(CasoEpidemiologico.enfermedad),  # Cambiado de tipo_eno a enfermedad
+                    selectinload(CasoEpidemiologico.sintomas).selectinload(
+                        DetalleCasoSintomas.sintoma
                     ),
-                    selectinload(Evento.muestras),
-                    selectinload(Evento.diagnosticos),
-                    selectinload(Evento.vacunas),
-                    selectinload(Evento.tratamientos),
-                    selectinload(Evento.internaciones),
-                    selectinload(Evento.investigaciones),
-                    selectinload(Evento.contactos),
-                    selectinload(Evento.antecedentes),
-                    selectinload(Evento.ambitos_concurrencia),
+                    selectinload(CasoEpidemiologico.muestras),
+                    selectinload(CasoEpidemiologico.diagnosticos),
+                    selectinload(CasoEpidemiologico.vacunas),
+                    selectinload(CasoEpidemiologico.tratamientos),
+                    selectinload(CasoEpidemiologico.internaciones),
+                    selectinload(CasoEpidemiologico.investigaciones),
+                    selectinload(CasoEpidemiologico.contactos),
+                    selectinload(CasoEpidemiologico.antecedentes),
+                    selectinload(CasoEpidemiologico.ambitos_concurrencia),
                 )
             )
         else:  # animal
             eventos_query = (
-                select(Evento)
-                .where(Evento.id_animal == persona_id)
+                select(CasoEpidemiologico)
+                .where(CasoEpidemiologico.id_animal == persona_id)
                 .options(
-                    selectinload(Evento.tipo_eno),
-                    selectinload(Evento.sintomas).selectinload(
-                        DetalleEventoSintomas.sintoma
+                    selectinload(CasoEpidemiologico.enfermedad),  # Cambiado de tipo_eno a enfermedad
+                    selectinload(CasoEpidemiologico.sintomas).selectinload(
+                        DetalleCasoSintomas.sintoma
                     ),
-                    selectinload(Evento.muestras),
-                    selectinload(Evento.diagnosticos),
-                    selectinload(Evento.vacunas),
-                    selectinload(Evento.tratamientos),
-                    selectinload(Evento.internaciones),
-                    selectinload(Evento.investigaciones),
-                    selectinload(Evento.contactos),
-                    selectinload(Evento.antecedentes),
-                    selectinload(Evento.ambitos_concurrencia),
+                    selectinload(CasoEpidemiologico.muestras),
+                    selectinload(CasoEpidemiologico.diagnosticos),
+                    selectinload(CasoEpidemiologico.vacunas),
+                    selectinload(CasoEpidemiologico.tratamientos),
+                    selectinload(CasoEpidemiologico.internaciones),
+                    selectinload(CasoEpidemiologico.investigaciones),
+                    selectinload(CasoEpidemiologico.contactos),
+                    selectinload(CasoEpidemiologico.antecedentes),
+                    selectinload(CasoEpidemiologico.ambitos_concurrencia),
                 )
             )
 
@@ -189,7 +186,7 @@ async def get_persona_timeline(
 
         for evento in eventos:
             evento_tipo_nombre = (
-                evento.tipo_eno.nombre if evento.tipo_eno else f"Tipo {evento.id_tipo_eno}"
+                evento.enfermedad.nombre if evento.enfermedad else f"Tipo {evento.id_enfermedad}"  # Cambiado de tipo_eno a enfermedad
             )
 
             # 1. Item del evento principal
@@ -197,14 +194,14 @@ async def get_persona_timeline(
             timeline_items.append(
                 TimelineItem(
                     tipo="evento",
-                    fecha=evento.fecha_minima_evento,
-                    titulo=f"Evento {evento_tipo_nombre}",
+                    fecha=evento.fecha_minima_caso,
+                    titulo=f"CasoEpidemiologico {evento_tipo_nombre}",
                     descripcion=(
-                        f"Caso #{evento.id_evento_caso} - "
+                        f"Caso #{evento.id_snvs} - "  # Cambiado de id_evento_caso a id_snvs
                         f"{evento.clasificacion_estrategia or 'Sin clasificar'}"
                     ),
                     detalles={
-                        "id_evento_caso": evento.id_evento_caso,
+                        "id_evento_caso": evento.id_snvs,  # Cambiado de id_evento_caso a id_snvs
                         "clasificacion": evento.clasificacion_estrategia,
                         "confidence_score": evento.confidence_score,
                     },
@@ -220,7 +217,7 @@ async def get_persona_timeline(
             # 2. Síntomas del evento
             for sintoma_detalle in evento.sintomas or []:
                 fecha_sintoma = (
-                    sintoma_detalle.fecha_inicio_sintoma or evento.fecha_minima_evento
+                    sintoma_detalle.fecha_inicio_sintoma or evento.fecha_minima_caso
                 )
                 sintoma_nombre = (
                     sintoma_detalle.sintoma.signo_sintoma
@@ -245,7 +242,7 @@ async def get_persona_timeline(
             for muestra in evento.muestras or []:
                 fecha_muestra = getattr(
                     muestra, "fecha_toma_muestra", None
-                ) or evento.fecha_minima_evento
+                ) or evento.fecha_minima_caso
                 tipo_muestra = getattr(muestra, "tipo_muestra", "Muestra")
                 resultado = getattr(muestra, "resultado", None)
 
@@ -273,7 +270,7 @@ async def get_persona_timeline(
             for diagnostico in evento.diagnosticos or []:
                 fecha_diagnostico = (
                     getattr(diagnostico, "fecha_diagnostico", None)
-                    or evento.fecha_minima_evento
+                    or evento.fecha_minima_caso
                 )
                 metodo = getattr(diagnostico, "metodo_diagnostico", "Diagnóstico")
 
@@ -294,7 +291,7 @@ async def get_persona_timeline(
             for vacuna in evento.vacunas or []:
                 fecha_vacuna = (
                     getattr(vacuna, "fecha_ultima_dosis", None)
-                    or evento.fecha_minima_evento
+                    or evento.fecha_minima_caso
                 )
                 nombre_vacuna = getattr(vacuna, "nombre_vacuna", "Vacuna")
 
@@ -319,7 +316,7 @@ async def get_persona_timeline(
             for tratamiento in evento.tratamientos or []:
                 fecha_tratamiento = (
                     getattr(tratamiento, "fecha_inicio_tratamiento", None)
-                    or evento.fecha_minima_evento
+                    or evento.fecha_minima_caso
                 )
                 descripcion_tratamiento = getattr(
                     tratamiento, "descripcion_tratamiento", "Tratamiento"
@@ -342,7 +339,7 @@ async def get_persona_timeline(
             for internacion in evento.internaciones or []:
                 fecha_internacion = (
                     getattr(internacion, "fecha_internacion", None)
-                    or evento.fecha_minima_evento
+                    or evento.fecha_minima_caso
                 )
                 requirio_uci = getattr(internacion, "requirio_uci", False)
                 es_fallecido = getattr(internacion, "es_fallecido", False)
@@ -373,7 +370,7 @@ async def get_persona_timeline(
             for investigacion in evento.investigaciones or []:
                 fecha_investigacion = (
                     getattr(investigacion, "fecha_investigacion", None)
-                    or evento.fecha_minima_evento
+                    or evento.fecha_minima_caso
                 )
                 es_terreno = getattr(investigacion, "es_investigacion_terreno", False)
 
@@ -384,7 +381,7 @@ async def get_persona_timeline(
                         titulo=(
                             "Investigación de terreno" if es_terreno else "Investigación"
                         ),
-                        descripcion=f"Investigación epidemiológica - Evento {evento_tipo_nombre}",
+                        descripcion=f"Investigación epidemiológica - CasoEpidemiologico {evento_tipo_nombre}",
                         evento_id=evento.id,
                         evento_tipo=evento_tipo_nombre,
                         icono="search",

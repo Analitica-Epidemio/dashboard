@@ -15,7 +15,7 @@ from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAuthOrSignedUrl
 from app.domains.autenticacion.models import User
-from app.domains.eventos_epidemiologicos.eventos.models import Evento
+from app.domains.vigilancia_nominal.models.caso import CasoEpidemiologico
 
 logger = logging.getLogger(__name__)
 
@@ -40,9 +40,9 @@ async def get_date_range(
 
     # Query para obtener min, max y count
     stmt = select(
-        func.min(Evento.fecha_minima_evento).label("fecha_min"),
-        func.max(Evento.fecha_minima_evento).label("fecha_max"),
-        func.count(Evento.id).label("total")
+        func.min(CasoEpidemiologico.fecha_minima_caso).label("fecha_min"),
+        func.max(CasoEpidemiologico.fecha_minima_caso).label("fecha_max"),
+        func.count(CasoEpidemiologico.id).label("total")
     )
 
     result = await db.execute(stmt)

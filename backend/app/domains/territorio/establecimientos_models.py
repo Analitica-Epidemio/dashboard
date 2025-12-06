@@ -8,8 +8,8 @@ from sqlmodel import Field, Relationship
 from app.core.models import BaseModel
 
 if TYPE_CHECKING:
-    from app.domains.atencion_medica.salud_models.models import MuestraEvento
-    from app.domains.diagnosticos.models import DiagnosticoEvento
+    from app.domains.vigilancia_nominal.models.salud import MuestraCasoEpidemiologico
+    from app.domains.diagnosticos.models import DiagnosticoCasoEpidemiologico
     from app.domains.territorio.geografia_models import Localidad
 
 
@@ -85,7 +85,7 @@ class Establecimiento(BaseModel, table=True):
     localidad_establecimiento: Optional["Localidad"] = Relationship(
         back_populates="establecimientos"
     )
-    muestras: List["MuestraEvento"] = Relationship(back_populates="establecimiento")
-    diagnosticos: List["DiagnosticoEvento"] = Relationship(
+    muestras: List["MuestraCasoEpidemiologico"] = Relationship(back_populates="establecimiento")
+    diagnosticos: List["DiagnosticoCasoEpidemiologico"] = Relationship(
         back_populates="establecimiento"
     )

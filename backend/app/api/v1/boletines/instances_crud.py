@@ -19,7 +19,7 @@ from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAuthOrSignedUrl
 from app.domains.autenticacion.models import User
 from app.domains.boletines.models import BoletinInstance, BoletinTemplate
-from app.features.boletines.html_renderer import BulletinHTMLRenderer
+from app.domains.boletines.html_renderer import BulletinHTMLRenderer
 
 logger = logging.getLogger(__name__)
 
@@ -214,7 +214,7 @@ async def generate_instance_pdf(
                 parsed = json.loads(content)
                 if isinstance(parsed, dict) and parsed.get("type") == "doc":
                     # Es JSON TipTap, convertir a HTML
-                    from app.features.boletines.tiptap_to_html import tiptap_to_html
+                    from app.domains.boletines.tiptap_to_html import tiptap_to_html
                     content = tiptap_to_html(parsed)
             except json.JSONDecodeError:
                 pass  # No es JSON válido, usar como HTML
@@ -231,7 +231,7 @@ async def generate_instance_pdf(
         temp_pdf.close()
 
         # Generar PDF usando el servicio serverside
-        from app.features.reporteria.serverside_pdf_generator import (
+        from app.domains.reporteria.serverside_pdf_generator import (
             ServerSidePDFGenerator,
         )
 

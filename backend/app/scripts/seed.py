@@ -82,12 +82,7 @@ def truncate_tables():
                 "TRUNCATE establecimiento, localidad, departamento, provincia RESTART IDENTITY CASCADE"
             )
         )
-        # Tablas de agentes etiológicos
-        conn.execute(
-            text(
-                "TRUNCATE agente_extraccion_config, agente_etiologico RESTART IDENTITY CASCADE"
-            )
-        )
+
         conn.commit()
         print("✅ Tablas truncadas (geografía, establecimientos, agentes)")
 

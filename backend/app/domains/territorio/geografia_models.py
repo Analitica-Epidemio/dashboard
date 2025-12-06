@@ -39,11 +39,11 @@ class EstadoGeocodificacion(str, enum.Enum):
     DESHABILITADO = "DESHABILITADO"
 
 if TYPE_CHECKING:
-    from app.domains.eventos_epidemiologicos.ambitos_models import (
-        AmbitosConcurrenciaEvento,
+    from app.domains.vigilancia_nominal.models.ambitos import (
+        AmbitosConcurrenciaCaso,
     )
-    from app.domains.eventos_epidemiologicos.eventos.models import Evento
-    from app.domains.sujetos_epidemiologicos.viajes_models import ViajesCiudadano
+    from app.domains.vigilancia_nominal.models.caso import CasoEpidemiologico
+    from app.domains.vigilancia_nominal.models.sujetos import ViajesCiudadano
     from app.domains.territorio.establecimientos_models import Establecimiento
 
 
@@ -184,7 +184,7 @@ class Localidad(BaseModel, table=True):
     # Nota: CiudadanoDomicilio no tiene FK a Localidad, la relación es indirecta via Domicilio
     domicilios: List["Domicilio"] = Relationship(back_populates="localidad")
     viajes: List["ViajesCiudadano"] = Relationship(back_populates="localidad")
-    ambitos_concurrencia: List["AmbitosConcurrenciaEvento"] = Relationship(
+    ambitos_concurrencia: List["AmbitosConcurrenciaCaso"] = Relationship(
         back_populates="localidad"
     )
 
@@ -200,7 +200,7 @@ class Domicilio(BaseModel, table=True):
     - UNIQUE constraint evita duplicados
 
     Casos de uso:
-    - Eventos apuntan al domicilio donde ocurrió el caso
+    - CasoEpidemiologicos apuntan al domicilio donde ocurrió el caso
     - Personas tienen historial temporal de domicilios (PersonaDomicilio)
     - Análisis de clusters (múltiples casos en mismo edificio)
     """
@@ -275,5 +275,5 @@ class Domicilio(BaseModel, table=True):
 
     # Relaciones
     localidad: "Localidad" = Relationship(back_populates="domicilios")
-    eventos: List["Evento"] = Relationship(back_populates="domicilio")
+    casos: List["CasoEpidemiologico"] = Relationship(back_populates="domicilio")
     # personas_historico: List["PersonaDomicilio"] = Relationship(back_populates="domicilio")

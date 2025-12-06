@@ -1,1 +1,1 @@
-# Eventos API module
+# CasoEpidemiologicos API module

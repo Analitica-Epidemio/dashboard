@@ -38,14 +38,14 @@ def create_superadmin():
 
     with SessionLocal() as db:
         # Check for existing users
-        result = db.execute(select(User).order_by(User.role, User.email))
+        result = db.execute(select(User).order_by(User.rol, User.email))
         all_users = result.scalars().all()
 
         if all_users:
             print(f"⚠️  Ya existen {len(all_users)} usuario(s) en el sistema:")
 
-            superadmins = [u for u in all_users if u.role == UserRole.SUPERADMIN]
-            others = [u for u in all_users if u.role != UserRole.SUPERADMIN]
+            superadmins = [u for u in all_users if u.rol == UserRole.SUPERADMIN]
+            others = [u for u in all_users if u.rol != UserRole.SUPERADMIN]
 
             if superadmins:
                 print("\n🔐 Superadmins:")
@@ -56,7 +56,7 @@ def create_superadmin():
                 print("\n👤 Otros usuarios:")
                 start_idx = len(superadmins) + 1
                 for i, user in enumerate(others, start_idx):
-                    print(f"   {i}. {user.email} ({user.nombre} {user.apellido}) - {user.role.value}")
+                    print(f"   {i}. {user.email} ({user.nombre} {user.apellido}) - {user.rol.value}")
 
             print("\n¿Qué desea hacer?")
             print("   1. Crear un nuevo superadmin")
@@ -102,9 +102,9 @@ def create_superadmin():
 
                 # Update password
                 try:
-                    selected_user.hashed_password = PasswordSecurity.get_password_hash(password)
-                    selected_user.locked_until = None  # Unlock if locked
-                    selected_user.login_attempts = 0  # Reset login attempts
+                    selected_user.contrasena_hasheada = PasswordSecurity.get_password_hash(password)
+                    selected_user.bloqueado_hasta = None  # Unlock if locked
+                    selected_user.intentos_login = 0  # Reset login attempts
 
                     db.commit()
                     db.refresh(selected_user)
@@ -196,11 +196,11 @@ def create_superadmin():
                 email=email,
                 nombre=nombre,
                 apellido=apellido,
-                hashed_password=hashed_password,
-                role=UserRole.SUPERADMIN,
-                status=UserStatus.ACTIVE,
-                email_verification_token=verification_token,
-                is_email_verified=True  # Auto-verify for superadmin
+                contrasena_hasheada=hashed_password,
+                rol=UserRole.SUPERADMIN,
+                estado=UserStatus.ACTIVE,
+                token_verificacion_email=verification_token,
+                es_email_verificado=True  # Auto-verify for superadmin
             )
 
             db.add(user)

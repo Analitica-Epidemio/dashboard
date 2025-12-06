@@ -11,11 +11,11 @@ from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireSuperadmin
 from app.domains.autenticacion.models import User
-from app.domains.eventos_epidemiologicos.clasificacion.repositories import (
-    EventStrategyRepository,
+from app.domains.vigilancia_nominal.clasificacion.repositories import (
+    EstrategiaClasificacionRepository,
 )
-from app.domains.eventos_epidemiologicos.clasificacion.schemas import (
-    EventStrategyResponse,
+from app.domains.vigilancia_nominal.clasificacion.schemas import (
+    EstrategiaClasificacionResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ async def activate_strategy(
     strategy_id: int,
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(RequireSuperadmin())
-) -> SuccessResponse[EventStrategyResponse]:
+) -> SuccessResponse[EstrategiaClasificacionResponse]:
     """
     Activar estrategia.
 
@@ -38,7 +38,7 @@ async def activate_strategy(
     logger.info(f"✅ Activating strategy: {strategy_id}")
 
     try:
-        repo = EventStrategyRepository(db)
+        repo = EstrategiaClasificacionRepository(db)
 
         # Verificar que existe
         strategy = await repo.get_by_id(strategy_id)
@@ -51,7 +51,7 @@ async def activate_strategy(
 
         # Activar (el repositorio maneja la lógica de desactivar otras)
         activated_strategy = await repo.activate(strategy_id)
-        strategy_response = EventStrategyResponse.from_orm(activated_strategy)
+        strategy_response = EstrategiaClasificacionResponse.from_orm(activated_strategy)
 
         logger.info(f"✅ Strategy activated: {activated_strategy.name}")
         return SuccessResponse(data=strategy_response)

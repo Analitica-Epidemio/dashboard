@@ -15,14 +15,16 @@ from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAuthOrSignedUrl
 from app.domains.autenticacion.models import User
-from app.domains.eventos_epidemiologicos.eventos.models import Evento, GrupoEno, TipoEno
-from app.domains.sujetos_epidemiologicos.ciudadanos_models import Ciudadano
+from app.domains.vigilancia_nominal.models.enfermedad import GrupoDeEnfermedades
+from app.domains.vigilancia_nominal.models.caso import CasoEpidemiologico
+from app.domains.vigilancia_nominal.models.enfermedad import Enfermedad
+from app.domains.vigilancia_nominal.models.sujetos import Ciudadano
 from app.domains.territorio.geografia_models import Departamento, Localidad, Provincia
 
 logger = logging.getLogger(__name__)
 
 
-class EventoStats(BaseModel):
+class CasoEpidemiologicoStats(BaseModel):
     """Estadísticas de eventos más típicos"""
     tipo_eno: str
     codigo_tipo: Optional[str]
@@ -68,7 +70,7 @@ class TablaResumen(BaseModel):
 class DashboardResumenResponse(BaseModel):
     """Response del dashboard resumen"""
     tabla_resumen: TablaResumen
-    eventos_mas_tipicos: List[EventoStats]
+    eventos_mas_tipicos: List[CasoEpidemiologicoStats]
     grupos_mas_tipicos: List[GrupoStats]
     piramide_poblacional: List[PiramidePoblacional]
     territorios_afectados: List[TerritorioAfectado]
@@ -87,7 +89,7 @@ async def get_dashboard_resumen(
     """
     Obtiene estadísticas resumen del dashboard:
     - Tabla resumen con totales
-    - Eventos más típicos
+    - CasoEpidemiologicos más típicos
     - Grupos más típicos
     - Pirámide poblacional
     - Territorios afectados (jerárquico)
@@ -96,55 +98,55 @@ async def get_dashboard_resumen(
     # Construir filtros base
     filtros = []
     if fecha_desde:
-        filtros.append(Evento.fecha_minima_evento >= fecha_desde)
+        filtros.append(CasoEpidemiologico.fecha_minima_caso >= fecha_desde)
     if fecha_hasta:
-        filtros.append(Evento.fecha_minima_evento <= fecha_hasta)
+        filtros.append(CasoEpidemiologico.fecha_minima_caso <= fecha_hasta)
     if tipo_eno_id:
-        filtros.append(Evento.id_tipo_eno == tipo_eno_id)
+        filtros.append(CasoEpidemiologico.id_enfermedad == tipo_eno_id)
     if clasificacion:
-        filtros.append(Evento.clasificacion_estrategia == clasificacion)
+        filtros.append(CasoEpidemiologico.clasificacion_estrategia == clasificacion)
 
     # Filtro adicional para grupo (many-to-many)
     if grupo_id:
-        from app.domains.eventos_epidemiologicos.eventos.models import EventoGrupoEno
+        from app.domains.vigilancia_nominal.models.caso import CasoGrupoEnfermedad
         filtros.append(
-            Evento.id.in_(
-                select(EventoGrupoEno.id_evento).where(EventoGrupoEno.id_grupo_eno == grupo_id)
+            CasoEpidemiologico.id.in_(
+                select(CasoGrupoEnfermedad.id_caso).where(CasoGrupoEnfermedad.id_grupo == grupo_id)
             )
         )
 
     # 1. TABLA RESUMEN
-    query_total = select(func.count(Evento.id)).where(and_(*filtros) if filtros else True)
+    query_total = select(func.count(CasoEpidemiologico.id)).where(and_(*filtros) if filtros else True)
     total_eventos = (await db.execute(query_total)).scalar_one()
 
-    query_confirmados = select(func.count(Evento.id)).where(
+    query_confirmados = select(func.count(CasoEpidemiologico.id)).where(
         and_(
-            Evento.clasificacion_estrategia == "CONFIRMADOS",
+            CasoEpidemiologico.clasificacion_estrategia == "CONFIRMADOS",
             *(filtros if filtros else [])
         )
     )
     total_confirmados = (await db.execute(query_confirmados)).scalar_one()
 
-    query_sospechosos = select(func.count(Evento.id)).where(
+    query_sospechosos = select(func.count(CasoEpidemiologico.id)).where(
         and_(
-            Evento.clasificacion_estrategia == "SOSPECHOSOS",
+            CasoEpidemiologico.clasificacion_estrategia == "SOSPECHOSOS",
             *(filtros if filtros else [])
         )
     )
     total_sospechosos = (await db.execute(query_sospechosos)).scalar_one()
 
-    query_negativos = select(func.count(Evento.id)).where(
+    query_negativos = select(func.count(CasoEpidemiologico.id)).where(
         and_(
-            Evento.clasificacion_estrategia == "NEGATIVOS",
+            CasoEpidemiologico.clasificacion_estrategia == "NEGATIVOS",
             *(filtros if filtros else [])
         )
     )
     total_negativos = (await db.execute(query_negativos)).scalar_one()
 
     # Total personas afectadas (ciudadanos únicos)
-    query_personas = select(func.count(func.distinct(Evento.codigo_ciudadano))).where(
+    query_personas = select(func.count(func.distinct(CasoEpidemiologico.codigo_ciudadano))).where(
         and_(
-            Evento.codigo_ciudadano.isnot(None),
+            CasoEpidemiologico.codigo_ciudadano.isnot(None),
             *(filtros if filtros else [])
         )
     )
@@ -152,8 +154,8 @@ async def get_dashboard_resumen(
 
     # Fechas primer y último evento
     query_fechas = select(
-        func.min(Evento.fecha_minima_evento),
-        func.max(Evento.fecha_minima_evento)
+        func.min(CasoEpidemiologico.fecha_minima_caso),
+        func.max(CasoEpidemiologico.fecha_minima_caso)
     ).where(and_(*filtros) if filtros else True)
     fechas_result = (await db.execute(query_fechas)).one()
     fecha_primer_evento = fechas_result[0]
@@ -172,24 +174,24 @@ async def get_dashboard_resumen(
     # 2. EVENTOS MÁS TÍPICOS (Top 10 tipos de eventos)
     query_eventos = (
         select(
-            TipoEno.nombre,
-            TipoEno.codigo,
-            func.count(Evento.id).label("total"),
-            Evento.clasificacion_estrategia
+            Enfermedad.nombre,
+            Enfermedad.slug,
+            func.count(CasoEpidemiologico.id).label("total"),
+            CasoEpidemiologico.clasificacion_estrategia
         )
-        .join(TipoEno, Evento.id_tipo_eno == TipoEno.id)
+        .join(Enfermedad, CasoEpidemiologico.id_enfermedad == Enfermedad.id)
         .where(and_(*filtros) if filtros else True)
-        .group_by(TipoEno.nombre, TipoEno.codigo, Evento.clasificacion_estrategia)
-        .order_by(func.count(Evento.id).desc())
+        .group_by(Enfermedad.nombre, Enfermedad.slug, CasoEpidemiologico.clasificacion_estrategia)
+        .order_by(func.count(CasoEpidemiologico.id).desc())
         .limit(100)  # Límite amplio para agrupar después
     )
     eventos_result = (await db.execute(query_eventos)).all()
 
     # Agrupar por tipo de evento
-    eventos_dict: Dict[str, EventoStats] = {}
+    eventos_dict: Dict[str, CasoEpidemiologicoStats] = {}
     for tipo_nombre, tipo_codigo, total, clasificacion in eventos_result:
         if tipo_nombre not in eventos_dict:
-            eventos_dict[tipo_nombre] = EventoStats(
+            eventos_dict[tipo_nombre] = CasoEpidemiologicoStats(
                 tipo_eno=tipo_nombre,
                 codigo_tipo=tipo_codigo,
                 total=0,
@@ -208,21 +210,21 @@ async def get_dashboard_resumen(
     )[:10]
 
     # 3. GRUPOS MÁS TÍPICOS - Ahora usando la tabla de unión evento_grupo_eno
-    from app.domains.eventos_epidemiologicos.eventos.models import EventoGrupoEno
+    from app.domains.vigilancia_nominal.models.caso import CasoGrupoEnfermedad
 
     query_grupos = (
         select(
-            GrupoEno.nombre,
-            GrupoEno.codigo,
-            TipoEno.nombre.label("tipo_nombre"),
-            func.count(Evento.id).label("total")
+            GrupoDeEnfermedades.nombre,
+            GrupoDeEnfermedades.slug,
+            Enfermedad.nombre.label("tipo_nombre"),
+            func.count(CasoEpidemiologico.id).label("total")
         )
-        .join(EventoGrupoEno, Evento.id == EventoGrupoEno.id_evento)
-        .join(GrupoEno, EventoGrupoEno.id_grupo_eno == GrupoEno.id)
-        .join(TipoEno, Evento.id_tipo_eno == TipoEno.id)
+        .join(CasoGrupoEnfermedad, CasoEpidemiologico.id == CasoGrupoEnfermedad.id_caso)
+        .join(GrupoDeEnfermedades, CasoGrupoEnfermedad.id_grupo == GrupoDeEnfermedades.id)
+        .join(Enfermedad, CasoEpidemiologico.id_enfermedad == Enfermedad.id)
         .where(and_(*filtros) if filtros else True)
-        .group_by(GrupoEno.nombre, GrupoEno.codigo, TipoEno.nombre)
-        .order_by(func.count(Evento.id).desc())
+        .group_by(GrupoDeEnfermedades.nombre, GrupoDeEnfermedades.slug, Enfermedad.nombre)
+        .order_by(func.count(CasoEpidemiologico.id).desc())
     )
     grupos_result = (await db.execute(query_grupos)).all()
 
@@ -253,7 +255,7 @@ async def get_dashboard_resumen(
     # Usar AGE(fecha_apertura_caso, fecha_nacimiento) para calcular la edad al momento del evento
     edad_calculada = func.extract(
         'year',
-        func.age(Evento.fecha_apertura_caso, Evento.fecha_nacimiento)
+        func.age(CasoEpidemiologico.fecha_apertura_caso, CasoEpidemiologico.fecha_nacimiento)
     ).label('edad')
 
     query_piramide = (
@@ -261,12 +263,12 @@ async def get_dashboard_resumen(
             edad_calculada,
             Ciudadano.sexo_biologico
         )
-        .join(Ciudadano, Evento.codigo_ciudadano == Ciudadano.codigo_ciudadano)
+        .join(Ciudadano, CasoEpidemiologico.codigo_ciudadano == Ciudadano.codigo_ciudadano)
         .where(
             and_(
-                Evento.codigo_ciudadano.isnot(None),
-                Evento.fecha_nacimiento.isnot(None),
-                Evento.fecha_apertura_caso.isnot(None),
+                CasoEpidemiologico.codigo_ciudadano.isnot(None),
+                CasoEpidemiologico.fecha_nacimiento.isnot(None),
+                CasoEpidemiologico.fecha_apertura_caso.isnot(None),
                 Ciudadano.sexo_biologico.isnot(None),
                 *(filtros if filtros else [])
             )
@@ -309,11 +311,11 @@ async def get_dashboard_resumen(
         select(
             Provincia.nombre,
             Provincia.id_provincia_indec,
-            func.count(Evento.id).label("total")
+            func.count(CasoEpidemiologico.id).label("total")
         )
         .join(
             Establecimiento,
-            Evento.id_establecimiento_notificacion == Establecimiento.id
+            CasoEpidemiologico.id_establecimiento_notificacion == Establecimiento.id
         )
         .join(
             Localidad,
@@ -329,7 +331,7 @@ async def get_dashboard_resumen(
         )
         .where(and_(*filtros) if filtros else True)
         .group_by(Provincia.nombre, Provincia.id_provincia_indec)
-        .order_by(func.count(Evento.id).desc())
+        .order_by(func.count(CasoEpidemiologico.id).desc())
     )
     territorios_result = (await db.execute(query_territorios)).all()
 

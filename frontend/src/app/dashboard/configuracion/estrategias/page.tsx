@@ -65,7 +65,7 @@ import { StrategyForm } from "@/features/estrategias/components/strategy-form";
 // Tipo para agrupar estrategias por evento
 interface EventStrategiesGroup {
   tipo_eno_id: number;
-  tipo_eno_name: string;
+  tipo_enfermedad_name: string;
   strategies: EventStrategy[];
   hasActive: boolean;
   totalRules: number;
@@ -110,16 +110,16 @@ export default function EstrategiasPageNew() {
     const filteredStrats = strategiesData.filter((s: EventStrategy) => {
       const matchesSearch =
         s.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-        s.tipo_eno_name?.toLowerCase().includes(debouncedSearch.toLowerCase());
+        s.tipo_enfermedad_name?.toLowerCase().includes(debouncedSearch.toLowerCase());
       return matchesSearch;
     });
 
     filteredStrats.forEach((strategy: EventStrategy) => {
-      const key = strategy.tipo_eno_id;
+      const key = strategy.id_enfermedad;
       if (!groups.has(key)) {
         groups.set(key, {
           tipo_eno_id: key,
-          tipo_eno_name: strategy.tipo_eno_name || `Evento ${key}`,
+          tipo_enfermedad_name: strategy.tipo_enfermedad_name || `Evento ${key}`,
           strategies: [],
           hasActive: false,
           totalRules: 0,
@@ -141,7 +141,7 @@ export default function EstrategiasPageNew() {
     });
 
     return Array.from(groups.values()).sort((a, b) =>
-      a.tipo_eno_name.localeCompare(b.tipo_eno_name)
+      a.tipo_enfermedad_name.localeCompare(b.tipo_enfermedad_name)
     );
   }, [strategiesData, debouncedSearch]);
 
@@ -150,7 +150,7 @@ export default function EstrategiasPageNew() {
     const allStrategies = strategiesData as EventStrategy[];
     const totalStrategies = allStrategies.length;
     const activeStrategies = allStrategies.filter((s) => s.active).length;
-    const eventsWithStrategy = new Set(allStrategies.map((s) => s.tipo_eno_id)).size;
+    const eventsWithStrategy = new Set(allStrategies.map((s) => s.id_enfermedad)).size;
 
     return {
       totalStrategies,
@@ -348,7 +348,7 @@ export default function EstrategiasPageNew() {
                             </td>
                             <td className="px-4 py-3">
                               <div className="space-y-0.5">
-                                <span className="text-sm font-medium block">{group.tipo_eno_name}</span>
+                                <span className="text-sm font-medium block">{group.tipo_enfermedad_name}</span>
                                 <span className="text-xs text-muted-foreground">{strategy.name}</span>
                               </div>
                             </td>
@@ -453,7 +453,7 @@ export default function EstrategiasPageNew() {
                               </td>
                               <td className="px-4 py-3">
                                 <div className="flex items-center gap-2">
-                                  <span className="text-sm font-semibold">{group.tipo_eno_name}</span>
+                                  <span className="text-sm font-semibold">{group.tipo_enfermedad_name}</span>
                                   <Badge variant="outline" className="text-xs">
                                     {group.strategies.length} estrategias
                                   </Badge>

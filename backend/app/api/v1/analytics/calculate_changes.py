@@ -13,7 +13,7 @@ from app.api.v1.analytics.period_utils import get_epi_week_dates
 from app.api.v1.analytics.schemas import (
     CalculateChangesRequest,
     CalculateChangesResponse,
-    EventoCambioConCategoria,
+    CasoEpidemiologicoCambioConCategoria,
 )
 from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
@@ -77,11 +77,11 @@ async def calculate_changes(
                 ge.nombre as grupo_eno_nombre,
                 COUNT(DISTINCT e.id) as casos
             FROM evento e
-            INNER JOIN tipo_eno te ON e.id_tipo_eno = te.id
-            INNER JOIN tipo_eno_grupo_eno tege ON te.id = tege.id_tipo_eno
-            INNER JOIN grupo_eno ge ON tege.id_grupo_eno = ge.id
-            WHERE e.fecha_minima_evento >= :fecha_inicio_actual
-                AND e.fecha_minima_evento <= :fecha_fin_actual
+            INNER JOIN tipo_eno te ON e.id_enfermedad = te.id
+            INNER JOIN tipo_eno_grupo_eno tege ON te.id = tege.id_enfermedad
+            INNER JOIN grupo_eno ge ON tege.id_grupo = ge.id
+            WHERE e.fecha_minima_caso >= :fecha_inicio_actual
+                AND e.fecha_minima_caso <= :fecha_fin_actual
                 AND te.id = ANY(:tipo_eno_ids)
             GROUP BY te.id, te.nombre, ge.id, ge.nombre
         ),
@@ -90,17 +90,17 @@ async def calculate_changes(
                 te.id as tipo_eno_id,
                 COUNT(DISTINCT e.id) as casos
             FROM evento e
-            INNER JOIN tipo_eno te ON e.id_tipo_eno = te.id
-            WHERE e.fecha_minima_evento >= :fecha_inicio_anterior
-                AND e.fecha_minima_evento <= :fecha_fin_anterior
+            INNER JOIN tipo_eno te ON e.id_enfermedad = te.id
+            WHERE e.fecha_minima_caso >= :fecha_inicio_anterior
+                AND e.fecha_minima_caso <= :fecha_fin_anterior
                 AND te.id = ANY(:tipo_eno_ids)
             GROUP BY te.id
         )
         SELECT
             a.tipo_eno_id,
             a.tipo_eno_nombre,
-            a.grupo_eno_id,
-            a.grupo_eno_nombre,
+            a.id_grupo,
+            a.grupo_nombre,
             a.casos as casos_actuales,
             COALESCE(b.casos, 0) as casos_anteriores,
             (a.casos - COALESCE(b.casos, 0)) as diferencia_absoluta,
@@ -135,11 +135,11 @@ async def calculate_changes(
         else:
             categoria = "estable"
 
-        eventos.append(EventoCambioConCategoria(
+        eventos.append(CasoEpidemiologicoCambioConCategoria(
             tipo_eno_id=row.tipo_eno_id,
             tipo_eno_nombre=row.tipo_eno_nombre,
-            grupo_eno_id=row.grupo_eno_id,
-            grupo_eno_nombre=row.grupo_eno_nombre,
+            grupo_eno_id=row.id_grupo,
+            grupo_eno_nombre=row.grupo_nombre,
             casos_actuales=int(row.casos_actuales),
             casos_anteriores=int(row.casos_anteriores),
             diferencia_absoluta=int(row.diferencia_absoluta),

@@ -20,6 +20,6 @@ async def logout_all_sessions(
     """
     Logout from all sessions
     """
-    await auth_service.logout_all_sessions(current_user.id)
+    await auth_service.cerrar_todas_sesiones(current_user.id)
     logger.info(f"User {current_user.email} logged out from all sessions")
     return {"message": "Logged out from all sessions"}

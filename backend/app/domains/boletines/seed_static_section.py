@@ -55,7 +55,7 @@ Ejemplo: Para mostrar "Influenza A" como una sola serie que agrupa
 from typing import Any
 
 
-def create_static_content_template() -> dict[str, Any]:
+def crear_template_contenido_estatico() -> dict[str, Any]:
     """
     Crea el template de contenido estatico del boletin.
 
@@ -114,7 +114,7 @@ def create_static_content_template() -> dict[str, Any]:
                 "type": "heading",
                 "attrs": {"level": 2},
                 "content": [
-                    {"type": "text", "text": "Eventos de Notificación Obligatoria (ENOs)"}
+                    {"type": "text", "text": "CasoEpidemiologicos de Notificación Obligatoria (ENOs)"}
                 ],
             },
             {
@@ -546,7 +546,7 @@ def create_static_content_template() -> dict[str, Any]:
                 "type": "heading",
                 "attrs": {"level": 2},
                 "content": [
-                    {"type": "text", "text": "Análisis por Evento Seleccionado"}
+                    {"type": "text", "text": "Análisis por CasoEpidemiologico Seleccionado"}
                 ],
             },
             {

@@ -117,8 +117,8 @@ export function EventoDetail({ eventoId, onClose }: EventoDetailProps) {
               {evento.ciudadano
                 ? `${evento.ciudadano.nombre} ${evento.ciudadano.apellido}`
                 : evento.animal
-                ? evento.animal.identificacion || `Animal #${evento.animal.id}`
-                : "Sujeto no identificado"}
+                  ? evento.animal.identificacion || `Animal #${evento.animal.id}`
+                  : "Sujeto no identificado"}
             </h2>
             <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
               <div className="flex items-center gap-1">
@@ -133,7 +133,7 @@ export function EventoDetail({ eventoId, onClose }: EventoDetailProps) {
               </div>
               <div className="flex items-center gap-1">
                 <Calendar className="h-4 w-4" />
-                <span>{formatDate(evento.fecha_minima_evento)}</span>
+                <span>{formatDate(evento.fecha_minima_caso)}</span>
               </div>
             </div>
           </div>
@@ -346,7 +346,7 @@ export function EventoDetail({ eventoId, onClose }: EventoDetailProps) {
                     Fecha del evento
                   </p>
                   <p className="text-sm">
-                    {formatDate(evento.fecha_minima_evento)}
+                    {formatDate(evento.fecha_minima_caso)}
                   </p>
                 </div>
                 {evento.fecha_inicio_sintomas && (
@@ -382,14 +382,14 @@ export function EventoDetail({ eventoId, onClose }: EventoDetailProps) {
               </div>
               {(evento.semana_epidemiologica_apertura ||
                 evento.anio_epidemiologico_apertura) && (
-                <div className="pt-2 border-t">
-                  <p className="text-sm text-muted-foreground">
-                    Semana epidemiológica:{" "}
-                    {evento.semana_epidemiologica_apertura}/
-                    {evento.anio_epidemiologico_apertura}
-                  </p>
-                </div>
-              )}
+                  <div className="pt-2 border-t">
+                    <p className="text-sm text-muted-foreground">
+                      Semana epidemiológica:{" "}
+                      {evento.semana_epidemiologica_apertura}/
+                      {evento.anio_epidemiologico_apertura}
+                    </p>
+                  </div>
+                )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -628,25 +628,25 @@ export function EventoDetail({ eventoId, onClose }: EventoDetailProps) {
                           )}
                           {(internacion as { condicion_egreso?: string })
                             .condicion_egreso && (
-                            <Badge
-                              variant={
-                                (
+                              <Badge
+                                variant={
+                                  (
+                                    (internacion as { condicion_egreso?: string })
+                                      .condicion_egreso || ""
+                                  )
+                                    .toLowerCase()
+                                    .includes("muerte")
+                                    ? "destructive"
+                                    : "default"
+                                }
+                                className="text-xs"
+                              >
+                                {
                                   (internacion as { condicion_egreso?: string })
-                                    .condicion_egreso || ""
-                                )
-                                  .toLowerCase()
-                                  .includes("muerte")
-                                  ? "destructive"
-                                  : "default"
-                              }
-                              className="text-xs"
-                            >
-                              {
-                                (internacion as { condicion_egreso?: string })
-                                  .condicion_egreso
-                              }
-                            </Badge>
-                          )}
+                                    .condicion_egreso
+                                }
+                              </Badge>
+                            )}
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4 text-sm">
@@ -917,15 +917,15 @@ export function EventoDetail({ eventoId, onClose }: EventoDetailProps) {
                   </div>
                   {(evento.establecimiento_consulta.provincia ||
                     evento.establecimiento_consulta.localidad) && (
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <MapPin className="h-3 w-3" />
-                      <span>
-                        {evento.establecimiento_consulta.localidad}
-                        {evento.establecimiento_consulta.provincia &&
-                          `, ${evento.establecimiento_consulta.provincia}`}
-                      </span>
-                    </div>
-                  )}
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <MapPin className="h-3 w-3" />
+                        <span>
+                          {evento.establecimiento_consulta.localidad}
+                          {evento.establecimiento_consulta.provincia &&
+                            `, ${evento.establecimiento_consulta.provincia}`}
+                        </span>
+                      </div>
+                    )}
                 </div>
               </CardContent>
             </Card>
@@ -954,15 +954,15 @@ export function EventoDetail({ eventoId, onClose }: EventoDetailProps) {
                   </div>
                   {(evento.establecimiento_notificacion.provincia ||
                     evento.establecimiento_notificacion.localidad) && (
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <MapPin className="h-3 w-3" />
-                      <span>
-                        {evento.establecimiento_notificacion.localidad}
-                        {evento.establecimiento_notificacion.provincia &&
-                          `, ${evento.establecimiento_notificacion.provincia}`}
-                      </span>
-                    </div>
-                  )}
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <MapPin className="h-3 w-3" />
+                        <span>
+                          {evento.establecimiento_notificacion.localidad}
+                          {evento.establecimiento_notificacion.provincia &&
+                            `, ${evento.establecimiento_notificacion.provincia}`}
+                        </span>
+                      </div>
+                    )}
                 </div>
               </CardContent>
             </Card>
@@ -991,15 +991,15 @@ export function EventoDetail({ eventoId, onClose }: EventoDetailProps) {
                   </div>
                   {(evento.establecimiento_carga.provincia ||
                     evento.establecimiento_carga.localidad) && (
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <MapPin className="h-3 w-3" />
-                      <span>
-                        {evento.establecimiento_carga.localidad}
-                        {evento.establecimiento_carga.provincia &&
-                          `, ${evento.establecimiento_carga.provincia}`}
-                      </span>
-                    </div>
-                  )}
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <MapPin className="h-3 w-3" />
+                        <span>
+                          {evento.establecimiento_carga.localidad}
+                          {evento.establecimiento_carga.provincia &&
+                            `, ${evento.establecimiento_carga.provincia}`}
+                        </span>
+                      </div>
+                    )}
                 </div>
               </CardContent>
             </Card>

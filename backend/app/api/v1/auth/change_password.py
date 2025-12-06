@@ -27,10 +27,10 @@ async def change_password(
 
     This will logout all other sessions for security.
     """
-    await auth_service.change_password(
+    await auth_service.cambiar_contrasena(
         current_user.id,
-        password_data.current_password,
-        password_data.new_password
+        password_data.contrasena_actual,
+        password_data.nueva_contrasena
     )
     logger.info(f"User {current_user.email} changed their password")
     return {"message": "Password changed successfully"}

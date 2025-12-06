@@ -11,6 +11,63 @@ from sqlmodel import Field, Relationship
 from app.core.models import BaseModel
 
 
+class BoletinSnippet(BaseModel, table=True):
+    """
+    Snippet reutilizable para boletines epidemiologicos.
+
+    Un snippet es un fragmento de template HTML con placeholders Jinja2
+    que puede ser renderizado con diferentes variables.
+
+    Categorias tipicas:
+    - estructura: portada, introduccion, conclusion, footer
+    - evento: templates para diferentes tipos de eventos
+    """
+
+    __tablename__ = "boletin_snippets"
+
+    codigo: str = Field(
+        max_length=100,
+        index=True,
+        unique=True,
+        description="Codigo unico del snippet (ej: portada, introduccion)"
+    )
+    nombre: str = Field(
+        max_length=255,
+        description="Nombre descriptivo del snippet"
+    )
+    descripcion: Optional[str] = Field(
+        default=None,
+        sa_column=Column(Text),
+        description="Descripcion del proposito del snippet"
+    )
+    categoria: str = Field(
+        max_length=50,
+        index=True,
+        description="Categoria del snippet (estructura, evento, etc.)"
+    )
+    template: str = Field(
+        sa_column=Column(Text, nullable=False),
+        description="Template HTML con placeholders Jinja2"
+    )
+    variables_schema: Dict[str, Any] = Field(
+        sa_column=Column(JSON, nullable=False),
+        description="Schema de variables requeridas por el template"
+    )
+    condiciones: Optional[Dict[str, Any]] = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="Condiciones para aplicar este snippet"
+    )
+    orden: int = Field(
+        default=0,
+        description="Orden de renderizado del snippet"
+    )
+    is_active: bool = Field(
+        default=True,
+        description="Si el snippet esta activo"
+    )
+
+
 class BoletinTemplateConfig(BaseModel, table=True):
     """
     Configuración única del template de boletín (singleton).

@@ -11,8 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_async_session
 from app.core.security import RequireSuperadmin
 from app.domains.autenticacion.models import User
-from app.domains.eventos_epidemiologicos.clasificacion.repositories import (
-    EventStrategyRepository,
+from app.domains.vigilancia_nominal.clasificacion.repositories import (
+    EstrategiaClasificacionRepository,
 )
 
 logger = logging.getLogger(__name__)
@@ -39,7 +39,7 @@ async def delete_strategy(
     logger.info(f"🗑️ Deleting strategy: {strategy_id}, force: {force}")
 
     try:
-        repo = EventStrategyRepository(db)
+        repo = EstrategiaClasificacionRepository(db)
 
         # Verificar que existe
         existing = await repo.get_by_id(strategy_id)

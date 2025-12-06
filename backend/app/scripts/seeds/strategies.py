@@ -16,23 +16,26 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.domains.eventos_epidemiologicos.clasificacion.models import (
+from app.domains.vigilancia_nominal.clasificacion.models import (
     ClassificationRule,
-    EventStrategy,
+    EstrategiaClasificacion,
     FilterCondition,
     TipoClasificacion,
     TipoFiltro,
 )
-from app.domains.eventos_epidemiologicos.eventos.models import GrupoEno, TipoEno
+from app.domains.vigilancia_nominal.models.enfermedad import (
+    Enfermedad,
+    GrupoDeEnfermedades,
+)
 
 
 class StrategySeeder:
-    """Seeder para migrar estrategias desde el código legacy."""
+    """Seeder para migrar estrategias desde el codigo legacy."""
 
     def __init__(self, session: Session):
         self.session = session
-        self.created_strategies: Dict[str, EventStrategy] = {}
-        self.tipo_enos: Dict[str, TipoEno] = {}
+        self.created_strategies: Dict[str, EstrategiaClasificacion] = {}
+        self.tipo_enos: Dict[str, Enfermedad] = {}
 
     def seed_all(self):
         """Ejecuta el seed completo de todas las estrategias."""
@@ -129,19 +132,19 @@ class StrategySeeder:
             # Almacenar con el nombre original para matching en create_strategy
             self.tipo_enos[nombre] = tipo_eno
 
-    def _get_or_create_grupo_eno(self, nombre: str, descripcion: str) -> GrupoEno:
+    def _get_or_create_grupo_eno(self, nombre: str, descripcion: str) -> GrupoDeEnfermedades:
         """Obtiene o crea un grupo ENO."""
         # Usar kebab-case para código
         codigo_kebab = "vigilancia-epidemiologica"
 
-        # Buscar existente por nombre (sin convertir a mayúsculas)
+        # Buscar existente por nombre (sin convertir a mayusculas)
         result = self.session.execute(
-            select(GrupoEno).where(GrupoEno.nombre == nombre)
+            select(GrupoDeEnfermedades).where(GrupoDeEnfermedades.nombre == nombre)
         )
         grupo = result.scalar_one_or_none()
 
         if not grupo:
-            grupo = GrupoEno(
+            grupo = GrupoDeEnfermedades(
                 nombre=nombre, descripcion=descripcion, codigo=codigo_kebab
             )
             self.session.add(grupo)
@@ -151,21 +154,21 @@ class StrategySeeder:
 
     def _get_or_create_tipo_eno(
         self, nombre: str, codigo: str, grupo_id: int
-    ) -> TipoEno:
+    ) -> Enfermedad:
         """Obtiene o crea un tipo ENO."""
 
-        # Buscar existente por código kebab-case
+        # Buscar existente por codigo kebab-case
         result = self.session.execute(
-            select(TipoEno).where(TipoEno.codigo == codigo)
+            select(Enfermedad).where(Enfermedad.slug == codigo)
         )
         tipo_eno = result.scalar_one_or_none()
 
         if not tipo_eno:
-            tipo_eno = TipoEno(
+            tipo_eno = Enfermedad(
                 nombre=nombre,
                 codigo=codigo,  # kebab-case
-                id_grupo_eno=grupo_id,
-                descripcion=f"Eventos de tipo {nombre}",
+                id_grupo=grupo_id,
+                descripcion=f"CasoEpidemiologicos de tipo {nombre}",
             )
             self.session.add(tipo_eno)
             self.session.flush()
@@ -179,7 +182,7 @@ class StrategySeeder:
         description: str,
         config: Optional[Dict] = None,
         confidence_threshold: float = 0.7,
-    ) -> EventStrategy:
+    ) -> EstrategiaClasificacion:
         """Crea una estrategia base."""
         tipo_eno = self.tipo_enos.get(tipo_eno_name)
         if not tipo_eno:
@@ -187,14 +190,14 @@ class StrategySeeder:
 
         # Verificar si ya existe
         result = self.session.execute(
-            select(EventStrategy).where(EventStrategy.tipo_eno_id == tipo_eno.id)
+            select(EstrategiaClasificacion).where(EstrategiaClasificacion.tipo_eno_id == tipo_eno.id)
         )
         existing = result.scalar_one_or_none()
 
         if existing:
             return existing
 
-        strategy = EventStrategy(
+        strategy = EstrategiaClasificacion(
             tipo_eno_id=tipo_eno.id,
             name=name,
             description=description,
@@ -214,7 +217,7 @@ class StrategySeeder:
 
     def _add_classification_rule(
         self,
-        strategy: EventStrategy,
+        strategy: EstrategiaClasificacion,
         classification: TipoClasificacion,
         name: str,
         conditions: List[Dict],

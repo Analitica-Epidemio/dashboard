@@ -24,8 +24,8 @@ async def get_user_sessions(
     """
     Get current user's active sessions
     """
-    sessions = await auth_service.get_user_sessions(
+    sessions = await auth_service.obtener_sesiones_usuario(
         current_user.id,
-        token_data.session_id
+        token_data.id_sesion
     )
     return sessions

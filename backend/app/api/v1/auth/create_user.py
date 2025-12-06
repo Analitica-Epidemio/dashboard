@@ -28,6 +28,6 @@ async def create_user(
     - **password**: Strong password (min 8 chars, must include uppercase, lowercase, digit, special char)
     - **role**: User role (superadmin, epidemiologo)
     """
-    user = await auth_service.create_user(user_data)
+    user = await auth_service.crear_usuario(user_data)
     logger.info(f"Superadmin {current_user.email} created user {user.email}")
     return user

@@ -10,7 +10,7 @@ from app.api.v1.boletines import config, instances_crud, preview, templates_crud
 from app.api.v1.boletines.generate_draft import generate_draft
 from app.api.v1.boletines.preview import (
     AgenteDisponible,
-    EventoDisponible,
+    CasoEpidemiologicoDisponible,
     SectionPreviewResponse,
 )
 from app.api.v1.boletines.schemas import (
@@ -338,9 +338,9 @@ router.add_api_route(
     response_model=SuccessResponse[SectionPreviewResponse],
     name="preview_evento",
     summary="Preview genérico de datos para cualquier evento",
-    description="Recibe el código de un TipoEno o GrupoEno y genera un resumen de datos",
+    description="Recibe el código de un Enfermedad o GrupoDeEnfermedades y genera un resumen de datos",
     responses={
-        404: {"model": ErrorResponse, "description": "Evento no encontrado"},
+        404: {"model": ErrorResponse, "description": "CasoEpidemiologico no encontrado"},
         500: {"model": ErrorResponse, "description": "Error interno"},
     },
 )
@@ -349,10 +349,10 @@ router.add_api_route(
     "/preview/eventos-disponibles",
     preview.list_available_eventos,
     methods=["GET"],
-    response_model=SuccessResponse[List[EventoDisponible]],
+    response_model=SuccessResponse[List[CasoEpidemiologicoDisponible]],
     name="list_available_eventos",
     summary="Listar eventos disponibles para preview",
-    description="Retorna todos los TipoEno y GrupoEno con código para usar en el selector",
+    description="Retorna todos los Enfermedad y GrupoDeEnfermedades con código para usar en el selector",
     responses={
         500: {"model": ErrorResponse, "description": "Error interno"},
     },

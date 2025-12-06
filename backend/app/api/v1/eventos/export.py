@@ -49,7 +49,7 @@ async def export_eventos(
         # TODO: Implementar exportación real con pandas
         df = pd.DataFrame(
             {
-                "ID Evento": [1, 2, 3],
+                "ID CasoEpidemiologico": [1, 2, 3],
                 "Tipo": ["Dengue", "COVID", "Rabia"],
                 "Fecha": ["2024-01-01", "2024-01-02", "2024-01-03"],
             }

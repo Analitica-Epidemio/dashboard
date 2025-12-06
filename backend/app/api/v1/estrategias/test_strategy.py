@@ -13,14 +13,14 @@ from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User
-from app.domains.eventos_epidemiologicos.clasificacion.repositories import (
-    EventStrategyRepository,
+from app.domains.vigilancia_nominal.clasificacion.repositories import (
+    EstrategiaClasificacionRepository,
 )
-from app.domains.eventos_epidemiologicos.clasificacion.schemas import (
+from app.domains.vigilancia_nominal.clasificacion.schemas import (
     StrategyTestRequest,
     StrategyTestResponse,
 )
-from app.domains.eventos_epidemiologicos.clasificacion.services import (
+from app.domains.vigilancia_nominal.clasificacion.services import (
     EventClassificationService,
 )
 
@@ -47,7 +47,7 @@ async def test_strategy(
     logger.info(f"🧪 Testing strategy: {strategy_id}")
 
     try:
-        repo = EventStrategyRepository(db)
+        repo = EstrategiaClasificacionRepository(db)
         service = EventClassificationService(db)
 
         # Verificar que existe

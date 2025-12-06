@@ -16,11 +16,8 @@ from sqlmodel import Session
 
 from app.core.database import get_session
 from app.core.schemas.response import SuccessResponse
-from app.domains.eventos_epidemiologicos.eventos.models import (
-    Evento,
-    EventoGrupoEno,
-    TipoEno,
-)
+from app.domains.vigilancia_nominal.models.enfermedad import Enfermedad
+from app.domains.vigilancia_nominal.models.caso import (    CasoEpidemiologico, CasoGrupoEnfermedad)
 from app.domains.territorio.geografia_models import (
     Departamento,
     Domicilio,
@@ -68,7 +65,7 @@ class DomicilioMapaItem(BaseModel):
     )
 
     # Fechas de todos los eventos para animación temporal
-    # Lista de fechas (fecha_inicio_sintomas o fecha_minima_evento) para timeline
+    # Lista de fechas (fecha_inicio_sintomas o fecha_minima_caso) para timeline
     fechas_eventos: List[date] = Field(
         default_factory=list,
         description="Lista de fechas de eventos para animación temporal"
@@ -95,8 +92,8 @@ async def get_domicilios_mapa(
     id_localidad_indec: Optional[int] = Query(
         None, description="Filtrar por localidad"
     ),
-    id_grupo_eno: Optional[int] = Query(None, description="Filtrar por grupo ENO"),
-    id_tipo_eno: Optional[int] = Query(None, description="Filtrar por tipo ENO"),
+    id_grupo: Optional[int] = Query(None, description="Filtrar por grupo ENO"),
+    id_enfermedad: Optional[int] = Query(None, description="Filtrar por tipo ENO"),
     fecha_hasta: Optional[date] = Query(
         None, description="Filtrar eventos hasta esta fecha"
     ),
@@ -121,8 +118,8 @@ async def get_domicilios_mapa(
         id_provincia_indec,
         id_departamento_indec,
         id_localidad_indec,
-        id_grupo_eno,
-        id_tipo_eno,
+        id_grupo,
+        id_enfermedad,
         fecha_hasta,
         limit,
     )
@@ -141,11 +138,11 @@ async def get_domicilios_mapa(
             Departamento.nombre.label("departamento_nombre"),
             Provincia.id_provincia_indec,
             Provincia.nombre.label("provincia_nombre"),
-            func.count(Evento.id).label("total_eventos"),
-            func.min(Evento.fecha_minima_evento).label("primer_evento_fecha"),
+            func.count(CasoEpidemiologico.id).label("total_eventos"),
+            func.min(CasoEpidemiologico.fecha_minima_caso).label("primer_evento_fecha"),
         )
-        .select_from(Evento)
-        .join(Domicilio, Evento.id_domicilio == Domicilio.id)
+        .select_from(CasoEpidemiologico)
+        .join(Domicilio, CasoEpidemiologico.id_domicilio == Domicilio.id)
         .join(Localidad, Domicilio.id_localidad_indec == Localidad.id_localidad_indec)
         .join(
             Departamento,
@@ -169,20 +166,20 @@ async def get_domicilios_mapa(
         query = query.where(Localidad.id_localidad_indec == id_localidad_indec)
 
     # Aplicar filtros de tipo de evento
-    if id_grupo_eno is not None:
+    if id_grupo is not None:
         query = query.where(
-            Evento.id.in_(
-                select(EventoGrupoEno.id_evento).where(
-                    EventoGrupoEno.id_grupo_eno == id_grupo_eno
+            CasoEpidemiologico.id.in_(
+                select(CasoGrupoEnfermedad.id_caso).where(
+                    CasoGrupoEnfermedad.id_grupo == id_grupo
                 )
             )
         )
-    if id_tipo_eno is not None:
-        query = query.where(Evento.id_tipo_eno == id_tipo_eno)
+    if id_enfermedad is not None:
+        query = query.where(CasoEpidemiologico.id_enfermedad == id_enfermedad)
 
     # Filtro temporal
     if fecha_hasta is not None:
-        query = query.where(Evento.fecha_minima_evento <= fecha_hasta)
+        query = query.where(CasoEpidemiologico.fecha_minima_caso <= fecha_hasta)
 
     # Agrupar por domicilio
     query = query.group_by(
@@ -200,7 +197,7 @@ async def get_domicilios_mapa(
     )
 
     # Ordenar por cantidad de eventos (priorizar hotspots) y limitar
-    query = query.order_by(func.count(Evento.id).desc()).limit(limit)
+    query = query.order_by(func.count(CasoEpidemiologico.id).desc()).limit(limit)
 
     result = session.exec(query).all()
 
@@ -223,14 +220,14 @@ async def get_domicilios_mapa(
         # Query para obtener conteo de tipos por domicilio
         tipos_query = (
             select(
-                Evento.id_domicilio,
-                TipoEno.nombre.label("tipo_nombre"),
-                func.count(Evento.id).label("count"),
+                CasoEpidemiologico.id_domicilio,
+                Enfermedad.nombre.label("tipo_nombre"),
+                func.count(CasoEpidemiologico.id).label("count"),
             )
-            .select_from(Evento)
-            .outerjoin(TipoEno, Evento.id_tipo_eno == TipoEno.id)
-            .where(Evento.id_domicilio.in_(domicilio_ids))
-            .group_by(Evento.id_domicilio, TipoEno.nombre)
+            .select_from(CasoEpidemiologico)
+            .outerjoin(Enfermedad, CasoEpidemiologico.id_enfermedad == Enfermedad.id)
+            .where(CasoEpidemiologico.id_domicilio.in_(domicilio_ids))
+            .group_by(CasoEpidemiologico.id_domicilio, Enfermedad.nombre)
         )
 
         tipos_result = session.exec(tipos_query).all()
@@ -250,14 +247,14 @@ async def get_domicilios_mapa(
     fechas_por_domicilio: dict[int, List[date]] = {}
 
     if domicilio_ids:
-        # Obtener fecha_minima_evento de cada evento por domicilio
+        # Obtener fecha_minima_caso de cada evento por domicilio
         fechas_query = (
             select(
-                Evento.id_domicilio,
-                Evento.fecha_minima_evento,
+                CasoEpidemiologico.id_domicilio,
+                CasoEpidemiologico.fecha_minima_caso,
             )
-            .where(Evento.id_domicilio.in_(domicilio_ids))
-            .where(Evento.fecha_minima_evento.is_not(None))
+            .where(CasoEpidemiologico.id_domicilio.in_(domicilio_ids))
+            .where(CasoEpidemiologico.fecha_minima_caso.is_not(None))
         )
 
         fechas_result = session.exec(fechas_query).all()
@@ -265,7 +262,7 @@ async def get_domicilios_mapa(
         # Organizar fechas por domicilio
         for fecha_row in fechas_result:
             dom_id = fecha_row.id_domicilio
-            fecha = fecha_row.fecha_minima_evento
+            fecha = fecha_row.fecha_minima_caso
 
             if dom_id not in fechas_por_domicilio:
                 fechas_por_domicilio[dom_id] = []

@@ -21,7 +21,7 @@ async def logout_session(
     """
     Logout specific session
     """
-    success = await auth_service.logout_specific_session(
+    success = await auth_service.cerrar_sesion_especifica(
         current_user.id,
         session_id
     )

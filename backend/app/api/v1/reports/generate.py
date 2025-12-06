@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_async_session
 from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User
-from app.features.reporteria.serverside_pdf_generator import serverside_pdf_generator
+from app.domains.reporteria.serverside_pdf_generator import serverside_pdf_generator
 
 from .schemas import ReportRequest
 

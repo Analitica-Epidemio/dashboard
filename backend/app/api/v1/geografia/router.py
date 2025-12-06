@@ -66,7 +66,7 @@ async def get_provincias_geojson(
 
 @router.get("/provincias/geojson-con-eventos")
 async def get_provincias_con_eventos(
-    id_grupo_eno: int | None = Query(None, description="Filtrar por grupo ENO"),
+    id_grupo: int | None = Query(None, description="Filtrar por grupo ENO"),
     session: AsyncSession = Depends(get_async_session),
 ) -> dict[str, Any]:
     """
@@ -77,9 +77,9 @@ async def get_provincias_con_eventos(
     params: dict[str, Any] = {}
 
     evento_join_condition = ""
-    if id_grupo_eno:
-        evento_join_condition = "AND e.id_grupo_eno = :id_grupo_eno"
-        params["id_grupo_eno"] = id_grupo_eno
+    if id_grupo:
+        evento_join_condition = "AND e.id_grupo = :id_grupo"
+        params["id_grupo"] = id_grupo
 
     query = text(f"""
         SELECT
@@ -223,7 +223,7 @@ async def get_departamentos_geojson(
 @router.get("/departamentos/geojson-con-eventos")
 async def get_departamentos_con_eventos(
     id_provincia_indec: int | None = Query(None, description="Filtrar por provincia"),
-    id_grupo_eno: int | None = Query(None, description="Filtrar por grupo ENO"),
+    id_grupo: int | None = Query(None, description="Filtrar por grupo ENO"),
     session: AsyncSession = Depends(get_async_session),
 ) -> dict[str, Any]:
     """
@@ -241,9 +241,9 @@ async def get_departamentos_con_eventos(
         params["id_provincia"] = id_provincia_indec
 
     evento_join_condition = ""
-    if id_grupo_eno:
-        evento_join_condition = "AND e.id_grupo_eno = :id_grupo_eno"
-        params["id_grupo_eno"] = id_grupo_eno
+    if id_grupo:
+        evento_join_condition = "AND e.id_grupo = :id_grupo"
+        params["id_grupo"] = id_grupo
 
     where_sql = " AND ".join(where_clauses)
 

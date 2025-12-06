@@ -1,5 +1,5 @@
 """
-Seed de Grupos ENO (Eventos de Notificación Obligatoria).
+Seed de Grupos ENO (CasoEpidemiologicos de Notificación Obligatoria).
 
 Este seed carga todos los grupos ENO oficiales del SNVS con:
 - Nombre completo
@@ -228,7 +228,7 @@ GRUPOS_ENO = [
         "nombre": "Envenenamiento por Animales Ponzoñosos",
         "codigo": "envenenamiento-por-animales-ponzonosos",
         "descripcion": "Vigilancia de Ofidismo, Araneísmo, Escorpionismo",
-        "ventana_dias_default": 7,  # Eventos puntuales
+        "ventana_dias_default": 7,  # CasoEpidemiologicos puntuales
     },
     {
         "nombre": "Intoxicaciones",
@@ -395,13 +395,13 @@ def seed_grupos_eno(session: Session) -> int:
         Número de grupos insertados/actualizados
     """
     print("\n" + "=" * 70)
-    print("🏥 CARGANDO GRUPOS ENO (Eventos de Notificación Obligatoria)")
+    print("🏥 CARGANDO GRUPOS ENO (CasoEpidemiologicos de Notificación Obligatoria)")
     print("=" * 70)
 
     # Primero eliminar el grupo "Vigilancia Epidemiológica" si existe (era un hack)
     delete_hack = text("""
-        DELETE FROM grupo_eno
-        WHERE codigo = 'vigilancia-epidemiologica'
+        DELETE FROM grupo_de_enfermedades
+        WHERE slug = 'vigilancia-epidemiologica'
     """)
     result = session.execute(delete_hack)
     if result.rowcount > 0:
@@ -413,19 +413,19 @@ def seed_grupos_eno(session: Session) -> int:
     for grupo in GRUPOS_ENO:
         # UPSERT usando ON CONFLICT
         stmt = text("""
-            INSERT INTO grupo_eno (nombre, codigo, descripcion, ventana_dias_default, created_at, updated_at)
-            VALUES (:nombre, :codigo, :descripcion, :ventana_dias, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-            ON CONFLICT (codigo) DO UPDATE SET
+            INSERT INTO grupo_de_enfermedades (nombre, slug, descripcion, ventana_dias_visualizacion, created_at, updated_at)
+            VALUES (:nombre, :slug, :descripcion, :ventana_dias, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ON CONFLICT (slug) DO UPDATE SET
                 nombre = EXCLUDED.nombre,
                 descripcion = EXCLUDED.descripcion,
-                ventana_dias_default = EXCLUDED.ventana_dias_default,
+                ventana_dias_visualizacion = EXCLUDED.ventana_dias_visualizacion,
                 updated_at = CURRENT_TIMESTAMP
             RETURNING (xmax = 0) AS inserted
         """)
 
         result = session.execute(stmt, {
             "nombre": grupo["nombre"],
-            "codigo": grupo["codigo"],
+            "slug": grupo["codigo"],
             "descripcion": grupo["descripcion"],
             "ventana_dias": grupo["ventana_dias_default"],
         })

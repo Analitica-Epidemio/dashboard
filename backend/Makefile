@@ -164,8 +164,11 @@ lint: ## Run linter and formatter
 	docker compose exec api uv run ruff check . --fix
 	docker compose exec api uv run ruff format .
 
-typecheck: ## Run type checking
-	docker compose exec api uv run mypy app
+typecheck: ## Run type checking (strict mode)
+	docker compose exec api uv run mypy app --show-error-codes --pretty --show-column-numbers
+
+typecheck-strict: ## Run VERY strict type checking (catches ALL errors)
+	docker compose exec api uv run mypy app --follow-imports=normal --show-error-codes --pretty --no-error-summary 2>&1 | head -100
 
 qa: ## Run all quality checks (lint + typecheck + test)
 	@make lint

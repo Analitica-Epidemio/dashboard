@@ -1,0 +1,14 @@
+"""
+Procesamiento de vigilancia nominal.
+
+Este módulo registra automáticamente el processor en el registry de jobs.
+"""
+
+from app.domains.jobs.registry import register_processor
+
+from .processor import crear_procesador
+
+# Registrar processor automáticamente al importar el módulo
+register_processor("vigilancia_nominal", crear_procesador)
+
+__all__ = ["crear_procesador"]

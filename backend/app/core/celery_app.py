@@ -32,8 +32,8 @@ def create_celery_app() -> Celery:
         broker=settings.CELERY_BROKER_URL,
         backend=settings.CELERY_RESULT_BACKEND,
         include=[
-            "app.features.procesamiento_archivos.tasks",
-            "app.features.geocoding.tasks",
+            "app.domains.jobs.tasks",
+            "app.domains.territorio.geocoding_tasks",
             # Agregar más módulos de tasks aquí
         ],
     )
@@ -59,15 +59,15 @@ def create_celery_app() -> Celery:
         # Task routing y priority
         task_default_queue="default",
         task_routes={
-            "app.features.procesamiento_archivos.tasks.process_csv_file": {
+            "app.domains.jobs.tasks.execute_job": {
                 "queue": "file_processing",
                 "priority": 5,
             },
-            "app.features.procesamiento_archivos.tasks.cleanup_old_files": {
+            "app.domains.jobs.tasks.cleanup_old_files": {
                 "queue": "maintenance",
                 "priority": 1,
             },
-            "app.features.geocoding.tasks.geocode_pending_domicilios": {
+            "app.domains.territorio.geocoding_tasks.geocode_pending_domicilios": {
                 "queue": "geocoding",
                 "priority": 3,  # Prioridad media-baja (no urgente)
             },
@@ -87,17 +87,17 @@ def create_celery_app() -> Celery:
         # Beat scheduler (para tareas periódicas)
         beat_schedule={
             "cleanup-old-files": {
-                "task": "app.features.procesamiento_archivos.tasks.cleanup_old_files",
+                "task": "app.domains.jobs.tasks.cleanup_old_files",
                 "schedule": 3600.0,  # Cada hora
                 "options": {"queue": "maintenance"},
             },
             "cleanup-old-jobs": {
-                "task": "app.features.procesamiento_archivos.tasks.cleanup_old_jobs",
+                "task": "app.domains.jobs.tasks.cleanup_old_jobs",
                 "schedule": 7200.0,  # Cada 2 horas
                 "options": {"queue": "maintenance"},
             },
             "cleanup-temp-uploads": {
-                "task": "app.features.procesamiento_archivos.tasks.cleanup_temp_uploads",
+                "task": "app.domains.jobs.tasks.cleanup_temp_uploads",
                 "schedule": 3600.0,  # Cada hora
                 "options": {"queue": "maintenance"},
             },

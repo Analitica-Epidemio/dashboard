@@ -23,23 +23,27 @@ def seed_superadmin(session: Session) -> None:
     # Verificar si ya existe
     existing_admin = session.query(User).filter(User.email == "admin@admin.com").first()
 
+    hashed_password = PasswordSecurity.obtener_hash_contrasena("admin")
+
     if existing_admin:
-        print("  ⚠️  Usuario admin@admin.com ya existe, omitiendo...")
+        print("  ⚠️  Usuario admin@admin.com ya existe, actualizando...")
+        existing_admin.contrasena_hasheada = hashed_password
+        existing_admin.rol = UserRole.SUPERADMIN
+        existing_admin.estado = UserStatus.ACTIVE
+        existing_admin.es_email_verificado = True
+        session.commit()
+        print("  ✅ Superadmin actualizado exitosamente")
         return
 
     # Crear superadmin
-    # Nota: La contraseña "admin" no cumple requisitos de seguridad en producción
-    # pero es útil para desarrollo/testing
-    hashed_password = PasswordSecurity.get_password_hash("admin")
-
     superadmin = User(
         email="admin@admin.com",
-        hashed_password=hashed_password,
+        contrasena_hasheada=hashed_password,
         nombre="Admin",
         apellido="Sistema",
-        role=UserRole.SUPERADMIN,
-        status=UserStatus.ACTIVE,
-        is_email_verified=True,  # Ya verificado para evitar paso extra
+        rol=UserRole.SUPERADMIN,
+        estado=UserStatus.ACTIVE,
+        es_email_verificado=True,
         created_at=datetime.now(timezone.utc),
     )
 

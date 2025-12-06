@@ -17,7 +17,7 @@ from pydantic import BaseModel
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User
-from app.features.procesamiento_archivos.config.columns import REQUIRED_COLUMNS
+from app.domains.vigilancia_nominal.procesamiento.config.columns import REQUIRED_COLUMNS
 
 # MIME types válidos para archivos permitidos
 VALID_MIME_TYPES = {

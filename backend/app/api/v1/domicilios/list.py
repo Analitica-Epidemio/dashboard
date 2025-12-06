@@ -14,7 +14,7 @@ from sqlmodel import Session
 
 from app.core.database import get_session
 from app.core.schemas.response import SuccessResponse
-from app.domains.eventos_epidemiologicos.eventos.models import Evento
+from app.domains.vigilancia_nominal.models.caso import CasoEpidemiologico
 from app.domains.territorio.geografia_models import (
     Departamento,
     Domicilio,
@@ -102,11 +102,11 @@ async def list_domicilios(
     # Subquery para contar eventos por domicilio
     eventos_count_subquery = (
         select(
-            Evento.id_domicilio,
-            func.count(Evento.id).label("total_eventos"),
+            CasoEpidemiologico.id_domicilio,
+            func.count(CasoEpidemiologico.id).label("total_eventos"),
         )
-        .where(Evento.id_domicilio.is_not(None))
-        .group_by(Evento.id_domicilio)
+        .where(CasoEpidemiologico.id_domicilio.is_not(None))
+        .group_by(CasoEpidemiologico.id_domicilio)
         .subquery()
     )
 

@@ -25,6 +25,6 @@ async def update_user(
 
     Superadmins can update any user's information including role and status.
     """
-    updated_user = await auth_service.update_user(user_id, user_data)
+    updated_user = await auth_service.actualizar_usuario(user_id, user_data)
     logger.info(f"Superadmin {current_user.email} updated user {updated_user.email}")
     return updated_user
