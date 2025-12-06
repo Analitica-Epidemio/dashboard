@@ -1829,7 +1829,7 @@ def seed_tipos_eno(session: Session) -> int:
     print("=" * 70)
 
     # Obtener mapeo de códigos de grupo a IDs
-    grupo_map_query = text("SELECT id, codigo FROM grupo_eno")
+    grupo_map_query = text("SELECT id, slug FROM grupo_de_enfermedades")
     grupo_results = session.execute(grupo_map_query).fetchall()
     grupo_map = {row[1]: row[0] for row in grupo_results}
 
@@ -1857,9 +1857,9 @@ def seed_tipos_eno(session: Session) -> int:
 
         # UPSERT del tipo ENO
         stmt = text("""
-            INSERT INTO tipo_eno (nombre, codigo, descripcion, periodo_incubacion_min_dias, periodo_incubacion_max_dias, fuente_referencia, created_at, updated_at)
-            VALUES (:nombre, :codigo, :descripcion, :incubacion_min, :incubacion_max, :fuente_referencia, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-            ON CONFLICT (codigo) DO UPDATE SET
+            INSERT INTO enfermedad (nombre, slug, descripcion, periodo_incubacion_min_dias, periodo_incubacion_max_dias, fuente_referencia, created_at, updated_at)
+            VALUES (:nombre, :slug, :descripcion, :incubacion_min, :incubacion_max, :fuente_referencia, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ON CONFLICT (slug) DO UPDATE SET
                 nombre = EXCLUDED.nombre,
                 descripcion = EXCLUDED.descripcion,
                 periodo_incubacion_min_dias = EXCLUDED.periodo_incubacion_min_dias,
@@ -1873,7 +1873,7 @@ def seed_tipos_eno(session: Session) -> int:
             stmt,
             {
                 "nombre": tipo["nombre"],
-                "codigo": tipo["slug"],
+                "slug": tipo["slug"],
                 "descripcion": tipo["descripcion"],
                 "incubacion_min": tipo["incubacion_min"],
                 "incubacion_max": tipo["incubacion_max"],
@@ -1894,7 +1894,7 @@ def seed_tipos_eno(session: Session) -> int:
         # Crear relaciones con grupos (limpiar existentes primero)
         session.execute(
             text("""
-            DELETE FROM tipo_eno_grupo_eno WHERE id_enfermedad = :tipo_id
+            DELETE FROM enfermedad_grupo WHERE id_enfermedad = :tipo_id
         """),
             {"tipo_id": tipo_id},
         )
@@ -1903,8 +1903,8 @@ def seed_tipos_eno(session: Session) -> int:
             grupo_id = grupo_map[grupo_codigo]
             session.execute(
                 text("""
-                INSERT INTO tipo_eno_grupo_eno (id_enfermedad, id_grupo, created_at, updated_at)
-                VALUES (:tipo_id, :grupo_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                INSERT INTO enfermedad_grupo (id_enfermedad, id_grupo)
+                VALUES (:tipo_id, :grupo_id)
                 ON CONFLICT DO NOTHING
             """),
                 {"tipo_id": tipo_id, "grupo_id": grupo_id},
@@ -1915,11 +1915,11 @@ def seed_tipos_eno(session: Session) -> int:
 
     # Buscar tipos que no están en el seed, con conteo de referencias
     huerfanos_query = text("""
-        SELECT t.id, t.codigo, t.nombre,
-               (SELECT COUNT(*) FROM evento e WHERE e.id_enfermedad = t.id) +
-               (SELECT COUNT(*) FROM event_strategy es WHERE es.tipo_eno_id = t.id) as ref_count
-        FROM tipo_eno t
-        WHERE t.codigo NOT IN :codigos
+        SELECT t.id, t.slug, t.nombre,
+               (SELECT COUNT(*) FROM caso_epidemiologico e WHERE e.id_enfermedad = t.id) +
+               (SELECT COUNT(*) FROM estrategia_clasificacion es WHERE es.id_enfermedad = t.id) as ref_count
+        FROM enfermedad t
+        WHERE t.slug NOT IN :codigos
     """)
     huerfanos = session.execute(
         huerfanos_query, {"codigos": tuple(codigos_seed)}
@@ -1933,12 +1933,12 @@ def seed_tipos_eno(session: Session) -> int:
         if ref_count == 0:
             # Eliminar relaciones primero
             session.execute(
-                text("DELETE FROM tipo_eno_grupo_eno WHERE id_enfermedad = :id"),
+                text("DELETE FROM enfermedad_grupo WHERE id_enfermedad = :id"),
                 {"id": tipo_id},
             )
             # Luego eliminar el tipo
             session.execute(
-                text("DELETE FROM tipo_eno WHERE id = :id"), {"id": tipo_id}
+                text("DELETE FROM enfermedad WHERE id = :id"), {"id": tipo_id}
             )
             eliminados += 1
             print(f"  🗑️  Eliminado huérfano: {codigo}")

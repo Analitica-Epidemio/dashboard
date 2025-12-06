@@ -6,7 +6,7 @@ Puede ser ejecutado directamente o importado desde seed.py
 """
 
 import sys
-from datetime import datetime
+import datetime as dt
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -240,7 +240,7 @@ class StrategySeeder:
             description=description,
             config=config or {},
             confidence_threshold=confidence_threshold,
-            valid_from=datetime(2000, 1, 1),
+            valid_from=dt.datetime(2000, 1, 1),
             valid_until=None,
             is_active=True,
             created_by="seed_script",

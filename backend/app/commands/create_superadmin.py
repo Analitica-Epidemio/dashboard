@@ -229,6 +229,51 @@ def create_superadmin():
             sys.exit(1)
 
 
+def create_dev_superadmin():
+    """
+    Crea un superadmin de desarrollo con credenciales admin/admin.
+    Solo para uso en desarrollo local.
+    """
+    print("🔐 Creando superadmin de desarrollo (admin/admin)...")
+
+    sync_database_url = settings.DATABASE_URL.replace("+asyncpg", "")
+    sync_engine = create_engine(sync_database_url)
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=sync_engine)
+
+    with SessionLocal() as db:
+        # Verificar si ya existe
+        result = db.execute(select(User).where(col(User.email) == "admin@admin.com"))
+        if result.first():
+            print("⚠️  El superadmin de desarrollo ya existe (admin@admin.com)")
+            return
+
+        try:
+            hashed_password = PasswordSecurity.obtener_hash_contrasena("admin")
+            verification_token = SecurityTokens.generar_token_verificacion()
+
+            user = User(
+                email="admin@admin.com",
+                nombre="Admin",
+                apellido="Dev",
+                contrasena_hasheada=hashed_password,
+                rol=UserRole.SUPERADMIN,
+                estado=UserStatus.ACTIVE,
+                token_verificacion_email=verification_token,
+                es_email_verificado=True,
+            )
+
+            db.add(user)
+            db.commit()
+
+            print("✅ Superadmin de desarrollo creado:")
+            print("   Email: admin@admin.com")
+            print("   Password: admin")
+
+        except Exception as e:
+            print(f"❌ Error creando superadmin: {str(e)}")
+            sys.exit(1)
+
+
 def main():
     """Main entry point"""
     try:

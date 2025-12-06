@@ -1,5 +1,9 @@
 """
-Seed de usuarios iniciales del sistema
+Seed de usuarios iniciales del sistema.
+
+IMPORTANTE: El superadmin de desarrollo (admin/admin) solo se crea
+si el usuario confirma explícitamente. Esto evita crear credenciales
+inseguras en producción por accidente.
 """
 
 from datetime import datetime, timezone
@@ -10,38 +14,55 @@ from app.domains.autenticacion.models import User, UserRole, UserStatus
 from app.domains.autenticacion.security import PasswordSecurity
 
 
-def seed_superadmin(session: Session) -> None:
+def seed_superadmin(session: Session, force: bool = False) -> None:
     """
-    Crea el usuario superadmin inicial
+    Crea el usuario superadmin de desarrollo.
+
+    Args:
+        session: Sesión de base de datos
+        force: Si True, no pregunta confirmación (para scripts automatizados)
 
     Credenciales:
     - Email: admin@admin.com
     - Contraseña: admin
     - Rol: SUPERADMIN
-    """
-    print("\n🔐 Creando usuario SUPERADMIN...")
 
+    ADVERTENCIA: Solo usar en desarrollo local.
+    En producción usar: make superadmin
+    """
     # Verificar si ya existe
     existing_admin = session.query(User).filter(User.email == "admin@admin.com").first()
 
-    hashed_password = PasswordSecurity.obtener_hash_contrasena("admin")
-
     if existing_admin:
-        print("  ⚠️  Usuario admin@admin.com ya existe, actualizando...")
-        existing_admin.contrasena_hasheada = hashed_password
-        existing_admin.rol = UserRole.SUPERADMIN
-        existing_admin.estado = UserStatus.ACTIVE
-        existing_admin.es_email_verificado = True
-        session.commit()
-        print("  ✅ Superadmin actualizado exitosamente")
+        print("  ⚠️  Superadmin de desarrollo ya existe (admin@admin.com)")
         return
 
-    # Crear superadmin
+    # Preguntar confirmación si no es forzado
+    if not force:
+        print("\n⚠️  ADVERTENCIA: Esto creará un superadmin con credenciales inseguras:")
+        print("   Email: admin@admin.com")
+        print("   Password: admin")
+        print("\n   Solo usar en desarrollo local. En producción usar: make superadmin")
+
+        try:
+            respuesta = input("\n¿Crear superadmin de desarrollo? [y/N]: ").strip().lower()
+            if respuesta not in ["y", "yes", "si", "sí"]:
+                print("  ⏭️  Omitido. Usar 'make superadmin' para crear uno seguro.")
+                return
+        except EOFError:
+            # No hay stdin (ej: pipe), omitir
+            print("  ⏭️  Omitido (no hay terminal interactiva)")
+            return
+
+    print("\n🔐 Creando superadmin de desarrollo...")
+
+    hashed_password = PasswordSecurity.obtener_hash_contrasena("admin")
+
     superadmin = User(
         email="admin@admin.com",
         contrasena_hasheada=hashed_password,
         nombre="Admin",
-        apellido="Sistema",
+        apellido="Dev",
         rol=UserRole.SUPERADMIN,
         estado=UserStatus.ACTIVE,
         es_email_verificado=True,
@@ -51,8 +72,6 @@ def seed_superadmin(session: Session) -> None:
     session.add(superadmin)
     session.commit()
 
-    print("  ✅ Superadmin creado exitosamente")
+    print("  ✅ Superadmin de desarrollo creado")
     print("     Email: admin@admin.com")
-    print("     Contraseña: admin")
-    print(f"     Rol: {UserRole.SUPERADMIN}")
-    print(f"     Estado: {UserStatus.ACTIVE}")
+    print("     Password: admin")

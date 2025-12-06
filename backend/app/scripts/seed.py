@@ -58,6 +58,11 @@ from pathlib import Path
 # Agregar el directorio raíz al path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
+# Cargar variables de entorno desde .env
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 
@@ -88,6 +93,28 @@ def truncate_tables():
         print("✅ Tablas truncadas (geografía, establecimientos, agentes)")
 
 
+def preguntar_superadmin_dev() -> bool:
+    """
+    Pregunta al usuario si quiere crear el superadmin de desarrollo.
+    Retorna True si el usuario confirma, False en caso contrario.
+    """
+    print("\n" + "=" * 70)
+    print("🔐 SUPERADMIN DE DESARROLLO")
+    print("=" * 70)
+    print("\n⚠️  ADVERTENCIA: Esto creará un superadmin con credenciales inseguras:")
+    print("   Email: admin@admin.com")
+    print("   Password: admin")
+    print("\n   Solo usar en desarrollo local. En producción usar: make superadmin")
+
+    try:
+        respuesta = input("\n¿Crear superadmin de desarrollo? [y/N]: ").strip().lower()
+        return respuesta in ["y", "yes", "si", "sí"]
+    except EOFError:
+        # No hay stdin (ej: pipe), omitir
+        print("  ⏭️  Omitido (no hay terminal interactiva)")
+        return False
+
+
 def main():
     """Ejecuta todos los seeds en orden"""
     print("\n" + "=" * 70)
@@ -100,9 +127,11 @@ def main():
     print("  🦠 Grupos/Tipos ENO y Agentes Etiológicos")
     print("  🎯 Estrategias epidemiológicas")
     print("  📈 Configuración de gráficos y boletines")
-    print("  🔐 Usuario superadmin (admin@admin.com)")
     print("\n⏱️  Tiempo estimado: 8-12 minutos (incluye descargas WFS)")
     print("=" * 70)
+
+    # Preguntar al inicio si crear superadmin de desarrollo
+    crear_superadmin = preguntar_superadmin_dev()
 
     DATABASE_URL = os.getenv(
         "DATABASE_URL",
@@ -127,7 +156,7 @@ def main():
             seed_provincias_desde_georef,
         )
 
-        with engine.connect() as conn:
+        with engine.begin() as conn:
             prov_count = seed_provincias_desde_georef(conn)
             dept_count = seed_departamentos_desde_georef(conn)
             loc_count = seed_localidades_desde_georef(conn, max_localidades=5000)
@@ -142,7 +171,7 @@ def main():
                 seed_geometrias_provincias,
             )
 
-            with engine.connect() as conn:
+            with engine.begin() as conn:
                 seed_geometrias_provincias(conn)
                 seed_geometrias_departamentos(conn)
         except Exception as e:
@@ -180,7 +209,7 @@ def main():
         try:
             from app.scripts.seeds.seed_establecimientos_refes import seed_refes
 
-            with engine.connect() as conn:
+            with engine.begin() as conn:
                 estab_count = seed_refes(conn)
         except Exception as e:
             print(f"⚠️  Error descargando REFES (omitiendo): {e}")
@@ -323,20 +352,25 @@ def main():
 
             traceback.print_exc()
 
-        # Paso 8: Usuarios
+        # Paso 8: Usuarios (solo si el usuario confirmó al inicio)
         print("\n" + "=" * 70)
         print("PASO 8/10: USUARIOS")
         print("=" * 70)
-        try:
-            from app.scripts.seeds.seed_users import seed_superadmin
+        superadmin_creado = False
+        if crear_superadmin:
+            try:
+                from app.scripts.seeds.seed_users import seed_superadmin
 
-            with Session(engine) as session:
-                seed_superadmin(session)
-        except Exception as e:
-            print(f"⚠️  Error creando usuarios: {e}")
-            import traceback
+                with Session(engine) as session:
+                    seed_superadmin(session, force=True)
+                    superadmin_creado = True
+            except Exception as e:
+                print(f"⚠️  Error creando usuarios: {e}")
+                import traceback
 
-            traceback.print_exc()
+                traceback.print_exc()
+        else:
+            print("  ⏭️  Superadmin de desarrollo omitido (usar 'make superadmin' para crear uno seguro)")
 
         # Resumen
         print("\n" + "=" * 70)
@@ -352,7 +386,10 @@ def main():
         print("  ✅ Estrategias epidemiológicas")
         print("  ✅ Configuración de gráficos")
         print("  ✅ Configuración de boletines (template)")
-        print("  ✅ Usuario superadmin (admin@admin.com)")
+        if superadmin_creado:
+            print("  ✅ Usuario superadmin (admin@admin.com / admin)")
+        else:
+            print("  ⏭️  Superadmin omitido (usar 'make superadmin')")
         print("=" * 70)
 
     except Exception as e:

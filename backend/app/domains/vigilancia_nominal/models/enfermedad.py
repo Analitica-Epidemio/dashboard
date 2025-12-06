@@ -104,7 +104,7 @@ class GrupoDeEnfermedades(BaseModel, table=True):
     )
     slug: Optional[str] = Field(
         None,
-        max_length=50,
+        max_length=100,
         unique=True,
         index=True,
         description="Identificador único kebab-case para URLs y templates (ej: 'arbovirosis')",
@@ -178,7 +178,7 @@ class Enfermedad(BaseModel, table=True):
     )
     slug: Optional[str] = Field(
         None,
-        max_length=50,
+        max_length=100,
         unique=True,
         index=True,
         description="Identificador único kebab-case para URLs y templates (ej: 'dengue')",

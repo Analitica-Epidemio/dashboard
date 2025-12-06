@@ -127,7 +127,7 @@ class EstrategiaClasificacion(BaseModel, table=True):
 
     # Validez temporal
     valid_from: datetime = Field(
-        default_factory=datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(timezone.utc),
         description="Fecha desde cuando la estrategia es válida",
     )
     valid_until: Optional[datetime] = Field(
@@ -136,8 +136,8 @@ class EstrategiaClasificacion(BaseModel, table=True):
     )
 
     # Auditoría
-    created_at: datetime = Field(default_factory=datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     created_by: Optional[str] = Field(default=None, max_length=100)
     updated_by: Optional[str] = Field(default=None, max_length=100)
 
@@ -366,7 +366,7 @@ class StrategyChangeLog(BaseModel, table=True):
     # Auditoría
     changed_by: str = Field(max_length=100, description="Usuario que realizó el cambio")
     changed_at: datetime = Field(
-        default_factory=datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(timezone.utc),
         index=True,
         description="Fecha y hora del cambio",
     )
@@ -505,7 +505,7 @@ class EventClassificationAudit(BaseModel, table=True):
 
     # Auditoría temporal
     classified_at: datetime = Field(
-        default_factory=datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(timezone.utc),
         index=True,
         description="Fecha y hora de la clasificación automática",
     )

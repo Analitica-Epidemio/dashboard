@@ -397,11 +397,19 @@ def seed_grupos_eno(session: Session) -> int:
     print("=" * 70)
 
     # Primero eliminar el grupo "Vigilancia Epidemiológica" si existe (era un hack)
-    delete_hack = text("""
+    # Primero eliminar referencias en enfermedad_grupo
+    delete_refs = text("""
+        DELETE FROM enfermedad_grupo
+        WHERE id_grupo IN (SELECT id FROM grupo_de_enfermedades WHERE slug = 'vigilancia-epidemiologica')
+    """)
+    session.execute(delete_refs)
+
+    # Luego eliminar el grupo
+    delete_group = text("""
         DELETE FROM grupo_de_enfermedades
         WHERE slug = 'vigilancia-epidemiologica'
     """)
-    result = session.execute(delete_hack)
+    result = session.execute(delete_group)
     if result.rowcount > 0:
         print("  🗑️  Eliminado grupo hack 'vigilancia-epidemiologica'")
 
