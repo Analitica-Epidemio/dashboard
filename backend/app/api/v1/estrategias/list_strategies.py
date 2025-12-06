@@ -56,9 +56,13 @@ async def list_strategies(
         # Obtener total count
         count_query = select(func.count(EstrategiaClasificacion.id))
         if active_only is not None:
-            count_query = count_query.where(EstrategiaClasificacion.is_active == active_only)
+            count_query = count_query.where(
+                EstrategiaClasificacion.is_active == active_only
+            )
         if tipo_eno_id is not None:
-            count_query = count_query.where(EstrategiaClasificacion.tipo_eno_id == tipo_eno_id)
+            count_query = count_query.where(
+                EstrategiaClasificacion.id_enfermedad == tipo_eno_id
+            )
 
         result = await db.execute(count_query)
         total = result.scalar() or 0
@@ -72,7 +76,8 @@ async def list_strategies(
         )
 
         strategy_responses = [
-            EstrategiaClasificacionResponse.from_orm(strategy) for strategy in strategies
+            EstrategiaClasificacionResponse.model_validate(strategy)
+            for strategy in strategies
         ]
 
         # Calcular metadata de paginación

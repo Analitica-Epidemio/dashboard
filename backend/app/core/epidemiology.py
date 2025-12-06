@@ -1,11 +1,14 @@
 """
 Utilidades para cálculos epidemiológicos
 """
+
 from datetime import date, timedelta
 from typing import Dict, Optional, Tuple
 
 
-def calcular_semana_epidemiologica(fecha: date) -> Tuple[int, int]:
+def calcular_semana_epidemiologica(
+    fecha: Optional[date],
+) -> Tuple[Optional[int], Optional[int]]:
     """
     Calcula la semana epidemiológica y el año epidemiológico para una fecha dada.
 
@@ -41,7 +44,9 @@ def calcular_semana_epidemiologica(fecha: date) -> Tuple[int, int]:
         año_anterior = fecha.year - 1
         primer_dia_año_anterior = date(año_anterior, 1, 1)
         dias_hasta_domingo = (6 - primer_dia_año_anterior.weekday()) % 7
-        primer_domingo_anterior = primer_dia_año_anterior + timedelta(days=dias_hasta_domingo)
+        primer_domingo_anterior = primer_dia_año_anterior + timedelta(
+            days=dias_hasta_domingo
+        )
         if primer_domingo_anterior.day > 4:
             primer_domingo_anterior -= timedelta(days=7)
 
@@ -61,10 +66,14 @@ def calcular_semana_epidemiologica(fecha: date) -> Tuple[int, int]:
             # Verificar si el próximo año ya comenzó
             ultimo_dia_año = date(fecha.year, 12, 31)
             dias_hasta_fin = (ultimo_dia_año - fecha).days
-            if dias_hasta_fin < 3:  # Los últimos días pueden pertenecer a la semana 1 del próximo año
+            if (
+                dias_hasta_fin < 3
+            ):  # Los últimos días pueden pertenecer a la semana 1 del próximo año
                 primer_dia_proximo = date(fecha.year + 1, 1, 1)
                 dias_hasta_domingo_proximo = (6 - primer_dia_proximo.weekday()) % 7
-                primer_domingo_proximo = primer_dia_proximo + timedelta(days=dias_hasta_domingo_proximo)
+                primer_domingo_proximo = primer_dia_proximo + timedelta(
+                    days=dias_hasta_domingo_proximo
+                )
                 if primer_domingo_proximo.day > 4:
                     primer_domingo_proximo -= timedelta(days=7)
 
@@ -74,7 +83,9 @@ def calcular_semana_epidemiologica(fecha: date) -> Tuple[int, int]:
         return semana, fecha.year
 
 
-def calcular_edad(fecha_nacimiento: Optional[date], fecha_evento: date) -> Optional[int]:
+def calcular_edad(
+    fecha_nacimiento: Optional[date], fecha_evento: date
+) -> Optional[int]:
     """
     Calcula la edad en años completos entre fecha de nacimiento y fecha del evento.
 
@@ -91,8 +102,10 @@ def calcular_edad(fecha_nacimiento: Optional[date], fecha_evento: date) -> Optio
     edad = fecha_evento.year - fecha_nacimiento.year
 
     # Ajustar si aún no ha cumplido años este año
-    if fecha_evento.month < fecha_nacimiento.month or \
-       (fecha_evento.month == fecha_nacimiento.month and fecha_evento.day < fecha_nacimiento.day):
+    if fecha_evento.month < fecha_nacimiento.month or (
+        fecha_evento.month == fecha_nacimiento.month
+        and fecha_evento.day < fecha_nacimiento.day
+    ):
         edad -= 1
 
     return edad if edad >= 0 else None
@@ -129,7 +142,9 @@ def obtener_fechas_semana_epidemiologica(year: int, week: int) -> Tuple[date, da
     return fecha_inicio, fecha_fin
 
 
-def generar_metadata_semanas(semana_inicio: int, año_inicio: int, semana_fin: int, año_fin: int) -> list[Dict]:
+def generar_metadata_semanas(
+    semana_inicio: int, año_inicio: int, semana_fin: int, año_fin: int
+) -> list[Dict]:
     """
     Genera metadata para un rango de semanas epidemiológicas.
 
@@ -147,13 +162,17 @@ def generar_metadata_semanas(semana_inicio: int, año_inicio: int, semana_fin: i
     # Caso simple: mismo año
     if año_inicio == año_fin:
         for week in range(semana_inicio, semana_fin + 1):
-            start_date, end_date = obtener_fechas_semana_epidemiologica(año_inicio, week)
-            metadata.append({
-                "year": año_inicio,
-                "week": week,
-                "start_date": start_date.strftime("%Y-%m-%d"),
-                "end_date": end_date.strftime("%Y-%m-%d")
-            })
+            start_date, end_date = obtener_fechas_semana_epidemiologica(
+                año_inicio, week
+            )
+            metadata.append(
+                {
+                    "year": año_inicio,
+                    "week": week,
+                    "start_date": start_date.strftime("%Y-%m-%d"),
+                    "end_date": end_date.strftime("%Y-%m-%d"),
+                }
+            )
     else:
         # Múltiples años: desde semana_inicio hasta fin del primer año
         # Determinar última semana del año_inicio
@@ -167,13 +186,17 @@ def generar_metadata_semanas(semana_inicio: int, año_inicio: int, semana_fin: i
 
         # Semanas del primer año
         for week in range(semana_inicio, ultima_semana_año_inicio + 1):
-            start_date, end_date = obtener_fechas_semana_epidemiologica(año_inicio, week)
-            metadata.append({
-                "year": año_inicio,
-                "week": week,
-                "start_date": start_date.strftime("%Y-%m-%d"),
-                "end_date": end_date.strftime("%Y-%m-%d")
-            })
+            start_date, end_date = obtener_fechas_semana_epidemiologica(
+                año_inicio, week
+            )
+            metadata.append(
+                {
+                    "year": año_inicio,
+                    "week": week,
+                    "start_date": start_date.strftime("%Y-%m-%d"),
+                    "end_date": end_date.strftime("%Y-%m-%d"),
+                }
+            )
 
         # Años intermedios completos (si los hay)
         for year in range(año_inicio + 1, año_fin):
@@ -186,21 +209,25 @@ def generar_metadata_semanas(semana_inicio: int, año_inicio: int, semana_fin: i
 
             for week in range(1, ultima_semana + 1):
                 start_date, end_date = obtener_fechas_semana_epidemiologica(year, week)
-                metadata.append({
-                    "year": year,
-                    "week": week,
-                    "start_date": start_date.strftime("%Y-%m-%d"),
-                    "end_date": end_date.strftime("%Y-%m-%d")
-                })
+                metadata.append(
+                    {
+                        "year": year,
+                        "week": week,
+                        "start_date": start_date.strftime("%Y-%m-%d"),
+                        "end_date": end_date.strftime("%Y-%m-%d"),
+                    }
+                )
 
         # Semanas del último año
         for week in range(1, semana_fin + 1):
             start_date, end_date = obtener_fechas_semana_epidemiologica(año_fin, week)
-            metadata.append({
-                "year": año_fin,
-                "week": week,
-                "start_date": start_date.strftime("%Y-%m-%d"),
-                "end_date": end_date.strftime("%Y-%m-%d")
-            })
+            metadata.append(
+                {
+                    "year": año_fin,
+                    "week": week,
+                    "start_date": start_date.strftime("%Y-%m-%d"),
+                    "end_date": end_date.strftime("%Y-%m-%d"),
+                }
+            )
 
     return metadata

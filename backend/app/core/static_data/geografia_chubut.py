@@ -36,30 +36,42 @@ DEPARTAMENTOS_CHUBUT = {
 
 # Departamentos por zona UGD
 UGD_DEPARTAMENTOS_POR_ZONA = {
-    UGD_ZONA_NORESTE: [26077, 26042, 26028, 26063, 26070],  # RAWSON, GAIMAN, FLORENTINO AMEGHINO, MÁRTIRES, PASO DE INDIOS
+    UGD_ZONA_NORESTE: [
+        26077,
+        26042,
+        26028,
+        26063,
+        26070,
+    ],  # RAWSON, GAIMAN, FLORENTINO AMEGHINO, MÁRTIRES, PASO DE INDIOS
     UGD_ZONA_NORTE: [26007, 206105, 26049],  # BIEDMA, TELSEN, GASTRE
     UGD_ZONA_SUR: [26021, 26091, 26084],  # ESCALANTE, SARMIENTO, RÍO SENGUER
-    UGD_ZONA_NOROESTE: [26035, 26014, 26056, 26098],  # FUTALEUFÚ, CUSHAMEN, LANGUIÑEO, TEHUELCHES
+    UGD_ZONA_NOROESTE: [
+        26035,
+        26014,
+        26056,
+        26098,
+    ],  # FUTALEUFÚ, CUSHAMEN, LANGUIÑEO, TEHUELCHES
 }
 
 # Población por departamento (Censo 2022)
 POBLACION_DEPARTAMENTOS = {
-    26007: 103173,   # BIEDMA
-    26014: 28209,    # CUSHAMEN
-    26021: 215453,   # ESCALANTE
-    26028: 1786,     # FLORENTINO AMEGHINO
-    26035: 50316,    # FUTALEUFÚ
-    26042: 12639,    # GAIMAN
-    26049: 1195,     # GASTRE
-    26056: 2884,     # LANGUIÑEO
-    26063: 754,      # MÁRTIRES
-    26070: 1886,     # PASO DE INDIOS
-    26077: 145763,   # RAWSON
-    26084: 6366,     # RÍO SENGUER
-    26091: 14596,    # SARMIENTO
-    26098: 5978,     # TEHUELCHES
-    206105: 1623,    # TELSEN
+    26007: 103173,  # BIEDMA
+    26014: 28209,  # CUSHAMEN
+    26021: 215453,  # ESCALANTE
+    26028: 1786,  # FLORENTINO AMEGHINO
+    26035: 50316,  # FUTALEUFÚ
+    26042: 12639,  # GAIMAN
+    26049: 1195,  # GASTRE
+    26056: 2884,  # LANGUIÑEO
+    26063: 754,  # MÁRTIRES
+    26070: 1886,  # PASO DE INDIOS
+    26077: 145763,  # RAWSON
+    26084: 6366,  # RÍO SENGUER
+    26091: 14596,  # SARMIENTO
+    26098: 5978,  # TEHUELCHES
+    206105: 1623,  # TELSEN
 }
+
 
 # Función helper para obtener la zona UGD de un departamento
 def get_zona_ugd(id_departamento_indec: int) -> str:
@@ -69,10 +81,14 @@ def get_zona_ugd(id_departamento_indec: int) -> str:
             return zona
     return "Sin zona asignada"
 
+
 # Función helper para obtener el nombre del departamento
 def get_nombre_departamento(id_departamento_indec: int) -> str:
     """Obtiene el nombre del departamento desde el código INDEC"""
-    return DEPARTAMENTOS_CHUBUT.get(id_departamento_indec, f"Departamento INDEC {id_departamento_indec}")
+    return DEPARTAMENTOS_CHUBUT.get(
+        id_departamento_indec, f"Departamento INDEC {id_departamento_indec}"
+    )
+
 
 # Función helper para obtener población
 def get_poblacion_departamento(id_departamento_indec: int) -> int:

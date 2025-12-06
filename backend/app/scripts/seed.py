@@ -50,6 +50,7 @@ O desde Make:
 
 TIEMPO ESTIMADO: 5-8 minutos
 """
+
 import os
 import sys
 from pathlib import Path
@@ -147,6 +148,7 @@ def main():
         except Exception as e:
             print(f"⚠️  Error cargando geometrías: {e}")
             import traceback
+
             traceback.print_exc()
 
         # Paso 2: Población del Censo 2022
@@ -241,7 +243,9 @@ def main():
             )
 
             # Crear engine dedicado para este seed (evita problemas de event loop)
-            async_db_url = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
+            async_db_url = DATABASE_URL.replace(
+                "postgresql://", "postgresql+asyncpg://"
+            )
             temp_engine = create_async_engine(async_db_url)
 
             async def seed_agentes_async():
@@ -301,7 +305,9 @@ def main():
             from app.domains.boletines.seeds import seed_boletin_template_config
 
             # Crear engine dedicado para este seed (evita problemas de event loop)
-            async_db_url = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
+            async_db_url = DATABASE_URL.replace(
+                "postgresql://", "postgresql+asyncpg://"
+            )
             temp_engine = create_async_engine(async_db_url)
 
             async def seed_boletin_async():

@@ -97,7 +97,10 @@ router.add_api_route(
     name="get_evento_details",
     summary="Obtiene detalles completos de un evento (para dialog)",
     responses={
-        404: {"model": ErrorResponse, "description": "CasoEpidemiologico no encontrado"},
+        404: {
+            "model": ErrorResponse,
+            "description": "CasoEpidemiologico no encontrado",
+        },
         500: {"model": ErrorResponse, "description": "Error interno del servidor"},
     },
 )

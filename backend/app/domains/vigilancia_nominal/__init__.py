@@ -18,8 +18,8 @@ from app.domains.vigilancia_nominal.models import (
     CasoEpidemiologico,
     CasoGrupoEnfermedad,
     Enfermedad,
-    GrupoDeEnfermedades,
     EnfermedadGrupo,
+    GrupoDeEnfermedades,
 )
 
 __all__ = [

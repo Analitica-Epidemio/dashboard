@@ -50,19 +50,6 @@ router.add_api_route(
     description="Lista establecimientos con conteo de eventos relacionados",
 )
 
-# Endpoint de detalle de establecimiento con sus personas/eventos relacionados
-router.add_api_route(
-    "/{id_establecimiento}",
-    get_establecimiento_detalle,
-    methods=["GET"],
-    response_model=SuccessResponse[EstablecimientoDetalleResponse],
-    summary="Obtener detalle de establecimiento",
-    description="Obtiene detalle completo de un establecimiento con todas las personas/eventos relacionados",
-    responses={
-        404: {"model": ErrorResponse, "description": "Establecimiento no encontrado"},
-        500: {"model": ErrorResponse, "description": "Error interno del servidor"},
-    },
-)
 
 # ============================================================================
 # ENDPOINTS DE MAPEO SNVS → IGN
@@ -148,4 +135,22 @@ router.add_api_route(
     response_model=SuccessResponse[dict],
     summary="Aceptar múltiples sugerencias en bulk",
     description="Crea múltiples mapeos en una sola operación (útil para aceptar sugerencias de alta confianza)",
+)
+
+# ============================================================================
+# ENDPOINT GENÉRICO (DEBE IR AL FINAL)
+# ============================================================================
+
+# Endpoint de detalle de establecimiento con sus personas/eventos relacionados
+router.add_api_route(
+    "/{id_establecimiento}",
+    get_establecimiento_detalle,
+    methods=["GET"],
+    response_model=SuccessResponse[EstablecimientoDetalleResponse],
+    summary="Obtener detalle de establecimiento",
+    description="Obtiene detalle completo de un establecimiento con todas las personas/eventos relacionados",
+    responses={
+        404: {"model": ErrorResponse, "description": "Establecimiento no encontrado"},
+        500: {"model": ErrorResponse, "description": "Error interno del servidor"},
+    },
 )

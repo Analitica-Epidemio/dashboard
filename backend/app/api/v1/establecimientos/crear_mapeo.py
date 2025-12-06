@@ -30,7 +30,7 @@ async def crear_mapeo_snvs_ign(
     if not estab_snvs or estab_snvs.source != "SNVS":
         raise HTTPException(
             status_code=404,
-            detail=f"Establecimiento SNVS con ID {request.id_establecimiento_snvs} no encontrado"
+            detail=f"Establecimiento SNVS con ID {request.id_establecimiento_snvs} no encontrado",
         )
 
     # Obtener establecimiento IGN
@@ -38,20 +38,19 @@ async def crear_mapeo_snvs_ign(
     if not estab_ign or estab_ign.source != "IGN":
         raise HTTPException(
             status_code=404,
-            detail=f"Establecimiento IGN con ID {request.id_establecimiento_ign} no encontrado"
+            detail=f"Establecimiento IGN con ID {request.id_establecimiento_ign} no encontrado",
         )
 
     # Verificar si ya tiene mapeo
     if estab_snvs.codigo_refes:
         raise HTTPException(
             status_code=400,
-            detail=f"El establecimiento SNVS ya tiene un mapeo a REFES {estab_snvs.codigo_refes}. Use PUT para actualizar."
+            detail=f"El establecimiento SNVS ya tiene un mapeo a REFES {estab_snvs.codigo_refes}. Use PUT para actualizar.",
         )
 
     # Calcular metadata del mapeo
     similitud_nombre = calcular_similitud_nombre(
-        estab_snvs.nombre or "",
-        estab_ign.nombre or ""
+        estab_snvs.nombre or "", estab_ign.nombre or ""
     )
 
     # Para mapeos manuales, consideramos los datos geográficos del SNVS
@@ -62,22 +61,16 @@ async def crear_mapeo_snvs_ign(
 
     # Si ambos tienen localidad, verificar match geográfico
     if estab_snvs.id_localidad_indec and estab_ign.id_localidad_indec:
-        localidad_match = (estab_snvs.id_localidad_indec == estab_ign.id_localidad_indec)
+        localidad_match = estab_snvs.id_localidad_indec == estab_ign.id_localidad_indec
 
     score = calcular_score_match(
-        similitud_nombre,
-        provincia_match,
-        departamento_match,
-        localidad_match
+        similitud_nombre, provincia_match, departamento_match, localidad_match
     )
 
     confianza = determinar_confianza(score, similitud_nombre)
 
     razon = request.razon or generar_razon_match(
-        similitud_nombre,
-        provincia_match,
-        departamento_match,
-        localidad_match
+        similitud_nombre, provincia_match, departamento_match, localidad_match
     )
 
     # Copiar datos del IGN al SNVS

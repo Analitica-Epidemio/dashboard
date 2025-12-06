@@ -10,6 +10,7 @@ from fastapi import Depends
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import col
 
 from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
@@ -22,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 class ChartDisponibleItem(BaseModel):
     """Chart disponible para insertar en boletines"""
+
     id: int
     codigo: str
     nombre: str
@@ -32,20 +34,25 @@ class ChartDisponibleItem(BaseModel):
 
 class ChartsDisponiblesResponse(BaseModel):
     """Response con lista de charts disponibles"""
+
     charts: List[ChartDisponibleItem]
     total: int
 
 
 async def get_charts_disponibles(
     db: AsyncSession = Depends(get_async_session),
-    current_user: User | None = RequireAuthOrSignedUrl
+    current_user: User | None = RequireAuthOrSignedUrl,
 ) -> SuccessResponse[ChartsDisponiblesResponse]:
     """
     Obtiene lista de charts disponibles desde BD
     Usado por el selector de charts en el editor de boletines
     """
     # Obtener charts activos de la BD
-    query = select(DashboardChart).where(DashboardChart.activo.is_(True)).order_by(DashboardChart.orden)
+    query = (
+        select(DashboardChart)
+        .where(col(DashboardChart.activo).is_(True))
+        .order_by(col(DashboardChart.orden))
+    )
     result = await db.execute(query)
     charts = result.scalars().all()
 
@@ -59,11 +66,9 @@ async def get_charts_disponibles(
             funcion_procesamiento=chart.funcion_procesamiento,
         )
         for chart in charts
+        if chart.id is not None
     ]
 
-    response = ChartsDisponiblesResponse(
-        charts=charts_items,
-        total=len(charts_items)
-    )
+    response = ChartsDisponiblesResponse(charts=charts_items, total=len(charts_items))
 
     return SuccessResponse(data=response)

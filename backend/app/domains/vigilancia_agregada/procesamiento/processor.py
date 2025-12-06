@@ -7,6 +7,8 @@ TODO: Implementar lógica de procesamiento de datos agregados.
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 
 class AgregadaProcessor:
     """
@@ -15,7 +17,9 @@ class AgregadaProcessor:
     TODO: Implementar lógica específica para datos agregados.
     """
 
-    def __init__(self, session, callback_progreso: Callable[[int, str], None]):
+    def __init__(
+        self, session: AsyncSession, callback_progreso: Callable[[int, str], None]
+    ) -> None:
         self.session = session
         self.callback_progreso = callback_progreso
 
@@ -42,7 +46,7 @@ class AgregadaProcessor:
 
 
 def crear_procesador(
-    session, callback_progreso: Callable[[int, str], None]
+    session: AsyncSession, callback_progreso: Callable[[int, str], None]
 ) -> AgregadaProcessor:
     """
     Factory function para crear el processor.

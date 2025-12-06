@@ -39,14 +39,17 @@ class SaludManager:
 
     # Delegate methods to sub-processors
     def upsert_muestras_eventos(
-        self, df: pl.DataFrame, establecimiento_mapping: Dict[str, int], evento_mapping: Dict[int, int]
+        self,
+        df: pl.DataFrame,
+        establecimiento_mapping: Dict[str, int],
+        evento_mapping: Dict[int, int],
     ) -> BulkOperationResult:
         """Bulk upsert event samples."""
-        return self.muestras.upsert_muestras_eventos(df, establecimiento_mapping, evento_mapping)
+        return self.muestras.upsert_muestras_eventos(
+            df, establecimiento_mapping, evento_mapping
+        )
 
-    def upsert_vacunas_ciudadanos(
-        self, df: pl.DataFrame
-    ) -> BulkOperationResult:
+    def upsert_vacunas_ciudadanos(self, df: pl.DataFrame) -> BulkOperationResult:
         """Bulk upsert citizen vaccines."""
         return self.vacunas.upsert_vacunas_ciudadanos(df)
 

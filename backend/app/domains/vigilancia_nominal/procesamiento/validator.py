@@ -5,8 +5,8 @@ Usa Polars para máximo rendimiento y mínimo uso de memoria.
 """
 
 import logging
-from datetime import datetime
-from typing import Dict
+from datetime import datetime, timezone
+from typing import Any, Dict, List, cast
 
 import polars as pl
 
@@ -37,9 +37,13 @@ class OptimizedDataValidator:
     - 50-70% menos memoria que pandas
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Inicializa el validador sin dependencias externas."""
-        self.reporte_validacion = {"errores": [], "advertencias": [], "estadisticas": {}}
+        self.reporte_validacion: Dict[str, Any] = {
+            "errores": [],
+            "advertencias": [],
+            "estadisticas": {},
+        }
 
     def validar(self, df: pl.DataFrame) -> pl.DataFrame:
         """
@@ -84,11 +88,15 @@ class OptimizedDataValidator:
 
         if criticas_faltantes:
             # DEBUGGING EXHAUSTIVO
-            logger.error(f"📋 Columnas presentes ({len(columnas_df)}): {columnas_df[:20]}...")
-            logger.error(f"❌ Columnas críticas faltantes ({len(criticas_faltantes)}): {criticas_faltantes}")
+            logger.error(
+                f"📋 Columnas presentes ({len(columnas_df)}): {columnas_df[:20]}..."
+            )
+            logger.error(
+                f"❌ Columnas críticas faltantes ({len(criticas_faltantes)}): {criticas_faltantes}"
+            )
 
             mensaje_error = f"Columnas críticas faltantes: {criticas_faltantes}"
-            self.reporte_validacion["errores"].append(
+            cast(List[Dict[str, Any]], self.reporte_validacion["errores"]).append(
                 {
                     "tipo": "columnas_criticas_faltantes",
                     "columnas": criticas_faltantes,
@@ -101,13 +109,15 @@ class OptimizedDataValidator:
         # Verificar que no esté vacío
         if df.height == 0:
             mensaje_error = "DataFrame vacío"
-            self.reporte_validacion["errores"].append(
+            cast(List[Dict[str, Any]], self.reporte_validacion["errores"]).append(
                 {"tipo": "dataframe_vacio", "severidad": "critica"}
             )
 
             raise ValueError(mensaje_error)
 
-        logger.debug(f"Estructura válida: {len(df.columns)} columnas, {df.height} filas")
+        logger.debug(
+            f"Estructura válida: {len(df.columns)} columnas, {df.height} filas"
+        )
 
     def _limpiar_datos_vectorizado(self, df: pl.DataFrame) -> pl.DataFrame:
         """
@@ -161,7 +171,9 @@ class OptimizedDataValidator:
             if "PROVINCIA" in col and df[col].dtype == pl.Utf8:
                 # Usar replace de Polars (más eficiente)
                 exprs_provincia.append(
-                    pl.col(col).replace(PROVINCIA_MAPPING, default=pl.col(col)).alias(col)
+                    pl.col(col)
+                    .replace(PROVINCIA_MAPPING, default=pl.col(col))
+                    .alias(col)
                 )
             else:
                 exprs_provincia.append(pl.col(col))
@@ -171,16 +183,24 @@ class OptimizedDataValidator:
         # 5. Normalizar tipos de documento
         if Columns.TIPO_DOC.name in df.columns:
             mapeo_doc = {k: v.name for k, v in DOCUMENTO_MAPPING.items()}
-            df = df.with_columns([
-                pl.col(Columns.TIPO_DOC.name).replace(mapeo_doc, default=pl.col(Columns.TIPO_DOC.name))
-            ])
+            df = df.with_columns(
+                [
+                    pl.col(Columns.TIPO_DOC.name).replace(
+                        mapeo_doc, default=pl.col(Columns.TIPO_DOC.name)
+                    )
+                ]
+            )
 
         # 6. Normalizar sexo
         if Columns.SEXO.name in df.columns:
             mapeo_sexo = {k: v.name for k, v in SEXO_MAPPING.items()}
-            df = df.with_columns([
-                pl.col(Columns.SEXO.name).replace(mapeo_sexo, default=pl.col(Columns.SEXO.name))
-            ])
+            df = df.with_columns(
+                [
+                    pl.col(Columns.SEXO.name).replace(
+                        mapeo_sexo, default=pl.col(Columns.SEXO.name)
+                    )
+                ]
+            )
 
         logger.debug("Limpieza vectorizada completada")
 
@@ -208,7 +228,11 @@ class OptimizedDataValidator:
 
                 # Convertir a string uppercase y mapear
                 exprs_bool.append(
-                    pl.col(col).cast(pl.Utf8).str.to_uppercase().replace(mapeo_bool).alias(col)
+                    pl.col(col)
+                    .cast(pl.Utf8)
+                    .str.to_uppercase()
+                    .replace(mapeo_bool)
+                    .alias(col)
                 )
             else:
                 exprs_bool.append(pl.col(col))
@@ -230,7 +254,9 @@ class OptimizedDataValidator:
             conteo_duplicados = df[Columns.IDEVENTOCASO.name].n_unique() < df.height
             if conteo_duplicados:
                 duplicados = df.height - df[Columns.IDEVENTOCASO.name].n_unique()
-                self.reporte_validacion["advertencias"].append(
+                cast(
+                    List[Dict[str, Any]], self.reporte_validacion["advertencias"]
+                ).append(
                     {
                         "tipo": "ids_evento_duplicados",
                         "conteo": duplicados,
@@ -243,17 +269,24 @@ class OptimizedDataValidator:
         for col in cols_edad:
             if col in df.columns:
                 conteo_invalido = df.filter(
-                    (pl.col(col) < VALIDATION_LIMITS["min_age"]) |
-                    (pl.col(col) > VALIDATION_LIMITS["max_age"])
+                    (pl.col(col) < VALIDATION_LIMITS["min_age"])
+                    | (pl.col(col) > VALIDATION_LIMITS["max_age"])
                 ).height
 
                 if conteo_invalido > 0:
-                    self.reporte_validacion["advertencias"].append(
-                        {"tipo": "edades_invalidas", "columna": col, "conteo": conteo_invalido}
+                    cast(
+                        List[Dict[str, Any]], self.reporte_validacion["advertencias"]
+                    ).append(
+                        {
+                            "tipo": "edades_invalidas",
+                            "columna": col,
+                            "conteo": conteo_invalido,
+                        }
                     )
 
         # 3. Verificar fechas futuras solo en fechas críticas
         from datetime import datetime as dt
+
         fecha_actual = dt.now()
         cols_fecha_critica = ["FECHA_APERTURA", "FECHA_NACIMIENTO"]
 
@@ -262,8 +295,14 @@ class OptimizedDataValidator:
                 conteo_futuro = df.filter(pl.col(col) > fecha_actual).height
 
                 if conteo_futuro > 0:
-                    self.reporte_validacion["advertencias"].append(
-                        {"tipo": "fechas_futuras", "columna": col, "conteo": conteo_futuro}
+                    cast(
+                        List[Dict[str, Any]], self.reporte_validacion["advertencias"]
+                    ).append(
+                        {
+                            "tipo": "fechas_futuras",
+                            "columna": col,
+                            "conteo": conteo_futuro,
+                        }
                     )
 
         logger.debug("Validación de valores críticos completada")
@@ -276,7 +315,7 @@ class OptimizedDataValidator:
             "filas_removidas": conteo_original - conteo_final,
             "conteo_errores": len(self.reporte_validacion["errores"]),
             "conteo_advertencias": len(self.reporte_validacion["advertencias"]),
-            "tiempo_validacion": datetime.utcnow().isoformat(),
+            "tiempo_validacion": datetime.now(timezone.utc).isoformat(),
         }
 
     def obtener_reporte_validacion(self) -> Dict:

@@ -9,6 +9,7 @@ Poblamos:
 
 El archivo se descarga automáticamente si no existe.
 """
+
 import os
 import sys
 import urllib.request
@@ -119,7 +120,7 @@ def normalizar_nombre(nombre: str) -> str:
     )
 
 
-def seed_poblacion_provincias(session: Session, archivo_path: Path):
+def seed_poblacion_provincias(session: Session, archivo_path: Path) -> None:
     """Carga población de provincias desde Cuadro 1"""
 
     print("\n📊 Cargando población de provincias...")
@@ -159,27 +160,31 @@ def seed_poblacion_provincias(session: Session, archivo_path: Path):
             SET poblacion = :poblacion
             WHERE id_provincia_indec = :codigo
         """)
-        result = session.execute(stmt, {"poblacion": poblacion_total, "codigo": codigo_indec})
+        result = session.execute(
+            stmt, {"poblacion": poblacion_total, "codigo": codigo_indec}
+        )
 
         if result.rowcount > 0:
             updated_count += 1
             print(f"✅ {jurisdiccion}: {poblacion_total:,} habitantes")
         else:
-            print(f"⚠️  Provincia no encontrada en BD: {jurisdiccion} (código {codigo_indec})")
+            print(
+                f"⚠️  Provincia no encontrada en BD: {jurisdiccion} (código {codigo_indec})"
+            )
 
     session.commit()
     print(f"\n✅ Actualizadas {updated_count} provincias")
 
 
-def seed_poblacion_departamentos(session: Session, archivo_path: Path):
+def seed_poblacion_departamentos(session: Session, archivo_path: Path) -> None:
     """Carga población de departamentos desde Cuadros 2.1 a 2.24"""
 
     print("\n📊 Cargando población de departamentos...")
 
     # Mapeo de cuadros a provincias
     cuadros_provincias = {
-        "Cuadro 2.1": 2,   # CABA
-        "Cuadro 2.2": 6,   # Buenos Aires
+        "Cuadro 2.1": 2,  # CABA
+        "Cuadro 2.2": 6,  # Buenos Aires
         "Cuadro 2.3": 10,  # Catamarca
         "Cuadro 2.4": 22,  # Chaco
         "Cuadro 2.5": 26,  # Chubut
@@ -187,21 +192,21 @@ def seed_poblacion_departamentos(session: Session, archivo_path: Path):
         "Cuadro 2.7": 18,  # Corrientes
         "Cuadro 2.8": 30,  # Entre Ríos
         "Cuadro 2.9": 34,  # Formosa
-        "Cuadro 2.10": 38, # Jujuy
-        "Cuadro 2.11": 42, # La Pampa
-        "Cuadro 2.12": 46, # La Rioja
-        "Cuadro 2.13": 50, # Mendoza
-        "Cuadro 2.14": 54, # Misiones
-        "Cuadro 2.15": 58, # Neuquén
-        "Cuadro 2.16": 62, # Río Negro
-        "Cuadro 2.17": 66, # Salta
-        "Cuadro 2.18": 70, # San Juan
-        "Cuadro 2.19": 74, # San Luis
-        "Cuadro 2.20": 78, # Santa Cruz
-        "Cuadro 2.21": 82, # Santa Fe
-        "Cuadro 2.22": 86, # Santiago del Estero
-        "Cuadro 2.23": 94, # Tierra del Fuego
-        "Cuadro 2.24": 90, # Tucumán
+        "Cuadro 2.10": 38,  # Jujuy
+        "Cuadro 2.11": 42,  # La Pampa
+        "Cuadro 2.12": 46,  # La Rioja
+        "Cuadro 2.13": 50,  # Mendoza
+        "Cuadro 2.14": 54,  # Misiones
+        "Cuadro 2.15": 58,  # Neuquén
+        "Cuadro 2.16": 62,  # Río Negro
+        "Cuadro 2.17": 66,  # Salta
+        "Cuadro 2.18": 70,  # San Juan
+        "Cuadro 2.19": 74,  # San Luis
+        "Cuadro 2.20": 78,  # Santa Cruz
+        "Cuadro 2.21": 82,  # Santa Fe
+        "Cuadro 2.22": 86,  # Santiago del Estero
+        "Cuadro 2.23": 94,  # Tierra del Fuego
+        "Cuadro 2.24": 90,  # Tucumán
     }
 
     total_updated = 0
@@ -212,8 +217,12 @@ def seed_poblacion_departamentos(session: Session, archivo_path: Path):
             df = pd.read_excel(archivo_path, sheet_name=cuadro, header=2)
 
             # Obtener nombre de provincia
-            stmt_prov = text("SELECT nombre FROM provincia WHERE id_provincia_indec = :codigo")
-            result_prov = session.execute(stmt_prov, {"codigo": id_provincia_indec}).first()
+            stmt_prov = text(
+                "SELECT nombre FROM provincia WHERE id_provincia_indec = :codigo"
+            )
+            result_prov = session.execute(
+                stmt_prov, {"codigo": id_provincia_indec}
+            ).first()
 
             if not result_prov:
                 print(f"⚠️  Provincia no encontrada: código {id_provincia_indec}")
@@ -242,12 +251,18 @@ def seed_poblacion_departamentos(session: Session, archivo_path: Path):
 
                 # Obtener población (segunda columna = Total)
                 try:
-                    poblacion = int(row["Total (1)"] if "Total (1)" in df.columns else row[df.columns[1]])
+                    poblacion = int(
+                        row["Total (1)"]
+                        if "Total (1)" in df.columns
+                        else row[df.columns[1]]
+                    )
                 except (ValueError, KeyError):
                     continue
 
                 # Limpiar nombre
-                nombre_depto = nombre_depto.replace("Comuna ", "").replace("Partido ", "").strip()
+                nombre_depto = (
+                    nombre_depto.replace("Comuna ", "").replace("Partido ", "").strip()
+                )
                 nombre_norm = normalizar_nombre(nombre_depto)
 
                 # Buscar y actualizar departamento (normalizar ambos lados quitando tildes)
@@ -261,11 +276,14 @@ def seed_poblacion_departamentos(session: Session, archivo_path: Path):
                             'Á', 'A'), 'É', 'E'), 'Í', 'I'), 'Ó', 'O'), 'Ú', 'U'), 'Ñ', 'N')
                         = :nombre_norm
                 """)
-                result = session.execute(stmt_update, {
-                    "poblacion": poblacion,
-                    "id_prov": id_provincia_indec,
-                    "nombre_norm": nombre_norm
-                })
+                result = session.execute(
+                    stmt_update,
+                    {
+                        "poblacion": poblacion,
+                        "id_prov": id_provincia_indec,
+                        "nombre_norm": nombre_norm,
+                    },
+                )
 
                 if result.rowcount > 0:
                     total_updated += 1
@@ -280,28 +298,26 @@ def seed_poblacion_departamentos(session: Session, archivo_path: Path):
 
     session.commit()
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("✅ RESUMEN DEPARTAMENTOS:")
     print(f"   Actualizados: {total_updated}")
     print(f"   No encontrados: {total_not_found}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
 
-def main():
+def main() -> None:
     """Función principal del seed"""
     print("\n🗺️  Seed de Población - Censo 2022...")
 
     # Obtener la URL de la base de datos
     DATABASE_URL = os.getenv(
         "DATABASE_URL",
-        "postgresql://epidemiologia_user:epidemiologia_password@localhost:5432/epidemiologia_db"
+        "postgresql://epidemiologia_user:epidemiologia_password@localhost:5432/epidemiologia_db",
     )
 
     # Cambiar postgresql+asyncpg:// por postgresql:// para usar psycopg2 síncrono
     if "postgresql+asyncpg" in DATABASE_URL:
-        DATABASE_URL = DATABASE_URL.replace(
-            "postgresql+asyncpg://", "postgresql://"
-        )
+        DATABASE_URL = DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://")
 
     # Verificar/descargar archivo del censo
     data_dir = Path(__file__).parent / "data"

@@ -4,10 +4,10 @@ Modelos base para toda la aplicación.
 Proveen funcionalidad común como timestamps, soft delete, y métodos útiles.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
-from sqlalchemy import DateTime, func
+from sqlalchemy import func
 from sqlmodel import Field, SQLModel
 
 
@@ -15,13 +15,11 @@ class TimestampMixin(SQLModel):
     """Mixin para campos de auditoría temporal."""
 
     created_at: datetime = Field(
-        sa_type=DateTime(timezone=True),
         sa_column_kwargs={"server_default": func.now(), "nullable": False},
         description="Fecha y hora de creación del registro",
     )
 
     updated_at: datetime = Field(
-        sa_type=DateTime(timezone=True),
         sa_column_kwargs={
             "server_default": func.now(),
             "onupdate": func.now(),
@@ -36,7 +34,6 @@ class SoftDeleteMixin(SQLModel):
 
     deleted_at: Optional[datetime] = Field(
         default=None,
-        sa_type=DateTime(timezone=True),
         sa_column_kwargs={"nullable": True},
         description="Fecha de borrado lógico",
     )
@@ -52,7 +49,7 @@ class SoftDeleteMixin(SQLModel):
 
     def soft_delete(self) -> None:
         """Marca el registro como eliminado."""
-        self.deleted_at = datetime.utcnow()
+        self.deleted_at = datetime.now(timezone.utc)
         self.is_active = False
 
     def restore(self) -> None:
@@ -85,10 +82,10 @@ class BaseModel(TimestampMixin, SQLModel):
         # Permite campos arbitrarios en JSON
         arbitrary_types_allowed = True
 
-    def dict(self, **kwargs) -> Dict[str, Any]:
+    def model_dump(self, **kwargs: Any) -> Dict[str, Any]:
         """Override para excluir campos None por defecto."""
         kwargs.setdefault("exclude_none", True)
-        return super().dict(**kwargs)
+        return super().model_dump(**kwargs)
 
     def update_from_dict(self, data: Dict[str, Any]) -> None:
         """Actualiza el modelo desde un diccionario."""

@@ -22,7 +22,9 @@ class PaginationMeta(BaseModel):
     page_size: int = Field(..., description="Elementos por página", ge=1, le=100)
     total: int = Field(..., description="Total de elementos", ge=0)
     total_pages: int = Field(..., description="Total de páginas", ge=0)
-    has_next: Optional[bool] = Field(default=None, description="Si hay página siguiente")
+    has_next: Optional[bool] = Field(
+        default=None, description="Si hay página siguiente"
+    )
     has_prev: Optional[bool] = Field(default=None, description="Si hay página anterior")
 
 

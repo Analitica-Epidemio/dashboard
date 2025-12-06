@@ -9,8 +9,10 @@ from app.domains.autenticacion.models import User
 from app.domains.autenticacion.schemas import UserResponse
 
 
-async def get_current_user_info(current_user: User = Depends(get_current_user)) -> UserResponse:
+async def get_current_user_info(
+    current_user: User = Depends(get_current_user),
+) -> UserResponse:
     """
     Get current user information
     """
-    return current_user
+    return UserResponse.model_validate(current_user)

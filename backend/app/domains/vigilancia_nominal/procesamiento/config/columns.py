@@ -7,12 +7,16 @@ Cada columna se define UNA SOLA VEZ con nombre + tipo + si es requerida.
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import List
+from typing import Any
+
+import pandas as pd
 
 # === TIPOS DE DATOS ===
 
+
 class ColumnType(Enum):
     """Tipos de datos para columnas epidemiológicas."""
+
     TEXT = "text"
     NUMERIC = "numeric"  # Usará Int64 (nullable integer) en pandas
     DATE = "date"
@@ -30,6 +34,7 @@ class Column:
         Columns.IDEVENTOCASO.type      # ✅ Obtener tipo
         Columns.IDEVENTOCASO.required  # ✅ Saber si es requerida
     """
+
     name: str
     type: ColumnType
     required: bool = False
@@ -37,6 +42,7 @@ class Column:
 
 # === DEFINICIÓN ÚNICA DE COLUMNAS ===
 # FUENTE ÚNICA DE VERDAD - Todo se deriva de esta clase
+
 
 class Columns:
     """
@@ -72,15 +78,21 @@ class Columns:
     ID_SNVS_INTERPRET_USR = Column("ID_SNVS_INTERPRET_USR", ColumnType.NUMERIC)
     ID_SNVS_VIAJE_EPIDEMIO = Column("ID_SNVS_VIAJE_EPIDEMIO", ColumnType.NUMERIC)
     ID_SNVS_SIGNO_SINTOMA = Column("ID_SNVS_SIGNO_SINTOMA", ColumnType.NUMERIC)
-    ID_SNVS_ANTECEDENTE_EPIDEMIO = Column("ID_SNVS_ANTECEDENTE_EPIDEMIO", ColumnType.NUMERIC)
+    ID_SNVS_ANTECEDENTE_EPIDEMIO = Column(
+        "ID_SNVS_ANTECEDENTE_EPIDEMIO", ColumnType.NUMERIC
+    )
     ID_SNVS_VACUNA = Column("ID_SNVS_VACUNA", ColumnType.NUMERIC)
 
     # === Clasificación (crítico) ===
     EVENTO = Column("EVENTO", ColumnType.CATEGORICAL, required=True)
     GRUPO_EVENTO = Column("GRUPO_EVENTO", ColumnType.CATEGORICAL)
     TIPO_EVENTO = Column("TIPO_EVENTO", ColumnType.CATEGORICAL)
-    CLASIFICACION_MANUAL = Column("CLASIFICACION_MANUAL", ColumnType.CATEGORICAL, required=True)
-    CLASIFICACION_AUTOMATICA = Column("CLASIFICACION_AUTOMATICA", ColumnType.CATEGORICAL)
+    CLASIFICACION_MANUAL = Column(
+        "CLASIFICACION_MANUAL", ColumnType.CATEGORICAL, required=True
+    )
+    CLASIFICACION_AUTOMATICA = Column(
+        "CLASIFICACION_AUTOMATICA", ColumnType.CATEGORICAL
+    )
     CLASIFICACION_ALGORITMO = Column("CLASIFICACION_ALGORITMO", ColumnType.CATEGORICAL)
     USER_CENTINELA = Column("USER_CENTINELA", ColumnType.TEXT)
     EVENTO_CENTINELA = Column("EVENTO_CENTINELA", ColumnType.BOOLEAN)
@@ -128,14 +140,20 @@ class Columns:
     ID_LOC_INDEC_RESIDENCIA = Column("ID_LOC_INDEC_RESIDENCIA", ColumnType.NUMERIC)
     LOCALIDAD_RESIDENCIA = Column("LOCALIDAD_RESIDENCIA", ColumnType.TEXT)
     CALLE_DOMICILIO = Column("CALLE_DOMICILIO", ColumnType.TEXT)
-    NUMERO_DOMICILIO = Column("NUMERO_DOMICILIO", ColumnType.TEXT)  # TEXT porque puede tener "S/N", "123 A", etc
+    NUMERO_DOMICILIO = Column(
+        "NUMERO_DOMICILIO", ColumnType.TEXT
+    )  # TEXT porque puede tener "S/N", "123 A", etc
 
     # === Ubicación intervención ===
     PROVINCIA_INTERVIENEN = Column("PROVINCIA_INTERVIENEN", ColumnType.TEXT)
-    REGION_SANITARIA_INTERVIENEN = Column("REGION_SANITARIA_INTERVIENEN", ColumnType.TEXT)
+    REGION_SANITARIA_INTERVIENEN = Column(
+        "REGION_SANITARIA_INTERVIENEN", ColumnType.TEXT
+    )
     DEPARTAMENTO_INTERVIENEN = Column("DEPARTAMENTO_INTERVIENEN", ColumnType.TEXT)
     LOCALIDAD_INTERVIENEN = Column("LOCALIDAD_INTERVIENEN", ColumnType.TEXT)
-    ESTABLECIMIENTOS_INTERVIENEN = Column("ESTABLECIMIENTOS_INTERVIENEN", ColumnType.TEXT)
+    ESTABLECIMIENTOS_INTERVIENEN = Column(
+        "ESTABLECIMIENTOS_INTERVIENEN", ColumnType.TEXT
+    )
 
     # === Ámbitos y lugares de ocurrencia ===
     TIPO_LUGAR_OCURRENCIA = Column("TIPO_LUGAR_OCURRENCIA", ColumnType.TEXT)
@@ -174,7 +192,9 @@ class Columns:
     # === Muestras ===
     MUESTRA = Column("MUESTRA", ColumnType.CATEGORICAL)
     FTM = Column("FTM", ColumnType.DATE)  # Fecha Toma Muestra
-    ID_ESTABLECIMIENTO_MUESTRA = Column("ID_ESTABLECIMIENTO_MUESTRA", ColumnType.NUMERIC)
+    ID_ESTABLECIMIENTO_MUESTRA = Column(
+        "ID_ESTABLECIMIENTO_MUESTRA", ColumnType.NUMERIC
+    )
     ESTABLECIMIENTO_MUESTRA = Column("ESTABLECIMIENTO_MUESTRA", ColumnType.TEXT)
     ID_PROV_INDEC_MUESTRA = Column("ID_PROV_INDEC_MUESTRA", ColumnType.NUMERIC)
     ID_PROVINCIA_MUESTRA = Column("ID_PROVINCIA_MUESTRA", ColumnType.NUMERIC)
@@ -212,7 +232,9 @@ class Columns:
     DEPARTAMENTO_EPI = Column("DEPARTAMENTO_EPI", ColumnType.TEXT)
     ID_LOC_INDEC_EPI = Column("ID_LOC_INDEC_EPI", ColumnType.NUMERIC)
     LOCALIDAD_EPI = Column("LOCALIDAD_EPI", ColumnType.TEXT)
-    ID_ORIGEN = Column("ID_ORIGEN", ColumnType.NUMERIC)  # ID del establecimiento de epidemiología/origen
+    ID_ORIGEN = Column(
+        "ID_ORIGEN", ColumnType.NUMERIC
+    )  # ID del establecimiento de epidemiología/origen
 
     # === Establecimiento Carga ===
     ESTABLECIMIENTO_CARGA = Column("ESTABLECIMIENTO_CARGA", ColumnType.TEXT)
@@ -241,7 +263,9 @@ class Columns:
     TIPO_Y_LUGAR_INVESTIGACION = Column("TIPO_Y_LUGAR_INVESTIGACION", ColumnType.TEXT)
     CONTACTO_CON_CONFIR = Column("CONTACTO_CON_CONFIR", ColumnType.BOOLEAN)
     CONTACTO_CON_SOSPECHOSO = Column("CONTACTO_CON_SOSPECHOSO", ColumnType.BOOLEAN)
-    CONTACTOS_RELEVADOS_CONTACTOS_DETECTADOS = Column("CONTACTOS_RELEVADOS_CONTACTOS_DETECTADOS", ColumnType.NUMERIC)
+    CONTACTOS_RELEVADOS_CONTACTOS_DETECTADOS = Column(
+        "CONTACTOS_RELEVADOS_CONTACTOS_DETECTADOS", ColumnType.NUMERIC
+    )
     CONTACTOS_MENORES_1 = Column("CONTACTOS_MENORES_1", ColumnType.NUMERIC)
     CONTACTO_EMBARAZADAS = Column("CONTACTO_EMBARAZADAS", ColumnType.NUMERIC)
     CONTACTOS_VACUNADOS = Column("CONTACTOS_VACUNADOS", ColumnType.NUMERIC)
@@ -276,7 +300,9 @@ class Columns:
     VALOR = Column("VALOR", ColumnType.NUMERIC)
     ORIGEN_FINANCIAMIENTO = Column("ORIGEN_FINANCIAMIENTO", ColumnType.TEXT)
     PUEBLO_INDIGENA = Column("PUEBLO_INDIGENA", ColumnType.BOOLEAN)
-    SE_DECLARA_PUEBLO_INDIGENA = Column("SE_DECLARA_PUEBLO_INDIGENA", ColumnType.BOOLEAN)
+    SE_DECLARA_PUEBLO_INDIGENA = Column(
+        "SE_DECLARA_PUEBLO_INDIGENA", ColumnType.BOOLEAN
+    )
     ETNIA = Column("ETNIA", ColumnType.TEXT)
     BARRIO_POPULAR = Column("BARRIO_POPULAR", ColumnType.BOOLEAN)
     CENTINELA = Column("CENTINELA", ColumnType.BOOLEAN)
@@ -287,31 +313,32 @@ class Columns:
 
 # === FUNCIONES DE UTILIDAD (derivadas automáticamente) ===
 
-def _get_all_columns() -> List[Column]:
+
+def _get_all_columns() -> list[Column]:
     """Obtiene todas las columnas definidas en la clase Columns."""
     return [
         getattr(Columns, attr)
         for attr in dir(Columns)
-        if not attr.startswith('_') and isinstance(getattr(Columns, attr), Column)
+        if not attr.startswith("_") and isinstance(getattr(Columns, attr), Column)
     ]
 
 
-def get_column_names() -> List[str]:
+def get_column_names() -> list[str]:
     """Retorna lista de nombres de todas las columnas."""
     return [col.name for col in _get_all_columns()]
 
 
-def get_required_columns() -> List[str]:
+def get_required_columns() -> list[str]:
     """Retorna lista de nombres de columnas requeridas."""
     return [col.name for col in _get_all_columns() if col.required]
 
 
-def get_columns_by_type(column_type: ColumnType) -> List[str]:
+def get_columns_by_type(column_type: ColumnType) -> list[str]:
     """Retorna nombres de columnas por tipo."""
     return [col.name for col in _get_all_columns() if col.type == column_type]
 
 
-def validate_dataframe(df) -> dict:
+def validate_dataframe(df: pd.DataFrame) -> dict[str, Any]:
     """
     Valida que el DataFrame tenga las columnas requeridas.
 

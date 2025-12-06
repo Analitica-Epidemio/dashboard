@@ -16,8 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 async def get_job_status_endpoint(
-    job_id: str,
-    current_user: User = Depends(RequireAnyRole())
+    job_id: str, current_user: User = Depends(RequireAnyRole())
 ) -> SuccessResponse[JobStatusResponse]:
     """Get current status of a processing job."""
     logger.info(f"Getting status for job: {job_id}")
@@ -27,9 +26,10 @@ async def get_job_status_endpoint(
     if not job_status:
         logger.warning(f"Job not found: {job_id}")
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Job {job_id} no encontrado"
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Job {job_id} no encontrado"
         )
 
-    logger.info(f"Job {job_id} status: {job_status.status}, progress: {job_status.progress_percentage}%")
+    logger.info(
+        f"Job {job_id} status: {job_status.status}, progress: {job_status.progress_percentage}%"
+    )
     return SuccessResponse(data=job_status)

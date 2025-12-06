@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 async def logout(
     token_data=Depends(get_current_user_token),
-    auth_service: AuthService = Depends(get_auth_service)
+    auth_service: AuthService = Depends(get_auth_service),
 ):
     """
     Logout current session

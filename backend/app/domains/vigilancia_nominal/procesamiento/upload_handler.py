@@ -43,7 +43,9 @@ class NominalUploadHandler:
             Job creado y lanzado
         """
         tamano_archivo = getattr(archivo, "size", 0)
-        logger.info(f"Procesando nominal: {nombre_archivo} ({tamano_archivo / 1024 / 1024:.1f} MB)")
+        logger.info(
+            f"Procesando nominal: {nombre_archivo} ({tamano_archivo / 1024 / 1024:.1f} MB)"
+        )
 
         # Validar archivo
         await file_validator.validar_planilla(archivo)
@@ -66,6 +68,7 @@ class NominalUploadHandler:
         job.set_input("ruta_archivo", str(ruta_archivo))
 
         from app.domains.jobs.repositories import job_repository
+
         await job_repository.update(job)
 
         # Lanzar job

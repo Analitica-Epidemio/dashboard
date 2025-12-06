@@ -6,7 +6,25 @@ Este módulo contiene lógica para detectar automáticamente el tipo de sujeto
 """
 
 import re
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, TypedDict
+
+
+class ClasificacionTaxonomica(TypedDict):
+    genero: Optional[str]
+    especie: Optional[str]
+    nombre_completo: str
+
+
+class InfoAnimal(TypedDict):
+    especie: Optional[str]
+    subespecie: Optional[str]
+    ubicacion: Optional[str]
+    info_adicional: List[str]
+    clasificacion_taxonomica: Dict[
+        str, Optional[str]
+    ]  # Usamos Dict simple para evitar anidamiento complejo si no es necesario, o ClasificacionTaxonomica si lo es.
+    # Mejor usemos ClasificacionTaxonomica con total=False si fuera necesario, pero aquí parece que siempre se inicializa vacía.
+    # Simplifiquemos: clasificacion_taxonomica puede estar vacía.
 
 
 class TipoSujetoDetector:
@@ -19,7 +37,7 @@ class TipoSujetoDetector:
     NO hardcodea especies específicas, detecta patrones.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Patrones para detectar nomenclatura científica/taxonómica
         self.taxonomia_patterns = [
             r"NO HEMATOFAGO",  # Término técnico específico
@@ -29,7 +47,11 @@ class TipoSujetoDetector:
             r"MACROTUS|CHILOENSIS|BRASILIENSIS|MAGELLANICUS|TADARIDA|HISTIOTUS|MONTANUS",  # Sufijos científicos comunes
         ]
 
-    def detectar(self, row: Dict[str, Any]) -> Tuple[str, float, Dict[str, Any]]:
+    def detectar(
+        self, row: Dict[str, Any]
+    ) -> Tuple[
+        str, float, Dict[str, Any]
+    ]:  # Keep generic Dict return for now as it mixes Human/Animal/Indet metadata
         """
         Detecta el tipo de sujeto y extrae metadata.
 
@@ -166,11 +188,11 @@ class TipoSujetoDetector:
         else:
             return ("indeterminado", max(humano_score, animal_score))
 
-    def _extraer_info_animal(self, nombre: str, apellido: str) -> Dict[str, Any]:
+    def _extraer_info_animal(self, nombre: str, apellido: str) -> InfoAnimal:
         """
         Extrae información del animal de manera inteligente.
         """
-        info = {
+        info: InfoAnimal = {
             "especie": None,
             "subespecie": None,
             "ubicacion": None,
@@ -288,7 +310,7 @@ class MetadataExtractor:
     usando la lógica existente de regex pero de manera más estructurada.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Patrón de regex existente para fuente de contagio en rabia
         self.fuente_contagio_pattern = r"zorro|murci[ée]lago|muercielago|gato|perro|tadarida|lasiurus|histiotus|myotis"
 

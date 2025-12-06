@@ -40,7 +40,7 @@ class TempFileStorage:
         Returns:
             Path al archivo guardado
         """
-        ext_original = Path(archivo.filename).suffix.lower() if archivo.filename else ''
+        ext_original = Path(archivo.filename).suffix.lower() if archivo.filename else ""
 
         if sufijo:
             sufijo_limpio = "".join(

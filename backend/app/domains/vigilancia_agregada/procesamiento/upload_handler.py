@@ -74,6 +74,7 @@ class AgregadaUploadHandler:
         job.set_input("ruta_archivo", str(ruta_archivo))
 
         from app.domains.jobs.repositories import job_repository
+
         await job_repository.update(job)
 
         # Lanzar job

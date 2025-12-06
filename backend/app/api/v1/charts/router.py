@@ -13,25 +13,13 @@ from .get_indicadores import get_indicadores
 router = APIRouter(prefix="/charts", tags=["Charts"])
 
 # Get dashboard charts endpoint (migrado a UniversalChartSpec)
-router.add_api_route(
-    "/dashboard",
-    get_dashboard_charts,
-    methods=["GET"]
-)
+router.add_api_route("/dashboard", get_dashboard_charts, methods=["GET"])
 
 # Get available charts for boletin selector
-router.add_api_route(
-    "/disponibles",
-    get_charts_disponibles,
-    methods=["GET"]
-)
+router.add_api_route("/disponibles", get_charts_disponibles, methods=["GET"])
 
 # Get indicadores/metrics endpoint
-router.add_api_route(
-    "/indicadores",
-    get_indicadores,
-    methods=["GET"]
-)
+router.add_api_route("/indicadores", get_indicadores, methods=["GET"])
 
 # Include chart spec router (universal chart specification)
 router.include_router(chart_spec_router)

@@ -70,9 +70,7 @@ def crear_template_contenido_estatico() -> dict[str, Any]:
             {
                 "type": "heading",
                 "attrs": {"level": 1},
-                "content": [
-                    {"type": "text", "text": "Boletín Epidemiológico Semanal"}
-                ],
+                "content": [{"type": "text", "text": "Boletín Epidemiológico Semanal"}],
             },
             {
                 "type": "paragraph",
@@ -106,7 +104,6 @@ def crear_template_contenido_estatico() -> dict[str, Any]:
                 ],
             },
             {"type": "horizontalRule"},
-
             # =================================================================
             # 4. TABLA N°1: ENOs MAS FRECUENTES
             # =================================================================
@@ -114,7 +111,10 @@ def crear_template_contenido_estatico() -> dict[str, Any]:
                 "type": "heading",
                 "attrs": {"level": 2},
                 "content": [
-                    {"type": "text", "text": "CasoEpidemiologicos de Notificación Obligatoria (ENOs)"}
+                    {
+                        "type": "text",
+                        "text": "CasoEpidemiologicos de Notificación Obligatoria (ENOs)",
+                    }
                 ],
             },
             {
@@ -140,7 +140,6 @@ def crear_template_contenido_estatico() -> dict[str, Any]:
                 },
             },
             {"type": "horizontalRule"},
-
             # =================================================================
             # 5-6. VIGILANCIA DE INFECCIONES RESPIRATORIAS AGUDAS
             # =================================================================
@@ -148,10 +147,12 @@ def crear_template_contenido_estatico() -> dict[str, Any]:
                 "type": "heading",
                 "attrs": {"level": 2},
                 "content": [
-                    {"type": "text", "text": "Vigilancia de Infecciones Respiratorias Agudas"}
+                    {
+                        "type": "text",
+                        "text": "Vigilancia de Infecciones Respiratorias Agudas",
+                    }
                 ],
             },
-
             # -----------------------------------------------------------------
             # ENFERMEDAD TIPO INFLUENZA (ETI) - Grafico N°1
             # -----------------------------------------------------------------
@@ -180,7 +181,6 @@ def crear_template_contenido_estatico() -> dict[str, Any]:
                     },
                 },
             },
-
             # -----------------------------------------------------------------
             # NEUMONIA - Grafico N°2
             # -----------------------------------------------------------------
@@ -208,7 +208,6 @@ def crear_template_contenido_estatico() -> dict[str, Any]:
                 },
             },
             {"type": "horizontalRule"},
-
             # =================================================================
             # 7. BRONQUIOLITIS
             # =================================================================
@@ -217,7 +216,6 @@ def crear_template_contenido_estatico() -> dict[str, Any]:
                 "attrs": {"level": 2},
                 "content": [{"type": "text", "text": "Bronquiolitis"}],
             },
-
             # -----------------------------------------------------------------
             # Grafico N°3: Corredor endemico Bronquiolitis
             # -----------------------------------------------------------------
@@ -239,7 +237,6 @@ def crear_template_contenido_estatico() -> dict[str, Any]:
                     },
                 },
             },
-
             # -----------------------------------------------------------------
             # Grafico N°4: ETI, Neumonia y Bronquiolitis por grupo etario
             # LABELS EXACTOS del PDF: "Bronquiolitis", "Enfermedad tipo influenza (ETI)", "Neumonia"
@@ -264,15 +261,26 @@ def crear_template_contenido_estatico() -> dict[str, Any]:
                         # Cada serie puede agrupar múltiples códigos bajo un label
                         # "valores" se interpreta según "agrupar_por" del queryParams
                         "series": [
-                            {"label": "Bronquiolitis", "color": "#F44336", "valores": ["bronquiolitis"]},
-                            {"label": "Enfermedad tipo influenza (ETI)", "color": "#2196F3", "valores": ["eti"]},
-                            {"label": "Neumonía", "color": "#FF9800", "valores": ["neumonia"]},
+                            {
+                                "label": "Bronquiolitis",
+                                "color": "#F44336",
+                                "valores": ["bronquiolitis"],
+                            },
+                            {
+                                "label": "Enfermedad tipo influenza (ETI)",
+                                "color": "#2196F3",
+                                "valores": ["eti"],
+                            },
+                            {
+                                "label": "Neumonía",
+                                "color": "#FF9800",
+                                "valores": ["neumonia"],
+                            },
                         ],
                     },
                 },
             },
             {"type": "horizontalRule"},
-
             # =================================================================
             # 8. VIGILANCIA DE VIRUS RESPIRATORIOS EN INTERNADOS
             # =================================================================
@@ -280,10 +288,12 @@ def crear_template_contenido_estatico() -> dict[str, Any]:
                 "type": "heading",
                 "attrs": {"level": 2},
                 "content": [
-                    {"type": "text", "text": "Vigilancia de Virus Respiratorios en Internados y/o Fallecidos por IRA"}
+                    {
+                        "type": "text",
+                        "text": "Vigilancia de Virus Respiratorios en Internados y/o Fallecidos por IRA",
+                    }
                 ],
             },
-
             # -----------------------------------------------------------------
             # Grafico N°5: Internados por IRA segun agente viral por SE
             # LABELS EXACTOS: VSR, Metaneumovirus, Influenza A, Adenovirus, SARS-CoV-2
@@ -318,15 +328,30 @@ def crear_template_contenido_estatico() -> dict[str, Any]:
                         # Permite agrupar múltiples agentes bajo un label (ej: influenza-a-h1n1 + h3n2 = "Influenza A")
                         "series": [
                             {"label": "VSR", "color": "#2196F3", "valores": ["vsr"]},
-                            {"label": "Metaneumovirus", "color": "#9C27B0", "valores": ["metaneumovirus"]},
-                            {"label": "Influenza A", "color": "#F44336", "valores": ["influenza-a"]},
-                            {"label": "Adenovirus", "color": "#4CAF50", "valores": ["adenovirus-respiratorio"]},
-                            {"label": "SARS-CoV-2", "color": "#FF9800", "valores": ["sars-cov-2"]},
+                            {
+                                "label": "Metaneumovirus",
+                                "color": "#9C27B0",
+                                "valores": ["metaneumovirus"],
+                            },
+                            {
+                                "label": "Influenza A",
+                                "color": "#F44336",
+                                "valores": ["influenza-a"],
+                            },
+                            {
+                                "label": "Adenovirus",
+                                "color": "#4CAF50",
+                                "valores": ["adenovirus-respiratorio"],
+                            },
+                            {
+                                "label": "SARS-CoV-2",
+                                "color": "#FF9800",
+                                "valores": ["sars-cov-2"],
+                            },
                         ],
                     },
                 },
             },
-
             # -----------------------------------------------------------------
             # Grafico N°6: Internados por IRA segun agente viral por grupo etario
             # -----------------------------------------------------------------
@@ -357,17 +382,32 @@ def crear_template_contenido_estatico() -> dict[str, Any]:
                         "chart_type": "stacked_bar",
                         "show_legend": True,
                         "series": [
-                            {"label": "SARS-CoV-2", "color": "#FF9800", "valores": ["sars-cov-2"]},
-                            {"label": "Adenovirus", "color": "#4CAF50", "valores": ["adenovirus-respiratorio"]},
-                            {"label": "Influenza A", "color": "#F44336", "valores": ["influenza-a"]},
-                            {"label": "Metaneumovirus", "color": "#9C27B0", "valores": ["metaneumovirus"]},
+                            {
+                                "label": "SARS-CoV-2",
+                                "color": "#FF9800",
+                                "valores": ["sars-cov-2"],
+                            },
+                            {
+                                "label": "Adenovirus",
+                                "color": "#4CAF50",
+                                "valores": ["adenovirus-respiratorio"],
+                            },
+                            {
+                                "label": "Influenza A",
+                                "color": "#F44336",
+                                "valores": ["influenza-a"],
+                            },
+                            {
+                                "label": "Metaneumovirus",
+                                "color": "#9C27B0",
+                                "valores": ["metaneumovirus"],
+                            },
                             {"label": "VSR", "color": "#2196F3", "valores": ["vsr"]},
                         ],
                     },
                 },
             },
             {"type": "horizontalRule"},
-
             # =================================================================
             # 9. INTOXICACION POR MONOXIDO DE CARBONO (CO)
             # =================================================================
@@ -375,10 +415,12 @@ def crear_template_contenido_estatico() -> dict[str, Any]:
                 "type": "heading",
                 "attrs": {"level": 2},
                 "content": [
-                    {"type": "text", "text": "Intoxicación por Monóxido de Carbono (CO)"}
+                    {
+                        "type": "text",
+                        "text": "Intoxicación por Monóxido de Carbono (CO)",
+                    }
                 ],
             },
-
             # -----------------------------------------------------------------
             # Grafico N°7: Casos por UGD comparando años
             # -----------------------------------------------------------------
@@ -399,7 +441,6 @@ def crear_template_contenido_estatico() -> dict[str, Any]:
                 },
             },
             {"type": "horizontalRule"},
-
             # =================================================================
             # 10. VIGILANCIA DE DIARREAS
             # =================================================================
@@ -408,7 +449,6 @@ def crear_template_contenido_estatico() -> dict[str, Any]:
                 "attrs": {"level": 2},
                 "content": [{"type": "text", "text": "Vigilancia de Diarrea"}],
             },
-
             # -----------------------------------------------------------------
             # Grafico N°8: Corredor endemico Diarrea
             # -----------------------------------------------------------------
@@ -430,7 +470,6 @@ def crear_template_contenido_estatico() -> dict[str, Any]:
                     },
                 },
             },
-
             # -----------------------------------------------------------------
             # Grafico N°9: Agentes etiologicos en Diarreas por SE
             # LABELS EXACTOS: Rotavirus (DV), Salmonella spp., Shigella flexneri,
@@ -440,7 +479,10 @@ def crear_template_contenido_estatico() -> dict[str, Any]:
                 "type": "heading",
                 "attrs": {"level": 3},
                 "content": [
-                    {"type": "text", "text": "Casos de Diarrea Aguda según Agente Etiológico"}
+                    {
+                        "type": "text",
+                        "text": "Casos de Diarrea Aguda según Agente Etiológico",
+                    }
                 ],
             },
             {
@@ -471,19 +513,46 @@ def crear_template_contenido_estatico() -> dict[str, Any]:
                         "chart_type": "stacked_bar",
                         "show_legend": True,
                         "series": [
-                            {"label": "Rotavirus (DV)", "color": "#2196F3", "valores": ["rotavirus"]},
-                            {"label": "Salmonella spp.", "color": "#FF9800", "valores": ["salmonella-spp"]},
-                            {"label": "Shigella flexneri", "color": "#9C27B0", "valores": ["shigella-flexneri"]},
-                            {"label": "Shigella sonnei", "color": "#F44336", "valores": ["shigella-sonnei"]},
-                            {"label": "Shigella spp.", "color": "#E91E63", "valores": ["shigella-spp"]},
-                            {"label": "STEC O157", "color": "#795548", "valores": ["stec-o157"]},
-                            {"label": "Adenovirus (DV)", "color": "#4CAF50", "valores": ["adenovirus-enterico"]},
+                            {
+                                "label": "Rotavirus (DV)",
+                                "color": "#2196F3",
+                                "valores": ["rotavirus"],
+                            },
+                            {
+                                "label": "Salmonella spp.",
+                                "color": "#FF9800",
+                                "valores": ["salmonella-spp"],
+                            },
+                            {
+                                "label": "Shigella flexneri",
+                                "color": "#9C27B0",
+                                "valores": ["shigella-flexneri"],
+                            },
+                            {
+                                "label": "Shigella sonnei",
+                                "color": "#F44336",
+                                "valores": ["shigella-sonnei"],
+                            },
+                            {
+                                "label": "Shigella spp.",
+                                "color": "#E91E63",
+                                "valores": ["shigella-spp"],
+                            },
+                            {
+                                "label": "STEC O157",
+                                "color": "#795548",
+                                "valores": ["stec-o157"],
+                            },
+                            {
+                                "label": "Adenovirus (DV)",
+                                "color": "#4CAF50",
+                                "valores": ["adenovirus-enterico"],
+                            },
                         ],
                     },
                 },
             },
             {"type": "horizontalRule"},
-
             # =================================================================
             # 11. SINDROME UREMICO HEMOLITICO (SUH)
             # =================================================================
@@ -494,7 +563,6 @@ def crear_template_contenido_estatico() -> dict[str, Any]:
                     {"type": "text", "text": "Síndrome Urémico Hemolítico (SUH)"}
                 ],
             },
-
             # -----------------------------------------------------------------
             # Grafico N°10: Distribucion de casos por año
             # -----------------------------------------------------------------
@@ -514,7 +582,6 @@ def crear_template_contenido_estatico() -> dict[str, Any]:
                     },
                 },
             },
-
             # -----------------------------------------------------------------
             # Corredor endemico SUH
             # -----------------------------------------------------------------
@@ -537,7 +604,6 @@ def crear_template_contenido_estatico() -> dict[str, Any]:
                 },
             },
             {"type": "horizontalRule"},
-
             # =================================================================
             # PLACEHOLDER PARA EVENTOS SELECCIONADOS (LOOP DE EVENTOS)
             # Este es el unico agregado respecto al PDF de referencia
@@ -546,7 +612,10 @@ def crear_template_contenido_estatico() -> dict[str, Any]:
                 "type": "heading",
                 "attrs": {"level": 2},
                 "content": [
-                    {"type": "text", "text": "Análisis por CasoEpidemiologico Seleccionado"}
+                    {
+                        "type": "text",
+                        "text": "Análisis por CasoEpidemiologico Seleccionado",
+                    }
                 ],
             },
             {
@@ -564,7 +633,6 @@ def crear_template_contenido_estatico() -> dict[str, Any]:
                 "attrs": {},
             },
             {"type": "horizontalRule"},
-
             # =================================================================
             # 12. ANEXOS
             # =================================================================
@@ -592,7 +660,6 @@ def crear_template_contenido_estatico() -> dict[str, Any]:
                 ],
             },
             {"type": "horizontalRule"},
-
             # =================================================================
             # 13. METODOLOGIA
             # =================================================================
@@ -623,7 +690,6 @@ def crear_template_contenido_estatico() -> dict[str, Any]:
                 ],
             },
             {"type": "horizontalRule"},
-
             # =================================================================
             # 14. MATERIAL DE CONSULTA
             # =================================================================

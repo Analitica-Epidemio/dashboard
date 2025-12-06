@@ -69,7 +69,9 @@ def conectar_db() -> Session:
     return Session(engine)
 
 
-def obtener_top_establecimientos(conn, limit: int = 200) -> List[Establecimiento]:
+def obtener_top_establecimientos(
+    conn: Session, limit: int = 200
+) -> List[Establecimiento]:
     """
     Obtiene los top N establecimientos ordenados por total de eventos.
 
@@ -167,31 +169,42 @@ def obtener_top_establecimientos(conn, limit: int = 200) -> List[Establecimiento
     # Convertir Row a dict
     establecimientos = []
     for row in rows:
-        estab_dict = {
-            "id": row.id,
-            "nombre": row.nombre,
-            "source": row.source,
-            "codigo_refes": row.codigo_refes,
-            "codigo_snvs": row.codigo_snvs,
-            "localidad_nombre": row.localidad_nombre,
-            "departamento_nombre": row.departamento_nombre,
-            "provincia_nombre": row.provincia_nombre,
-            "latitud": row.latitud,
-            "longitud": row.longitud,
-            "eventos_consulta": row.eventos_consulta,
-            "eventos_notificacion": row.eventos_notificacion,
-            "eventos_carga": row.eventos_carga,
-            "eventos_muestra": row.eventos_muestra,
-            "eventos_diagnostico": row.eventos_diagnostico,
-            "eventos_tratamiento": row.eventos_tratamiento,
-            "total_eventos": row.total_eventos
-        }
-        establecimientos.append(Establecimiento(**estab_dict))
+        establecimientos.append(
+            Establecimiento(
+                id=int(row.id),
+                nombre=str(row.nombre),
+                source=str(row.source),
+                codigo_refes=str(row.codigo_refes)
+                if row.codigo_refes is not None
+                else None,
+                codigo_snvs=str(row.codigo_snvs)
+                if row.codigo_snvs is not None
+                else None,
+                localidad_nombre=str(row.localidad_nombre)
+                if row.localidad_nombre is not None
+                else None,
+                departamento_nombre=str(row.departamento_nombre)
+                if row.departamento_nombre is not None
+                else None,
+                provincia_nombre=str(row.provincia_nombre)
+                if row.provincia_nombre is not None
+                else None,
+                latitud=float(row.latitud) if row.latitud is not None else None,
+                longitud=float(row.longitud) if row.longitud is not None else None,
+                eventos_consulta=int(row.eventos_consulta),
+                eventos_notificacion=int(row.eventos_notificacion),
+                eventos_carga=int(row.eventos_carga),
+                eventos_muestra=int(row.eventos_muestra),
+                eventos_diagnostico=int(row.eventos_diagnostico),
+                eventos_tratamiento=int(row.eventos_tratamiento),
+                total_eventos=int(row.total_eventos),
+            )
+        )
 
     return establecimientos
 
 
-def obtener_todos_ign(conn) -> List[Establecimiento]:
+def obtener_todos_ign(conn: Session) -> List[Establecimiento]:
     """
     Obtiene TODOS los establecimientos IGN para usar como candidatos en matching.
     No necesitamos los conteos de eventos, solo los datos básicos.
@@ -227,26 +240,37 @@ def obtener_todos_ign(conn) -> List[Establecimiento]:
 
     establecimientos = []
     for row in rows:
-        estab_dict = {
-            "id": row.id,
-            "nombre": row.nombre,
-            "source": row.source,
-            "codigo_refes": row.codigo_refes,
-            "codigo_snvs": row.codigo_snvs,
-            "localidad_nombre": row.localidad_nombre,
-            "departamento_nombre": row.departamento_nombre,
-            "provincia_nombre": row.provincia_nombre,
-            "latitud": row.latitud,
-            "longitud": row.longitud,
-            "eventos_consulta": 0,
-            "eventos_notificacion": 0,
-            "eventos_carga": 0,
-            "eventos_muestra": 0,
-            "eventos_diagnostico": 0,
-            "eventos_tratamiento": 0,
-            "total_eventos": 0
-        }
-        establecimientos.append(Establecimiento(**estab_dict))
+        establecimientos.append(
+            Establecimiento(
+                id=int(row.id),
+                nombre=str(row.nombre),
+                source=str(row.source),
+                codigo_refes=str(row.codigo_refes)
+                if row.codigo_refes is not None
+                else None,
+                codigo_snvs=str(row.codigo_snvs)
+                if row.codigo_snvs is not None
+                else None,
+                localidad_nombre=str(row.localidad_nombre)
+                if row.localidad_nombre is not None
+                else None,
+                departamento_nombre=str(row.departamento_nombre)
+                if row.departamento_nombre is not None
+                else None,
+                provincia_nombre=str(row.provincia_nombre)
+                if row.provincia_nombre is not None
+                else None,
+                latitud=float(row.latitud) if row.latitud is not None else None,
+                longitud=float(row.longitud) if row.longitud is not None else None,
+                eventos_consulta=0,
+                eventos_notificacion=0,
+                eventos_carga=0,
+                eventos_muestra=0,
+                eventos_diagnostico=0,
+                eventos_tratamiento=0,
+                total_eventos=0,
+            )
+        )
 
     return establecimientos
 
@@ -302,8 +326,9 @@ def calcular_similitud_nombre(nombre1: str, nombre2: str) -> float:
     return similitud * 100
 
 
-def calcular_distancia_geografica(lat1: float, lon1: float,
-                                  lat2: float, lon2: float) -> float:
+def calcular_distancia_geografica(
+    lat1: float, lon1: float, lat2: float, lon2: float
+) -> float:
     """
     Calcula distancia aproximada en km usando fórmula haversine simplificada.
     """
@@ -315,8 +340,8 @@ def calcular_distancia_geografica(lat1: float, lon1: float,
     dlat = lat2 - lat1
     dlon = lon2 - lon1
 
-    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
-    c = 2 * atan2(sqrt(a), sqrt(1-a))
+    a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+    c = 2 * atan2(sqrt(a), sqrt(1 - a))
 
     return R * c
 
@@ -324,7 +349,7 @@ def calcular_distancia_geografica(lat1: float, lon1: float,
 def encontrar_mejores_matches(
     snvs_estab: Establecimiento,
     ign_establecimientos: List[Establecimiento],
-    top_n: int = 3
+    top_n: int = 3,
 ) -> List[MapeoSugerido]:
     """
     Encuentra los mejores N matches de IGN para un establecimiento SNVS.
@@ -338,8 +363,11 @@ def encontrar_mejores_matches(
 
     for ign in ign_establecimientos:
         # FILTRO CRÍTICO: Si las provincias son diferentes y ambas están definidas, skip
-        if (snvs_estab.provincia_nombre and ign.provincia_nombre and
-            snvs_estab.provincia_nombre.lower() != ign.provincia_nombre.lower()):
+        if (
+            snvs_estab.provincia_nombre
+            and ign.provincia_nombre
+            and snvs_estab.provincia_nombre.lower() != ign.provincia_nombre.lower()
+        ):
             continue  # Descarta este candidato
 
         # Score base: similitud de nombre (60% del peso, reducido para dar más peso a geografía)
@@ -349,49 +377,68 @@ def encontrar_mejores_matches(
         razones = [f"similitud nombre: {score_nombre:.1f}%"]
 
         # Bonus por provincia coincidente (10% del peso)
-        if (snvs_estab.provincia_nombre and ign.provincia_nombre and
-            snvs_estab.provincia_nombre.lower() == ign.provincia_nombre.lower()):
+        if (
+            snvs_estab.provincia_nombre
+            and ign.provincia_nombre
+            and snvs_estab.provincia_nombre.lower() == ign.provincia_nombre.lower()
+        ):
             score += 10
             razones.append(f"provincia: {snvs_estab.provincia_nombre}")
 
         # Bonus por departamento coincidente (15% del peso)
-        if (snvs_estab.departamento_nombre and ign.departamento_nombre and
-            snvs_estab.departamento_nombre.lower() == ign.departamento_nombre.lower()):
+        if (
+            snvs_estab.departamento_nombre
+            and ign.departamento_nombre
+            and snvs_estab.departamento_nombre.lower()
+            == ign.departamento_nombre.lower()
+        ):
             score += 15
             razones.append(f"mismo depto: {snvs_estab.departamento_nombre}")
 
         # Bonus por localidad coincidente (15% del peso)
-        if (snvs_estab.localidad_nombre and ign.localidad_nombre and
-            snvs_estab.localidad_nombre.lower() == ign.localidad_nombre.lower()):
+        if (
+            snvs_estab.localidad_nombre
+            and ign.localidad_nombre
+            and snvs_estab.localidad_nombre.lower() == ign.localidad_nombre.lower()
+        ):
             score += 15
             razones.append("misma localidad")
 
         # Si score de nombre es perfecto (100%) y departamento coincide, es muy confiable
-        if score_nombre == 100 and snvs_estab.departamento_nombre and ign.departamento_nombre and \
-           snvs_estab.departamento_nombre.lower() == ign.departamento_nombre.lower():
+        if (
+            score_nombre == 100
+            and snvs_estab.departamento_nombre
+            and ign.departamento_nombre
+            and snvs_estab.departamento_nombre.lower()
+            == ign.departamento_nombre.lower()
+        ):
             score = max(score, 85)  # Garantizar alta confianza
 
         if score >= 50:  # Solo considerar si score mínimo
-            candidatos.append(MapeoSugerido(
-                snvs_nombre=snvs_estab.nombre,
-                snvs_id=snvs_estab.id,
-                ign_nombre=ign.nombre,
-                ign_id=ign.id,
-                ign_codigo_refes=ign.codigo_refes or "N/A",
-                score=score,
-                razon=" + ".join(razones),
-                localidad_snvs=snvs_estab.localidad_nombre,
-                localidad_ign=ign.localidad_nombre
-            ))
+            candidatos.append(
+                MapeoSugerido(
+                    snvs_nombre=snvs_estab.nombre,
+                    snvs_id=snvs_estab.id,
+                    ign_nombre=ign.nombre,
+                    ign_id=ign.id,
+                    ign_codigo_refes=ign.codigo_refes or "N/A",
+                    score=score,
+                    razon=" + ".join(razones),
+                    localidad_snvs=snvs_estab.localidad_nombre,
+                    localidad_ign=ign.localidad_nombre,
+                )
+            )
 
     # Ordenar por score descendente y retornar top N
     candidatos.sort(key=lambda x: x.score, reverse=True)
     return candidatos[:top_n]
 
 
-def generar_reporte(establecimientos: List[Establecimiento],
-                   mapeos_sugeridos: List[MapeoSugerido],
-                   output_path: str):
+def generar_reporte(
+    establecimientos: List[Establecimiento],
+    mapeos_sugeridos: List[MapeoSugerido],
+    output_path: str,
+) -> None:
     """Genera el archivo de reporte en formato texto."""
 
     # Separar por source
@@ -434,7 +481,9 @@ def generar_reporte(establecimientos: List[Establecimiento],
 
         if provincias:
             f.write("DISTRIBUCIÓN GEOGRÁFICA (Top 5 provincias):\n")
-            for prov, count in sorted(provincias.items(), key=lambda x: x[1], reverse=True)[:5]:
+            for prov, count in sorted(
+                provincias.items(), key=lambda x: x[1], reverse=True
+            )[:5]:
                 f.write(f"  • {prov}: {count} establecimientos\n")
             f.write("\n")
 
@@ -464,15 +513,21 @@ def generar_reporte(establecimientos: List[Establecimiento],
                 if e.provincia_nombre:
                     ubicacion_parts.append(e.provincia_nombre)
 
-                f.write(f"  UBICACIÓN: {', '.join(ubicacion_parts) if ubicacion_parts else 'N/A'}\n")
+                f.write(
+                    f"  UBICACIÓN: {', '.join(ubicacion_parts) if ubicacion_parts else 'N/A'}\n"
+                )
 
                 if e.latitud and e.longitud:
                     f.write(f"  COORDENADAS: {e.latitud:.4f}, {e.longitud:.4f}\n")
 
                 f.write(f"  EVENTOS: {e.total_eventos:,} total ")
-                f.write(f"(consulta: {e.eventos_consulta}, notificación: {e.eventos_notificacion}, ")
+                f.write(
+                    f"(consulta: {e.eventos_consulta}, notificación: {e.eventos_notificacion}, "
+                )
                 f.write(f"carga: {e.eventos_carga}, muestra: {e.eventos_muestra}, ")
-                f.write(f"diagnóstico: {e.eventos_diagnostico}, tratamiento: {e.eventos_tratamiento})\n\n")
+                f.write(
+                    f"diagnóstico: {e.eventos_diagnostico}, tratamiento: {e.eventos_tratamiento})\n\n"
+                )
 
         # Establecimientos SNVS
         if snvs_estabs:
@@ -496,15 +551,21 @@ def generar_reporte(establecimientos: List[Establecimiento],
                 if e.provincia_nombre:
                     ubicacion_parts.append(e.provincia_nombre)
 
-                f.write(f"  UBICACIÓN: {', '.join(ubicacion_parts) if ubicacion_parts else 'N/A'}\n")
+                f.write(
+                    f"  UBICACIÓN: {', '.join(ubicacion_parts) if ubicacion_parts else 'N/A'}\n"
+                )
 
                 if e.latitud and e.longitud:
                     f.write(f"  COORDENADAS: {e.latitud:.4f}, {e.longitud:.4f}\n")
 
                 f.write(f"  EVENTOS: {e.total_eventos:,} total ")
-                f.write(f"(consulta: {e.eventos_consulta}, notificación: {e.eventos_notificacion}, ")
+                f.write(
+                    f"(consulta: {e.eventos_consulta}, notificación: {e.eventos_notificacion}, "
+                )
                 f.write(f"carga: {e.eventos_carga}, muestra: {e.eventos_muestra}, ")
-                f.write(f"diagnóstico: {e.eventos_diagnostico}, tratamiento: {e.eventos_tratamiento})\n\n")
+                f.write(
+                    f"diagnóstico: {e.eventos_diagnostico}, tratamiento: {e.eventos_tratamiento})\n\n"
+                )
 
         # ===== SECCIÓN 3: SUGERENCIAS DE MAPEO =====
         if mapeos_sugeridos:
@@ -519,12 +580,14 @@ def generar_reporte(establecimientos: List[Establecimiento],
 
             if alta_confianza:
                 f.write(f"\n{'─' * 80}\n")
-                f.write(f"MAPEOS DE ALTA CONFIANZA (score ≥ 85) - {len(alta_confianza)} sugerencias\n")
+                f.write(
+                    f"MAPEOS DE ALTA CONFIANZA (score ≥ 85) - {len(alta_confianza)} sugerencias\n"
+                )
                 f.write(f"{'─' * 80}\n\n")
 
                 for m in alta_confianza:
-                    f.write(f"• SNVS: \"{m.snvs_nombre}\" [ID: {m.snvs_id}]\n")
-                    f.write(f"  → IGN: \"{m.ign_nombre}\" [ID: {m.ign_id}]\n")
+                    f.write(f'• SNVS: "{m.snvs_nombre}" [ID: {m.snvs_id}]\n')
+                    f.write(f'  → IGN: "{m.ign_nombre}" [ID: {m.ign_id}]\n')
                     f.write(f"  Score: {m.score:.1f} | Razón: {m.razon}\n")
                     f.write(f"  REFES: {m.ign_codigo_refes}\n")
                     if m.localidad_snvs or m.localidad_ign:
@@ -534,12 +597,14 @@ def generar_reporte(establecimientos: List[Establecimiento],
 
             if media_confianza:
                 f.write(f"\n{'─' * 80}\n")
-                f.write(f"MAPEOS DE CONFIANZA MEDIA (score 70-84) - {len(media_confianza)} sugerencias\n")
+                f.write(
+                    f"MAPEOS DE CONFIANZA MEDIA (score 70-84) - {len(media_confianza)} sugerencias\n"
+                )
                 f.write(f"{'─' * 80}\n\n")
 
                 for m in media_confianza:
-                    f.write(f"• SNVS: \"{m.snvs_nombre}\" [ID: {m.snvs_id}]\n")
-                    f.write(f"  → IGN: \"{m.ign_nombre}\" [ID: {m.ign_id}]\n")
+                    f.write(f'• SNVS: "{m.snvs_nombre}" [ID: {m.snvs_id}]\n')
+                    f.write(f'  → IGN: "{m.ign_nombre}" [ID: {m.ign_id}]\n')
                     f.write(f"  Score: {m.score:.1f} | Razón: {m.razon}\n")
                     f.write(f"  REFES: {m.ign_codigo_refes}\n")
                     if m.localidad_snvs or m.localidad_ign:
@@ -549,12 +614,14 @@ def generar_reporte(establecimientos: List[Establecimiento],
 
             if baja_confianza:
                 f.write(f"\n{'─' * 80}\n")
-                f.write(f"MAPEOS DE BAJA CONFIANZA (score 50-69) - {len(baja_confianza)} sugerencias\n")
+                f.write(
+                    f"MAPEOS DE BAJA CONFIANZA (score 50-69) - {len(baja_confianza)} sugerencias\n"
+                )
                 f.write(f"{'─' * 80}\n\n")
 
                 for m in baja_confianza:
-                    f.write(f"• SNVS: \"{m.snvs_nombre}\" [ID: {m.snvs_id}]\n")
-                    f.write(f"  → IGN: \"{m.ign_nombre}\" [ID: {m.ign_id}]\n")
+                    f.write(f'• SNVS: "{m.snvs_nombre}" [ID: {m.snvs_id}]\n')
+                    f.write(f'  → IGN: "{m.ign_nombre}" [ID: {m.ign_id}]\n')
                     f.write(f"  Score: {m.score:.1f} | Razón: {m.razon}\n")
                     f.write(f"  REFES: {m.ign_codigo_refes}\n")
                     if m.localidad_snvs or m.localidad_ign:
@@ -573,19 +640,30 @@ def generar_reporte(establecimientos: List[Establecimiento],
             f.write(f"  • Total SNVS sin mapear en top 200: {len(snvs_no_mapeados)}\n")
             f.write(f"  • SNVS con sugerencias encontradas: {snvs_unicos}\n")
             f.write(f"  • Mapeos sugeridos con score ≥ 85: {len(alta_confianza)}\n")
-            f.write(f"  • Mapeos sugeridos con score ≥ 70: {len(alta_confianza) + len(media_confianza)}\n")
+            f.write(
+                f"  • Mapeos sugeridos con score ≥ 70: {len(alta_confianza) + len(media_confianza)}\n"
+            )
             f.write(f"  • Total sugerencias: {len(mapeos_sugeridos)}\n\n")
 
             # Calcular potencial cobertura
             if snvs_no_mapeados:
-                cobertura_alta = (len(set(m.snvs_id for m in alta_confianza)) / len(snvs_no_mapeados)) * 100
-                cobertura_media = (len(set(m.snvs_id for m in alta_confianza + media_confianza)) / len(snvs_no_mapeados)) * 100
+                cobertura_alta = (
+                    len(set(m.snvs_id for m in alta_confianza)) / len(snvs_no_mapeados)
+                ) * 100
+                cobertura_media = (
+                    len(set(m.snvs_id for m in alta_confianza + media_confianza))
+                    / len(snvs_no_mapeados)
+                ) * 100
 
-                f.write(f"  • Potencial cobertura con alta confianza: +{cobertura_alta:.1f}%\n")
-                f.write(f"  • Potencial cobertura con media-alta confianza: +{cobertura_media:.1f}%\n")
+                f.write(
+                    f"  • Potencial cobertura con alta confianza: +{cobertura_alta:.1f}%\n"
+                )
+                f.write(
+                    f"  • Potencial cobertura con media-alta confianza: +{cobertura_media:.1f}%\n"
+                )
 
 
-def main():
+def main() -> None:
     """Función principal del script."""
     print("Conectando a la base de datos...")
     conn = conectar_db()
@@ -600,7 +678,9 @@ def main():
         snvs_establecimientos = [e for e in establecimientos if e.source == "SNVS"]
         snvs_no_mapeados = [e for e in snvs_establecimientos if not e.codigo_refes]
 
-        print(f"  ✓ IGN: {len(ign_establecimientos)}, SNVS: {len(snvs_establecimientos)}")
+        print(
+            f"  ✓ IGN: {len(ign_establecimientos)}, SNVS: {len(snvs_establecimientos)}"
+        )
         print(f"  ✓ SNVS sin mapear: {len(snvs_no_mapeados)}")
 
         # Obtener TODOS los establecimientos IGN para matching (no solo los del top 200)

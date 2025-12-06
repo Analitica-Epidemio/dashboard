@@ -44,27 +44,19 @@ class DiagnosticosProcessor:
         self.internaciones = InternacionesProcessor(context, logger)
 
     # Delegate methods to sub-processors
-    def upsert_diagnosticos_eventos(
-        self, df: pl.DataFrame
-    ) -> BulkOperationResult:
+    def upsert_diagnosticos_eventos(self, df: pl.DataFrame) -> BulkOperationResult:
         """Bulk upsert diagnostic events."""
         return self.diagnosticos.upsert_diagnosticos_eventos(df)
 
-    def upsert_estudios_eventos(
-        self, df: pl.DataFrame
-    ) -> BulkOperationResult:
+    def upsert_estudios_eventos(self, df: pl.DataFrame) -> BulkOperationResult:
         """Bulk upsert study events."""
         return self.estudios.upsert_estudios_eventos(df)
 
-    def upsert_tratamientos_eventos(
-        self, df: pl.DataFrame
-    ) -> BulkOperationResult:
+    def upsert_tratamientos_eventos(self, df: pl.DataFrame) -> BulkOperationResult:
         """Bulk upsert treatment events."""
         return self.tratamientos.upsert_tratamientos_eventos(df)
 
-    def upsert_internaciones_eventos(
-        self, df: pl.DataFrame
-    ) -> BulkOperationResult:
+    def upsert_internaciones_eventos(self, df: pl.DataFrame) -> BulkOperationResult:
         """Bulk upsert hospitalization events."""
         return self.internaciones.upsert_internaciones_eventos(df)
 

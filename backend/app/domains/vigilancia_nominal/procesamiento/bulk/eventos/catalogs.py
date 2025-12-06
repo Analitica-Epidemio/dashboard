@@ -5,23 +5,27 @@ Handles get-or-create operations for catalog/taxonomy tables.
 OPTIMIZADO CON POLARS PURO - lazy evaluation, joins, sin loops Python.
 """
 
+from typing import Any
+
 import polars as pl
-from sqlalchemy import select
+from sqlalchemy import inspect, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlmodel import col
 
 from app.core.slug import capitalizar_nombre, generar_slug
 from app.domains.vigilancia_nominal.models.enfermedad import (
     Enfermedad,
     GrupoDeEnfermedades,
 )
-from ..config.columns import Columns
+
+from ...config.columns import Columns
 from ..shared import get_current_timestamp, get_or_create_catalog
 
 
 class CatalogsProcessor:
     """Handles catalog/taxonomy operations for eventos - POLARS PURO."""
 
-    def __init__(self, context, logger_instance):
+    def __init__(self, context: Any, logger_instance: Any) -> None:
         self.context = context
         self.logger = logger_instance
 
@@ -77,20 +81,19 @@ class CatalogsProcessor:
                 pl.col(Columns.GRUPO_EVENTO.name).is_not_null()
                 & pl.col(Columns.TIPO_EVENTO.name).is_not_null()
             )
-            .select([
-                pl.col(Columns.GRUPO_EVENTO.name)
+            .select(
+                [
+                    pl.col(Columns.GRUPO_EVENTO.name)
                     .cast(pl.Utf8)
                     .str.strip_chars()
                     .alias("grupo_str"),
-                pl.col(Columns.TIPO_EVENTO.name)
+                    pl.col(Columns.TIPO_EVENTO.name)
                     .cast(pl.Utf8)
                     .str.strip_chars()
                     .alias("tipo_str"),
-            ])
-            .filter(
-                (pl.col("grupo_str") != "")
-                & (pl.col("tipo_str") != "")
+                ]
             )
+            .filter((pl.col("grupo_str") != "") & (pl.col("tipo_str") != ""))
         )
 
         df_prepared = df_lazy.collect()
@@ -99,41 +102,39 @@ class CatalogsProcessor:
             return {}, {}
 
         # === PASO 2: Generar slugs con Polars apply (batch processing) ===
-        df_with_slugs = df_prepared.with_columns([
-            pl.col("grupo_str")
+        df_with_slugs = df_prepared.with_columns(
+            [
+                pl.col("grupo_str")
                 .map_elements(generar_slug, return_dtype=pl.Utf8)
                 .alias("slug_grupo"),
-            pl.col("tipo_str")
+                pl.col("tipo_str")
                 .map_elements(generar_slug, return_dtype=pl.Utf8)
                 .alias("slug_tipo"),
-        ])
+            ]
+        )
 
         # === PASO 3: JOIN con grupo_mapping para obtener grupo_id ===
         if not grupo_mapping:
             return {}, {}
 
-        grupo_df = pl.DataFrame({
-            "slug_grupo": list(grupo_mapping.keys()),
-            "grupo_id": list(grupo_mapping.values()),
-        })
-
-        df_with_grupo_id = df_with_slugs.join(
-            grupo_df,
-            on="slug_grupo",
-            how="inner"
+        grupo_df = pl.DataFrame(
+            {
+                "slug_grupo": list(grupo_mapping.keys()),
+                "grupo_id": list(grupo_mapping.values()),
+            }
         )
+
+        df_with_grupo_id = df_with_slugs.join(grupo_df, on="slug_grupo", how="inner")
 
         if df_with_grupo_id.height == 0:
             return {}, {}
 
         # === PASO 4: Agregar por enfermedad para obtener enfermedad -> grupos mapping ===
-        enfermedad_grupos_agg = (
-            df_with_grupo_id
-            .group_by("slug_tipo")
-            .agg([
+        enfermedad_grupos_agg = df_with_grupo_id.group_by("slug_tipo").agg(
+            [
                 pl.col("tipo_str").first().alias("nombre_original"),
                 pl.col("grupo_id").unique().alias("grupo_ids"),
-            ])
+            ]
         )
 
         # Extraer slugs únicos para check/create
@@ -143,8 +144,8 @@ class CatalogsProcessor:
             return {}, {}
 
         # === PASO 5: Check existing enfermedades ===
-        stmt = select(Enfermedad.id, Enfermedad.slug).where(
-            Enfermedad.slug.in_(list(slugs_set))
+        stmt = select(col(Enfermedad.id), col(Enfermedad.slug)).where(
+            col(Enfermedad.slug).in_(list(slugs_set))
         )
         existing_mapping = {
             slug: enfermedad_id
@@ -164,21 +165,25 @@ class CatalogsProcessor:
             nuevas_enfermedades = []
             for row in faltantes_df.iter_rows(named=True):
                 nombre_original = row["nombre_original"]
-                nuevas_enfermedades.append({
-                    "nombre": capitalizar_nombre(nombre_original),
-                    "slug": generar_slug(nombre_original),
-                    "created_at": timestamp,
-                    "updated_at": timestamp,
-                })
+                nuevas_enfermedades.append(
+                    {
+                        "nombre": capitalizar_nombre(nombre_original),
+                        "slug": generar_slug(nombre_original),
+                        "created_at": timestamp,
+                        "updated_at": timestamp,
+                    }
+                )
 
             if nuevas_enfermedades:
-                stmt = pg_insert(Enfermedad.__table__).values(nuevas_enfermedades)
+                stmt = pg_insert(inspect(Enfermedad).local_table).values(
+                    nuevas_enfermedades
+                )
                 upsert_stmt = stmt.on_conflict_do_nothing(index_elements=["slug"])
                 self.context.session.execute(upsert_stmt)
 
                 # Re-fetch complete mapping
-                stmt = select(Enfermedad.id, Enfermedad.slug).where(
-                    Enfermedad.slug.in_(list(slugs_set))
+                stmt = select(col(Enfermedad.id), col(Enfermedad.slug)).where(
+                    col(Enfermedad.slug).in_(list(slugs_set))
                 )
                 existing_mapping = {
                     slug: enfermedad_id
@@ -186,15 +191,15 @@ class CatalogsProcessor:
                 }
 
         # === PASO 7: Build enfermedad_id → grupo_ids mapping ===
-        enfermedad_id_df = pl.DataFrame({
-            "slug_tipo": list(existing_mapping.keys()),
-            "enfermedad_id": list(existing_mapping.values()),
-        })
+        enfermedad_id_df = pl.DataFrame(
+            {
+                "slug_tipo": list(existing_mapping.keys()),
+                "enfermedad_id": list(existing_mapping.values()),
+            }
+        )
 
         enfermedad_grupos_final = enfermedad_grupos_agg.join(
-            enfermedad_id_df,
-            on="slug_tipo",
-            how="inner"
+            enfermedad_id_df, on="slug_tipo", how="inner"
         )
 
         # Convertir a dict: enfermedad_id -> set(grupo_ids)

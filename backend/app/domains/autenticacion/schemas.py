@@ -1,6 +1,7 @@
 """
 Authentication Pydantic schemas for requests/responses
 """
+
 from datetime import datetime
 from typing import Optional
 
@@ -11,6 +12,7 @@ from .models import UserRole, UserStatus
 
 class UserBase(BaseModel):
     """Base user schema"""
+
     email: EmailStr
     nombre: str = Field(min_length=1, max_length=100)
     apellido: str = Field(min_length=1, max_length=100)
@@ -18,12 +20,14 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     """Schema for creating a new user"""
+
     contrasena: str = Field(min_length=8, max_length=128)
     rol: UserRole = UserRole.EPIDEMIOLOGO
 
 
 class UserUpdate(BaseModel):
     """Schema for updating user information"""
+
     email: Optional[EmailStr] = None
     nombre: Optional[str] = Field(default=None, min_length=1, max_length=100)
     apellido: Optional[str] = Field(default=None, min_length=1, max_length=100)
@@ -33,6 +37,7 @@ class UserUpdate(BaseModel):
 
 class UserResponse(UserBase):
     """Schema for user response (public info)"""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -45,6 +50,7 @@ class UserResponse(UserBase):
 
 class UserLogin(BaseModel):
     """Schema for user login"""
+
     email: EmailStr
     contrasena: str = Field(min_length=1)
     recordarme: bool = False
@@ -52,23 +58,27 @@ class UserLogin(BaseModel):
 
 class UserChangePassword(BaseModel):
     """Schema for changing password"""
+
     contrasena_actual: str
     nueva_contrasena: str = Field(min_length=8, max_length=128)
 
 
 class PasswordReset(BaseModel):
     """Schema for password reset request"""
+
     email: EmailStr
 
 
 class PasswordResetConfirm(BaseModel):
     """Schema for confirming password reset"""
+
     token: str
     nueva_contrasena: str = Field(min_length=8, max_length=128)
 
 
 class TokenUser(BaseModel):
     """User info in token response"""
+
     id: int
     email: str
     nombre: str
@@ -78,6 +88,7 @@ class TokenUser(BaseModel):
 
 class Token(BaseModel):
     """JWT Token response with user info"""
+
     token_acceso: str
     token_type: str = "bearer"
     expira_en: int
@@ -87,6 +98,7 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     """Token payload data"""
+
     user_id: Optional[int] = None
     email: Optional[str] = None
     rol: Optional[str] = None
@@ -95,11 +107,13 @@ class TokenData(BaseModel):
 
 class RefreshToken(BaseModel):
     """Refresh token request"""
+
     token_refresco: str
 
 
 class SessionInfo(BaseModel):
     """Session information response"""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: int

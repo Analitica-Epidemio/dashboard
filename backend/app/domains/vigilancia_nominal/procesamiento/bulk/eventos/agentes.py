@@ -12,8 +12,9 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import polars as pl
-from sqlalchemy import select
+from sqlalchemy import inspect, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlmodel import col
 
 from app.domains.catalogos.agentes.models import AgenteEtiologico
 from app.domains.vigilancia_nominal.models.agentes import (
@@ -148,7 +149,6 @@ REGLAS_EXTRACCION: Dict[str, List[Dict[str, Any]]] = {
             "metodo": "antigeno",
         },
     ],
-
     # =========================================================================
     # Diarrea aguda
     # =========================================================================
@@ -192,7 +192,6 @@ REGLAS_EXTRACCION: Dict[str, List[Dict[str, Any]]] = {
             "metodo": "clasificacion",
         },
     ],
-
     # =========================================================================
     # SUH - Sindrome Uremico Hemolitico
     # =========================================================================
@@ -212,7 +211,6 @@ REGLAS_EXTRACCION: Dict[str, List[Dict[str, Any]]] = {
             "metodo": "clasificacion",
         },
     ],
-
     # =========================================================================
     # Dengue
     # =========================================================================
@@ -266,7 +264,6 @@ REGLAS_EXTRACCION: Dict[str, List[Dict[str, Any]]] = {
             "metodo": "PCR",
         },
     ],
-
     # =========================================================================
     # Meningoencefalitis
     # =========================================================================
@@ -286,7 +283,6 @@ REGLAS_EXTRACCION: Dict[str, List[Dict[str, Any]]] = {
             "metodo": "clasificacion",
         },
     ],
-
     # =========================================================================
     # Otras infecciones invasivas
     # =========================================================================
@@ -330,7 +326,7 @@ class AgentesExtractor:
     NO usa regex ni "contains". Solo igualdad exacta (case-insensitive).
     """
 
-    def __init__(self, context, logger: logging.Logger):
+    def __init__(self, context: Any, logger: logging.Logger) -> None:
         self.context = context
         self.logger = logger
         self._agentes_by_codigo: Optional[Dict[str, int]] = None
@@ -344,13 +340,15 @@ class AgentesExtractor:
         if self._agentes_by_codigo is not None:
             return self._agentes_by_codigo
 
-        stmt = select(AgenteEtiologico.id, AgenteEtiologico.slug).where(
-            AgenteEtiologico.activo == True  # noqa: E712
+        stmt = select(col(AgenteEtiologico.id), col(AgenteEtiologico.slug)).where(
+            col(AgenteEtiologico.activo) == True  # noqa: E712
         )
         result = self.context.session.execute(stmt)
         rows = result.fetchall()
 
-        self._agentes_by_codigo = {row.slug: row.id for row in rows}  # Cambiado de codigo a slug
+        self._agentes_by_codigo = {
+            row.slug: row.id for row in rows
+        }  # Cambiado de codigo a slug
         return self._agentes_by_codigo
 
     def _match_exacto(self, valor_csv: Any, valor_regla: str) -> bool:
@@ -497,6 +495,8 @@ class AgentesExtractor:
         if missing:
             return BulkOperationResult(
                 inserted_count=0,
+                updated_count=0,
+                skipped_count=0,
                 errors=[f"Columnas faltantes: {missing}"],
                 duration_seconds=(datetime.now() - start_time).total_seconds(),
             )
@@ -507,6 +507,8 @@ class AgentesExtractor:
             self.logger.warning("  No hay agentes en la BD")
             return BulkOperationResult(
                 inserted_count=0,
+                updated_count=0,
+                skipped_count=0,
                 errors=["No hay agentes configurados en la BD"],
                 duration_seconds=(datetime.now() - start_time).total_seconds(),
             )
@@ -514,9 +516,13 @@ class AgentesExtractor:
         # DEBUG: Ver qué eventos hay en el CSV vs reglas
         eventos_csv = set(df["EVENTO"].drop_nulls().unique().to_list())
         eventos_csv_lower = {e.lower(): e for e in eventos_csv}
-        eventos_con_match = set(eventos_csv_lower.keys()).intersection(self._reglas_lower.keys())
+        eventos_con_match = set(eventos_csv_lower.keys()).intersection(
+            self._reglas_lower.keys()
+        )
 
-        self.logger.info(f"  CasoEpidemiologicos CSV: {len(eventos_csv)}, reglas: {len(self._reglas_lower)}, match: {len(eventos_con_match)}")
+        self.logger.info(
+            f"  CasoEpidemiologicos CSV: {len(eventos_csv)}, reglas: {len(self._reglas_lower)}, match: {len(eventos_con_match)}"
+        )
         if eventos_con_match:
             matched_names = [eventos_csv_lower[e] for e in list(eventos_con_match)[:5]]
             self.logger.info(f"  ✓ Con reglas: {matched_names}")
@@ -583,7 +589,7 @@ class AgentesExtractor:
 
         # Bulk insert/update
         try:
-            stmt = pg_insert(CasoAgente.__table__).values(unique_agentes)
+            stmt = pg_insert(inspect(CasoAgente).local_table).values(unique_agentes)
             stmt = stmt.on_conflict_do_update(
                 constraint="uq_caso_agente",  # Cambiado de uq_evento_agente a uq_caso_agente
                 set_={

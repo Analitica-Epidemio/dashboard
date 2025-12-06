@@ -22,7 +22,7 @@ async def delete_strategy(
     strategy_id: int,
     force: bool = False,
     db: AsyncSession = Depends(get_async_session),
-    current_user: User = Depends(RequireSuperadmin())
+    current_user: User = Depends(RequireSuperadmin()),
 ):
     """
     Eliminar estrategia.

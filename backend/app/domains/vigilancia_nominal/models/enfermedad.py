@@ -24,6 +24,7 @@ Ejemplos de enfermedades:
 from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import CheckConstraint, Index, SmallInteger, UniqueConstraint
+from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.core.models import BaseModel
@@ -66,10 +67,8 @@ class EnfermedadGrupo(SQLModel, table=True):
     )
 
     # Relaciones
-    enfermedad: "Enfermedad" = Relationship(
-        back_populates="enfermedad_grupos"
-    )
-    grupo: "GrupoDeEnfermedades" = Relationship(
+    enfermedad: Mapped["Enfermedad"] = Relationship(back_populates="enfermedad_grupos")
+    grupo: Mapped["GrupoDeEnfermedades"] = Relationship(
         back_populates="enfermedad_grupos"
     )
 
@@ -96,9 +95,7 @@ class GrupoDeEnfermedades(BaseModel, table=True):
     """
 
     __tablename__ = "grupo_de_enfermedades"
-    __table_args__ = (
-        Index("ix_grupo_enfermedades_slug", "slug"),
-    )
+    __table_args__ = (Index("ix_grupo_enfermedades_slug", "slug"),)
 
     nombre: str = Field(
         ...,
@@ -126,8 +123,12 @@ class GrupoDeEnfermedades(BaseModel, table=True):
     )
 
     # Relaciones
-    enfermedad_grupos: List["EnfermedadGrupo"] = Relationship(back_populates="grupo")
-    casos_en_grupo: List["CasoGrupoEnfermedad"] = Relationship(back_populates="grupo")
+    enfermedad_grupos: Mapped[List["EnfermedadGrupo"]] = Relationship(
+        back_populates="grupo"
+    )
+    casos_en_grupo: Mapped[List["CasoGrupoEnfermedad"]] = Relationship(
+        back_populates="grupo"
+    )
 
     @property
     def usa_acumulado_anual(self) -> bool:
@@ -220,8 +221,12 @@ class Enfermedad(BaseModel, table=True):
     )
 
     # Relaciones
-    enfermedad_grupos: List["EnfermedadGrupo"] = Relationship(back_populates="enfermedad")
-    casos: List["CasoEpidemiologico"] = Relationship(back_populates="enfermedad")
+    enfermedad_grupos: Mapped[List["EnfermedadGrupo"]] = Relationship(
+        back_populates="enfermedad"
+    )
+    casos: Mapped[List["CasoEpidemiologico"]] = Relationship(
+        back_populates="enfermedad"
+    )
 
     @property
     def periodo_incubacion_promedio_dias(self) -> Optional[float]:

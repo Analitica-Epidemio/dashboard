@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 async def create_strategy(
     strategy_data: EstrategiaClasificacionCreate,
     db: AsyncSession = Depends(get_async_session),
-    current_user: User = Depends(RequireSuperadmin())
+    current_user: User = Depends(RequireSuperadmin()),
 ) -> SuccessResponse[EstrategiaClasificacionResponse]:
     """
     Crear nueva estrategia de clasificación.
@@ -45,19 +45,19 @@ async def create_strategy(
         repo = EstrategiaClasificacionRepository(db)
 
         # Verificar si ya existe estrategia para este tipo de evento
-        existing = await repo.get_by_tipo_eno_id(strategy_data.tipo_eno_id)
+        existing = await repo.get_by_id_enfermedad(strategy_data.id_enfermedad)
         if existing:
             logger.warning(
-                f"❌ Strategy already exists for tipo_eno_id: {strategy_data.tipo_eno_id}"
+                f"❌ Strategy already exists for id_enfermedad: {strategy_data.id_enfermedad}"
             )
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=f"Ya existe una estrategia para el tipo de evento {strategy_data.tipo_eno_id}",
+                detail=f"Ya existe una estrategia para el tipo de evento {strategy_data.id_enfermedad}",
             )
 
         # Crear estrategia
         strategy = await repo.create(strategy_data)
-        strategy_response = EstrategiaClasificacionResponse.from_orm(strategy)
+        strategy_response = EstrategiaClasificacionResponse.model_validate(strategy)
 
         logger.info(f"✅ Strategy created with ID: {strategy.id}")
         return SuccessResponse(data=strategy_response)

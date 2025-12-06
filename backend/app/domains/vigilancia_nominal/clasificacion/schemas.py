@@ -7,7 +7,7 @@ Definiciones para:
 - Serialización API
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
@@ -39,14 +39,14 @@ class FilterConditionRequest(BaseModel):
 
     @field_validator("logical_operator")
     @classmethod
-    def validate_logical_operator(cls, v):
+    def validate_logical_operator(cls, v: str) -> str:
         if v not in ["AND", "OR"]:
             raise ValueError("logical_operator debe ser AND o OR")
         return v
 
     @field_validator("value", "values")
     @classmethod
-    def validate_filter_values(cls, v, info):
+    def validate_filter_values(cls, v: Any, info: Any) -> Any:
         field_name = info.field_name
         values = info.data
         filter_type = values.get("filter_type")
@@ -97,7 +97,9 @@ class ClassificationRuleRequest(BaseModel):
 
     @field_validator("filters")
     @classmethod
-    def validate_at_least_one_filter(cls, v):
+    def validate_at_least_one_filter(
+        cls, v: List[FilterConditionRequest]
+    ) -> List[FilterConditionRequest]:
         if not v or len(v) == 0:
             raise ValueError("Debe tener al menos un filtro")
 
@@ -140,8 +142,8 @@ class EstrategiaClasificacionBase(BaseModel):
         None, description="Configuración adicional (filtros geográficos, etc.)"
     )
     valid_from: datetime = Field(
-        default_factory=datetime.utcnow,
-        description="Fecha desde cuando la estrategia es válida"
+        default_factory=lambda: datetime.now(timezone.utc),
+        description="Fecha desde cuando la estrategia es válida",
     )
     valid_until: Optional[datetime] = Field(
         None, description="Fecha hasta cuando la estrategia es válida (None = sin fin)"
@@ -149,7 +151,9 @@ class EstrategiaClasificacionBase(BaseModel):
 
     @field_validator("valid_until")
     @classmethod
-    def validate_valid_until(cls, v, info):
+    def validate_valid_until(
+        cls, v: Optional[datetime], info: Any
+    ) -> Optional[datetime]:
         """Valida que valid_until sea posterior a valid_from."""
         values = info.data
         valid_from = values.get("valid_from")
@@ -170,7 +174,9 @@ class EstrategiaClasificacionCreate(EstrategiaClasificacionBase):
 
     @field_validator("classification_rules")
     @classmethod
-    def validate_rules(cls, v):
+    def validate_rules(
+        cls, v: List[ClassificationRuleRequest]
+    ) -> List[ClassificationRuleRequest]:
         if not v or len(v) == 0:
             raise ValueError("Debe definir al menos una regla de clasificación")
 
@@ -192,9 +198,7 @@ class EstrategiaClasificacionUpdate(BaseModel):
     confidence_threshold: Optional[float] = Field(
         None, ge=0.0, le=1.0, description="Umbral de confianza general"
     )
-    description: Optional[str] = Field(
-        None, description="Descripción de la estrategia"
-    )
+    description: Optional[str] = Field(None, description="Descripción de la estrategia")
     config: Optional[Dict[str, Any]] = Field(
         None, description="Configuración adicional"
     )
@@ -213,7 +217,9 @@ class EstrategiaClasificacionUpdate(BaseModel):
 
     @field_validator("classification_rules")
     @classmethod
-    def validate_rules(cls, v):
+    def validate_rules(
+        cls, v: Optional[List[ClassificationRuleRequest]]
+    ) -> Optional[List[ClassificationRuleRequest]]:
         if v is not None:
             if len(v) == 0:
                 raise ValueError("Debe definir al menos una regla de clasificación")
@@ -230,7 +236,9 @@ class EstrategiaClasificacionResponse(EstrategiaClasificacionBase):
     """Response DTO para estrategias."""
 
     id: int = Field(..., description="ID de la estrategia")
-    tipo_enfermedad_name: Optional[str] = Field(None, description="Nombre del tipo de evento")
+    tipo_enfermedad_name: Optional[str] = Field(
+        None, description="Nombre del tipo de evento"
+    )
     status: str = Field("active", description="Estado de la estrategia")
     classification_rules: List[ClassificationRuleResponse] = Field(
         [], description="Reglas de clasificación"
@@ -238,8 +246,12 @@ class EstrategiaClasificacionResponse(EstrategiaClasificacionBase):
     metadata_extractors: List[FilterConditionResponse] = Field(
         [], description="Extractores de metadata"
     )
-    valid_from: datetime = Field(..., description="Fecha desde cuando la estrategia es válida")
-    valid_until: Optional[datetime] = Field(None, description="Fecha hasta cuando la estrategia es válida")
+    valid_from: datetime = Field(
+        ..., description="Fecha desde cuando la estrategia es válida"
+    )
+    valid_until: Optional[datetime] = Field(
+        None, description="Fecha hasta cuando la estrategia es válida"
+    )
     created_at: datetime = Field(..., description="Fecha de creación")
     updated_at: datetime = Field(..., description="Fecha de última actualización")
     created_by: Optional[str] = Field(
@@ -253,7 +265,7 @@ class EstrategiaClasificacionResponse(EstrategiaClasificacionBase):
 
     @field_validator("status")
     @classmethod
-    def determine_status(cls, v, info):
+    def determine_status(cls, v: str, info: Any) -> str:
         """Determina el estado basado en los campos."""
         values = info.data
         if values.get("active"):
@@ -277,7 +289,7 @@ class StrategyTestRequest(BaseModel):
 
     @field_validator("csv_data")
     @classmethod
-    def validate_csv_data(cls, v):
+    def validate_csv_data(cls, v: str) -> str:
         if not v or len(v.strip()) == 0:
             raise ValueError("csv_data no puede estar vacío")
 

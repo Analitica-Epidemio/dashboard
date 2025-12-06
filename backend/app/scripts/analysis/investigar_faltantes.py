@@ -14,22 +14,27 @@ from difflib import SequenceMatcher
 
 from sqlalchemy import create_engine, text
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://epidemiologia_user:epidemiologia_password@localhost:5432/epidemiologia_db")
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql://epidemiologia_user:epidemiologia_password@localhost:5432/epidemiologia_db",
+)
 if "postgresql+asyncpg" in DATABASE_URL:
     DATABASE_URL = DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://")
 
 engine = create_engine(DATABASE_URL)
+
 
 def normalizar_texto(texto: str) -> str:
     """Normaliza texto para matching."""
     if not texto:
         return ""
     texto = texto.upper()
-    texto = unicodedata.normalize('NFD', texto)
-    texto = ''.join(char for char in texto if unicodedata.category(char) != 'Mn')
-    texto = texto.replace('.', ' ').replace(',', ' ').replace('-', ' ')
-    texto = ' '.join(texto.split())
+    texto = unicodedata.normalize("NFD", texto)
+    texto = "".join(char for char in texto if unicodedata.category(char) != "Mn")
+    texto = texto.replace(".", " ").replace(",", " ").replace("-", " ")
+    texto = " ".join(texto.split())
     return texto.strip()
+
 
 # Hospitales no mapeados
 hospitales_faltantes = [
@@ -40,9 +45,9 @@ hospitales_faltantes = [
     (13568, "HOSPITAL RURAL CHOLILA", 5),
 ]
 
-print("="*80)
+print("=" * 80)
 print("INVESTIGACIÓN DE HOSPITALES NO MAPEADOS")
-print("="*80)
+print("=" * 80)
 print()
 
 candidatos_para_agregar = []
@@ -57,14 +62,21 @@ with engine.connect() as conn:
 
         # Buscar en IGN por palabras clave
         palabras = nombre_norm.split()
-        palabras_busqueda = [p for p in palabras if p not in ['HOSPITAL', 'CENTRO', 'DE', 'LA', 'EL', 'Y']]
+        palabras_busqueda = [
+            p
+            for p in palabras
+            if p not in ["HOSPITAL", "CENTRO", "DE", "LA", "EL", "Y"]
+        ]
 
         mejor_match = None
-        mejor_similitud = 0
+        mejor_similitud = 0.0
 
-        for palabra in palabras_busqueda[:3]:  # Buscar por las 3 primeras palabras significativas
+        for palabra in palabras_busqueda[
+            :3
+        ]:  # Buscar por las 3 primeras palabras significativas
             # Buscar en la tabla establecimiento (estructura OLD)
-            result = conn.execute(text('''
+            result = conn.execute(
+                text("""
                 SELECT e.establecimiento as nombre, e.id_establecimiento as codigo_snvs,
                        l.nombre as localidad,
                        d.nombre as departamento,
@@ -75,7 +87,9 @@ with engine.connect() as conn:
                 LEFT JOIN provincia p ON d.id_provincia_indec = p.id_provincia_indec
                 WHERE e.establecimiento ILIKE :busqueda
                 LIMIT 5
-            '''), {'busqueda': f'%{palabra}%'})
+            """),
+                {"busqueda": f"%{palabra}%"},
+            )
 
             rows = result.fetchall()
             if rows:
@@ -89,7 +103,9 @@ with engine.connect() as conn:
 
                     # Calcular similitud
                     nombre_db_norm = normalizar_texto(nombre_db)
-                    similitud = SequenceMatcher(None, nombre_norm, nombre_db_norm).ratio() * 100
+                    similitud = (
+                        SequenceMatcher(None, nombre_norm, nombre_db_norm).ratio() * 100
+                    )
 
                     print(f"    • {nombre_db}")
                     print(f"      ID: {id_db} | Similitud: {similitud:.1f}%")
@@ -99,15 +115,15 @@ with engine.connect() as conn:
                     if similitud > mejor_similitud:
                         mejor_similitud = similitud
                         mejor_match = {
-                            'snvs_id': snvs_id,
-                            'nombre_snvs': nombre_snvs,
-                            'nombre_db': nombre_db,
-                            'id_db': id_db,
-                            'similitud': similitud,
-                            'localidad': localidad,
-                            'depto': depto,
-                            'prov': prov,
-                            'eventos': eventos
+                            "snvs_id": snvs_id,
+                            "nombre_snvs": nombre_snvs,
+                            "nombre_db": nombre_db,
+                            "id_db": id_db,
+                            "similitud": similitud,
+                            "localidad": localidad,
+                            "depto": depto,
+                            "prov": prov,
+                            "eventos": eventos,
                         }
 
                     print()
@@ -118,16 +134,20 @@ with engine.connect() as conn:
 
         print()
 
-print("="*80)
+print("=" * 80)
 print("RESUMEN - CANDIDATOS PARA AGREGAR MANUALMENTE")
-print("="*80)
+print("=" * 80)
 print()
 
 if candidatos_para_agregar:
-    print(f"Encontrados {len(candidatos_para_agregar)} candidatos con similitud >= 75%:")
+    print(
+        f"Encontrados {len(candidatos_para_agregar)} candidatos con similitud >= 75%:"
+    )
     print()
     for c in candidatos_para_agregar:
-        print(f"✓ SNVS: {c['nombre_snvs']} (ID: {c['snvs_id']}) - {c['eventos']} eventos")
+        print(
+            f"✓ SNVS: {c['nombre_snvs']} (ID: {c['snvs_id']}) - {c['eventos']} eventos"
+        )
         print(f"  → DB: {c['nombre_db']} (ID: {c['id_db']})")
         print(f"  Similitud: {c['similitud']:.1f}%")
         print(f"  Ubicación: {c['localidad']}, {c['depto']}, {c['prov']}")

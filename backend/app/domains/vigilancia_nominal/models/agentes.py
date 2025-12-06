@@ -13,14 +13,15 @@ from enum import Enum
 from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import JSON, Column, Index, Text, UniqueConstraint
+from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship
 
 from app.core.models import BaseModel
 
 if TYPE_CHECKING:
     from app.domains.catalogos.agentes.models import AgenteEtiologico
-    from app.domains.vigilancia_nominal.models.enfermedad import Enfermedad
     from app.domains.vigilancia_nominal.models.caso import CasoEpidemiologico
+    from app.domains.vigilancia_nominal.models.enfermedad import Enfermedad
 
 
 class AgenteExtraccionConfig(BaseModel, table=True):
@@ -40,8 +41,10 @@ class AgenteExtraccionConfig(BaseModel, table=True):
     __tablename__ = "agente_extraccion_config"
     __table_args__ = (
         UniqueConstraint(
-            "id_agente", "id_enfermedad", "campo_busqueda",
-            name="uq_agente_enfermedad_campo"
+            "id_agente",
+            "id_enfermedad",
+            "campo_busqueda",
+            name="uq_agente_enfermedad_campo",
         ),
         Index("idx_config_agente", "id_agente"),
         Index("idx_config_enfermedad", "id_enfermedad"),
@@ -50,79 +53,72 @@ class AgenteExtraccionConfig(BaseModel, table=True):
 
     # FKs
     id_agente: int = Field(
-        foreign_key="agente_etiologico.id",
-        description="ID del agente a extraer"
+        foreign_key="agente_etiologico.id", description="ID del agente a extraer"
     )
     id_enfermedad: int = Field(
         foreign_key="enfermedad.id",
-        description="ID de la enfermedad donde buscar este agente"
+        description="ID de la enfermedad donde buscar este agente",
     )
 
     # Configuración de búsqueda
     campo_busqueda: str = Field(
-        max_length=100,
-        description="Campo del CSV donde buscar (ej: 'DETERMINACION')"
+        max_length=100, description="Campo del CSV donde buscar (ej: 'DETERMINACION')"
     )
     patron_busqueda: str = Field(
         max_length=500,
-        description="Patrón regex o texto para buscar (ej: 'VSR|Sincicial')"
+        description="Patrón regex o texto para buscar (ej: 'VSR|Sincicial')",
     )
     es_regex: bool = Field(
         default=True,
-        description="Si patron_busqueda es regex (True) o texto exacto (False)"
+        description="Si patron_busqueda es regex (True) o texto exacto (False)",
     )
     case_sensitive: bool = Field(
-        default=False,
-        description="Si la búsqueda es sensible a mayúsculas/minúsculas"
+        default=False, description="Si la búsqueda es sensible a mayúsculas/minúsculas"
     )
 
     # Configuración de resultado
     campo_resultado: Optional[str] = Field(
         None,
         max_length=100,
-        description="Campo donde verificar resultado positivo. NULL si no aplica."
+        description="Campo donde verificar resultado positivo. NULL si no aplica.",
     )
     valores_positivos: Optional[List[str]] = Field(
         None,
         sa_column=Column(JSON),
-        description="Valores que indican resultado positivo"
+        description="Valores que indican resultado positivo",
     )
 
     # Método de detección
     metodo_deteccion_default: Optional[str] = Field(
         None,
         max_length=100,
-        description="Método de detección por defecto (ej: 'PCR', 'cultivo')"
+        description="Método de detección por defecto (ej: 'PCR', 'cultivo')",
     )
 
     # Prioridad y estado
     prioridad: int = Field(
-        default=100,
-        description="Prioridad de evaluación (menor = más prioritario)"
+        default=100, description="Prioridad de evaluación (menor = más prioritario)"
     )
     activo: bool = Field(
-        default=True,
-        index=True,
-        description="Si esta config está activa"
+        default=True, index=True, description="Si esta config está activa"
     )
 
     notas: Optional[str] = Field(
-        None,
-        sa_column=Column(Text),
-        description="Notas sobre esta configuración"
+        None, sa_column=Column(Text), description="Notas sobre esta configuración"
     )
 
     # Relaciones
-    agente: "AgenteEtiologico" = Relationship()
-    enfermedad: "Enfermedad" = Relationship()
-    casos_extraidos: List["CasoAgente"] = Relationship(
+    agente: Mapped["AgenteEtiologico"] = Relationship()
+    enfermedad: Mapped["Enfermedad"] = Relationship()
+    casos_extraidos: Mapped[List["CasoAgente"]] = Relationship(
         back_populates="config_usada",
-        sa_relationship_kwargs={"foreign_keys": "[CasoAgente.id_config_usada]"}
+        sa_relationship_kwargs={"foreign_keys": "[CasoAgente.id_config_usada]"},
     )
 
 
 class ResultadoDeteccion(str, Enum):
     """Estados posibles de detección de un agente."""
+
     POSITIVO = "POSITIVO"
     NEGATIVO = "NEGATIVO"
     INDETERMINADO = "INDETERMINADO"
@@ -150,62 +146,53 @@ class CasoAgente(BaseModel, table=True):
 
     # FKs principales
     id_caso: int = Field(
-        foreign_key="caso_epidemiologico.id",
-        description="ID del caso epidemiológico"
+        foreign_key="caso_epidemiologico.id", description="ID del caso epidemiológico"
     )
     id_agente: int = Field(
         foreign_key="agente_etiologico.id",
-        description="ID del agente buscado/detectado"
+        description="ID del agente buscado/detectado",
     )
 
     # Resultado de la detección
     resultado: ResultadoDeteccion = Field(
         default=ResultadoDeteccion.POSITIVO,
         index=True,
-        description="Resultado: positivo, negativo, indeterminado, no_realizado"
+        description="Resultado: positivo, negativo, indeterminado, no_realizado",
     )
 
     # Metadata de la detección
     metodo_deteccion: Optional[str] = Field(
         None,
         max_length=100,
-        description="Método de detección usado (ej: 'PCR', 'cultivo')"
+        description="Método de detección usado (ej: 'PCR', 'cultivo')",
     )
     resultado_raw: Optional[str] = Field(
-        None,
-        max_length=200,
-        description="Valor original del resultado"
+        None, max_length=200, description="Valor original del resultado"
     )
     fecha_deteccion: Optional[date] = Field(
-        None,
-        index=True,
-        description="Fecha de la detección/resultado"
+        None, index=True, description="Fecha de la detección/resultado"
     )
 
     # Trazabilidad
     id_config_usada: Optional[int] = Field(
         None,
         foreign_key="agente_extraccion_config.id",
-        description="Config que extrajo este agente"
+        description="Config que extrajo este agente",
     )
     campo_origen: Optional[str] = Field(
-        None,
-        max_length=100,
-        description="Campo del CSV de donde se extrajo"
+        None, max_length=100, description="Campo del CSV de donde se extrajo"
     )
     valor_origen: Optional[str] = Field(
-        None,
-        max_length=500,
-        description="Valor original del campo que matcheó"
+        None, max_length=500, description="Valor original del campo que matcheó"
     )
 
     # Relaciones
-    caso: "CasoEpidemiologico" = Relationship(
+    caso: Mapped["CasoEpidemiologico"] = Relationship(
         back_populates="agentes_detectados",
-        sa_relationship_kwargs={"foreign_keys": "caso_agente.c.id_caso"}
+        sa_relationship_kwargs={"foreign_keys": "caso_agente.c.id_caso"},
     )
-    agente: "AgenteEtiologico" = Relationship()
-    config_usada: Optional["AgenteExtraccionConfig"] = Relationship(
+    agente: Mapped["AgenteEtiologico"] = Relationship()
+    config_usada: Mapped[Optional["AgenteExtraccionConfig"]] = Relationship(
         back_populates="casos_extraidos",
-        sa_relationship_kwargs={"foreign_keys": "caso_agente.c.id_config_usada"}
+        sa_relationship_kwargs={"foreign_keys": "caso_agente.c.id_config_usada"},
     )

@@ -28,13 +28,13 @@ DIRECTORIO_UPLOAD_TEMP = Path(tempfile.gettempdir()) / "epidemio_uploads"
 
 class ProcessFromPreviewRequest(BaseModel):
     """Request para procesar un archivo previamente subido."""
+
     upload_id: str = Field(..., description="ID de subida del endpoint de preview")
     sheet_name: str = Field(..., description="Nombre de la hoja a procesar")
 
 
 async def process_file_from_preview(
-    request: ProcessFromPreviewRequest,
-    current_user: User = Depends(RequireAnyRole())
+    request: ProcessFromPreviewRequest, current_user: User = Depends(RequireAnyRole())
 ):
     """
     Procesar un archivo que fue previamente subido y previsualizado.
@@ -66,7 +66,7 @@ async def process_file_from_preview(
         logger.error(f"❌ ID de subida no encontrado: {id_subida}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Archivo no encontrado. El preview pudo haber expirado."
+            detail="Archivo no encontrado. El preview pudo haber expirado.",
         )
 
     ruta_archivo_temp = archivos_coincidentes[0]
@@ -78,15 +78,17 @@ async def process_file_from_preview(
         ext_archivo = ruta_archivo_temp.suffix.lower()
 
         # Preparar archivo para procesamiento (sin conversión innecesaria)
-        logger.info(f"📊 Preparando archivo para procesamiento - formato: {ext_archivo}")
+        logger.info(
+            f"📊 Preparando archivo para procesamiento - formato: {ext_archivo}"
+        )
 
         # Leer archivo en memoria
-        with open(ruta_archivo_temp, 'rb') as f:
+        with open(ruta_archivo_temp, "rb") as f:
             contenido_archivo = f.read()
 
         # Obtener tamaño del archivo
         tamano_archivo = os.path.getsize(ruta_archivo_temp)
-        logger.info(f"📊 Tamaño del archivo: {tamano_archivo / (1024*1024):.2f} MB")
+        logger.info(f"📊 Tamaño del archivo: {tamano_archivo / (1024 * 1024):.2f} MB")
 
         # Crear objeto tipo UploadFile
         from io import BytesIO
@@ -94,30 +96,32 @@ async def process_file_from_preview(
         from fastapi import UploadFile
 
         # Mantener el formato original (CSV o Excel)
-        if ext_archivo == '.csv':
+        if ext_archivo == ".csv":
             nombre_final = f"{nombre_hoja}.csv"
         else:
             nombre_final = f"{nombre_hoja}.xlsx"
 
         archivo_upload = UploadFile(
-            file=BytesIO(contenido_archivo),
-            filename=nombre_final,
-            size=tamano_archivo
+            file=BytesIO(contenido_archivo), filename=nombre_final, size=tamano_archivo
         )
 
         # Iniciar procesamiento asíncrono (el processor soporta Excel y CSV directamente)
-        logger.info(f"🚀 Iniciando job de Celery - procesará {ext_archivo} directamente")
+        logger.info(
+            f"🚀 Iniciando job de Celery - procesará {ext_archivo} directamente"
+        )
         job = await nominal_upload_handler.iniciar_procesamiento(
             archivo=archivo_upload,
             nombre_archivo=nombre_archivo_original,
-            nombre_hoja=nombre_hoja if ext_archivo != '.csv' else None
+            nombre_hoja=nombre_hoja if ext_archivo != ".csv" else None,
         )
 
         logger.info(f"✅ Job creado - job_id: {job.id}")
 
         # NO eliminar archivo temporal - permite reintentos sin re-subir
         # El archivo se limpia automáticamente por cleanup_temp_uploads.py cada 24h
-        logger.info(f"📌 Archivo temporal retenido para posible reintento: {ruta_archivo_temp.name}")
+        logger.info(
+            f"📌 Archivo temporal retenido para posible reintento: {ruta_archivo_temp.name}"
+        )
 
         # Retornar información del job
         datos_respuesta = AsyncJobResponse(
@@ -134,7 +138,7 @@ async def process_file_from_preview(
         # Mantener archivo para debugging - se limpia automáticamente
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Hoja '{nombre_hoja}' no encontrada en el archivo"
+            detail=f"Hoja '{nombre_hoja}' no encontrada en el archivo",
         )
 
     except Exception as e:
@@ -142,5 +146,5 @@ async def process_file_from_preview(
         # Mantener archivo para reintentos - se limpia automáticamente
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error procesando archivo: {str(e)}"
+            detail=f"Error procesando archivo: {str(e)}",
         )

@@ -6,12 +6,13 @@ REFACTORIZADO: Sistema configurable con queries y renderers reutilizables.
 
 import json
 import logging
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Any, Optional
 
 from fastapi import Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import col
 
 from app.api.v1.analytics.period_utils import get_epi_week_dates
 from app.api.v1.boletines.schemas import (
@@ -33,7 +34,7 @@ logger = logging.getLogger(__name__)
 async def generate_draft(
     request: GenerateDraftRequest,
     db: AsyncSession = Depends(get_async_session),
-    current_user: Optional[User] = RequireAuthOrSignedUrl
+    current_user: Optional[User] = RequireAuthOrSignedUrl,
 ) -> SuccessResponse[GenerateDraftResponse]:
     """
     Genera un borrador de boletín epidemiológico usando configuración desde DB.
@@ -68,21 +69,24 @@ async def generate_draft(
         if not config:
             raise HTTPException(
                 status_code=500,
-                detail="No se encontró configuración de template. Ejecute el seed primero."
+                detail="No se encontró configuración de template. Ejecute el seed primero.",
             )
 
         # 2. Construir contexto Jinja2
         context = build_context(request)
 
         # 3. Procesar template unificado
-        static_template = config.static_content_template or {"type": "doc", "content": []}
+        static_template = config.static_content_template or {
+            "type": "doc",
+            "content": [],
+        }
         event_template = config.event_section_template or None
         final_content, validation_warnings = await process_unified_template(
             db=db,
             template=static_template,
             request=request,
             context=context,
-            event_template=event_template
+            event_template=event_template,
         )
 
         # 7. Guardar instancia
@@ -91,7 +95,7 @@ async def generate_draft(
             request=request,
             content=final_content,
             context=context,
-            current_user=current_user
+            current_user=current_user,
         )
 
         logger.info(f"✓ Boletín generado exitosamente: ID {boletin.id}")
@@ -104,32 +108,34 @@ async def generate_draft(
                 "anio": context["anio"],
                 "fecha_inicio": context["fecha_inicio"],
                 "fecha_fin": context["fecha_fin"],
-                "num_semanas": request.num_semanas
+                "num_semanas": request.num_semanas,
             },
             eventos_incluidos=[
-                {
-                    "tipo_eno_id": e.tipo_eno_id,
-                    "incluir_charts": e.incluir_charts
-                }
+                {"tipo_eno_id": e.tipo_eno_id, "incluir_charts": e.incluir_charts}
                 for e in request.eventos_seleccionados
             ],
-            fecha_generacion=datetime.utcnow()
+            fecha_generacion=datetime.now(timezone.utc),
         )
+
+        # Verificar que el ID del boletín no sea None
+        if boletin.id is None:
+            raise HTTPException(
+                status_code=500, detail="Error: boletín guardado sin ID"
+            )
 
         return SuccessResponse(
             data=GenerateDraftResponse(
                 boletin_instance_id=boletin.id,
                 content=json.dumps(final_content),  # TipTap JSON como string
                 metadata=metadata,
-                warnings=validation_warnings
+                warnings=validation_warnings,
             )
         )
 
     except Exception as e:
         logger.error(f"Error generando borrador: {e}", exc_info=True)
         raise HTTPException(
-            status_code=500,
-            detail=f"Error al generar borrador: {str(e)}"
+            status_code=500, detail=f"Error al generar borrador: {str(e)}"
         )
 
 
@@ -137,8 +143,7 @@ async def generate_draft(
 
 
 def _calculate_previous_period(
-    fecha_inicio: "date",
-    fecha_fin: "date"
+    fecha_inicio: "date", fecha_fin: "date"
 ) -> tuple["date", "date"]:
     """
     Calcula el período anterior equivalente al período dado.
@@ -167,7 +172,7 @@ async def process_unified_template(
     template: dict[str, Any],
     request: "GenerateDraftRequest",
     context: dict[str, Any],
-    event_template: Optional[dict[str, Any]] = None
+    event_template: Optional[dict[str, Any]] = None,
 ) -> tuple[dict[str, Any], list[str]]:
     """
     Procesa un template en formato unificado (bloques embebidos en TipTap).
@@ -197,7 +202,9 @@ async def process_unified_template(
     logger.info("=" * 60)
     logger.info("PROCESANDO TEMPLATE UNIFICADO")
     logger.info(f"  - Contexto disponible: {list(context.keys())}")
-    logger.info(f"  - CasoEpidemiologicos seleccionados: {len(request.eventos_seleccionados)}")
+    logger.info(
+        f"  - CasoEpidemiologicos seleccionados: {len(request.eventos_seleccionados)}"
+    )
     logger.info(f"  - Event template presente: {event_template is not None}")
     logger.info("=" * 60)
 
@@ -209,7 +216,7 @@ async def process_unified_template(
     for idx, node in enumerate(result.get("content", [])):
         node_type = node.get("type")
 
-        logger.debug(f"[{idx+1}/{total_nodes}] Procesando nodo tipo: {node_type}")
+        logger.debug(f"[{idx + 1}/{total_nodes}] Procesando nodo tipo: {node_type}")
 
         if node_type == "selectedEventsPlaceholder":
             # ════════════════════════════════════════════════════════════════
@@ -219,51 +226,94 @@ async def process_unified_template(
             logger.info("📋 ENCONTRADO: selectedEventsPlaceholder")
 
             if not event_template:
-                logger.warning("⚠️  No hay event_template definido - saltando placeholder")
-                new_content.append({
-                    "type": "paragraph",
-                    "content": [{"type": "text", "text": "⚠️ No hay template de evento configurado"}]
-                })
+                logger.warning(
+                    "⚠️  No hay event_template definido - saltando placeholder"
+                )
+                new_content.append(
+                    {
+                        "type": "paragraph",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "⚠️ No hay template de evento configurado",
+                            }
+                        ],
+                    }
+                )
                 warnings.append("No hay template de evento configurado")
                 continue
 
             if not request.eventos_seleccionados:
                 logger.warning("⚠️  No hay eventos seleccionados - saltando placeholder")
-                new_content.append({
-                    "type": "paragraph",
-                    "content": [{"type": "text", "text": "ℹ️ No se seleccionaron eventos para incluir"}]
-                })
+                new_content.append(
+                    {
+                        "type": "paragraph",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "ℹ️ No se seleccionaron eventos para incluir",
+                            }
+                        ],
+                    }
+                )
                 continue
 
-            logger.info(f"🔄 Expandiendo placeholder para {len(request.eventos_seleccionados)} eventos")
+            logger.info(
+                f"🔄 Expandiendo placeholder para {len(request.eventos_seleccionados)} eventos"
+            )
 
             for evento_idx, evento in enumerate(request.eventos_seleccionados):
-                logger.info(f"  [{evento_idx+1}/{len(request.eventos_seleccionados)}] Procesando evento ID: {evento.tipo_eno_id}")
+                logger.info(
+                    f"  [{evento_idx + 1}/{len(request.eventos_seleccionados)}] Procesando evento ID: {evento.tipo_eno_id}"
+                )
                 try:
                     # Obtener info del evento
                     evento_info = await get_evento_info(db, evento.tipo_eno_id)
                     if not evento_info:
-                        logger.warning(f"    ⚠️ CasoEpidemiologico {evento.tipo_eno_id} no encontrado en DB")
-                        warnings.append(f"CasoEpidemiologico {evento.tipo_eno_id} no encontrado")
-                        new_content.append({
-                            "type": "paragraph",
-                            "content": [{"type": "text", "text": f"⚠️ CasoEpidemiologico ID {evento.tipo_eno_id} no encontrado"}]
-                        })
+                        logger.warning(
+                            f"    ⚠️ CasoEpidemiologico {evento.tipo_eno_id} no encontrado en DB"
+                        )
+                        warnings.append(
+                            f"CasoEpidemiologico {evento.tipo_eno_id} no encontrado"
+                        )
+                        new_content.append(
+                            {
+                                "type": "paragraph",
+                                "content": [
+                                    {
+                                        "type": "text",
+                                        "text": f"⚠️ CasoEpidemiologico ID {evento.tipo_eno_id} no encontrado",
+                                    }
+                                ],
+                            }
+                        )
                         continue
 
-                    logger.info(f"    ✓ CasoEpidemiologico: {evento_info.get('nombre')} (código: {evento_info.get('codigo')})")
+                    logger.info(
+                        f"    ✓ CasoEpidemiologico: {evento_info.get('nombre')} (código: {evento_info.get('codigo')})"
+                    )
 
                     # Crear contexto específico para este evento
                     evento_context = context.copy()
-                    evento_context.update({
-                        # Variables con nombres explícitos para templates
-                        "nombre_evento_sanitario": evento_info.get("nombre", f"CasoEpidemiologico {evento.tipo_eno_id}"),
-                        "codigo_evento_snvs": evento_info.get("codigo", str(evento.tipo_eno_id)),
-                        # Variables internas (compatibilidad)
-                        "tipo_evento": evento_info.get("nombre", f"CasoEpidemiologico {evento.tipo_eno_id}"),
-                        "evento_codigo": evento_info.get("codigo", str(evento.tipo_eno_id)),
-                        "evento_id": evento.tipo_eno_id,
-                    })
+                    evento_context.update(
+                        {
+                            # Variables con nombres explícitos para templates
+                            "nombre_evento_sanitario": evento_info.get(
+                                "nombre", f"CasoEpidemiologico {evento.tipo_eno_id}"
+                            ),
+                            "codigo_evento_snvs": evento_info.get(
+                                "codigo", str(evento.tipo_eno_id)
+                            ),
+                            # Variables internas (compatibilidad)
+                            "tipo_evento": evento_info.get(
+                                "nombre", f"CasoEpidemiologico {evento.tipo_eno_id}"
+                            ),
+                            "evento_codigo": evento_info.get(
+                                "codigo", str(evento.tipo_eno_id)
+                            ),
+                            "evento_id": evento.tipo_eno_id,
+                        }
+                    )
 
                     # Obtener análisis de tendencia para este evento
                     logger.info("    📊 Analizando tendencia...")
@@ -271,17 +321,27 @@ async def process_unified_template(
                         db=db,
                         query_service=query_service,
                         evento_id=evento.tipo_eno_id,
-                        context=evento_context
+                        context=evento_context,
                     )
                     evento_context.update(trend_analysis)
-                    logger.info(f"    ✓ Tendencia: {trend_analysis.get('tendencia_tipo', 'N/A')} ({trend_analysis.get('casos_semana_actual', 0)} casos)")
+                    logger.info(
+                        f"    ✓ Tendencia: {trend_analysis.get('tendencia_tipo', 'N/A')} ({trend_analysis.get('casos_semana_actual', 0)} casos)"
+                    )
 
                     # Log de variables disponibles para este evento
                     logger.info("    📝 Variables de evento disponibles:")
-                    for key in ['nombre_evento_sanitario', 'codigo_evento_snvs', 'descripcion_tendencia_casos',
-                                'casos_semana_actual', 'casos_semana_anterior', 'porcentaje_cambio']:
-                        val = evento_context.get(key, '[NO DEFINIDA]')
-                        logger.info(f"       - {key}: {str(val)[:60]}{'...' if len(str(val)) > 60 else ''}")
+                    for key in [
+                        "nombre_evento_sanitario",
+                        "codigo_evento_snvs",
+                        "descripcion_tendencia_casos",
+                        "casos_semana_actual",
+                        "casos_semana_anterior",
+                        "porcentaje_cambio",
+                    ]:
+                        val = evento_context.get(key, "[NO DEFINIDA]")
+                        logger.info(
+                            f"       - {key}: {str(val)[:60]}{'...' if len(str(val)) > 60 else ''}"
+                        )
 
                     # Procesar template de evento recursivamente
                     logger.info("    🔧 Procesando template de evento...")
@@ -290,30 +350,49 @@ async def process_unified_template(
                         event_template=event_template,
                         evento_context=evento_context,
                         query_service=query_service,
-                        renderer=renderer
+                        renderer=renderer,
                     )
 
                     if event_content:
-                        logger.info(f"    ✓ Template procesado: {len(event_content)} nodos generados")
+                        logger.info(
+                            f"    ✓ Template procesado: {len(event_content)} nodos generados"
+                        )
                         new_content.extend(event_content)
                     else:
                         logger.warning("    ⚠️ Template no generó contenido")
-                        new_content.append({
-                            "type": "paragraph",
-                            "content": [{"type": "text", "text": f"ℹ️ Sin datos para {evento_info.get('nombre')}"}]
-                        })
+                        new_content.append(
+                            {
+                                "type": "paragraph",
+                                "content": [
+                                    {
+                                        "type": "text",
+                                        "text": f"ℹ️ Sin datos para {evento_info.get('nombre')}",
+                                    }
+                                ],
+                            }
+                        )
 
                     if event_warnings:
                         logger.warning(f"    ⚠️ Warnings: {event_warnings}")
                     warnings.extend(event_warnings)
 
                 except Exception as e:
-                    logger.error(f"    ❌ Error procesando evento {evento.tipo_eno_id}: {e}", exc_info=True)
+                    logger.error(
+                        f"    ❌ Error procesando evento {evento.tipo_eno_id}: {e}",
+                        exc_info=True,
+                    )
                     warnings.append(f"Error en evento {evento.tipo_eno_id}: {str(e)}")
-                    new_content.append({
-                        "type": "paragraph",
-                        "content": [{"type": "text", "text": f"⚠️ Error procesando evento: {str(e)}"}]
-                    })
+                    new_content.append(
+                        {
+                            "type": "paragraph",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": f"⚠️ Error procesando evento: {str(e)}",
+                                }
+                            ],
+                        }
+                    )
 
         elif node_type == "dynamicBlock":
             # Extraer configuración del bloque
@@ -347,7 +426,7 @@ async def process_unified_template(
                     query_service=query_service,
                     query_type=query_type,
                     query_params=merged_query_params,
-                    context=block_context
+                    context=block_context,
                 )
 
                 # Verificar si hay data
@@ -356,10 +435,17 @@ async def process_unified_template(
                     titulo = render_config.get("titulo", block_id)
                     # Reemplazar variables en el título
                     titulo = replace_template_variables_in_string(titulo, block_context)
-                    new_content.append({
-                        "type": "paragraph",
-                        "content": [{"type": "text", "text": f"ℹ️ {titulo}: Sin datos disponibles para el período seleccionado"}]
-                    })
+                    new_content.append(
+                        {
+                            "type": "paragraph",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": f"ℹ️ {titulo}: Sin datos disponibles para el período seleccionado",
+                                }
+                            ],
+                        }
+                    )
                     continue
 
                 logger.info(f"   ✓ Query retornó datos: {type(data).__name__}")
@@ -370,7 +456,7 @@ async def process_unified_template(
                     render_type=render_type,
                     data=data,
                     render_config=render_config,
-                    context=block_context
+                    context=block_context,
                 )
 
                 # Extraer contenido del bloque renderizado y agregar al documento
@@ -385,16 +471,24 @@ async def process_unified_template(
                     warnings.append(f"Bloque '{block_id}' no generó contenido válido")
 
             except Exception as e:
-                logger.error(f"   ❌ Error procesando bloque '{block_id}': {e}", exc_info=True)
+                logger.error(
+                    f"   ❌ Error procesando bloque '{block_id}': {e}", exc_info=True
+                )
                 warnings.append(f"Error en bloque '{block_id}': {str(e)}")
                 # Agregar un placeholder de error
-                new_content.append({
-                    "type": "paragraph",
-                    "content": [{"type": "text", "text": f"⚠️ Error en {block_id}: {str(e)}"}]
-                })
+                new_content.append(
+                    {
+                        "type": "paragraph",
+                        "content": [
+                            {"type": "text", "text": f"⚠️ Error en {block_id}: {str(e)}"}
+                        ],
+                    }
+                )
         else:
             # Nodo normal: aplicar reemplazo de variables si es texto
-            processed_node = replace_template_variables_in_node(node, context, log_replacements=True)
+            processed_node = replace_template_variables_in_node(
+                node, context, log_replacements=True
+            )
             new_content.append(processed_node)
 
     logger.info("=" * 60)
@@ -420,7 +514,7 @@ async def get_evento_info(db: AsyncSession, evento_id: int) -> Optional[dict[str
     """
     from app.domains.vigilancia_nominal.models.enfermedad import Enfermedad
 
-    stmt = select(Enfermedad).where(Enfermedad.id == evento_id)
+    stmt = select(Enfermedad).where(col(Enfermedad.id) == evento_id)
     result = await db.execute(stmt)
     tipo_eno = result.scalar_one_or_none()
 
@@ -437,7 +531,7 @@ async def analyze_event_trend(
     db: AsyncSession,
     query_service: BoletinQueryService,
     evento_id: int,
-    context: dict[str, Any]
+    context: dict[str, Any],
 ) -> dict[str, Any]:
     """
     Analiza la tendencia de un evento comparando semana actual vs anterior.
@@ -458,10 +552,7 @@ async def analyze_event_trend(
     try:
         # Obtener casos de semana actual
         casos_actual = await query_service.consultar_casos_semana(
-            db=db,
-            evento_id=evento_id,
-            semana=context["semana"],
-            anio=context["anio"]
+            db=db, evento_id=evento_id, semana=context["semana"], anio=context["anio"]
         )
 
         # Calcular semana anterior
@@ -473,10 +564,7 @@ async def analyze_event_trend(
 
         # Obtener casos de semana anterior
         casos_anterior = await query_service.consultar_casos_semana(
-            db=db,
-            evento_id=evento_id,
-            semana=semana_anterior,
-            anio=anio_anterior
+            db=db, evento_id=evento_id, semana=semana_anterior, anio=anio_anterior
         )
 
         # Calcular diferencia y porcentaje
@@ -533,7 +621,7 @@ async def process_event_template(
     event_template: dict[str, Any],
     evento_context: dict[str, Any],
     query_service: BoletinQueryService,
-    renderer: BoletinBlockRenderer
+    renderer: BoletinBlockRenderer,
 ) -> tuple[list[dict[str, Any]], list[str]]:
     """
     Procesa el template de un evento específico.
@@ -556,11 +644,15 @@ async def process_event_template(
     template_content = event_template.get("content", [])
     evento_nombre = evento_context.get("nombre_evento_sanitario", "CasoEpidemiologico")
 
-    logger.info(f"      📄 Procesando {len(template_content)} nodos del template para '{evento_nombre}'")
+    logger.info(
+        f"      📄 Procesando {len(template_content)} nodos del template para '{evento_nombre}'"
+    )
 
     for node_idx, node in enumerate(template_content):
         node_type = node.get("type")
-        logger.debug(f"      [{node_idx+1}/{len(template_content)}] Nodo tipo: {node_type}")
+        logger.debug(
+            f"      [{node_idx + 1}/{len(template_content)}] Nodo tipo: {node_type}"
+        )
 
         if node_type == "dynamicBlock":
             attrs = node.get("attrs", {})
@@ -572,7 +664,9 @@ async def process_event_template(
 
             # Reemplazar variables en block_id y config
             block_id = replace_template_variables_in_string(block_id, evento_context)
-            render_config = replace_template_variables_in_node(render_config, evento_context)
+            render_config = replace_template_variables_in_node(
+                render_config, evento_context
+            )
 
             logger.info(f"      📊 Bloque dinámico: {block_id} (query: {query_type})")
 
@@ -580,7 +674,9 @@ async def process_event_template(
             query_params = query_params.copy()
             query_params["tipo_evento"] = evento_context.get("tipo_evento")
             query_params["evento_id"] = evento_context.get("evento_id")
-            query_params["config"] = render_config  # Include config for chart_type, series, etc.
+            query_params["config"] = (
+                render_config  # Include config for chart_type, series, etc.
+            )
 
             try:
                 data = await execute_query(
@@ -589,19 +685,32 @@ async def process_event_template(
                     query_type=query_type,
                     query_params=query_params,
                     context=evento_context,
-                    evento_id=evento_context.get("evento_id")
+                    evento_id=evento_context.get("evento_id"),
                 )
 
                 # Verificar si hay data
                 if not data or (isinstance(data, (list, dict)) and len(data) == 0):
                     logger.warning(f"      ⚠️ Sin datos para {block_id}")
-                    titulo = render_config.get("titulo", block_id) if isinstance(render_config, dict) else block_id
+                    titulo = (
+                        render_config.get("titulo", block_id)
+                        if isinstance(render_config, dict)
+                        else block_id
+                    )
                     # Reemplazar variables Jinja2 en el título
-                    titulo = replace_template_variables_in_string(titulo, evento_context)
-                    processed_nodes.append({
-                        "type": "paragraph",
-                        "content": [{"type": "text", "text": f"ℹ️ {titulo}: Sin datos disponibles"}]
-                    })
+                    titulo = replace_template_variables_in_string(
+                        titulo, evento_context
+                    )
+                    processed_nodes.append(
+                        {
+                            "type": "paragraph",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": f"ℹ️ {titulo}: Sin datos disponibles",
+                                }
+                            ],
+                        }
+                    )
                     continue
 
                 rendered = render_block(
@@ -610,11 +719,13 @@ async def process_event_template(
                     data=data,
                     render_config=render_config,
                     context=evento_context,
-                    evento_id=evento_context.get("evento_id")
+                    evento_id=evento_context.get("evento_id"),
                 )
 
                 if isinstance(rendered, dict) and "content" in rendered:
-                    logger.info(f"      ✓ Bloque renderizado: {len(rendered['content'])} nodos")
+                    logger.info(
+                        f"      ✓ Bloque renderizado: {len(rendered['content'])} nodos"
+                    )
                     processed_nodes.extend(rendered["content"])
                 elif isinstance(rendered, dict):
                     processed_nodes.append(rendered)
@@ -624,17 +735,27 @@ async def process_event_template(
             except Exception as e:
                 logger.error(f"      ❌ Error en bloque {block_id}: {e}", exc_info=True)
                 warnings.append(f"Error en {block_id}: {str(e)}")
-                processed_nodes.append({
-                    "type": "paragraph",
-                    "content": [{"type": "text", "text": f"⚠️ Error en {block_id}: {str(e)}"}]
-                })
+                processed_nodes.append(
+                    {
+                        "type": "paragraph",
+                        "content": [
+                            {"type": "text", "text": f"⚠️ Error en {block_id}: {str(e)}"}
+                        ],
+                    }
+                )
         else:
             # Nodo normal - reemplazar variables
-            logger.debug(f"      Procesando nodo {node_type} con reemplazo de variables")
-            processed_node = replace_template_variables_in_node(deepcopy(node), evento_context, log_replacements=True)
+            logger.debug(
+                f"      Procesando nodo {node_type} con reemplazo de variables"
+            )
+            processed_node = replace_template_variables_in_node(
+                deepcopy(node), evento_context, log_replacements=True
+            )
             processed_nodes.append(processed_node)
 
-    logger.info(f"      ✓ Template de evento procesado: {len(processed_nodes)} nodos resultantes")
+    logger.info(
+        f"      ✓ Template de evento procesado: {len(processed_nodes)} nodos resultantes"
+    )
     return processed_nodes, warnings
 
 
@@ -653,7 +774,9 @@ def replace_template_variables_in_string(text: str, context: dict[str, Any]) -> 
         return text
 
 
-def replace_template_variables_in_node(node: dict[str, Any], context: dict[str, Any], log_replacements: bool = False) -> dict[str, Any]:
+def replace_template_variables_in_node(
+    node: dict[str, Any], context: dict[str, Any], log_replacements: bool = False
+) -> dict[str, Any]:
     """
     Reemplaza variables Jinja2 en un nodo TipTap recursivamente.
 
@@ -695,18 +818,16 @@ def replace_template_variables_in_node(node: dict[str, Any], context: dict[str, 
                 # Convertir a string si no lo es
                 value_str = str(value)
                 replacements_made.append((variable_key, value_str[:50]))
-                logger.debug(f"   🔄 variableNode '{variable_key}' → '{value_str[:50]}{'...' if len(value_str) > 50 else ''}'")
-                return {
-                    "type": "text",
-                    "text": value_str
-                }
+                logger.debug(
+                    f"   🔄 variableNode '{variable_key}' → '{value_str[:50]}{'...' if len(value_str) > 50 else ''}'"
+                )
+                return {"type": "text", "text": value_str}
             else:
                 # Variable no encontrada - dejar placeholder legible
-                logger.warning(f"   ⚠️ variableNode '{variable_key}' NO encontrada en contexto. Claves disponibles: {list(context.keys())[:10]}...")
-                return {
-                    "type": "text",
-                    "text": f"[{variable_key}]"
-                }
+                logger.warning(
+                    f"   ⚠️ variableNode '{variable_key}' NO encontrada en contexto. Claves disponibles: {list(context.keys())[:10]}..."
+                )
+                return {"type": "text", "text": f"[{variable_key}]"}
 
         # ═══════════════════════════════════════════════════════════════════
         # Nodos normales: procesar recursivamente
@@ -715,7 +836,10 @@ def replace_template_variables_in_node(node: dict[str, Any], context: dict[str, 
         for key, value in n.items():
             if key == "content" and isinstance(value, list):
                 # Procesar lista de nodos hijos
-                result[key] = [process_node(child) if isinstance(child, dict) else child for child in value]
+                result[key] = [
+                    process_node(child) if isinstance(child, dict) else child
+                    for child in value
+                ]
             elif key == "text" and isinstance(value, str):
                 # Reemplazar variables Jinja2 en texto
                 if "{{" in value or "{%" in value:
@@ -723,7 +847,9 @@ def replace_template_variables_in_node(node: dict[str, Any], context: dict[str, 
                         template = env.from_string(value)
                         rendered = template.render(**context)
                         if rendered != value:
-                            logger.debug(f"   🔄 Jinja2: '{value[:30]}...' → '{rendered[:30]}...'")
+                            logger.debug(
+                                f"   🔄 Jinja2: '{value[:30]}...' → '{rendered[:30]}...'"
+                            )
                         result[key] = rendered
                     except Exception as e:
                         logger.warning(f"   ⚠️ Error Jinja2 en '{value[:30]}': {e}")
@@ -733,7 +859,10 @@ def replace_template_variables_in_node(node: dict[str, Any], context: dict[str, 
             elif isinstance(value, dict):
                 result[key] = process_node(value)
             elif isinstance(value, list):
-                result[key] = [process_node(item) if isinstance(item, dict) else item for item in value]
+                result[key] = [
+                    process_node(item) if isinstance(item, dict) else item
+                    for item in value
+                ]
             else:
                 result[key] = value
 
@@ -757,7 +886,7 @@ async def get_template_config(db: AsyncSession) -> Optional[BoletinTemplateConfi
     Returns:
         BoletinTemplateConfig o None si no existe
     """
-    stmt = select(BoletinTemplateConfig).where(BoletinTemplateConfig.id == 1)
+    stmt = select(BoletinTemplateConfig).where(col(BoletinTemplateConfig.id) == 1)
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
 
@@ -803,7 +932,6 @@ def build_context(request: GenerateDraftRequest) -> dict[str, Any]:
         "fecha_inicio_semana_epidemiologica": fecha_inicio_str,
         "fecha_fin_semana_epidemiologica": fecha_fin_str,
         "num_semanas_analizadas": request.num_semanas,
-
         # Variables internas (para queries, no para templates)
         "semana": request.semana,  # Mantener para compatibilidad con queries
         "anio": request.anio,
@@ -815,14 +943,11 @@ def build_context(request: GenerateDraftRequest) -> dict[str, Any]:
         "fecha_inicio_obj": fecha_inicio,
         "fecha_fin_obj": fecha_fin,
         "titulo_custom": request.titulo_custom,
-        "eventos_seleccionados": request.eventos_seleccionados
+        "eventos_seleccionados": request.eventos_seleccionados,
     }
 
 
-async def resolve_tipo_eno_codigos(
-    db: AsyncSession,
-    codigos: list[str]
-) -> list[int]:
+async def resolve_tipo_eno_codigos(db: AsyncSession, codigos: list[str]) -> list[int]:
     """
     Resuelve códigos kebab-case de tipo_eno a IDs numéricos.
 
@@ -838,7 +963,9 @@ async def resolve_tipo_eno_codigos(
     if not codigos:
         return []
 
-    stmt = select(Enfermedad.id, Enfermedad.slug).where(Enfermedad.slug.in_(codigos))
+    stmt = select(col(Enfermedad.id), col(Enfermedad.slug)).where(
+        col(Enfermedad.slug).in_(codigos)
+    )
     result = await db.execute(stmt)
     rows = result.fetchall()
 
@@ -894,20 +1021,24 @@ async def resolve_series_config(
 
         if agrupar_por == "agente":
             # Para agentes, los valores son códigos de agente directamente
-            resolved_series.append({
-                "agente_codigos": valores,
-                "label": label,
-                "color": color,
-            })
+            resolved_series.append(
+                {
+                    "agente_codigos": valores,
+                    "label": label,
+                    "color": color,
+                }
+            )
         else:
             # Para eventos, resolver códigos a IDs
             tipo_eno_ids = await resolve_tipo_eno_codigos(db, valores)
             if tipo_eno_ids:
-                resolved_series.append({
-                    "tipo_eno_ids": tipo_eno_ids,
-                    "label": label,
-                    "color": color,
-                })
+                resolved_series.append(
+                    {
+                        "tipo_eno_ids": tipo_eno_ids,
+                        "label": label,
+                        "color": color,
+                    }
+                )
 
     return resolved_series
 
@@ -918,7 +1049,7 @@ async def execute_query(
     query_type: str,
     query_params: dict[str, Any],
     context: dict[str, Any],
-    evento_id: Optional[int] = None
+    evento_id: Optional[int] = None,
 ) -> Any:
     """
     Ejecuta una query según el tipo configurado.
@@ -950,7 +1081,7 @@ async def execute_query(
             db=db,
             limite=query_params.get("limit", 10),
             fecha_inicio=context["fecha_inicio_obj"],
-            fecha_fin=context["fecha_fin_obj"]
+            fecha_fin=context["fecha_fin_obj"],
         )
 
     elif query_type == "evento_detail":
@@ -960,21 +1091,17 @@ async def execute_query(
             db=db,
             evento_id=evento_id,
             fecha_inicio=context["fecha_inicio_obj"],
-            fecha_fin=context["fecha_fin_obj"]
+            fecha_fin=context["fecha_fin_obj"],
         )
 
     elif query_type == "capacidad_hospitalaria":
         return await query_service.consultar_capacidad_hospitalaria(
-            db=db,
-            semana=context["semana"],
-            anio=context["anio"]
+            db=db, semana=context["semana"], anio=context["anio"]
         )
 
     elif query_type == "virus_respiratorios":
         return await query_service.consultar_virus_respiratorios(
-            db=db,
-            semana=context["semana"],
-            anio=context["anio"]
+            db=db, semana=context["semana"], anio=context["anio"]
         )
 
     elif query_type == "eventos_agrupados":
@@ -983,7 +1110,7 @@ async def execute_query(
             tipo_evento=query_params.get("tipo_evento", "ETI"),
             semana=context["semana"],
             anio=context["anio"],
-            num_semanas=query_params.get("num_semanas", 4)
+            num_semanas=query_params.get("num_semanas", 4),
         )
 
     elif query_type == "distribucion_edad":
@@ -998,7 +1125,9 @@ async def execute_query(
 
         # Leer series desde config (render_config)
         render_config = query_params.get("config", {})
-        series_config = render_config.get("series", []) if isinstance(render_config, dict) else []
+        series_config = (
+            render_config.get("series", []) if isinstance(render_config, dict) else []
+        )
 
         # Resolver series usando estructura con "valores"
         resolved_series = await resolve_series_config(
@@ -1009,9 +1138,13 @@ async def execute_query(
 
         # Si no hay series resueltas y tenemos evento_id, crear serie simple
         if not resolved_series and evento_id:
-            resolved_series = [{"tipo_eno_ids": [evento_id], "label": "Casos", "color": "#4CAF50"}]
+            resolved_series = [
+                {"tipo_eno_ids": [evento_id], "label": "Casos", "color": "#4CAF50"}
+            ]
 
-        logger.info(f"distribucion_edad: agrupar_por={agrupar_por}, {len(resolved_series)} series")
+        logger.info(
+            f"distribucion_edad: agrupar_por={agrupar_por}, {len(resolved_series)} series"
+        )
 
         generator = ChartSpecGenerator(db)
 
@@ -1032,7 +1165,9 @@ async def execute_query(
             fecha_hasta = context.get("fecha_fin")
 
         filters = FiltrosGrafico(
-            ids_tipo_eno=all_tipo_eno_ids if all_tipo_eno_ids else ([evento_id] if evento_id else None),
+            ids_tipo_eno=all_tipo_eno_ids
+            if all_tipo_eno_ids
+            else ([evento_id] if evento_id else None),
             fecha_desde=fecha_desde,
             fecha_hasta=fecha_hasta,
         )
@@ -1042,7 +1177,7 @@ async def execute_query(
                 filtros=filters,
                 configuracion=query_params.get("config"),
                 configuracion_series=resolved_series if resolved_series else None,
-                agrupar_por=agrupar_por
+                agrupar_por=agrupar_por,
             )
             return {"spec": spec.model_dump(by_alias=True), "chart_code": "casos_edad"}
         except Exception as e:
@@ -1061,7 +1196,9 @@ async def execute_query(
             fecha_hasta=context.get("fecha_fin"),
         )
         try:
-            spec = await generator.generar_spec(codigo_grafico="mapa_chubut", filtros=filters)
+            spec = await generator.generar_spec(
+                codigo_grafico="mapa_chubut", filtros=filters
+            )
             return {"spec": spec.model_dump(by_alias=True), "chart_code": "mapa_chubut"}
         except Exception as e:
             logger.warning(f"Error generando spec distribucion_geografica: {e}")
@@ -1078,6 +1215,8 @@ async def execute_query(
         if periodo == "anual":
             # Corredor de todo el año - calcular fechas de SE 1 a SE actual
             anio = context.get("anio")
+            if not isinstance(anio, int):
+                anio = date.today().year
             semana_actual = context.get("semana", 52)
             fecha_inicio_anual, _ = get_epi_week_dates(1, anio)
             _, fecha_fin_anual = get_epi_week_dates(semana_actual, anio)
@@ -1094,22 +1233,29 @@ async def execute_query(
                 fecha_hasta=context.get("fecha_fin"),
             )
         try:
-            spec = await generator.generar_spec(codigo_grafico="corredor_endemico", filtros=filters)
-            return {"spec": spec.model_dump(by_alias=True), "chart_code": "corredor_endemico"}
+            spec = await generator.generar_spec(
+                codigo_grafico="corredor_endemico", filtros=filters
+            )
+            return {
+                "spec": spec.model_dump(by_alias=True),
+                "chart_code": "corredor_endemico",
+            }
         except Exception as e:
             logger.warning(f"Error generando spec corredor_endemico: {e}")
             return {}
 
     elif query_type == "comparacion_periodos":
         # Comparación del período actual vs período anterior
+        if evento_id is None:
+            logger.warning("comparacion_periodos: evento_id es None")
+            return {}
         return await query_service.consultar_comparacion_periodos(
             db=db,
             evento_id=evento_id,
             periodo_actual=(context["fecha_inicio_obj"], context["fecha_fin_obj"]),
             periodo_anterior=_calculate_previous_period(
-                context["fecha_inicio_obj"],
-                context["fecha_fin_obj"]
-            )
+                context["fecha_inicio_obj"], context["fecha_fin_obj"]
+            ),
         )
 
     elif query_type == "comparacion_anual":
@@ -1126,19 +1272,34 @@ async def execute_query(
             ids_tipo_eno=[evento_id] if evento_id else None,
             anio=anio,
             semana_hasta=semana,
-            comparar_anio_anterior=True
+            comparar_anio_anterior=True,
         )
         try:
-            spec = await generator.generar_spec(codigo_grafico="curva_epidemiologica", filtros=filters)
-            return {"spec": spec.model_dump(by_alias=True), "chart_code": "curva_epidemiologica_comparada"}
+            spec = await generator.generar_spec(
+                codigo_grafico="curva_epidemiologica", filtros=filters
+            )
+            return {
+                "spec": spec.model_dump(by_alias=True),
+                "chart_code": "curva_epidemiologica_comparada",
+            }
         except Exception as e:
             logger.warning(f"Error generando spec comparacion_anual: {e}")
             # Fallback a datos de query service
+            if evento_id is None:
+                logger.warning("comparacion_anual fallback: evento_id es None")
+                return {}
             return await query_service.consultar_comparacion_periodos(
                 db=db,
                 evento_id=evento_id,
                 periodo_actual=(date(anio, 1, 1), context["fecha_fin_obj"]),
-                periodo_anterior=(date(anio - 1, 1, 1), date(anio - 1, context["fecha_fin_obj"].month, context["fecha_fin_obj"].day))
+                periodo_anterior=(
+                    date(anio - 1, 1, 1),
+                    date(
+                        anio - 1,
+                        context["fecha_fin_obj"].month,
+                        context["fecha_fin_obj"].day,
+                    ),
+                ),
             )
 
     elif query_type == "curva_epidemiologica":
@@ -1153,9 +1314,13 @@ async def execute_query(
 
         # Leer series desde config (render_config)
         render_config = query_params.get("config", {})
-        series_config = render_config.get("series", []) if isinstance(render_config, dict) else []
+        series_config = (
+            render_config.get("series", []) if isinstance(render_config, dict) else []
+        )
 
-        logger.info(f"curva_epidemiologica: render_config.series={series_config}, agrupar_por={agrupar_por}")
+        logger.info(
+            f"curva_epidemiologica: render_config.series={series_config}, agrupar_por={agrupar_por}"
+        )
 
         # Resolver series usando estructura con "valores"
         resolved_series = await resolve_series_config(
@@ -1168,13 +1333,23 @@ async def execute_query(
 
         # Si no hay series resueltas y tenemos evento_id, crear serie simple
         if not resolved_series and evento_id:
-            resolved_series = [{"tipo_eno_ids": [evento_id], "label": "Casos", "color": "rgb(75, 192, 192)"}]
+            resolved_series = [
+                {
+                    "tipo_eno_ids": [evento_id],
+                    "label": "Casos",
+                    "color": "rgb(75, 192, 192)",
+                }
+            ]
 
         if not resolved_series:
-            logger.warning("curva_epidemiologica: No hay series válidas (series_config was empty or unresolved)")
+            logger.warning(
+                "curva_epidemiologica: No hay series válidas (series_config was empty or unresolved)"
+            )
             return {}
 
-        logger.info(f"curva_epidemiologica: agrupar_por={agrupar_por}, {len(resolved_series)} series")
+        logger.info(
+            f"curva_epidemiologica: agrupar_por={agrupar_por}, {len(resolved_series)} series"
+        )
         logger.info(f"curva_epidemiologica: resolved_series={resolved_series}")
 
         # Extraer todos los IDs de tipo_eno para el filtro (aplanar arrays)
@@ -1197,7 +1372,9 @@ async def execute_query(
 
         generator = ChartSpecGenerator(db)
         filters = FiltrosGrafico(
-            ids_tipo_eno=all_tipo_eno_ids if all_tipo_eno_ids else ([evento_id] if evento_id else None),
+            ids_tipo_eno=all_tipo_eno_ids
+            if all_tipo_eno_ids
+            else ([evento_id] if evento_id else None),
             fecha_desde=fecha_desde,
             fecha_hasta=fecha_hasta,
             agrupacion_temporal=query_params.get("agrupacion_temporal", "semana"),
@@ -1208,9 +1385,12 @@ async def execute_query(
                 filtros=filters,
                 configuracion=query_params.get("config"),
                 configuracion_series=resolved_series,
-                agrupar_por=agrupar_por
+                agrupar_por=agrupar_por,
             )
-            return {"spec": spec.model_dump(by_alias=True), "chart_code": "curva_epidemiologica"}
+            return {
+                "spec": spec.model_dump(by_alias=True),
+                "chart_code": "curva_epidemiologica",
+            }
         except Exception as e:
             logger.warning(f"Error generando spec curva_epidemiologica: {e}")
             return {}
@@ -1222,46 +1402,58 @@ async def execute_query(
     elif query_type == "insight_distribucion_edad":
         from app.domains.boletines.services.insights import BoletinInsightsService
 
+        if evento_id is None:
+            logger.warning("insight_distribucion_edad: evento_id es None")
+            return {"texto": ""}
         insights_service = BoletinInsightsService(db)
         return await insights_service.generar_insight_distribucion_edad(
             evento_id=evento_id,
             fecha_inicio=context["fecha_inicio_obj"],
             fecha_fin=context["fecha_fin_obj"],
-            evento_nombre=context.get("nombre_evento_sanitario")
+            evento_nombre=context.get("nombre_evento_sanitario"),
         )
 
     elif query_type == "insight_distribucion_geografica":
         from app.domains.boletines.services.insights import BoletinInsightsService
 
+        if evento_id is None:
+            logger.warning("insight_distribucion_geografica: evento_id es None")
+            return {"texto": ""}
         insights_service = BoletinInsightsService(db)
         return await insights_service.generar_insight_distribucion_geografica(
             evento_id=evento_id,
             fecha_inicio=context["fecha_inicio_obj"],
             fecha_fin=context["fecha_fin_obj"],
-            evento_nombre=context.get("nombre_evento_sanitario")
+            evento_nombre=context.get("nombre_evento_sanitario"),
         )
 
     elif query_type == "insight_tendencia":
         from app.domains.boletines.services.insights import BoletinInsightsService
 
+        if evento_id is None:
+            logger.warning("insight_tendencia: evento_id es None")
+            return {"texto": ""}
         insights_service = BoletinInsightsService(db)
         return await insights_service.generar_insight_tendencia(
             evento_id=evento_id,
             semana_actual=context["semana"],
             anio=context["anio"],
             num_semanas=query_params.get("num_semanas", context.get("num_semanas", 4)),
-            evento_nombre=context.get("nombre_evento_sanitario")
+            evento_nombre=context.get("nombre_evento_sanitario"),
         )
 
     elif query_type == "insight_resumen":
         from app.domains.boletines.services.insights import BoletinInsightsService
 
+        if evento_id is None:
+            logger.warning("insight_resumen: evento_id es None")
+            return {"texto": ""}
         insights_service = BoletinInsightsService(db)
         return await insights_service.generar_insight_resumen(
             evento_id=evento_id,
             fecha_inicio=context["fecha_inicio_obj"],
             fecha_fin=context["fecha_fin_obj"],
-            evento_nombre=context.get("nombre_evento_sanitario")
+            evento_nombre=context.get("nombre_evento_sanitario"),
         )
 
     else:
@@ -1270,9 +1462,7 @@ async def execute_query(
 
 
 def render_chart_block(
-    data: dict[str, Any],
-    render_config: dict[str, Any],
-    context: dict[str, Any]
+    data: dict[str, Any], render_config: dict[str, Any], context: dict[str, Any]
 ) -> dict[str, Any]:
     """
     Renderiza un bloque de chart con el spec embebido.
@@ -1295,10 +1485,17 @@ def render_chart_block(
     if not spec:
         return {
             "type": "doc",
-            "content": [{
-                "type": "paragraph",
-                "content": [{"type": "text", "text": f"ℹ️ {titulo}: Sin datos disponibles para generar el gráfico"}]
-            }]
+            "content": [
+                {
+                    "type": "paragraph",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": f"ℹ️ {titulo}: Sin datos disponibles para generar el gráfico",
+                        }
+                    ],
+                }
+            ],
         }
 
     # Obtener evento_id del contexto para pasarlo al chart
@@ -1313,13 +1510,17 @@ def render_chart_block(
         # En el nuevo schema: spec.datos.datos.departamentos
         # Pero aquí spec es un dict porque se hizo model_dump()
         # spec["datos"]["datos"]["departamentos"]
-        
+
         # Intentar acceder con la estructura nueva (datos -> datos -> departamentos)
-        departamentos_data = spec.get("datos", {}).get("datos", {}).get("departamentos", [])
+        departamentos_data = (
+            spec.get("datos", {}).get("datos", {}).get("departamentos", [])
+        )
         total_casos = spec.get("datos", {}).get("datos", {}).get("total_casos", 0)
 
         # Ordenar por casos descendente
-        departamentos_sorted = sorted(departamentos_data, key=lambda x: x.get("casos", 0), reverse=True)
+        departamentos_sorted = sorted(
+            departamentos_data, key=lambda x: x.get("casos", 0), reverse=True
+        )
 
         # Construir tabla TipTap nativa
         table_rows = [
@@ -1329,46 +1530,90 @@ def render_chart_block(
                 "content": [
                     {
                         "type": "tableHeader",
-                        "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Departamento"}]}]
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "content": [{"type": "text", "text": "Departamento"}],
+                            }
+                        ],
                     },
                     {
                         "type": "tableHeader",
-                        "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Casos"}]}]
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "content": [{"type": "text", "text": "Casos"}],
+                            }
+                        ],
                     },
                     {
                         "type": "tableHeader",
-                        "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Tasa/100k hab."}]}]
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "content": [{"type": "text", "text": "Tasa/100k hab."}],
+                            }
+                        ],
                     },
-                ]
+                ],
             }
         ]
 
         # Data rows
         for dept in departamentos_sorted:
-            table_rows.append({
-                "type": "tableRow",
-                "content": [
-                    {
-                        "type": "tableCell",
-                        "content": [{"type": "paragraph", "content": [{"type": "text", "text": dept.get("nombre", "")}]}]
-                    },
-                    {
-                        "type": "tableCell",
-                        "content": [{"type": "paragraph", "content": [{"type": "text", "text": str(dept.get("casos", 0))}]}]
-                    },
-                    {
-                        "type": "tableCell",
-                        "content": [{"type": "paragraph", "content": [{"type": "text", "text": f"{dept.get('tasa_incidencia', 0):.2f}"}]}]
-                    },
-                ]
-            })
+            table_rows.append(
+                {
+                    "type": "tableRow",
+                    "content": [
+                        {
+                            "type": "tableCell",
+                            "content": [
+                                {
+                                    "type": "paragraph",
+                                    "content": [
+                                        {"type": "text", "text": dept.get("nombre", "")}
+                                    ],
+                                }
+                            ],
+                        },
+                        {
+                            "type": "tableCell",
+                            "content": [
+                                {
+                                    "type": "paragraph",
+                                    "content": [
+                                        {
+                                            "type": "text",
+                                            "text": str(dept.get("casos", 0)),
+                                        }
+                                    ],
+                                }
+                            ],
+                        },
+                        {
+                            "type": "tableCell",
+                            "content": [
+                                {
+                                    "type": "paragraph",
+                                    "content": [
+                                        {
+                                            "type": "text",
+                                            "text": f"{dept.get('tasa_incidencia', 0):.2f}",
+                                        }
+                                    ],
+                                }
+                            ],
+                        },
+                    ],
+                }
+            )
 
         content_nodes = [
             # Título del mapa
             {
                 "type": "heading",
                 "attrs": {"level": 3},
-                "content": [{"type": "text", "text": titulo}]
+                "content": [{"type": "text", "text": titulo}],
             },
             # Imagen del mapa
             {
@@ -1379,38 +1624,30 @@ def render_chart_block(
                     "title": titulo,
                     "spec": spec,
                     "height": render_config.get("height", 400),
-                }
+                },
             },
             # Espacio
-            {
-                "type": "paragraph",
-                "content": []
-            },
+            {"type": "paragraph", "content": []},
             # Tabla HTML nativa con datos de departamentos
-            {
-                "type": "table",
-                "content": table_rows
-            },
+            {"type": "table", "content": table_rows},
             # Total de casos
             {
                 "type": "paragraph",
                 "content": [
-                    {"type": "text", "marks": [{"type": "bold"}], "text": f"Total de casos en la provincia: {total_casos}"}
-                ]
+                    {
+                        "type": "text",
+                        "marks": [{"type": "bold"}],
+                        "text": f"Total de casos en la provincia: {total_casos}",
+                    }
+                ],
             },
             # Espacio después
-            {
-                "type": "paragraph",
-                "content": []
-            }
+            {"type": "paragraph", "content": []},
         ]
 
         logger.info("✓ Mapa + Tabla departamentos (HTML nativo) renderizados")
 
-        return {
-            "type": "doc",
-            "content": content_nodes
-        }
+        return {"type": "doc", "content": content_nodes}
 
     # ═══════════════════════════════════════════════════════════════════════════
     # Caso normal: un solo chart
@@ -1420,7 +1657,7 @@ def render_chart_block(
         {
             "type": "heading",
             "attrs": {"level": 3},
-            "content": [{"type": "text", "text": titulo}]
+            "content": [{"type": "text", "text": titulo}],
         },
         # Chart embebido con spec y eventoIds
         {
@@ -1431,21 +1668,15 @@ def render_chart_block(
                 "title": titulo,
                 "spec": spec,
                 "height": render_config.get("height", 400),
-            }
+            },
         },
         # Espacio después
-        {
-            "type": "paragraph",
-            "content": []
-        }
+        {"type": "paragraph", "content": []},
     ]
 
     logger.info(f"✓ Chart renderizado: {chart_code}")
 
-    return {
-        "type": "doc",
-        "content": content_nodes
-    }
+    return {"type": "doc", "content": content_nodes}
 
 
 def render_block(
@@ -1454,7 +1685,7 @@ def render_block(
     data: Any,
     render_config: dict[str, Any],
     context: dict[str, Any],
-    evento_id: Optional[int] = None
+    evento_id: Optional[int] = None,
 ) -> dict[str, Any]:
     """
     Renderiza un bloque según el tipo configurado.
@@ -1506,17 +1737,14 @@ def render_block(
         logger.warning(f"Render type desconocido: {render_type}")
         return {
             "type": "paragraph",
-            "content": [{
-                "type": "text",
-                "text": f"⚠️ Bloque no renderizado: {render_type}"
-            }]
+            "content": [
+                {"type": "text", "text": f"⚠️ Bloque no renderizado: {render_type}"}
+            ],
         }
 
 
 def render_insight_text(
-    data: dict[str, Any],
-    render_config: dict[str, Any],
-    context: dict[str, Any]
+    data: dict[str, Any], render_config: dict[str, Any], context: dict[str, Any]
 ) -> dict[str, Any]:
     """
     Renderiza un insight como párrafo de texto TipTap.
@@ -1534,10 +1762,17 @@ def render_insight_text(
     if not texto:
         return {
             "type": "doc",
-            "content": [{
-                "type": "paragraph",
-                "content": [{"type": "text", "text": "ℹ️ Sin datos disponibles para generar insight."}]
-            }]
+            "content": [
+                {
+                    "type": "paragraph",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "ℹ️ Sin datos disponibles para generar insight.",
+                        }
+                    ],
+                }
+            ],
         }
 
     content_nodes = []
@@ -1546,24 +1781,22 @@ def render_insight_text(
     titulo = render_config.get("titulo")
     if titulo:
         titulo = replace_template_variables_in_string(titulo, context)
-        content_nodes.append({
-            "type": "heading",
-            "attrs": {"level": render_config.get("nivel_titulo", 4)},
-            "content": [{"type": "text", "text": titulo}]
-        })
+        content_nodes.append(
+            {
+                "type": "heading",
+                "attrs": {"level": render_config.get("nivel_titulo", 4)},
+                "content": [{"type": "text", "text": titulo}],
+            }
+        )
 
     # Agregar el texto del insight como párrafo
-    content_nodes.append({
-        "type": "paragraph",
-        "content": [{"type": "text", "text": texto}]
-    })
+    content_nodes.append(
+        {"type": "paragraph", "content": [{"type": "text", "text": texto}]}
+    )
 
     logger.info(f"✓ Insight renderizado: {texto[:50]}...")
 
-    return {
-        "type": "doc",
-        "content": content_nodes
-    }
+    return {"type": "doc", "content": content_nodes}
 
 
 async def save_boletin_instance(
@@ -1571,7 +1804,7 @@ async def save_boletin_instance(
     request: GenerateDraftRequest,
     content: dict[str, Any],
     context: dict[str, Any],
-    current_user: Optional[User]
+    current_user: Optional[User],
 ) -> BoletinInstance:
     """
     Guarda la instancia del boletín en DB.
@@ -1586,7 +1819,10 @@ async def save_boletin_instance(
     Returns:
         BoletinInstance guardado
     """
-    titulo = request.titulo_custom or f"Boletín Epidemiológico SE {request.semana}/{request.anio}"
+    titulo = (
+        request.titulo_custom
+        or f"Boletín Epidemiológico SE {request.semana}/{request.anio}"
+    )
 
     boletin = BoletinInstance(
         name=titulo,
@@ -1595,9 +1831,11 @@ async def save_boletin_instance(
             "semana": request.semana,
             "anio": request.anio,
             "num_semanas": request.num_semanas,
-            "eventos_seleccionados": [e.tipo_eno_id for e in request.eventos_seleccionados],
+            "eventos_seleccionados": [
+                e.tipo_eno_id for e in request.eventos_seleccionados
+            ],
             "generado_automaticamente": True,
-            "version": "2.0"  # Nueva versión con sistema configurable
+            "version": "2.0",  # Nueva versión con sistema configurable
         },
         template_snapshot={
             "tipo": "generacion_configurable_v2",
@@ -1606,8 +1844,8 @@ async def save_boletin_instance(
                 "semana_fin": context["semana"],
                 "anio": context["anio"],
                 "fecha_inicio": context["fecha_inicio"],
-                "fecha_fin": context["fecha_fin"]
-            }
+                "fecha_fin": context["fecha_fin"],
+            },
         },
         content=json.dumps(content),  # Guardar como JSON string
     )

@@ -55,7 +55,7 @@ async def update_strategy(
 
         # Actualizar
         strategy = await repo.update(strategy_id, strategy_data)
-        strategy_response = EstrategiaClasificacionResponse.from_orm(strategy)
+        strategy_response = EstrategiaClasificacionResponse.model_validate(strategy)
 
         logger.info(f"✅ Strategy updated: {strategy.name}")
         return SuccessResponse(data=strategy_response)

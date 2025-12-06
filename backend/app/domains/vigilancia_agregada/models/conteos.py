@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Optional
 
 from pydantic import model_validator
 from sqlalchemy import BigInteger, Index, SmallInteger
+from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship
 
 from app.core.models import BaseModel
@@ -139,13 +140,13 @@ class ConteoCasosClinicos(BaseModel, table=True):
     # Relaciones
     # ═══════════════════════════════════════════════════════════════
 
-    notificacion: "NotificacionSemanal" = Relationship(
+    notificacion: Mapped["NotificacionSemanal"] = Relationship(
         back_populates="conteos_clinicos"
     )
-    tipo_evento: "TipoCasoEpidemiologicoPasivo" = Relationship(
+    tipo_evento: Mapped["TipoCasoEpidemiologicoPasivo"] = Relationship(
         back_populates="conteos_clinicos"
     )
-    rango_etario: "RangoEtario" = Relationship(
+    rango_etario: Mapped["RangoEtario"] = Relationship(
         back_populates="conteos_clinicos"
     )
 
@@ -318,11 +319,11 @@ class ConteoEstudiosLab(BaseModel, table=True):
     # Relaciones
     # ═══════════════════════════════════════════════════════════════
 
-    notificacion: "NotificacionSemanal" = Relationship(
+    notificacion: Mapped["NotificacionSemanal"] = Relationship(
         back_populates="conteos_laboratorio"
     )
-    agente: "AgenteEtiologico" = Relationship()
-    rango_etario: "RangoEtario" = Relationship(
+    agente: Mapped["AgenteEtiologico"] = Relationship()
+    rango_etario: Mapped["RangoEtario"] = Relationship(
         back_populates="conteos_laboratorio"
     )
 
@@ -432,12 +433,12 @@ class ConteoCamasIRA(BaseModel, table=True):
     # Relaciones
     # ═══════════════════════════════════════════════════════════════
 
-    notificacion: "NotificacionSemanal" = Relationship(
+    notificacion: Mapped["NotificacionSemanal"] = Relationship(
         back_populates="conteos_internacion"
     )
-    tipo_evento: "TipoCasoEpidemiologicoPasivo" = Relationship(
+    tipo_evento: Mapped["TipoCasoEpidemiologicoPasivo"] = Relationship(
         back_populates="conteos_internacion"
     )
-    rango_etario: "RangoEtario" = Relationship(
+    rango_etario: Mapped["RangoEtario"] = Relationship(
         back_populates="conteos_internacion"
     )

@@ -9,14 +9,15 @@ from typing import Any
 
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import col
 
 from app.domains.boletines.models import CapacidadHospitalaria, VirusRespiratorio
+from app.domains.vigilancia_nominal.models.caso import CasoEpidemiologico
 from app.domains.vigilancia_nominal.models.enfermedad import (
     Enfermedad,
-    GrupoDeEnfermedades,
     EnfermedadGrupo,
+    GrupoDeEnfermedades,
 )
-from app.domains.vigilancia_nominal.models.caso import CasoEpidemiologico
 
 logger = logging.getLogger(__name__)
 
@@ -29,10 +30,7 @@ class BoletinQueryService:
 
     @staticmethod
     async def consultar_top_enos(
-        db: AsyncSession,
-        limite: int,
-        fecha_inicio: date,
-        fecha_fin: date
+        db: AsyncSession, limite: int, fecha_inicio: date, fecha_fin: date
     ) -> list[dict[str, Any]]:
         """
         Top N ENOs del período ordenados por casos.
@@ -59,9 +57,7 @@ class BoletinQueryService:
                 ...
             ]
         """
-        logger.info(
-            f"Query top {limite} ENOs desde {fecha_inicio} hasta {fecha_fin}"
-        )
+        logger.info(f"Query top {limite} ENOs desde {fecha_inicio} hasta {fecha_fin}")
 
         # Calcular período anterior (mismo número de días)
         dias_periodo = (fecha_fin - fecha_inicio).days
@@ -71,23 +67,36 @@ class BoletinQueryService:
         # Query casos actuales
         stmt_actual = (
             select(
-                Enfermedad.id.label("tipo_eno_id"),
-                Enfermedad.nombre.label("tipo_eno_nombre"),
-                GrupoDeEnfermedades.id.label("grupo_eno_id"),
-                GrupoDeEnfermedades.nombre.label("grupo_eno_nombre"),
-                func.count(CasoEpidemiologico.id).label("casos_actuales")
+                col(Enfermedad.id).label("tipo_eno_id"),
+                col(Enfermedad.nombre).label("tipo_eno_nombre"),
+                col(GrupoDeEnfermedades.id).label("grupo_eno_id"),
+                col(GrupoDeEnfermedades.nombre).label("grupo_eno_nombre"),
+                func.count(CasoEpidemiologico.id).label("casos_actuales"),
             )
             .select_from(CasoEpidemiologico)
-            .join(Enfermedad, CasoEpidemiologico.id_enfermedad == Enfermedad.id)
-            .join(EnfermedadGrupo, Enfermedad.id == EnfermedadGrupo.id_enfermedad)
-            .join(GrupoDeEnfermedades, EnfermedadGrupo.id_grupo == GrupoDeEnfermedades.id)
+            .join(
+                Enfermedad, col(CasoEpidemiologico.id_enfermedad) == col(Enfermedad.id)
+            )
+            .join(
+                EnfermedadGrupo,
+                col(Enfermedad.id) == col(EnfermedadGrupo.id_enfermedad),
+            )
+            .join(
+                GrupoDeEnfermedades,
+                col(EnfermedadGrupo.id_grupo) == col(GrupoDeEnfermedades.id),
+            )
             .where(
                 and_(
-                    CasoEpidemiologico.fecha_minima_caso >= fecha_inicio,
-                    CasoEpidemiologico.fecha_minima_caso <= fecha_fin
+                    col(CasoEpidemiologico.fecha_minima_caso) >= fecha_inicio,
+                    col(CasoEpidemiologico.fecha_minima_caso) <= fecha_fin,
                 )
             )
-            .group_by(Enfermedad.id, Enfermedad.nombre, GrupoDeEnfermedades.id, GrupoDeEnfermedades.nombre)
+            .group_by(
+                col(Enfermedad.id),
+                col(Enfermedad.nombre),
+                col(GrupoDeEnfermedades.id),
+                col(GrupoDeEnfermedades.nombre),
+            )
             .order_by(func.count(CasoEpidemiologico.id).desc())
             .limit(limite)
         )
@@ -103,23 +112,27 @@ class BoletinQueryService:
 
         stmt_previo = (
             select(
-                Enfermedad.id.label("tipo_eno_id"),
-                func.count(CasoEpidemiologico.id).label("casos_previos")
+                col(Enfermedad.id).label("tipo_eno_id"),
+                func.count(CasoEpidemiologico.id).label("casos_previos"),
             )
             .select_from(CasoEpidemiologico)
-            .join(Enfermedad, CasoEpidemiologico.id_enfermedad == Enfermedad.id)
+            .join(
+                Enfermedad, col(CasoEpidemiologico.id_enfermedad) == col(Enfermedad.id)
+            )
             .where(
                 and_(
-                    Enfermedad.id.in_(ids_tipo_eno),
-                    CasoEpidemiologico.fecha_minima_caso >= fecha_inicio_anterior,
-                    CasoEpidemiologico.fecha_minima_caso <= fecha_fin_anterior
+                    col(Enfermedad.id).in_(ids_tipo_eno),
+                    col(CasoEpidemiologico.fecha_minima_caso) >= fecha_inicio_anterior,
+                    col(CasoEpidemiologico.fecha_minima_caso) <= fecha_fin_anterior,
                 )
             )
-            .group_by(Enfermedad.id)
+            .group_by(col(Enfermedad.id))
         )
 
         resultado_previo = await db.execute(stmt_previo)
-        filas_previo = {fila.tipo_eno_id: fila.casos_previos for fila in resultado_previo.all()}
+        filas_previo = {
+            fila.tipo_eno_id: fila.casos_previos for fila in resultado_previo.all()
+        }
 
         # Combinar resultados
         top_enos = []
@@ -128,9 +141,7 @@ class BoletinQueryService:
             casos_previos = filas_previo.get(fila.tipo_eno_id, 0)
             cambio_absoluto = casos_actuales - casos_previos
             cambio_porcentual = (
-                (cambio_absoluto / casos_previos * 100)
-                if casos_previos > 0
-                else 0.0
+                (cambio_absoluto / casos_previos * 100) if casos_previos > 0 else 0.0
             )
 
             # Determinar tendencia
@@ -141,27 +152,26 @@ class BoletinQueryService:
             else:
                 tendencia = "estable"
 
-            top_enos.append({
-                "tipo_eno_id": fila.tipo_eno_id,
-                "tipo_eno_nombre": fila.tipo_eno_nombre,
-                "grupo_eno_id": fila.grupo_eno_id,
-                "grupo_eno_nombre": fila.grupo_eno_nombre,
-                "casos_actuales": casos_actuales,
-                "casos_previos": casos_previos,
-                "cambio_absoluto": cambio_absoluto,
-                "cambio_porcentual": round(cambio_porcentual, 1),
-                "tendencia": tendencia
-            })
+            top_enos.append(
+                {
+                    "tipo_eno_id": fila.tipo_eno_id,
+                    "tipo_eno_nombre": fila.tipo_eno_nombre,
+                    "grupo_eno_id": fila.grupo_eno_id,
+                    "grupo_eno_nombre": fila.grupo_eno_nombre,
+                    "casos_actuales": casos_actuales,
+                    "casos_previos": casos_previos,
+                    "cambio_absoluto": cambio_absoluto,
+                    "cambio_porcentual": round(cambio_porcentual, 1),
+                    "tendencia": tendencia,
+                }
+            )
 
         logger.info(f"✓ Top {len(top_enos)} ENOs obtenidos")
         return top_enos
 
     @staticmethod
     async def consultar_detalle_evento(
-        db: AsyncSession,
-        evento_id: int,
-        fecha_inicio: date,
-        fecha_fin: date
+        db: AsyncSession, evento_id: int, fecha_inicio: date, fecha_fin: date
     ) -> dict[str, Any]:
         """
         Datos detallados de un evento específico.
@@ -191,15 +201,21 @@ class BoletinQueryService:
         # Obtener info basica del evento
         stmt_basico = (
             select(
-                Enfermedad.id,
-                Enfermedad.nombre,
-                GrupoDeEnfermedades.id.label("grupo_id"),
-                GrupoDeEnfermedades.nombre.label("grupo_nombre")
+                col(Enfermedad.id),
+                col(Enfermedad.nombre),
+                col(GrupoDeEnfermedades.id).label("grupo_id"),
+                col(GrupoDeEnfermedades.nombre).label("grupo_nombre"),
             )
             .select_from(Enfermedad)
-            .join(EnfermedadGrupo, Enfermedad.id == EnfermedadGrupo.id_enfermedad)
-            .join(GrupoDeEnfermedades, EnfermedadGrupo.id_grupo == GrupoDeEnfermedades.id)
-            .where(Enfermedad.id == evento_id)
+            .join(
+                EnfermedadGrupo,
+                col(Enfermedad.id) == col(EnfermedadGrupo.id_enfermedad),
+            )
+            .join(
+                GrupoDeEnfermedades,
+                col(EnfermedadGrupo.id_grupo) == col(GrupoDeEnfermedades.id),
+            )
+            .where(col(Enfermedad.id) == evento_id)
         )
 
         resultado_basico = await db.execute(stmt_basico)
@@ -210,14 +226,11 @@ class BoletinQueryService:
             return {}
 
         # Contar casos totales
-        stmt_total = (
-            select(func.count(CasoEpidemiologico.id))
-            .where(
-                and_(
-                    CasoEpidemiologico.id_enfermedad == evento_id,
-                    CasoEpidemiologico.fecha_minima_caso >= fecha_inicio,
-                    CasoEpidemiologico.fecha_minima_caso <= fecha_fin
-                )
+        stmt_total = select(func.count(CasoEpidemiologico.id)).where(
+            and_(
+                col(CasoEpidemiologico.id_enfermedad) == evento_id,
+                col(CasoEpidemiologico.fecha_minima_caso) >= fecha_inicio,
+                col(CasoEpidemiologico.fecha_minima_caso) <= fecha_fin,
             )
         )
 
@@ -232,7 +245,7 @@ class BoletinQueryService:
             "casos_totales": int(casos_totales),
             "distribucion_edad": [],  # Se puede agregar después
             "distribucion_geografica": [],  # Se puede agregar después
-            "casos_por_semana": []  # Se puede agregar después
+            "casos_por_semana": [],  # Se puede agregar después
         }
 
         logger.info(f"✓ Detalle evento {evento_id}: {casos_totales} casos")
@@ -240,9 +253,7 @@ class BoletinQueryService:
 
     @staticmethod
     async def consultar_capacidad_hospitalaria(
-        db: AsyncSession,
-        semana: int,
-        anio: int
+        db: AsyncSession, semana: int, anio: int
     ) -> list[dict[str, Any]]:
         """
         Capacidad hospitalaria por UGD para una semana específica.
@@ -269,11 +280,11 @@ class BoletinQueryService:
             select(CapacidadHospitalaria)
             .where(
                 and_(
-                    CapacidadHospitalaria.semana_epidemiologica == semana,
-                    CapacidadHospitalaria.anio == anio
+                    col(CapacidadHospitalaria.semana_epidemiologica) == semana,
+                    col(CapacidadHospitalaria.anio) == anio,
                 )
             )
-            .order_by(CapacidadHospitalaria.ugd)
+            .order_by(col(CapacidadHospitalaria.ugd))
         )
 
         resultado = await db.execute(stmt)
@@ -284,7 +295,7 @@ class BoletinQueryService:
                 "ugd": fila.ugd,
                 "camas_totales": fila.camas_totales,
                 "camas_ocupadas": fila.camas_ocupadas,
-                "porcentaje_ocupacion": round(fila.porcentaje_ocupacion, 1)
+                "porcentaje_ocupacion": round(fila.porcentaje_ocupacion, 1),
             }
             for fila in filas
         ]
@@ -297,9 +308,7 @@ class BoletinQueryService:
 
     @staticmethod
     async def consultar_virus_respiratorios(
-        db: AsyncSession,
-        semana: int,
-        anio: int
+        db: AsyncSession, semana: int, anio: int
     ) -> list[dict[str, Any]]:
         """
         Detección de virus respiratorios para una semana específica.
@@ -326,11 +335,11 @@ class BoletinQueryService:
             select(VirusRespiratorio)
             .where(
                 and_(
-                    VirusRespiratorio.semana_epidemiologica == semana,
-                    VirusRespiratorio.anio == anio
+                    col(VirusRespiratorio.semana_epidemiologica) == semana,
+                    col(VirusRespiratorio.anio) == anio,
                 )
             )
-            .order_by(VirusRespiratorio.virus_tipo)
+            .order_by(col(VirusRespiratorio.virus_tipo))
         )
 
         resultado = await db.execute(stmt)
@@ -341,7 +350,7 @@ class BoletinQueryService:
                 "virus_tipo": fila.virus_tipo,
                 "casos_positivos": fila.casos_positivos,
                 "casos_testeados": fila.casos_testeados,
-                "porcentaje_positividad": round(fila.porcentaje_positividad, 1)
+                "porcentaje_positividad": round(fila.porcentaje_positividad, 1),
             }
             for fila in filas
         ]
@@ -357,7 +366,7 @@ class BoletinQueryService:
         db: AsyncSession,
         evento_id: int,
         periodo_actual: tuple[date, date],
-        periodo_anterior: tuple[date, date]
+        periodo_anterior: tuple[date, date],
     ) -> dict[str, Any]:
         """
         Comparación de casos entre dos períodos.
@@ -380,14 +389,11 @@ class BoletinQueryService:
         logger.info(f"Query comparación períodos evento {evento_id}")
 
         # Casos período actual
-        stmt_actual = (
-            select(func.count(CasoEpidemiologico.id))
-            .where(
-                and_(
-                    CasoEpidemiologico.id_enfermedad == evento_id,
-                    CasoEpidemiologico.fecha_minima_caso >= periodo_actual[0],
-                    CasoEpidemiologico.fecha_minima_caso <= periodo_actual[1]
-                )
+        stmt_actual = select(func.count(CasoEpidemiologico.id)).where(
+            and_(
+                col(CasoEpidemiologico.id_enfermedad) == evento_id,
+                col(CasoEpidemiologico.fecha_minima_caso) >= periodo_actual[0],
+                col(CasoEpidemiologico.fecha_minima_caso) <= periodo_actual[1],
             )
         )
 
@@ -395,14 +401,11 @@ class BoletinQueryService:
         casos_actuales = resultado_actual.scalar() or 0
 
         # Casos período anterior
-        stmt_anterior = (
-            select(func.count(CasoEpidemiologico.id))
-            .where(
-                and_(
-                    CasoEpidemiologico.id_enfermedad == evento_id,
-                    CasoEpidemiologico.fecha_minima_caso >= periodo_anterior[0],
-                    CasoEpidemiologico.fecha_minima_caso <= periodo_anterior[1]
-                )
+        stmt_anterior = select(func.count(CasoEpidemiologico.id)).where(
+            and_(
+                col(CasoEpidemiologico.id_enfermedad) == evento_id,
+                col(CasoEpidemiologico.fecha_minima_caso) >= periodo_anterior[0],
+                col(CasoEpidemiologico.fecha_minima_caso) <= periodo_anterior[1],
             )
         )
 
@@ -412,9 +415,7 @@ class BoletinQueryService:
         # Calcular cambios
         cambio_absoluto = casos_actuales - casos_previos
         cambio_porcentual = (
-            (cambio_absoluto / casos_previos * 100)
-            if casos_previos > 0
-            else 0.0
+            (cambio_absoluto / casos_previos * 100) if casos_previos > 0 else 0.0
         )
 
         # Determinar tendencia
@@ -430,7 +431,7 @@ class BoletinQueryService:
             "casos_previos": int(casos_previos),
             "cambio_absoluto": cambio_absoluto,
             "cambio_porcentual": round(cambio_porcentual, 1),
-            "tendencia": tendencia
+            "tendencia": tendencia,
         }
 
         logger.info(f"✓ Comparación: {casos_actuales} vs {casos_previos} casos")
@@ -438,10 +439,7 @@ class BoletinQueryService:
 
     @staticmethod
     async def consultar_distribucion_geografica(
-        db: AsyncSession,
-        evento_id: int,
-        fecha_inicio: date,
-        fecha_fin: date
+        db: AsyncSession, evento_id: int, fecha_inicio: date, fecha_fin: date
     ) -> list[dict[str, Any]]:
         """
         Distribución de casos por ubicación geográfica.
@@ -473,10 +471,7 @@ class BoletinQueryService:
 
     @staticmethod
     async def consultar_distribucion_edad(
-        db: AsyncSession,
-        evento_id: int,
-        fecha_inicio: date,
-        fecha_fin: date
+        db: AsyncSession, evento_id: int, fecha_inicio: date, fecha_fin: date
     ) -> list[dict[str, Any]]:
         """
         Distribución de casos por grupo etario.
@@ -508,11 +503,7 @@ class BoletinQueryService:
 
     @staticmethod
     async def consultar_eventos_agrupados(
-        db: AsyncSession,
-        tipo_evento: str,
-        semana: int,
-        anio: int,
-        num_semanas: int = 4
+        db: AsyncSession, tipo_evento: str, semana: int, anio: int, num_semanas: int = 4
     ) -> dict[str, Any]:
         """
         Datos de eventos agrupados para corredor endémico.
@@ -545,7 +536,9 @@ class BoletinQueryService:
         # Por ahora retorno estructura vacía
         # TODO: Implementar cuando tengamos datos de eventos agrupados
 
-        logger.warning(f"Query eventos agrupados {tipo_evento} no implementada completamente")
+        logger.warning(
+            f"Query eventos agrupados {tipo_evento} no implementada completamente"
+        )
         return {
             "evento": tipo_evento,
             "semana_actual": semana,
@@ -554,17 +547,14 @@ class BoletinQueryService:
                 "zona_exito": [0, 0],
                 "zona_seguridad": [0, 0],
                 "zona_alerta": [0, 0],
-                "zona_epidemia": [0, 0]
+                "zona_epidemia": [0, 0],
             },
-            "historico": []
+            "historico": [],
         }
 
     @staticmethod
     async def consultar_casos_semana(
-        db: AsyncSession,
-        evento_id: int,
-        semana: int,
-        anio: int
+        db: AsyncSession, evento_id: int, semana: int, anio: int
     ) -> int:
         """
         Cuenta casos de un evento para una semana específica.
@@ -585,14 +575,11 @@ class BoletinQueryService:
         # Calcular fechas de la semana epidemiológica
         fecha_inicio, fecha_fin = get_epi_week_dates(semana, anio)
 
-        stmt = (
-            select(func.count(CasoEpidemiologico.id))
-            .where(
-                and_(
-                    CasoEpidemiologico.id_enfermedad == evento_id,
-                    CasoEpidemiologico.fecha_minima_caso >= fecha_inicio,
-                    CasoEpidemiologico.fecha_minima_caso <= fecha_fin
-                )
+        stmt = select(func.count(CasoEpidemiologico.id)).where(
+            and_(
+                col(CasoEpidemiologico.id_enfermedad) == evento_id,
+                col(CasoEpidemiologico.fecha_minima_caso) >= fecha_inicio,
+                col(CasoEpidemiologico.fecha_minima_caso) <= fecha_fin,
             )
         )
 

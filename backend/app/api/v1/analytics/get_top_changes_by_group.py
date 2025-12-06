@@ -25,12 +25,16 @@ logger = logging.getLogger(__name__)
 
 
 async def get_top_changes_by_group(
-    semana_actual: int = Query(..., description="Semana epidemiológica actual", ge=1, le=53),
+    semana_actual: int = Query(
+        ..., description="Semana epidemiológica actual", ge=1, le=53
+    ),
     anio_actual: int = Query(..., description="Año epidemiológico actual"),
-    num_semanas: int = Query(4, description="Número de semanas hacia atrás", ge=1, le=52),
+    num_semanas: int = Query(
+        4, description="Número de semanas hacia atrás", ge=1, le=52
+    ),
     limit: int = Query(10, description="Top N eventos por grupo", ge=1, le=50),
     db: AsyncSession = Depends(get_async_session),
-    current_user: Optional[User] = RequireAuthOrSignedUrl
+    current_user: Optional[User] = RequireAuthOrSignedUrl,
 ) -> SuccessResponse[TopChangesByGroupResponse]:
     """
     Endpoint optimizado para obtener top cambios por grupo epidemiológico.
@@ -176,13 +180,16 @@ async def get_top_changes_by_group(
     """)
 
     # Ejecutar query
-    result = await db.execute(query, {
-        "fecha_inicio_actual": fecha_inicio_actual,
-        "fecha_fin_actual": fecha_fin_actual,
-        "fecha_inicio_anterior": fecha_inicio_anterior,
-        "fecha_fin_anterior": fecha_fin_anterior,
-        "limit": limit
-    })
+    result = await db.execute(
+        query,
+        {
+            "fecha_inicio_actual": fecha_inicio_actual,
+            "fecha_fin_actual": fecha_fin_actual,
+            "fecha_inicio_anterior": fecha_inicio_anterior,
+            "fecha_fin_anterior": fecha_fin_anterior,
+            "limit": limit,
+        },
+    )
     rows = result.fetchall()
 
     # Procesar resultados SIN agrupar - solo dos listas globales
@@ -194,11 +201,12 @@ async def get_top_changes_by_group(
             tipo_eno_id=row.tipo_eno_id,
             tipo_eno_nombre=row.tipo_eno_nombre,
             grupo_eno_id=0,  # No longer meaningful when evento can be in multiple groups
-            grupo_eno_nombre=row.grupos_nombres or "Sin grupo",  # Concatenated group names
+            grupo_eno_nombre=row.grupos_nombres
+            or "Sin grupo",  # Concatenated group names
             casos_actuales=int(row.casos_actuales),
             casos_anteriores=int(row.casos_anteriores),
             diferencia_absoluta=int(row.diferencia_absoluta),
-            diferencia_porcentual=round(float(row.diferencia_porcentual), 2)
+            diferencia_porcentual=round(float(row.diferencia_porcentual), 2),
         )
 
         if row.tipo_cambio == "crecimiento":
@@ -212,7 +220,7 @@ async def get_top_changes_by_group(
         semana_fin=semana_actual,
         anio=anio_actual,
         fecha_inicio=fecha_inicio_actual,
-        fecha_fin=fecha_fin_actual
+        fecha_fin=fecha_fin_actual,
     )
 
     periodo_anterior = PeriodoAnalisis(
@@ -220,16 +228,18 @@ async def get_top_changes_by_group(
         semana_fin=semana_fin_anterior,
         anio=anio_anterior,
         fecha_inicio=fecha_inicio_anterior,
-        fecha_fin=fecha_fin_anterior
+        fecha_fin=fecha_fin_anterior,
     )
 
     response = TopChangesByGroupResponse(
         periodo_actual=periodo_actual,
         periodo_anterior=periodo_anterior,
         top_crecimiento=top_crecimiento,
-        top_decrecimiento=top_decrecimiento
+        top_decrecimiento=top_decrecimiento,
     )
 
-    logger.info(f"Retornando {len(top_crecimiento)} eventos en crecimiento y {len(top_decrecimiento)} en decrecimiento")
+    logger.info(
+        f"Retornando {len(top_crecimiento)} eventos en crecimiento y {len(top_decrecimiento)} en decrecimiento"
+    )
 
     return SuccessResponse(data=response)

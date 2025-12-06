@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from sqlmodel import col
 
 from app.core.database import get_async_session
 from app.core.schemas.response import PaginatedResponse, PaginationMeta
@@ -17,8 +18,8 @@ from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User
 from app.domains.vigilancia_nominal.models.enfermedad import (
     Enfermedad,
-    GrupoDeEnfermedades,
     EnfermedadGrupo,
+    GrupoDeEnfermedades,
 )
 
 
@@ -55,7 +56,9 @@ async def list_grupos_eno(
             select(GrupoDeEnfermedades)
             .distinct()
             .options(
-                selectinload(GrupoDeEnfermedades.enfermedad_grupos).selectinload(EnfermedadGrupo.enfermedad)
+                selectinload(GrupoDeEnfermedades.enfermedad_grupos).selectinload(
+                    EnfermedadGrupo.enfermedad
+                )
             )
         )
 
@@ -63,31 +66,37 @@ async def list_grupos_eno(
         if nombre:
             # Subquery para encontrar grupos que tienen eventos con el nombre buscado
             subquery_eventos = (
-                select(EnfermedadGrupo.id_grupo)
-                .join(Enfermedad, EnfermedadGrupo.id_enfermedad == Enfermedad.id)
-                .where(Enfermedad.nombre.ilike(f"%{nombre}%"))
+                select(col(EnfermedadGrupo.id_grupo))
+                .join(
+                    Enfermedad, col(EnfermedadGrupo.id_enfermedad) == col(Enfermedad.id)
+                )
+                .where(col(Enfermedad.nombre).ilike(f"%{nombre}%"))
             )
 
             # Buscar grupos cuyo nombre coincida O que tengan eventos que coincidan
             query = query.where(
                 or_(
-                    GrupoDeEnfermedades.nombre.ilike(f"%{nombre}%"),
-                    GrupoDeEnfermedades.id.in_(subquery_eventos)
+                    col(GrupoDeEnfermedades.nombre).ilike(f"%{nombre}%"),
+                    col(GrupoDeEnfermedades.id).in_(subquery_eventos),
                 )
             )
 
         # Contar total de elementos (usar la misma logica de filtrado)
-        count_query = select(func.count(func.distinct(GrupoDeEnfermedades.id))).select_from(GrupoDeEnfermedades)
+        count_query = select(
+            func.count(func.distinct(GrupoDeEnfermedades.id))
+        ).select_from(GrupoDeEnfermedades)
         if nombre:
             subquery_eventos = (
-                select(EnfermedadGrupo.id_grupo)
-                .join(Enfermedad, EnfermedadGrupo.id_enfermedad == Enfermedad.id)
-                .where(Enfermedad.nombre.ilike(f"%{nombre}%"))
+                select(col(EnfermedadGrupo.id_grupo))
+                .join(
+                    Enfermedad, col(EnfermedadGrupo.id_enfermedad) == col(Enfermedad.id)
+                )
+                .where(col(Enfermedad.nombre).ilike(f"%{nombre}%"))
             )
             count_query = count_query.where(
                 or_(
-                    GrupoDeEnfermedades.nombre.ilike(f"%{nombre}%"),
-                    GrupoDeEnfermedades.id.in_(subquery_eventos)
+                    col(GrupoDeEnfermedades.nombre).ilike(f"%{nombre}%"),
+                    col(GrupoDeEnfermedades.id).in_(subquery_eventos),
                 )
             )
 
@@ -103,19 +112,29 @@ async def list_grupos_eno(
         grupos = result.scalars().all()
 
         # Convertir a modelo de respuesta
-        grupos_info = [
-            GrupoDeEnfermedadesInfo(
-                id=grupo.id,
-                nombre=grupo.nombre,
-                descripcion=grupo.descripcion,
-                codigo=grupo.slug,
-                eventos=[
-                    EnfermedadSimple(id=rel.enfermedad.id, nombre=rel.enfermedad.nombre)
-                    for rel in grupo.enfermedad_grupos
-                ],
+        grupos_info = []
+        for grupo in grupos:
+            if grupo.id is None:
+                continue
+
+            eventos = []
+            for rel in grupo.enfermedad_grupos:
+                if rel.enfermedad.id is not None:
+                    eventos.append(
+                        EnfermedadSimple(
+                            id=rel.enfermedad.id, nombre=rel.enfermedad.nombre
+                        )
+                    )
+
+            grupos_info.append(
+                GrupoDeEnfermedadesInfo(
+                    id=grupo.id,
+                    nombre=grupo.nombre,
+                    descripcion=grupo.descripcion,
+                    codigo=grupo.slug,
+                    eventos=eventos,
+                )
             )
-            for grupo in grupos
-        ]
 
         # Calcular paginas totales
         total_pages = (total + per_page - 1) // per_page if total > 0 else 0
@@ -135,12 +154,12 @@ async def list_grupos_eno(
                     else None
                 ),
                 "prev": (
-                    f"/api/v1/gruposEno?page={page-1}&per_page={per_page}"
+                    f"/api/v1/gruposEno?page={page - 1}&per_page={per_page}"
                     if page > 1
                     else None
                 ),
                 "next": (
-                    f"/api/v1/gruposEno?page={page+1}&per_page={per_page}"
+                    f"/api/v1/gruposEno?page={page + 1}&per_page={per_page}"
                     if page < total_pages
                     else None
                 ),

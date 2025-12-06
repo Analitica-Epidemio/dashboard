@@ -4,7 +4,7 @@ Convierte datos de queries en TipTap JSON nativo (100% editable).
 """
 
 import logging
-from typing import Any
+from typing import Any, Iterator
 
 from jinja2 import BaseLoader, Environment, Undefined
 
@@ -14,16 +14,16 @@ logger = logging.getLogger(__name__)
 class SilentUndefined(Undefined):
     """Custom Undefined que retorna string vacío en lugar de error."""
 
-    def _fail_with_undefined_error(self, *args, **kwargs):
+    def _fail_with_undefined_error(self, *args: Any, **kwargs: Any) -> str:
         return ""
 
-    def __str__(self):
+    def __str__(self) -> str:
         return ""
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Any]:
         return iter([])
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return False
 
 
@@ -76,7 +76,7 @@ class BoletinBlockRenderer:
     def render_top_enos_table(
         data: list[dict[str, Any]],
         config: dict[str, Any],
-        context: dict[str, Any] | None = None
+        context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         Genera tabla TipTap nativa con top ENOs.
@@ -102,10 +102,12 @@ class BoletinBlockRenderer:
         if not data:
             return {
                 "type": "paragraph",
-                "content": [{
-                    "type": "text",
-                    "text": f"⚠️ {titulo}: No hay datos disponibles para el período seleccionado."
-                }]
+                "content": [
+                    {
+                        "type": "text",
+                        "text": f"⚠️ {titulo}: No hay datos disponibles para el período seleccionado.",
+                    }
+                ],
             }
 
         # Título
@@ -113,10 +115,7 @@ class BoletinBlockRenderer:
             {
                 "type": "heading",
                 "attrs": {"level": 2},
-                "content": [{
-                    "type": "text",
-                    "text": titulo
-                }]
+                "content": [{"type": "text", "text": titulo}],
             }
         ]
 
@@ -127,15 +126,17 @@ class BoletinBlockRenderer:
         table_headers = [
             {"type": "text", "text": "ENO"},
             {"type": "text", "text": "Grupo"},
-            {"type": "text", "text": "Casos"}
+            {"type": "text", "text": "Casos"},
         ]
 
         if include_comparison:
-            table_headers.extend([
-                {"type": "text", "text": "Anterior"},
-                {"type": "text", "text": "Cambio"},
-                {"type": "text", "text": "Tendencia"}
-            ])
+            table_headers.extend(
+                [
+                    {"type": "text", "text": "Anterior"},
+                    {"type": "text", "text": "Cambio"},
+                    {"type": "text", "text": "Tendencia"},
+                ]
+            )
 
         # Construir tabla TipTap nativa
         table_rows = [
@@ -145,10 +146,10 @@ class BoletinBlockRenderer:
                 "content": [
                     {
                         "type": "tableHeader",
-                        "content": [{"type": "paragraph", "content": [header]}]
+                        "content": [{"type": "paragraph", "content": [header]}],
                     }
                     for header in table_headers
-                ]
+                ],
             }
         ]
 
@@ -157,91 +158,108 @@ class BoletinBlockRenderer:
             cells = [
                 {
                     "type": "tableCell",
-                    "content": [{
-                        "type": "paragraph",
-                        "content": [{"type": "text", "text": row["tipo_eno_nombre"]}]
-                    }]
+                    "content": [
+                        {
+                            "type": "paragraph",
+                            "content": [
+                                {"type": "text", "text": row["tipo_eno_nombre"]}
+                            ],
+                        }
+                    ],
                 },
                 {
                     "type": "tableCell",
-                    "content": [{
-                        "type": "paragraph",
-                        "content": [{"type": "text", "text": row["grupo_eno_nombre"]}]
-                    }]
+                    "content": [
+                        {
+                            "type": "paragraph",
+                            "content": [
+                                {"type": "text", "text": row["grupo_eno_nombre"]}
+                            ],
+                        }
+                    ],
                 },
                 {
                     "type": "tableCell",
-                    "content": [{
-                        "type": "paragraph",
-                        "content": [{"type": "text", "text": str(row["casos_actuales"])}]
-                    }]
-                }
+                    "content": [
+                        {
+                            "type": "paragraph",
+                            "content": [
+                                {"type": "text", "text": str(row["casos_actuales"])}
+                            ],
+                        }
+                    ],
+                },
             ]
 
             if include_comparison:
                 # Celda casos anteriores
-                cells.append({
-                    "type": "tableCell",
-                    "content": [{
-                        "type": "paragraph",
-                        "content": [{"type": "text", "text": str(row["casos_previos"])}]
-                    }]
-                })
+                cells.append(
+                    {
+                        "type": "tableCell",
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "content": [
+                                    {"type": "text", "text": str(row["casos_previos"])}
+                                ],
+                            }
+                        ],
+                    }
+                )
 
                 # Celda cambio porcentual
                 cambio_text = f"{row['cambio_porcentual']:+.1f}%"
-                cells.append({
-                    "type": "tableCell",
-                    "content": [{
-                        "type": "paragraph",
-                        "content": [{"type": "text", "text": cambio_text}]
-                    }]
-                })
+                cells.append(
+                    {
+                        "type": "tableCell",
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "content": [{"type": "text", "text": cambio_text}],
+                            }
+                        ],
+                    }
+                )
 
                 # Celda tendencia
                 tendencia_emoji = {
                     "crecimiento": "↑",
                     "descenso": "↓",
-                    "estable": "→"
+                    "estable": "→",
                 }.get(row["tendencia"], "→")
 
-                cells.append({
-                    "type": "tableCell",
-                    "content": [{
-                        "type": "paragraph",
-                        "content": [{"type": "text", "text": f"{tendencia_emoji} {row['tendencia'].title()}"}]
-                    }]
-                })
+                cells.append(
+                    {
+                        "type": "tableCell",
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "content": [
+                                    {
+                                        "type": "text",
+                                        "text": f"{tendencia_emoji} {row['tendencia'].title()}",
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                )
 
-            table_rows.append({
-                "type": "tableRow",
-                "content": cells
-            })
+            table_rows.append({"type": "tableRow", "content": cells})
 
         # Agregar tabla completa
-        content_nodes.append({
-            "type": "table",
-            "content": table_rows
-        })
+        content_nodes.append({"type": "table", "content": table_rows})
 
         # Agregar espacio después
-        content_nodes.append({
-            "type": "paragraph",
-            "content": []
-        })
+        content_nodes.append({"type": "paragraph", "content": []})
 
         logger.info(f"✓ Tabla top ENOs renderizada: {len(data)} filas")
 
-        return {
-            "type": "doc",
-            "content": content_nodes
-        }
+        return {"type": "doc", "content": content_nodes}
 
     @staticmethod
     def render_evento_section(
-        data: dict[str, Any],
-        config: dict[str, Any],
-        context: dict[str, Any]
+        data: dict[str, Any], config: dict[str, Any], context: dict[str, Any]
     ) -> dict[str, Any]:
         """
         Genera sección completa de evento con stats y charts.
@@ -261,7 +279,9 @@ class BoletinBlockRenderer:
 
         # Reemplazar variables en título
         titulo = config.get("titulo_template", "Análisis de CasoEpidemiologico")
-        titulo = titulo.replace("{{evento_nombre}}", data.get("tipo_eno_nombre", "CasoEpidemiologico"))
+        titulo = titulo.replace(
+            "{{evento_nombre}}", data.get("tipo_eno_nombre", "CasoEpidemiologico")
+        )
         titulo = titulo.replace("{{semana}}", str(context.get("semana", "")))
         titulo = titulo.replace("{{anio}}", str(context.get("anio", "")))
 
@@ -270,54 +290,54 @@ class BoletinBlockRenderer:
             {
                 "type": "heading",
                 "attrs": {"level": 2},
-                "content": [{"type": "text", "text": titulo}]
+                "content": [{"type": "text", "text": titulo}],
             },
             # Párrafo introductorio
             {
                 "type": "paragraph",
-                "content": [{
-                    "type": "text",
-                    "text": f"Durante el período analizado se registraron {data.get('casos_totales', 0)} casos de {data.get('tipo_eno_nombre', 'este evento')}."
-                }]
-            }
+                "content": [
+                    {
+                        "type": "text",
+                        "text": f"Durante el período analizado se registraron {data.get('casos_totales', 0)} casos de {data.get('tipo_eno_nombre', 'este evento')}.",
+                    }
+                ],
+            },
         ]
 
         # Agregar charts dinámicos si están configurados
         charts_config = config.get("charts", [])
         for chart in charts_config:
-            content_nodes.append({
-                "type": "paragraph",
-                "content": [{
-                    "type": "dynamicChart",
-                    "attrs": {
-                        "chartCode": chart["code"],
-                        "title": f"{data.get('tipo_eno_nombre')} - {chart['code']}",
-                        "eventoIds": str(data.get("tipo_eno_id", "")),
-                        "fechaDesde": context.get("fecha_inicio", ""),
-                        "fechaHasta": context.get("fecha_fin", ""),
-                        "height": chart.get("height", 400)
-                    }
-                }]
-            })
+            content_nodes.append(
+                {
+                    "type": "paragraph",
+                    "content": [
+                        {
+                            "type": "dynamicChart",
+                            "attrs": {
+                                "chartCode": chart["code"],
+                                "title": f"{data.get('tipo_eno_nombre')} - {chart['code']}",
+                                "eventoIds": str(data.get("tipo_eno_id", "")),
+                                "fechaDesde": context.get("fecha_inicio", ""),
+                                "fechaHasta": context.get("fecha_fin", ""),
+                                "height": chart.get("height", 400),
+                            },
+                        }
+                    ],
+                }
+            )
 
         # Espacio al final
-        content_nodes.append({
-            "type": "paragraph",
-            "content": []
-        })
+        content_nodes.append({"type": "paragraph", "content": []})
 
         logger.info(f"✓ Sección evento renderizada: {len(charts_config)} charts")
 
-        return {
-            "type": "doc",
-            "content": content_nodes
-        }
+        return {"type": "doc", "content": content_nodes}
 
     @staticmethod
     def render_capacidad_table(
         data: list[dict[str, Any]],
         config: dict[str, Any],
-        context: dict[str, Any] | None = None
+        context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         Genera tabla TipTap nativa con capacidad hospitalaria por UGD.
@@ -339,20 +359,16 @@ class BoletinBlockRenderer:
         if not data:
             return {
                 "type": "paragraph",
-                "content": [{
-                    "type": "text",
-                    "text": f"⚠️ {titulo}: No hay datos disponibles."
-                }]
+                "content": [
+                    {"type": "text", "text": f"⚠️ {titulo}: No hay datos disponibles."}
+                ],
             }
 
         content_nodes = [
             {
                 "type": "heading",
                 "attrs": {"level": 2},
-                "content": [{
-                    "type": "text",
-                    "text": titulo
-                }]
+                "content": [{"type": "text", "text": titulo}],
             }
         ]
 
@@ -364,94 +380,118 @@ class BoletinBlockRenderer:
                 "content": [
                     {
                         "type": "tableHeader",
-                        "content": [{
-                            "type": "paragraph",
-                            "content": [{"type": "text", "text": "UGD"}]
-                        }]
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "content": [{"type": "text", "text": "UGD"}],
+                            }
+                        ],
                     },
                     {
                         "type": "tableHeader",
-                        "content": [{
-                            "type": "paragraph",
-                            "content": [{"type": "text", "text": "Camas Totales"}]
-                        }]
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "content": [{"type": "text", "text": "Camas Totales"}],
+                            }
+                        ],
                     },
                     {
                         "type": "tableHeader",
-                        "content": [{
-                            "type": "paragraph",
-                            "content": [{"type": "text", "text": "Camas Ocupadas"}]
-                        }]
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "content": [{"type": "text", "text": "Camas Ocupadas"}],
+                            }
+                        ],
                     },
                     {
                         "type": "tableHeader",
-                        "content": [{
-                            "type": "paragraph",
-                            "content": [{"type": "text", "text": "% Ocupación"}]
-                        }]
-                    }
-                ]
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "content": [{"type": "text", "text": "% Ocupación"}],
+                            }
+                        ],
+                    },
+                ],
             }
         ]
 
         # Data rows
         for row in data:
-            table_rows.append({
-                "type": "tableRow",
-                "content": [
-                    {
-                        "type": "tableCell",
-                        "content": [{
-                            "type": "paragraph",
-                            "content": [{"type": "text", "text": row["ugd"]}]
-                        }]
-                    },
-                    {
-                        "type": "tableCell",
-                        "content": [{
-                            "type": "paragraph",
-                            "content": [{"type": "text", "text": str(row["camas_totales"])}]
-                        }]
-                    },
-                    {
-                        "type": "tableCell",
-                        "content": [{
-                            "type": "paragraph",
-                            "content": [{"type": "text", "text": str(row["camas_ocupadas"])}]
-                        }]
-                    },
-                    {
-                        "type": "tableCell",
-                        "content": [{
-                            "type": "paragraph",
-                            "content": [{"type": "text", "text": f"{row['porcentaje_ocupacion']:.1f}%"}]
-                        }]
-                    }
-                ]
-            })
+            table_rows.append(
+                {
+                    "type": "tableRow",
+                    "content": [
+                        {
+                            "type": "tableCell",
+                            "content": [
+                                {
+                                    "type": "paragraph",
+                                    "content": [{"type": "text", "text": row["ugd"]}],
+                                }
+                            ],
+                        },
+                        {
+                            "type": "tableCell",
+                            "content": [
+                                {
+                                    "type": "paragraph",
+                                    "content": [
+                                        {
+                                            "type": "text",
+                                            "text": str(row["camas_totales"]),
+                                        }
+                                    ],
+                                }
+                            ],
+                        },
+                        {
+                            "type": "tableCell",
+                            "content": [
+                                {
+                                    "type": "paragraph",
+                                    "content": [
+                                        {
+                                            "type": "text",
+                                            "text": str(row["camas_ocupadas"]),
+                                        }
+                                    ],
+                                }
+                            ],
+                        },
+                        {
+                            "type": "tableCell",
+                            "content": [
+                                {
+                                    "type": "paragraph",
+                                    "content": [
+                                        {
+                                            "type": "text",
+                                            "text": f"{row['porcentaje_ocupacion']:.1f}%",
+                                        }
+                                    ],
+                                }
+                            ],
+                        },
+                    ],
+                }
+            )
 
-        content_nodes.append({
-            "type": "table",
-            "content": table_rows
-        })
+        content_nodes.append({"type": "table", "content": table_rows})
 
-        content_nodes.append({
-            "type": "paragraph",
-            "content": []
-        })
+        content_nodes.append({"type": "paragraph", "content": []})
 
         logger.info(f"✓ Tabla capacidad renderizada: {len(data)} filas")
 
-        return {
-            "type": "doc",
-            "content": content_nodes
-        }
+        return {"type": "doc", "content": content_nodes}
 
     @staticmethod
     def render_virus_table(
         data: list[dict[str, Any]],
         config: dict[str, Any],
-        context: dict[str, Any] | None = None
+        context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         Genera tabla TipTap nativa con detección de virus respiratorios.
@@ -473,20 +513,16 @@ class BoletinBlockRenderer:
         if not data:
             return {
                 "type": "paragraph",
-                "content": [{
-                    "type": "text",
-                    "text": f"⚠️ {titulo}: No hay datos disponibles."
-                }]
+                "content": [
+                    {"type": "text", "text": f"⚠️ {titulo}: No hay datos disponibles."}
+                ],
             }
 
         content_nodes = [
             {
                 "type": "heading",
                 "attrs": {"level": 2},
-                "content": [{
-                    "type": "text",
-                    "text": titulo
-                }]
+                "content": [{"type": "text", "text": titulo}],
             }
         ]
 
@@ -498,94 +534,120 @@ class BoletinBlockRenderer:
                 "content": [
                     {
                         "type": "tableHeader",
-                        "content": [{
-                            "type": "paragraph",
-                            "content": [{"type": "text", "text": "Virus"}]
-                        }]
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "content": [{"type": "text", "text": "Virus"}],
+                            }
+                        ],
                     },
                     {
                         "type": "tableHeader",
-                        "content": [{
-                            "type": "paragraph",
-                            "content": [{"type": "text", "text": "Positivos"}]
-                        }]
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "content": [{"type": "text", "text": "Positivos"}],
+                            }
+                        ],
                     },
                     {
                         "type": "tableHeader",
-                        "content": [{
-                            "type": "paragraph",
-                            "content": [{"type": "text", "text": "Testeados"}]
-                        }]
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "content": [{"type": "text", "text": "Testeados"}],
+                            }
+                        ],
                     },
                     {
                         "type": "tableHeader",
-                        "content": [{
-                            "type": "paragraph",
-                            "content": [{"type": "text", "text": "% Positividad"}]
-                        }]
-                    }
-                ]
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "content": [{"type": "text", "text": "% Positividad"}],
+                            }
+                        ],
+                    },
+                ],
             }
         ]
 
         # Data rows
         for row in data:
-            table_rows.append({
-                "type": "tableRow",
-                "content": [
-                    {
-                        "type": "tableCell",
-                        "content": [{
-                            "type": "paragraph",
-                            "content": [{"type": "text", "text": row["virus_tipo"]}]
-                        }]
-                    },
-                    {
-                        "type": "tableCell",
-                        "content": [{
-                            "type": "paragraph",
-                            "content": [{"type": "text", "text": str(row["casos_positivos"])}]
-                        }]
-                    },
-                    {
-                        "type": "tableCell",
-                        "content": [{
-                            "type": "paragraph",
-                            "content": [{"type": "text", "text": str(row["casos_testeados"])}]
-                        }]
-                    },
-                    {
-                        "type": "tableCell",
-                        "content": [{
-                            "type": "paragraph",
-                            "content": [{"type": "text", "text": f"{row['porcentaje_positividad']:.1f}%"}]
-                        }]
-                    }
-                ]
-            })
+            table_rows.append(
+                {
+                    "type": "tableRow",
+                    "content": [
+                        {
+                            "type": "tableCell",
+                            "content": [
+                                {
+                                    "type": "paragraph",
+                                    "content": [
+                                        {"type": "text", "text": row["virus_tipo"]}
+                                    ],
+                                }
+                            ],
+                        },
+                        {
+                            "type": "tableCell",
+                            "content": [
+                                {
+                                    "type": "paragraph",
+                                    "content": [
+                                        {
+                                            "type": "text",
+                                            "text": str(row["casos_positivos"]),
+                                        }
+                                    ],
+                                }
+                            ],
+                        },
+                        {
+                            "type": "tableCell",
+                            "content": [
+                                {
+                                    "type": "paragraph",
+                                    "content": [
+                                        {
+                                            "type": "text",
+                                            "text": str(row["casos_testeados"]),
+                                        }
+                                    ],
+                                }
+                            ],
+                        },
+                        {
+                            "type": "tableCell",
+                            "content": [
+                                {
+                                    "type": "paragraph",
+                                    "content": [
+                                        {
+                                            "type": "text",
+                                            "text": f"{row['porcentaje_positividad']:.1f}%",
+                                        }
+                                    ],
+                                }
+                            ],
+                        },
+                    ],
+                }
+            )
 
-        content_nodes.append({
-            "type": "table",
-            "content": table_rows
-        })
+        content_nodes.append({"type": "table", "content": table_rows})
 
-        content_nodes.append({
-            "type": "paragraph",
-            "content": []
-        })
+        content_nodes.append({"type": "paragraph", "content": []})
 
         logger.info(f"✓ Tabla virus renderizada: {len(data)} filas")
 
-        return {
-            "type": "doc",
-            "content": content_nodes
-        }
+        return {"type": "doc", "content": content_nodes}
 
     @staticmethod
     def render_eventos_agrupados_table(
         data: dict[str, Any],
         config: dict[str, Any],
-        context: dict[str, Any] | None = None
+        context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         Genera tabla TipTap nativa con eventos agrupados (ETI, Neumonía, etc).
@@ -612,46 +674,41 @@ class BoletinBlockRenderer:
             {
                 "type": "heading",
                 "attrs": {"level": 2},
-                "content": [{
-                    "type": "text",
-                    "text": titulo
-                }]
+                "content": [{"type": "text", "text": titulo}],
             },
             {
                 "type": "paragraph",
-                "content": [{
-                    "type": "text",
-                    "text": f"Se registraron {data.get('casos_semana_actual', 0)} casos en la semana {data.get('semana_actual', '')}."
-                }]
-            }
+                "content": [
+                    {
+                        "type": "text",
+                        "text": f"Se registraron {data.get('casos_semana_actual', 0)} casos en la semana {data.get('semana_actual', '')}.",
+                    }
+                ],
+            },
         ]
 
         # Nota sobre corredor endémico
         if data.get("corredor"):
-            content_nodes.append({
-                "type": "paragraph",
-                "content": [{
-                    "type": "text",
-                    "text": "Los datos se encuentran dentro del corredor endémico esperado para esta época del año."
-                }]
-            })
+            content_nodes.append(
+                {
+                    "type": "paragraph",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "Los datos se encuentran dentro del corredor endémico esperado para esta época del año.",
+                        }
+                    ],
+                }
+            )
 
-        content_nodes.append({
-            "type": "paragraph",
-            "content": []
-        })
+        content_nodes.append({"type": "paragraph", "content": []})
 
         logger.info("✓ Tabla eventos agrupados renderizada")
 
-        return {
-            "type": "doc",
-            "content": content_nodes
-        }
+        return {"type": "doc", "content": content_nodes}
 
     @staticmethod
-    def render_tabla_contenidos(
-        secciones: list[dict[str, Any]]
-    ) -> dict[str, Any]:
+    def render_tabla_contenidos(secciones: list[dict[str, Any]]) -> dict[str, Any]:
         """
         Genera índice de contenidos automático.
 
@@ -671,10 +728,7 @@ class BoletinBlockRenderer:
             {
                 "type": "heading",
                 "attrs": {"level": 2},
-                "content": [{
-                    "type": "text",
-                    "text": "Índice de Contenidos"
-                }]
+                "content": [{"type": "text", "text": "Índice de Contenidos"}],
             }
         ]
 
@@ -682,30 +736,24 @@ class BoletinBlockRenderer:
         list_items = []
         for seccion in secciones:
             indent = "  " * (seccion.get("nivel", 1) - 1)
-            list_items.append({
-                "type": "listItem",
-                "content": [{
-                    "type": "paragraph",
-                    "content": [{
-                        "type": "text",
-                        "text": f"{indent}{seccion['titulo']}"
-                    }]
-                }]
-            })
+            list_items.append(
+                {
+                    "type": "listItem",
+                    "content": [
+                        {
+                            "type": "paragraph",
+                            "content": [
+                                {"type": "text", "text": f"{indent}{seccion['titulo']}"}
+                            ],
+                        }
+                    ],
+                }
+            )
 
-        content_nodes.append({
-            "type": "orderedList",
-            "content": list_items
-        })
+        content_nodes.append({"type": "orderedList", "content": list_items})
 
-        content_nodes.append({
-            "type": "paragraph",
-            "content": []
-        })
+        content_nodes.append({"type": "paragraph", "content": []})
 
         logger.info(f"✓ Tabla de contenidos renderizada: {len(secciones)} items")
 
-        return {
-            "type": "doc",
-            "content": content_nodes
-        }
+        return {"type": "doc", "content": content_nodes}

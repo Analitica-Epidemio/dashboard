@@ -264,68 +264,6 @@ router.add_api_route(
     },
 )
 
-router.add_api_route(
-    "/config/dynamic-blocks",
-    config.update_dynamic_blocks,
-    methods=["PUT"],
-    response_model=SuccessResponse[BoletinTemplateConfigResponse],
-    name="update_dynamic_blocks",
-    summary="Actualizar array completo de bloques dinámicos",
-    description="Reemplaza el array completo de bloques (útil para reordenar)",
-    responses={
-        404: {"model": ErrorResponse, "description": "Configuración no encontrada"},
-        400: {"model": ErrorResponse, "description": "Datos inválidos"},
-        403: {"model": ErrorResponse, "description": "Sin permisos (requiere admin)"},
-        500: {"model": ErrorResponse, "description": "Error interno"},
-    },
-)
-
-router.add_api_route(
-    "/config/dynamic-blocks",
-    config.create_dynamic_block,
-    methods=["POST"],
-    response_model=SuccessResponse[BoletinTemplateConfigResponse],
-    name="create_dynamic_block",
-    summary="Agregar un nuevo bloque dinámico",
-    description="Agrega un bloque al final del array de bloques dinámicos",
-    responses={
-        404: {"model": ErrorResponse, "description": "Configuración no encontrada"},
-        400: {"model": ErrorResponse, "description": "Bloque con ID duplicado o datos inválidos"},
-        403: {"model": ErrorResponse, "description": "Sin permisos (requiere admin)"},
-        500: {"model": ErrorResponse, "description": "Error interno"},
-    },
-)
-
-router.add_api_route(
-    "/config/dynamic-blocks/{block_id}",
-    config.update_dynamic_block,
-    methods=["PUT"],
-    response_model=SuccessResponse[BoletinTemplateConfigResponse],
-    name="update_dynamic_block",
-    summary="Actualizar un bloque dinámico específico",
-    description="Actualiza la configuración de un bloque existente por su ID",
-    responses={
-        404: {"model": ErrorResponse, "description": "Configuración o bloque no encontrado"},
-        403: {"model": ErrorResponse, "description": "Sin permisos (requiere admin)"},
-        500: {"model": ErrorResponse, "description": "Error interno"},
-    },
-)
-
-router.add_api_route(
-    "/config/dynamic-blocks/{block_id}",
-    config.delete_dynamic_block,
-    methods=["DELETE"],
-    response_model=SuccessResponse[BoletinTemplateConfigResponse],
-    name="delete_dynamic_block",
-    summary="Eliminar un bloque dinámico",
-    description="Elimina un bloque del array de bloques dinámicos por su ID",
-    responses={
-        404: {"model": ErrorResponse, "description": "Configuración o bloque no encontrado"},
-        403: {"model": ErrorResponse, "description": "Sin permisos (requiere admin)"},
-        500: {"model": ErrorResponse, "description": "Error interno"},
-    },
-)
-
 
 # ============================================================================
 # Preview Endpoints (for section data preview in the generator UI)
@@ -340,7 +278,10 @@ router.add_api_route(
     summary="Preview genérico de datos para cualquier evento",
     description="Recibe el código de un Enfermedad o GrupoDeEnfermedades y genera un resumen de datos",
     responses={
-        404: {"model": ErrorResponse, "description": "CasoEpidemiologico no encontrado"},
+        404: {
+            "model": ErrorResponse,
+            "description": "CasoEpidemiologico no encontrado",
+        },
         500: {"model": ErrorResponse, "description": "Error interno"},
     },
 )

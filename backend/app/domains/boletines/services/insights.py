@@ -13,10 +13,14 @@ from typing import Any, Optional
 
 from sqlalchemy import and_, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import col
 
+from app.domains.dashboard.age_groups_config import (
+    generar_sql_case_when,
+    obtener_configuracion_grupos_edad,
+)
 from app.domains.vigilancia_nominal.models.caso import CasoEpidemiologico
 from app.domains.vigilancia_nominal.models.enfermedad import Enfermedad
-from app.domains.dashboard.age_groups_config import (    generar_sql_case_when, obtener_configuracion_grupos_edad)
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +64,7 @@ class BoletinInsightsService:
         """
         # Obtener nombre del evento si no se pasó
         if not evento_nombre:
-            stmt = select(Enfermedad.nombre).where(Enfermedad.id == evento_id)
+            stmt = select(col(Enfermedad.nombre)).where(col(Enfermedad.id) == evento_id)
             result = await self.db.execute(stmt)
             row = result.scalar_one_or_none()
             evento_nombre = row if row else f"evento {evento_id}"
@@ -85,7 +89,11 @@ class BoletinInsightsService:
 
         result = await self.db.execute(
             text(query),
-            {"evento_id": evento_id, "fecha_inicio": fecha_inicio, "fecha_fin": fecha_fin}
+            {
+                "evento_id": evento_id,
+                "fecha_inicio": fecha_inicio,
+                "fecha_fin": fecha_fin,
+            },
         )
         filas = result.fetchall()
 
@@ -94,7 +102,7 @@ class BoletinInsightsService:
                 "texto": f"No se encontraron datos de distribución por edad para {evento_nombre}.",
                 "total_casos": 0,
                 "grupo_mayor": None,
-                "grupos": []
+                "grupos": [],
             }
 
         # Calcular totales y porcentajes
@@ -105,11 +113,13 @@ class BoletinInsightsService:
             if grupo_edad == "Desconocido":
                 continue
             porcentaje = (casos / total_casos * 100) if total_casos > 0 else 0
-            grupos.append({
-                "grupo": grupo_edad,
-                "casos": casos,
-                "porcentaje": round(porcentaje, 1)
-            })
+            grupos.append(
+                {
+                    "grupo": grupo_edad,
+                    "casos": casos,
+                    "porcentaje": round(porcentaje, 1),
+                }
+            )
 
         # Ordenar por casos (mayor a menor)
         grupos.sort(key=lambda x: x["casos"], reverse=True)
@@ -136,7 +146,7 @@ class BoletinInsightsService:
             "texto": texto,
             "total_casos": total_casos,
             "grupo_mayor": grupo_mayor,
-            "grupos": grupos
+            "grupos": grupos,
         }
 
     async def generar_insight_distribucion_geografica(
@@ -168,7 +178,7 @@ class BoletinInsightsService:
             }
         """
         if not evento_nombre:
-            stmt = select(Enfermedad.nombre).where(Enfermedad.id == evento_id)
+            stmt = select(col(Enfermedad.nombre)).where(col(Enfermedad.id) == evento_id)
             result = await self.db.execute(stmt)
             row = result.scalar_one_or_none()
             evento_nombre = row if row else f"evento {evento_id}"
@@ -190,7 +200,11 @@ class BoletinInsightsService:
 
         result = await self.db.execute(
             text(query),
-            {"evento_id": evento_id, "fecha_inicio": fecha_inicio, "fecha_fin": fecha_fin}
+            {
+                "evento_id": evento_id,
+                "fecha_inicio": fecha_inicio,
+                "fecha_fin": fecha_fin,
+            },
         )
         filas = result.fetchall()
 
@@ -199,7 +213,7 @@ class BoletinInsightsService:
                 "texto": f"No se encontraron datos de distribución geográfica para {evento_nombre}.",
                 "total_casos": 0,
                 "departamento_mayor": None,
-                "departamentos": []
+                "departamentos": [],
             }
 
         total_casos = sum(fila[1] for fila in filas)
@@ -209,11 +223,9 @@ class BoletinInsightsService:
             if nombre == "Sin especificar":
                 continue
             porcentaje = (casos / total_casos * 100) if total_casos > 0 else 0
-            departamentos.append({
-                "nombre": nombre,
-                "casos": casos,
-                "porcentaje": round(porcentaje, 1)
-            })
+            departamentos.append(
+                {"nombre": nombre, "casos": casos, "porcentaje": round(porcentaje, 1)}
+            )
 
         departamentos.sort(key=lambda x: x["casos"], reverse=True)
 
@@ -236,7 +248,7 @@ class BoletinInsightsService:
             "texto": texto,
             "total_casos": total_casos,
             "departamento_mayor": depto_mayor,
-            "departamentos": departamentos
+            "departamentos": departamentos,
         }
 
     async def generar_insight_tendencia(
@@ -273,7 +285,7 @@ class BoletinInsightsService:
         from app.api.v1.analytics.period_utils import get_epi_week_dates
 
         if not evento_nombre:
-            stmt = select(Enfermedad.nombre).where(Enfermedad.id == evento_id)
+            stmt = select(col(Enfermedad.nombre)).where(col(Enfermedad.id) == evento_id)
             result = await self.db.execute(stmt)
             row = result.scalar_one_or_none()
             evento_nombre = row if row else f"evento {evento_id}"
@@ -285,7 +297,9 @@ class BoletinInsightsService:
             semana_inicio_actual += 52
             anio_inicio_actual -= 1
 
-        fecha_inicio_actual, _ = get_epi_week_dates(semana_inicio_actual, anio_inicio_actual)
+        fecha_inicio_actual, _ = get_epi_week_dates(
+            semana_inicio_actual, anio_inicio_actual
+        )
         _, fecha_fin_actual = get_epi_week_dates(semana_actual, anio)
 
         # Calcular período anterior
@@ -301,32 +315,30 @@ class BoletinInsightsService:
             semana_inicio_anterior += 52
             anio_inicio_anterior -= 1
 
-        fecha_inicio_anterior, _ = get_epi_week_dates(semana_inicio_anterior, anio_inicio_anterior)
-        _, fecha_fin_anterior = get_epi_week_dates(semana_fin_anterior, anio_fin_anterior)
+        fecha_inicio_anterior, _ = get_epi_week_dates(
+            semana_inicio_anterior, anio_inicio_anterior
+        )
+        _, fecha_fin_anterior = get_epi_week_dates(
+            semana_fin_anterior, anio_fin_anterior
+        )
 
         # Query casos período actual
-        stmt_actual = (
-            select(func.count(CasoEpidemiologico.id))
-            .where(
-                and_(
-                    CasoEpidemiologico.id_enfermedad == evento_id,
-                    CasoEpidemiologico.fecha_minima_caso >= fecha_inicio_actual,
-                    CasoEpidemiologico.fecha_minima_caso <= fecha_fin_actual
-                )
+        stmt_actual = select(func.count(CasoEpidemiologico.id)).where(
+            and_(
+                col(CasoEpidemiologico.id_enfermedad) == evento_id,
+                col(CasoEpidemiologico.fecha_minima_caso) >= fecha_inicio_actual,
+                col(CasoEpidemiologico.fecha_minima_caso) <= fecha_fin_actual,
             )
         )
         result_actual = await self.db.execute(stmt_actual)
         casos_actual = result_actual.scalar() or 0
 
         # Query casos período anterior
-        stmt_anterior = (
-            select(func.count(CasoEpidemiologico.id))
-            .where(
-                and_(
-                    CasoEpidemiologico.id_enfermedad == evento_id,
-                    CasoEpidemiologico.fecha_minima_caso >= fecha_inicio_anterior,
-                    CasoEpidemiologico.fecha_minima_caso <= fecha_fin_anterior
-                )
+        stmt_anterior = select(func.count(CasoEpidemiologico.id)).where(
+            and_(
+                col(CasoEpidemiologico.id_enfermedad) == evento_id,
+                col(CasoEpidemiologico.fecha_minima_caso) >= fecha_inicio_anterior,
+                col(CasoEpidemiologico.fecha_minima_caso) <= fecha_fin_anterior,
             )
         )
         result_anterior = await self.db.execute(stmt_anterior)
@@ -368,7 +380,7 @@ class BoletinInsightsService:
             "variacion_porcentual": round(variacion, 1),
             "tendencia": tendencia,
             "periodo_actual": f"SE {semana_inicio_actual}-{semana_actual}/{anio}",
-            "periodo_anterior": f"SE {semana_inicio_anterior}-{semana_fin_anterior}/{anio_fin_anterior}"
+            "periodo_anterior": f"SE {semana_inicio_anterior}-{semana_fin_anterior}/{anio_fin_anterior}",
         }
 
     async def generar_insight_resumen(
@@ -398,20 +410,17 @@ class BoletinInsightsService:
             }
         """
         if not evento_nombre:
-            stmt = select(Enfermedad.nombre).where(Enfermedad.id == evento_id)
+            stmt = select(col(Enfermedad.nombre)).where(col(Enfermedad.id) == evento_id)
             result = await self.db.execute(stmt)
             row = result.scalar_one_or_none()
             evento_nombre = row if row else f"evento {evento_id}"
 
         # Obtener total de casos
-        stmt_total = (
-            select(func.count(CasoEpidemiologico.id))
-            .where(
-                and_(
-                    CasoEpidemiologico.id_enfermedad == evento_id,
-                    CasoEpidemiologico.fecha_minima_caso >= fecha_inicio,
-                    CasoEpidemiologico.fecha_minima_caso <= fecha_fin
-                )
+        stmt_total = select(func.count(CasoEpidemiologico.id)).where(
+            and_(
+                col(CasoEpidemiologico.id_enfermedad) == evento_id,
+                col(CasoEpidemiologico.fecha_minima_caso) >= fecha_inicio,
+                col(CasoEpidemiologico.fecha_minima_caso) <= fecha_fin,
             )
         )
         result_total = await self.db.execute(stmt_total)
@@ -421,7 +430,7 @@ class BoletinInsightsService:
             return {
                 "texto": f"No se registraron casos de {evento_nombre} durante el período analizado.",
                 "total_casos": 0,
-                "insights": {}
+                "insights": {},
             }
 
         # Obtener insights individuales
@@ -433,7 +442,9 @@ class BoletinInsightsService:
         )
 
         # Construir texto resumen
-        partes = [f"Durante el período analizado se notificaron {total_casos} casos de {evento_nombre}."]
+        partes = [
+            f"Durante el período analizado se notificaron {total_casos} casos de {evento_nombre}."
+        ]
 
         if insight_edad.get("grupo_mayor"):
             grupo = insight_edad["grupo_mayor"]
@@ -450,8 +461,5 @@ class BoletinInsightsService:
         return {
             "texto": " ".join(partes),
             "total_casos": total_casos,
-            "insights": {
-                "edad": insight_edad,
-                "geografia": insight_geo
-            }
+            "insights": {"edad": insight_edad, "geografia": insight_geo},
         }

@@ -24,7 +24,7 @@ async def get_strategy_audit_log(
     strategy_id: int,
     limit: int = 50,
     db: AsyncSession = Depends(get_async_session),
-    current_user: User = Depends(RequireAnyRole())
+    current_user: User = Depends(RequireAnyRole()),
 ) -> SuccessResponse[List[AuditLogResponse]]:
     """
     Obtener historial de auditoría de una estrategia.
@@ -48,7 +48,9 @@ async def get_strategy_audit_log(
 
         # Obtener log de auditoría
         audit_entries = await repo.get_audit_log(strategy_id, limit=limit)
-        audit_responses = [AuditLogResponse.from_orm(entry) for entry in audit_entries]
+        audit_responses = [
+            AuditLogResponse.model_validate(entry) for entry in audit_entries
+        ]
 
         logger.info(f"✅ Found {len(audit_responses)} audit entries")
         return SuccessResponse(data=audit_responses)

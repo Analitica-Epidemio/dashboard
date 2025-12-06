@@ -2,6 +2,7 @@
 
 import polars as pl
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlmodel import SQLModel
 
 from app.core.constants import FrecuenciaOcurrencia
 from app.domains.vigilancia_nominal.models.ambitos import AmbitosConcurrenciaCaso
@@ -19,9 +20,7 @@ from ..shared import (
 class AmbitosProcessor(BulkProcessorBase):
     """Handles place of occurrence operations."""
 
-    def upsert_ambitos_concurrencia(
-        self, df: pl.DataFrame
-    ) -> BulkOperationResult:
+    def upsert_ambitos_concurrencia(self, df: pl.DataFrame) -> BulkOperationResult:
         """
         Bulk upsert de ámbitos de concurrencia con Polars puro.
 
@@ -64,22 +63,42 @@ class AmbitosProcessor(BulkProcessorBase):
 
         frecuencia_expr = pl.lit(None)
         if Columns.FRECUENCIA.name in ambitos_df.columns:
-            base_expr = pl.col(Columns.FRECUENCIA.name).str.to_uppercase().str.strip_chars()
+            base_expr = (
+                pl.col(Columns.FRECUENCIA.name).str.to_uppercase().str.strip_chars()
+            )
             for pattern, value in frecuencia_mapping.items():
-                frecuencia_expr = pl.when(base_expr.str.contains(pattern)).then(pl.lit(value)).otherwise(frecuencia_expr)
+                frecuencia_expr = (
+                    pl.when(base_expr.str.contains(pattern))
+                    .then(pl.lit(value))
+                    .otherwise(frecuencia_expr)
+                )
 
-        ambitos_prepared = ambitos_df.select([
-            pl.col("id_caso"),
-            pl_col_or_null(ambitos_df, Columns.NOMBRE_LUGAR_OCURRENCIA.name).alias("nombre_lugar_ocurrencia"),
-            pl_col_or_null(ambitos_df, Columns.TIPO_LUGAR_OCURRENCIA.name).alias("tipo_lugar_ocurrencia"),
-            pl_col_or_null(ambitos_df, Columns.LOCALIDAD_AMBITO_OCURRENCIA.name).alias("localidad_ambito_ocurrencia"),
-            pl_col_or_null(ambitos_df, Columns.FECHA_AMBITO_OCURRENCIA.name, pl_safe_date).alias("fecha_ambito_ocurrencia"),
-            pl_col_or_null(ambitos_df, Columns.SITIO_PROBABLE_ADQUISICION.name, pl_map_boolean).alias("es_sitio_probable_adquisicion_infeccion"),
-            pl_col_or_null(ambitos_df, Columns.SITIO_PROBABLE_DISEMINACION.name, pl_map_boolean).alias("es_sitio_probable_diseminacion_infeccion"),
-            frecuencia_expr.alias("frecuencia_concurrencia"),
-            pl.lit(timestamp).alias("created_at"),
-            pl.lit(timestamp).alias("updated_at"),
-        ]).filter(
+        ambitos_prepared = ambitos_df.select(
+            [
+                pl.col("id_caso"),
+                pl_col_or_null(ambitos_df, Columns.NOMBRE_LUGAR_OCURRENCIA.name).alias(
+                    "nombre_lugar_ocurrencia"
+                ),
+                pl_col_or_null(ambitos_df, Columns.TIPO_LUGAR_OCURRENCIA.name).alias(
+                    "tipo_lugar_ocurrencia"
+                ),
+                pl_col_or_null(
+                    ambitos_df, Columns.LOCALIDAD_AMBITO_OCURRENCIA.name
+                ).alias("localidad_ambito_ocurrencia"),
+                pl_col_or_null(
+                    ambitos_df, Columns.FECHA_AMBITO_OCURRENCIA.name, pl_safe_date
+                ).alias("fecha_ambito_ocurrencia"),
+                pl_col_or_null(
+                    ambitos_df, Columns.SITIO_PROBABLE_ADQUISICION.name, pl_map_boolean
+                ).alias("es_sitio_probable_adquisicion_infeccion"),
+                pl_col_or_null(
+                    ambitos_df, Columns.SITIO_PROBABLE_DISEMINACION.name, pl_map_boolean
+                ).alias("es_sitio_probable_diseminacion_infeccion"),
+                frecuencia_expr.alias("frecuencia_concurrencia"),
+                pl.lit(timestamp).alias("created_at"),
+                pl.lit(timestamp).alias("updated_at"),
+            ]
+        ).filter(
             # Solo registros con datos relevantes
             pl.col("nombre_lugar_ocurrencia").is_not_null()
             | pl.col("tipo_lugar_ocurrencia").is_not_null()
@@ -91,7 +110,8 @@ class AmbitosProcessor(BulkProcessorBase):
 
         # PostgreSQL UPSERT
         ambitos_data = ambitos_prepared.to_dicts()
-        stmt = pg_insert(AmbitosConcurrenciaCaso.__table__).values(ambitos_data)
+        table = SQLModel.metadata.tables[AmbitosConcurrenciaCaso.__tablename__]
+        stmt = pg_insert(table).values(ambitos_data)
         upsert_stmt = stmt.on_conflict_do_nothing(index_elements=["id_caso"])
         self.context.session.execute(upsert_stmt)
 

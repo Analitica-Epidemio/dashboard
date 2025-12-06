@@ -21,8 +21,9 @@ OPTIMIZACIONES:
 """
 
 import polars as pl
-from sqlalchemy import func, select
+from sqlalchemy import func, inspect, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlmodel import col
 
 from app.domains.territorio.establecimientos_models import Establecimiento
 from app.domains.territorio.services.geografia_bootstrap_service import (
@@ -36,10 +37,22 @@ from ..shared import BulkProcessorBase, pl_clean_string, pl_safe_int
 # Formato: (columna_id_snvs, columna_nombre, columna_localidad)
 ESTABLECIMIENTO_COLUMN_GROUPS = [
     (Columns.ID_ESTAB_CLINICA, Columns.ESTAB_CLINICA, Columns.ID_LOC_INDEC_CLINICA),
-    (Columns.ID_ESTABLECIMIENTO_DIAG, Columns.ESTABLECIMIENTO_DIAG, Columns.ID_LOC_INDEC_DIAG),
-    (Columns.ID_ESTABLECIMIENTO_MUESTRA, Columns.ESTABLECIMIENTO_MUESTRA, Columns.ID_LOC_INDEC_MUESTRA),
+    (
+        Columns.ID_ESTABLECIMIENTO_DIAG,
+        Columns.ESTABLECIMIENTO_DIAG,
+        Columns.ID_LOC_INDEC_DIAG,
+    ),
+    (
+        Columns.ID_ESTABLECIMIENTO_MUESTRA,
+        Columns.ESTABLECIMIENTO_MUESTRA,
+        Columns.ID_LOC_INDEC_MUESTRA,
+    ),
     (Columns.ID_ORIGEN, Columns.ESTABLECIMIENTO_EPI, Columns.ID_LOC_INDEC_EPI),
-    (None, Columns.ESTABLECIMIENTO_CARGA, Columns.ID_LOC_INDEC_CARGA),  # CARGA no tiene columna ID
+    (
+        None,
+        Columns.ESTABLECIMIENTO_CARGA,
+        Columns.ID_LOC_INDEC_CARGA,
+    ),  # CARGA no tiene columna ID
 ]
 
 
@@ -70,7 +83,9 @@ class EstablecimientosProcessor(BulkProcessorBase):
         # Paso 2: Extraer establecimientos únicos (nombre, localidad)
         establecimientos_set = self._extract_establecimientos_from_df(df)
 
-        self.logger.info(f"🏥 Establecimientos únicos extraídos del CSV: {len(establecimientos_set)}")
+        self.logger.info(
+            f"🏥 Establecimientos únicos extraídos del CSV: {len(establecimientos_set)}"
+        )
         if establecimientos_set:
             # Log algunos ejemplos
             ejemplos = list(establecimientos_set)[:5]
@@ -82,7 +97,9 @@ class EstablecimientosProcessor(BulkProcessorBase):
 
         # Paso 3: Upsert establecimientos
         mapping = self._upsert_establecimientos(establecimientos_set)
-        self.logger.info(f"✅ Mapping de establecimientos creado: {len(mapping)} establecimientos mapeados")
+        self.logger.info(
+            f"✅ Mapping de establecimientos creado: {len(mapping)} establecimientos mapeados"
+        )
         return mapping
 
     # ===== EXTRACCIÓN =====
@@ -107,41 +124,66 @@ class EstablecimientosProcessor(BulkProcessorBase):
 
         for id_col, nombre_col, localidad_col in ESTABLECIMIENTO_COLUMN_GROUPS:
             # Obtener nombres de columnas (son objetos Column, necesitamos .name)
-            nombre_col_name = nombre_col.name if hasattr(nombre_col, 'name') else nombre_col
-            localidad_col_name = localidad_col.name if hasattr(localidad_col, 'name') else localidad_col
-            id_col_name = id_col.name if (id_col and hasattr(id_col, 'name')) else id_col
+            nombre_col_name = (
+                nombre_col.name if hasattr(nombre_col, "name") else nombre_col
+            )
+            localidad_col_name = (
+                localidad_col.name if hasattr(localidad_col, "name") else localidad_col
+            )
+
+            # Para id_col, puede ser None (columna CARGA no tiene ID)
+            # Asegurar que id_col_name es str o None
+            if id_col is None:
+                id_col_name = None
+            elif hasattr(id_col, "name"):
+                id_col_name = id_col.name
+            else:
+                id_col_name = id_col if isinstance(id_col, str) else None
 
             # Verificar que columnas necesarias existen
-            if nombre_col_name not in df.columns or localidad_col_name not in df.columns:
+            if (
+                nombre_col_name not in df.columns
+                or localidad_col_name not in df.columns
+            ):
                 continue
 
             has_id_col = id_col_name is not None and id_col_name in df.columns
 
             # LAZY EVALUATION - Procesar con expresiones Polars
             if has_id_col:
+                # Type narrowing: has_id_col=True garantiza id_col_name is not None
+                # Pero necesitamos asegurar al type checker que es str
+                assert isinstance(id_col_name, str), (
+                    "id_col_name debe ser str cuando has_id_col es True"
+                )
+
                 pares_df = (
                     df.lazy()
                     .filter(
                         # Al menos ID o nombre debe estar presente
-                        pl.col(id_col_name).is_not_null() | pl.col(nombre_col_name).is_not_null()
+                        pl.col(id_col_name).is_not_null()
+                        | pl.col(nombre_col_name).is_not_null()
                     )
-                    .select([
-                        # Limpiar ID de SNVS: convertir a int, luego a string
-                        (
-                            pl.when(pl_safe_int(id_col_name).is_not_null())
-                            .then(pl_safe_int(id_col_name).cast(pl.Utf8))
-                            .otherwise(None)
-                        ).alias("id_snvs_limpio"),
-                        # Limpiar nombre: strip + uppercase
-                        (
-                            pl_clean_string(nombre_col_name).str.to_uppercase()
-                        ).alias("nombre_limpio"),
-                        # Convertir localidad a int
-                        pl_safe_int(localidad_col_name).alias("id_loc_int"),
-                    ])
+                    .select(
+                        [
+                            # Limpiar ID de SNVS: convertir a int, luego a string
+                            (
+                                pl.when(pl_safe_int(id_col_name).is_not_null())
+                                .then(pl_safe_int(id_col_name).cast(pl.Utf8))
+                                .otherwise(None)
+                            ).alias("id_snvs_limpio"),
+                            # Limpiar nombre: strip + uppercase
+                            (pl_clean_string(nombre_col_name).str.to_uppercase()).alias(
+                                "nombre_limpio"
+                            ),
+                            # Convertir localidad a int
+                            pl_safe_int(localidad_col_name).alias("id_loc_int"),
+                        ]
+                    )
                     .filter(
                         # Filtrar registros que tienen al menos ID o nombre válidos
-                        pl.col("id_snvs_limpio").is_not_null() | pl.col("nombre_limpio").is_not_null()
+                        pl.col("id_snvs_limpio").is_not_null()
+                        | pl.col("nombre_limpio").is_not_null()
                     )
                     .collect()
                 )
@@ -150,11 +192,15 @@ class EstablecimientosProcessor(BulkProcessorBase):
                 pares_df = (
                     df.lazy()
                     .filter(pl.col(nombre_col_name).is_not_null())
-                    .select([
-                        pl.lit(None, dtype=pl.Utf8).alias("id_snvs_limpio"),
-                        pl_clean_string(nombre_col_name).str.to_uppercase().alias("nombre_limpio"),
-                        pl_safe_int(localidad_col_name).alias("id_loc_int"),
-                    ])
+                    .select(
+                        [
+                            pl.lit(None, dtype=pl.Utf8).alias("id_snvs_limpio"),
+                            pl_clean_string(nombre_col_name)
+                            .str.to_uppercase()
+                            .alias("nombre_limpio"),
+                            pl_safe_int(localidad_col_name).alias("id_loc_int"),
+                        ]
+                    )
                     .filter(pl.col("nombre_limpio").is_not_null())
                     .collect()
                 )
@@ -198,24 +244,33 @@ class EstablecimientosProcessor(BulkProcessorBase):
         ids_snvs = [id_snvs for id_snvs, nombre, _ in establecimientos_set if id_snvs]
         nombres = [nombre for id_snvs, nombre, _ in establecimientos_set if nombre]
 
-        self.logger.info(f"📋 Procesando {len(establecimientos_set)} establecimientos únicos:")
+        self.logger.info(
+            f"📋 Procesando {len(establecimientos_set)} establecimientos únicos:"
+        )
         self.logger.info(f"   - {len(ids_snvs)} con ID de SNVS")
         self.logger.info(f"   - {len(nombres)} con nombre")
 
         # PASO 1: Buscar por codigo_snvs (IDs del CSV)
         existing_by_codigo = self._get_establecimientos_by_codigo_snvs(ids_snvs)
-        self.logger.info(f"🔍 Paso 1 - Búsqueda por codigo_snvs: {len(existing_by_codigo)} matches")
+        self.logger.info(
+            f"🔍 Paso 1 - Búsqueda por codigo_snvs: {len(existing_by_codigo)} matches"
+        )
 
         # PASO 2: Para los que NO se encontraron por codigo_snvs, buscar por nombre
         # Construir lista de establecimientos sin match por código
         ids_con_match = set(existing_by_codigo.keys())
         establecimientos_sin_match = [
-            (id_snvs, nombre) for id_snvs, nombre, _ in establecimientos_set
+            (id_snvs, nombre)
+            for id_snvs, nombre, _ in establecimientos_set
             if id_snvs not in ids_con_match
         ]
-        nombres_sin_match = [nombre for _, nombre in establecimientos_sin_match if nombre]
+        nombres_sin_match = [
+            nombre for _, nombre in establecimientos_sin_match if nombre
+        ]
 
-        self.logger.info(f"🔍 Paso 2 - Establecimientos sin match por código: {len(establecimientos_sin_match)}")
+        self.logger.info(
+            f"🔍 Paso 2 - Establecimientos sin match por código: {len(establecimientos_sin_match)}"
+        )
         existing_by_nombre = self._get_existing_establecimientos(nombres_sin_match)
         self.logger.info(f"✓ Encontrados por nombre: {len(existing_by_nombre)}")
 
@@ -233,7 +288,8 @@ class EstablecimientosProcessor(BulkProcessorBase):
             # Si no está en existing_mapping, crear nuevo
             if clave not in existing_mapping:
                 nuevo = {
-                    "nombre": nombre or f"Establecimiento SNVS {id_snvs}",  # Usar ID si no hay nombre
+                    "nombre": nombre
+                    or f"Establecimiento SNVS {id_snvs}",  # Usar ID si no hay nombre
                     "id_localidad_indec": id_localidad,
                     "source": "SNVS",
                     "codigo_snvs": id_snvs,  # Solo guardar el ID numérico de SNVS, no el nombre
@@ -243,10 +299,14 @@ class EstablecimientosProcessor(BulkProcessorBase):
                 nuevos.append(nuevo)
 
         if nuevos:
-            self.logger.info(f"➕ Creando {len(nuevos)} nuevos establecimientos con source='SNVS'")
+            self.logger.info(
+                f"➕ Creando {len(nuevos)} nuevos establecimientos con source='SNVS'"
+            )
             if len(nuevos) <= 5:
-                self.logger.info(f"   Ejemplos: {[(e['codigo_snvs'], e['nombre']) for e in nuevos]}")
-            stmt = pg_insert(Establecimiento.__table__).values(nuevos)
+                self.logger.info(
+                    f"   Ejemplos: {[(e['codigo_snvs'], e['nombre']) for e in nuevos]}"
+                )
+            stmt = pg_insert(inspect(Establecimiento).local_table).values(nuevos)
             self.context.session.execute(stmt.on_conflict_do_nothing())
 
             # Re-obtener mapeo completo
@@ -254,7 +314,9 @@ class EstablecimientosProcessor(BulkProcessorBase):
                 **self._get_establecimientos_by_codigo_snvs(ids_snvs),
                 **self._get_existing_establecimientos(nombres),
             }
-            self.logger.info(f"✅ Mapping actualizado: {len(existing_mapping)} establecimientos")
+            self.logger.info(
+                f"✅ Mapping actualizado: {len(existing_mapping)} establecimientos"
+            )
         else:
             self.logger.info("ℹ️  Todos los establecimientos ya existen en BD")
 
@@ -277,8 +339,8 @@ class EstablecimientosProcessor(BulkProcessorBase):
             return {}
 
         # Query buscando por codigo_snvs (ahora son IDs numéricos)
-        stmt = select(Establecimiento.id, Establecimiento.codigo_snvs).where(
-            Establecimiento.codigo_snvs.in_(ids_snvs)
+        stmt = select(col(Establecimiento.id), col(Establecimiento.codigo_snvs)).where(
+            col(Establecimiento.codigo_snvs).in_(ids_snvs)
         )
 
         # Retornar mapeo id_snvs → id_establecimiento
@@ -305,12 +367,13 @@ class EstablecimientosProcessor(BulkProcessorBase):
         nombres_upper = [n.upper() for n in nombres]
 
         # Query con UPPER() para matching case-insensitive
-        stmt = select(Establecimiento.id, Establecimiento.nombre).where(
-            func.upper(Establecimiento.nombre).in_(nombres_upper)
+        stmt = select(col(Establecimiento.id), col(Establecimiento.nombre)).where(
+            func.upper(col(Establecimiento.nombre)).in_(nombres_upper)
         )
 
         # Retornar mapeo usando el nombre en uppercase como key
         return {
             nombre.upper(): estab_id
             for estab_id, nombre in self.context.session.execute(stmt).all()
+            if nombre is not None
         }

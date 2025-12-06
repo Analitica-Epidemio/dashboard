@@ -53,5 +53,5 @@ async def api_root(current_user: User = Depends(RequireAnyRole())) -> Dict[str, 
     return {
         "message": "API v1 funcionando correctamente",
         "authenticated_user": current_user.email,
-        "version": "1.0.0"
+        "version": "1.0.0",
     }

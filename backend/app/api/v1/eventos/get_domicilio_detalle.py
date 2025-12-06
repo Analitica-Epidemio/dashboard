@@ -11,19 +11,25 @@ from typing import List, Optional
 from fastapi import Depends, Path, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import select
-from sqlmodel import Session
+from sqlmodel import Session, col
 
 from app.core.database import get_session
 from app.core.schemas.response import SuccessResponse
-from app.domains.vigilancia_nominal.models.enfermedad import GrupoDeEnfermedades, Enfermedad
-from app.domains.vigilancia_nominal.models.caso import (    CasoEpidemiologico, CasoGrupoEnfermedad)
-from app.domains.vigilancia_nominal.models.sujetos import Ciudadano
 from app.domains.territorio.geografia_models import (
     Departamento,
     Domicilio,
     Localidad,
     Provincia,
 )
+from app.domains.vigilancia_nominal.models.caso import (
+    CasoEpidemiologico,
+    CasoGrupoEnfermedad,
+)
+from app.domains.vigilancia_nominal.models.enfermedad import (
+    Enfermedad,
+    GrupoDeEnfermedades,
+)
+from app.domains.vigilancia_nominal.models.sujetos import Ciudadano
 
 
 class CasoDetalle(BaseModel):
@@ -99,19 +105,24 @@ async def get_domicilio_detalle(
     domicilio_stmt = (
         select(
             Domicilio,
-            Localidad.nombre.label("localidad_nombre"),
-            Departamento.nombre.label("departamento_nombre"),
-            Provincia.nombre.label("provincia_nombre"),
+            col(Localidad.nombre).label("localidad_nombre"),
+            col(Departamento.nombre).label("departamento_nombre"),
+            col(Provincia.nombre).label("provincia_nombre"),
         )
-        .join(Localidad, Domicilio.id_localidad_indec == Localidad.id_localidad_indec)
+        .join(
+            Localidad,
+            col(Domicilio.id_localidad_indec) == col(Localidad.id_localidad_indec),
+        )
         .join(
             Departamento,
-            Localidad.id_departamento_indec == Departamento.id_departamento_indec,
+            col(Localidad.id_departamento_indec)
+            == col(Departamento.id_departamento_indec),
         )
         .join(
-            Provincia, Departamento.id_provincia_indec == Provincia.id_provincia_indec
+            Provincia,
+            col(Departamento.id_provincia_indec) == col(Provincia.id_provincia_indec),
         )
-        .where(Domicilio.id == id_domicilio)
+        .where(col(Domicilio.id) == id_domicilio)
     )
     domicilio_result = session.exec(domicilio_stmt).first()
 
@@ -128,37 +139,48 @@ async def get_domicilio_detalle(
     # Obtener eventos del domicilio con tipo y grupo
     query = (
         select(
-            CasoEpidemiologico.id,
-            CasoEpidemiologico.fecha_minima_caso,
-            CasoEpidemiologico.fecha_nacimiento,
-            CasoEpidemiologico.clasificacion_manual,
-            CasoEpidemiologico.clasificacion_estrategia,
-            Ciudadano.codigo_ciudadano,
-            Ciudadano.numero_documento,
-            Ciudadano.nombre,
-            Ciudadano.apellido,
-            Ciudadano.sexo_biologico,
-            Enfermedad.nombre.label("tipo_nombre"),
-            GrupoDeEnfermedades.nombre.label("grupo_nombre"),
+            col(CasoEpidemiologico.id),
+            col(CasoEpidemiologico.fecha_minima_caso),
+            col(CasoEpidemiologico.fecha_nacimiento),
+            col(CasoEpidemiologico.clasificacion_manual),
+            col(CasoEpidemiologico.clasificacion_estrategia),
+            col(Ciudadano.codigo_ciudadano),
+            col(Ciudadano.numero_documento),
+            col(Ciudadano.nombre),
+            col(Ciudadano.apellido),
+            col(Ciudadano.sexo_biologico),
+            col(Enfermedad.nombre).label("tipo_nombre"),
+            col(GrupoDeEnfermedades.nombre).label("grupo_nombre"),
         )
         .select_from(CasoEpidemiologico)
-        .join(Ciudadano, CasoEpidemiologico.codigo_ciudadano == Ciudadano.codigo_ciudadano)
-        .outerjoin(Enfermedad, CasoEpidemiologico.id_enfermedad == Enfermedad.id)
-        .outerjoin(CasoGrupoEnfermedad, CasoEpidemiologico.id == CasoGrupoEnfermedad.id_caso)
-        .outerjoin(GrupoDeEnfermedades, CasoGrupoEnfermedad.id_grupo == GrupoDeEnfermedades.id)
-        .where(CasoEpidemiologico.id_domicilio == id_domicilio)
+        .join(
+            Ciudadano,
+            col(CasoEpidemiologico.codigo_ciudadano) == col(Ciudadano.codigo_ciudadano),
+        )
+        .outerjoin(
+            Enfermedad, col(CasoEpidemiologico.id_enfermedad) == col(Enfermedad.id)
+        )
+        .outerjoin(
+            CasoGrupoEnfermedad,
+            col(CasoEpidemiologico.id) == col(CasoGrupoEnfermedad.id_caso),
+        )
+        .outerjoin(
+            GrupoDeEnfermedades,
+            col(CasoGrupoEnfermedad.id_grupo) == col(GrupoDeEnfermedades.id),
+        )
+        .where(col(CasoEpidemiologico.id_domicilio) == id_domicilio)
     )
 
     # Aplicar filtros temporales
     if fecha_desde is not None:
-        query = query.where(CasoEpidemiologico.fecha_minima_caso >= fecha_desde)
+        query = query.where(col(CasoEpidemiologico.fecha_minima_caso) >= fecha_desde)
     if fecha_hasta is not None:
-        query = query.where(CasoEpidemiologico.fecha_minima_caso <= fecha_hasta)
+        query = query.where(col(CasoEpidemiologico.fecha_minima_caso) <= fecha_hasta)
 
     # Ordenar por fecha más reciente primero
-    query = query.order_by(CasoEpidemiologico.fecha_minima_caso.desc())
+    query = query.order_by(col(CasoEpidemiologico.fecha_minima_caso).desc())
 
-    results = session.exec(query).all()
+    results = session.execute(query).all()
 
     # Construir lista de casos
     casos: List[CasoDetalle] = []

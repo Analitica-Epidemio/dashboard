@@ -2,10 +2,12 @@
 Seed de configuración de charts del dashboard.
 Basado en los charts del sistema epidemiologia_chubut.
 """
+
 import os
 import sys
 from datetime import datetime
 from pathlib import Path
+from typing import Any, Dict, List, Optional, TypedDict
 
 # Agregar el directorio raíz al path
 sys.path.append(str(Path(__file__).parent.parent.parent))
@@ -16,8 +18,25 @@ from sqlmodel import select
 
 from app.domains.dashboard.models import DashboardChart
 
+
+class ChartConfig(TypedDict):
+    height: int
+
+
+class ChartData(TypedDict):
+    codigo: str
+    nombre: str
+    descripcion: str
+    funcion_procesamiento: str
+    condiciones_display: Optional[Dict[str, Any]]
+    tipo_visualizacion: str
+    configuracion_chart: Dict[str, Any]
+    orden: int
+    activo: bool
+
+
 # Configuración de charts basados en el sistema Chubut
-DASHBOARD_CHARTS = [
+DASHBOARD_CHARTS: List[ChartData] = [
     {
         "codigo": "curva-epidemiologica",
         "nombre": "Curva Epidemiológica",
@@ -27,7 +46,7 @@ DASHBOARD_CHARTS = [
         "tipo_visualizacion": "line",
         "configuracion_chart": {"height": 300},
         "orden": 1,
-        "activo": True
+        "activo": True,
     },
     {
         "codigo": "corredor-endemico",
@@ -38,7 +57,7 @@ DASHBOARD_CHARTS = [
         "tipo_visualizacion": "area",
         "configuracion_chart": {"height": 300},
         "orden": 2,
-        "activo": True
+        "activo": True,
     },
     {
         "codigo": "piramide-poblacional",
@@ -49,7 +68,7 @@ DASHBOARD_CHARTS = [
         "tipo_visualizacion": "d3_pyramid",
         "configuracion_chart": {"height": 300},
         "orden": 3,
-        "activo": True
+        "activo": True,
     },
     {
         "codigo": "mapa-geografico",
@@ -60,7 +79,7 @@ DASHBOARD_CHARTS = [
         "tipo_visualizacion": "mapa",
         "configuracion_chart": {"height": 500},
         "orden": 4,
-        "activo": True
+        "activo": True,
     },
     {
         "codigo": "estacionalidad-mensual",
@@ -71,7 +90,7 @@ DASHBOARD_CHARTS = [
         "tipo_visualizacion": "bar",
         "configuracion_chart": {"height": 300},
         "orden": 5,
-        "activo": True
+        "activo": True,
     },
     {
         "codigo": "casos-edad",
@@ -82,7 +101,7 @@ DASHBOARD_CHARTS = [
         "tipo_visualizacion": "bar",
         "configuracion_chart": {"height": 300},
         "orden": 6,
-        "activo": True
+        "activo": True,
     },
     {
         "codigo": "intento-suicidio",
@@ -93,7 +112,7 @@ DASHBOARD_CHARTS = [
         "tipo_visualizacion": "bar",
         "configuracion_chart": {"height": 300},
         "orden": 7,
-        "activo": True
+        "activo": True,
     },
     {
         "codigo": "rabia-animal",
@@ -104,7 +123,7 @@ DASHBOARD_CHARTS = [
         "tipo_visualizacion": "bar",
         "configuracion_chart": {"height": 300},
         "orden": 8,
-        "activo": True
+        "activo": True,
     },
     {
         "codigo": "proporcion-ira",
@@ -115,7 +134,7 @@ DASHBOARD_CHARTS = [
         "tipo_visualizacion": "pie",
         "configuracion_chart": {"height": 400},
         "orden": 9,
-        "activo": True
+        "activo": True,
     },
     {
         "codigo": "distribucion-clasificacion",
@@ -126,12 +145,12 @@ DASHBOARD_CHARTS = [
         "tipo_visualizacion": "pie",
         "configuracion_chart": {"height": 300},
         "orden": 10,
-        "activo": True
-    }
+        "activo": True,
+    },
 ]
 
 
-def seed_charts(session: Session):
+def seed_charts(session: Session) -> None:
     """
     Crea los charts del dashboard en la base de datos.
     Recibe una sesión existente para usar en el seed maestro.
@@ -143,7 +162,9 @@ def seed_charts(session: Session):
 
     for chart_data in DASHBOARD_CHARTS:
         # Check if chart already exists
-        stmt = select(DashboardChart).where(DashboardChart.codigo == chart_data["codigo"])
+        stmt = select(DashboardChart).where(
+            DashboardChart.codigo == chart_data["codigo"]
+        )
         existing = session.execute(stmt).scalar_one_or_none()
 
         if existing:
@@ -172,7 +193,7 @@ def seed_charts(session: Session):
                 orden=chart_data["orden"],
                 activo=chart_data["activo"],
                 created_at=datetime.now(),
-                updated_at=datetime.now()
+                updated_at=datetime.now(),
             )
 
             session.add(chart)
@@ -180,24 +201,24 @@ def seed_charts(session: Session):
             print(f"  ✅ Chart {chart.codigo} creado")
 
     session.commit()
-    print(f"\n✅ {created_count} Dashboard Charts creados, {updated_count} actualizados")
+    print(
+        f"\n✅ {created_count} Dashboard Charts creados, {updated_count} actualizados"
+    )
 
 
-def main():
+def main() -> None:
     """
     Crea los charts del dashboard en la base de datos (ejecución standalone).
     """
     # Obtener la URL de la base de datos
     DATABASE_URL = os.getenv(
         "DATABASE_URL",
-        "postgresql://epidemiologia_user:epidemiologia_password@db:5432/epidemiologia_db"
+        "postgresql://epidemiologia_user:epidemiologia_password@db:5432/epidemiologia_db",
     )
 
     # Cambiar postgresql+asyncpg:// por postgresql:// para usar psycopg2 síncrono
     if "postgresql+asyncpg" in DATABASE_URL:
-        DATABASE_URL = DATABASE_URL.replace(
-            "postgresql+asyncpg://", "postgresql://"
-        )
+        DATABASE_URL = DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://")
 
     # Crear engine y sesión
     engine = create_engine(DATABASE_URL)

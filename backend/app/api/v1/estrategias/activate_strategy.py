@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 async def activate_strategy(
     strategy_id: int,
     db: AsyncSession = Depends(get_async_session),
-    current_user: User = Depends(RequireSuperadmin())
+    current_user: User = Depends(RequireSuperadmin()),
 ) -> SuccessResponse[EstrategiaClasificacionResponse]:
     """
     Activar estrategia.
@@ -51,7 +51,9 @@ async def activate_strategy(
 
         # Activar (el repositorio maneja la lógica de desactivar otras)
         activated_strategy = await repo.activate(strategy_id)
-        strategy_response = EstrategiaClasificacionResponse.from_orm(activated_strategy)
+        strategy_response = EstrategiaClasificacionResponse.model_validate(
+            activated_strategy
+        )
 
         logger.info(f"✅ Strategy activated: {activated_strategy.name}")
         return SuccessResponse(data=strategy_response)

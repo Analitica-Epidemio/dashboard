@@ -6,7 +6,7 @@ import logging
 
 from fastapi import Depends, HTTPException
 from sqlalchemy import select
-from sqlmodel import Session, func
+from sqlmodel import Session, col, func
 
 from app.api.v1.geocoding.schemas import TriggerGeocodingResponse
 from app.core.database import get_session
@@ -36,7 +36,7 @@ async def trigger_geocoding(
     # Contar domicilios pendientes
     logger.info("🔍 [DEBUG] Iniciando conteo de domicilios pendientes...")
     stmt = select(func.count(Domicilio.id)).where(
-        Domicilio.estado_geocodificacion.in_(
+        col(Domicilio.estado_geocodificacion).in_(
             [
                 EstadoGeocodificacion.PENDIENTE,
                 EstadoGeocodificacion.EN_COLA,

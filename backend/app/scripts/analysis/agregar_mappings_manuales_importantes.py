@@ -10,9 +10,12 @@ fueron agregados automáticamente porque:
 
 import json
 from pathlib import Path
+from typing import Any, Dict, Tuple, cast
 
 backend_dir = Path(__file__).parent.parent.parent.parent
-mapping_file = backend_dir / "app/scripts/seeds/data/establecimientos_mapping_final.json"
+mapping_file = (
+    backend_dir / "app/scripts/seeds/data/establecimientos_mapping_final.json"
+)
 
 # Mappings manuales de alta confianza
 MAPPINGS_MANUALES = {
@@ -29,7 +32,7 @@ MAPPINGS_MANUALES = {
         "provincia_snvs": "Chubut",
         "provincia_ign": "Chubut",
         "agregado_manual": True,
-        "eventos": 2439
+        "eventos": 2439,
     },
     "13680": {  # HOSPITAL ZONAL TRELEW CENTRO MATERNO INFANTIL - 14 eventos
         "nombre_snvs": "HOSPITAL ZONAL TRELEW CENTRO MATERNO INFANTIL",
@@ -45,7 +48,7 @@ MAPPINGS_MANUALES = {
         "provincia_ign": "Chubut",
         "agregado_manual": True,
         "eventos": 14,
-        "nota": "Cumplía criterios automáticos (score ≥85, similitud ≥80%) pero no se agregó. Posiblemente el código SNVS no estaba en las columnas procesadas de los CSVs."
+        "nota": "Cumplía criterios automáticos (score ≥85, similitud ≥80%) pero no se agregó. Posiblemente el código SNVS no estaba en las columnas procesadas de los CSVs.",
     },
     "13584": {  # HOSPITAL RURAL LAGO PUELO - 14 eventos
         "nombre_snvs": "HOSPITAL RURAL LAGO PUELO",
@@ -60,18 +63,18 @@ MAPPINGS_MANUALES = {
         "provincia_snvs": "Chubut",
         "provincia_ign": "Chubut",
         "agregado_manual": True,
-        "eventos": 14
-    }
+        "eventos": 14,
+    },
 }
 
 
-def cargar_mapping_actual():
+def cargar_mapping_actual() -> Dict[str, Any]:
     """Carga el archivo JSON actual."""
-    with open(mapping_file, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    with open(mapping_file, "r", encoding="utf-8") as f:
+        return cast(Dict[str, Any], json.load(f))
 
 
-def agregar_mappings(data):
+def agregar_mappings(data: Dict[str, Any]) -> Tuple[int, int]:
     """Agrega los mappings manuales al JSON."""
     count_nuevos = 0
     count_actualizados = 0
@@ -82,8 +85,12 @@ def agregar_mappings(data):
             count_actualizados += 1
         else:
             print(f"  ✓ Agregando: {mapping_data['nombre_snvs']}")
-            print(f"    → {mapping_data['nombre_ign']} (REFES: {mapping_data['codigo_refes']})")
-            print(f"    → Similitud: {mapping_data['similitud_nombre']}% | CasoEpidemiologicos: {mapping_data.get('eventos', 'N/A')}")
+            print(
+                f"    → {mapping_data['nombre_ign']} (REFES: {mapping_data['codigo_refes']})"
+            )
+            print(
+                f"    → Similitud: {mapping_data['similitud_nombre']}% | CasoEpidemiologicos: {mapping_data.get('eventos', 'N/A')}"
+            )
             count_nuevos += 1
 
         data["mapping"][snvs_code] = mapping_data
@@ -91,7 +98,7 @@ def agregar_mappings(data):
     return count_nuevos, count_actualizados
 
 
-def actualizar_stats(data, nuevos_mapeos):
+def actualizar_stats(data: Dict[str, Any], nuevos_mapeos: int) -> None:
     """Actualiza las estadísticas si existen."""
     if nuevos_mapeos == 0:
         return
@@ -111,19 +118,19 @@ def actualizar_stats(data, nuevos_mapeos):
     data["_README"]["stats"]["cobertura"] = f"{nueva_cobertura:.1f}%"
 
 
-def guardar_mapping(data):
+def guardar_mapping(data: Dict[str, Any]) -> None:
     """Guarda el archivo JSON actualizado."""
     # Ordenar las claves del mapping alfabéticamente
     data["mapping"] = dict(sorted(data["mapping"].items()))
 
-    with open(mapping_file, 'w', encoding='utf-8') as f:
+    with open(mapping_file, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
-def main():
-    print("="*80)
+def main() -> None:
+    print("=" * 80)
     print("AGREGAR MAPPINGS MANUALES - HOSPITALES IMPORTANTES")
-    print("="*80)
+    print("=" * 80)
     print()
 
     # Cargar JSON actual
@@ -146,9 +153,9 @@ def main():
         guardar_mapping(data)
 
         print()
-        print("="*80)
+        print("=" * 80)
         print("RESUMEN")
-        print("="*80)
+        print("=" * 80)
         print(f"  • Mapeos manuales procesados: {len(MAPPINGS_MANUALES)}")
         print(f"  • Nuevos mapeos agregados: {nuevos}")
         print(f"  • Mapeos actualizados: {actualizados}")
@@ -163,9 +170,9 @@ def main():
         print()
     else:
         print()
-        print("="*80)
+        print("=" * 80)
         print("RESUMEN")
-        print("="*80)
+        print("=" * 80)
         print(f"  • Mapeos manuales procesados: {len(MAPPINGS_MANUALES)}")
         print(f"  • Mapeos actualizados: {actualizados}")
         print()

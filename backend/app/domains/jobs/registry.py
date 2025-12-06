@@ -25,7 +25,9 @@ logger = logging.getLogger(__name__)
 class ProcessorProtocol(Protocol):
     """Contrato que todos los processors deben cumplir."""
 
-    def procesar_archivo(self, ruta_archivo: Any, nombre_hoja: Optional[str] = None) -> Dict[str, Any]:
+    def procesar_archivo(
+        self, ruta_archivo: Any, nombre_hoja: Optional[str] = None
+    ) -> Dict[str, Any]:
         """Procesa un archivo y retorna resultados."""
         ...
 

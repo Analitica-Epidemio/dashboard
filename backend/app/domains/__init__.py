@@ -23,6 +23,16 @@ PRINCIPIOS APLICADOS:
 # AUTENTICACION DOMAIN
 from app.domains.autenticacion.models import User, UserLogin, UserSession
 
+# BOLETINES DOMAIN
+from app.domains.boletines.models import (
+    BoletinInstance,
+    BoletinSnippet,
+    BoletinTemplate,
+    BoletinTemplateConfig,
+    CapacidadHospitalaria,
+    VirusRespiratorio,
+)
+
 # CATALOGOS COMPARTIDOS
 from app.domains.catalogos.agentes.models import (
     AgenteEtiologico,
@@ -30,58 +40,27 @@ from app.domains.catalogos.agentes.models import (
     GrupoAgente,
 )
 
-# VIGILANCIA NOMINAL DOMAIN (casos individuales)
-# Incluye: sujetos, enfermedades, agentes, atención médica, clasificación
-from app.domains.vigilancia_nominal.models import (
-    # Caso (modelo central)
-    AntecedenteEpidemiologico,
-    AntecedentesCasoEpidemiologico,
-    CasoEpidemiologico,
-    CasoGrupoEnfermedad,
-    DetalleCasoSintomas,
-    # Enfermedades
-    Enfermedad,
-    EnfermedadGrupo,
-    GrupoDeEnfermedades,
-    # Sujetos
-    Animal,
-    Ciudadano,
-    CiudadanoComorbilidades,
-    CiudadanoDatos,
-    CiudadanoDomicilio,
-    PersonaDomicilio,
-    ViajesCiudadano,
-    # Agentes (detecciones)
-    AgenteExtraccionConfig,
-    CasoAgente,
-    ResultadoDeteccion,
-    # Atención médica
-    ContactosNotificacion,
-    DiagnosticoCasoEpidemiologico,
-    InternacionCasoEpidemiologico,
-    InvestigacionCasoEpidemiologico,
-    TratamientoCasoEpidemiologico,
-    # Salud (catálogos y registros)
-    Comorbilidad,
-    Determinacion,
-    EstudioCasoEpidemiologico,
-    Muestra,
-    MuestraCasoEpidemiologico,
-    ResultadoTecnica,
-    Sintoma,
-    Tecnica,
-    Vacuna,
-    VacunasCiudadano,
-    # Ámbitos
-    AmbitosConcurrenciaCaso,
+# DASHBOARD DOMAIN
+from app.domains.dashboard.models import (
+    DashboardChart,
 )
-from app.domains.vigilancia_nominal.clasificacion.models import (
-    ClassificationRule,
-    EstrategiaClasificacion,
-    EventClassificationAudit,
-    FilterCondition,
-    StrategyChangeLog,
-    TipoClasificacion,
+
+# JOBS DOMAIN
+from app.domains.jobs.models import Job
+
+# TERRITORIO DOMAIN
+from app.domains.territorio.capas_gis_models import (
+    CapaAreaUrbana,
+    CapaHidrografia,
+)
+from app.domains.territorio.establecimientos_models import (
+    Establecimiento,
+)
+from app.domains.territorio.geografia_models import (
+    Departamento,
+    Domicilio,
+    Localidad,
+    Provincia,
 )
 
 # VIGILANCIA AGREGADA DOMAIN (datos agregados)
@@ -102,40 +81,60 @@ from app.domains.vigilancia_agregada.models.conteos import (
     ConteoCasosClinicos,
     ConteoEstudiosLab,
 )
-
-# TERRITORIO DOMAIN
-from app.domains.territorio.capas_gis_models import (
-    CapaAreaUrbana,
-    CapaHidrografia,
-)
-from app.domains.territorio.establecimientos_models import (
-    Establecimiento,
-)
-from app.domains.territorio.geografia_models import (
-    Departamento,
-    Domicilio,
-    Localidad,
-    Provincia,
+from app.domains.vigilancia_nominal.clasificacion.models import (
+    ClassificationRule,
+    EstrategiaClasificacion,
+    EventClassificationAudit,
+    FilterCondition,
+    StrategyChangeLog,
+    TipoClasificacion,
 )
 
-# BOLETINES DOMAIN
-from app.domains.boletines.models import (
-    BoletinInstance,
-    BoletinSnippet,
-    BoletinTemplate,
-    BoletinTemplateConfig,
-    CapacidadHospitalaria,
-    VirusRespiratorio,
+# VIGILANCIA NOMINAL DOMAIN (casos individuales)
+# Incluye: sujetos, enfermedades, agentes, atención médica, clasificación
+from app.domains.vigilancia_nominal.models import (
+    # Agentes (detecciones)
+    AgenteExtraccionConfig,
+    # Ámbitos
+    AmbitosConcurrenciaCaso,
+    # Sujetos
+    Animal,
+    # Caso (modelo central)
+    AntecedenteEpidemiologico,
+    AntecedentesCasoEpidemiologico,
+    CasoAgente,
+    CasoEpidemiologico,
+    CasoGrupoEnfermedad,
+    Ciudadano,
+    CiudadanoComorbilidades,
+    CiudadanoDatos,
+    CiudadanoDomicilio,
+    # Salud (catálogos y registros)
+    Comorbilidad,
+    # Atención médica
+    ContactosNotificacion,
+    DetalleCasoSintomas,
+    Determinacion,
+    DiagnosticoCasoEpidemiologico,
+    # Enfermedades
+    Enfermedad,
+    EnfermedadGrupo,
+    EstudioCasoEpidemiologico,
+    GrupoDeEnfermedades,
+    InternacionCasoEpidemiologico,
+    InvestigacionCasoEpidemiologico,
+    Muestra,
+    MuestraCasoEpidemiologico,
+    PersonaDomicilio,
+    ResultadoDeteccion,
+    ResultadoTecnica,
+    Sintoma,
+    Tecnica,
+    TratamientoCasoEpidemiologico,
+    Vacuna,
+    VacunasCiudadano,
+    ViajesCiudadano,
 )
-
-# JOBS DOMAIN
-from app.domains.jobs.models import Job
-
-# DASHBOARD DOMAIN
-from app.domains.dashboard.models import (
-    DashboardChart,
-)
-
 
 # Export all models for external access
 __all__ = [

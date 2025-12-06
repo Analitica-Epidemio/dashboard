@@ -19,9 +19,7 @@ class TopoJSONOptimizer:
         self.topojson_dir = Path(topojson_dir)
         self._cache: Dict[str, bytes] = {}
 
-    def _quantize_geometry(
-        self, coords: Any, decimals: int = 4
-    ) -> Any:
+    def _quantize_geometry(self, coords: Any, decimals: int = 4) -> Any:
         """
         Quantize coordinate precision to reduce JSON size.
 
@@ -38,13 +36,15 @@ class TopoJSONOptimizer:
         # Check if this is a coordinate pair
         if isinstance(coords[0], (int, float)):
             # Round to specified decimal places
-            multiplier = 10 ** decimals
+            multiplier = 10**decimals
             return [round(c * multiplier) / multiplier for c in coords]
 
         # Recursively process nested arrays
         return [self._quantize_geometry(c, decimals) for c in coords]
 
-    def _quantize_topojson(self, data: Dict[str, Any], decimals: int = 4) -> Dict[str, Any]:
+    def _quantize_topojson(
+        self, data: Dict[str, Any], decimals: int = 4
+    ) -> Dict[str, Any]:
         """Quantize all coordinates in TopoJSON to reduce JSON size"""
         result = data.copy()
 
@@ -80,7 +80,9 @@ class TopoJSONOptimizer:
             Tuple of (compressed_bytes, content_type)
         """
         # Check cache first
-        cache_key = f"{filename}:compress={compress}:quantize={quantize}:{quantize_decimals}"
+        cache_key = (
+            f"{filename}:compress={compress}:quantize={quantize}:{quantize_decimals}"
+        )
         if cache_key in self._cache:
             logger.debug(f"Cache hit for {cache_key}")
             return self._cache[cache_key], "application/json"

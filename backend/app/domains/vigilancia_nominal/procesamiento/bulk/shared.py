@@ -28,6 +28,22 @@ from app.core.bulk import (
     pl_safe_int,
 )
 
+__all__ = [
+    "BulkOperationResult",
+    "BulkProcessorBase",
+    "get_current_timestamp",
+    "get_or_create_catalog",
+    "has_any_value",
+    "pl_clean_numero_domicilio",
+    "pl_clean_string",
+    "pl_col_or_null",
+    "pl_map_boolean",
+    "pl_map_sexo",
+    "pl_map_tipo_documento",
+    "pl_safe_date",
+    "pl_safe_int",
+]
+
 # Patrones de calles inválidas
 PATRONES_CALLE_INVALIDA = [
     r"^s/n$",  # S/N

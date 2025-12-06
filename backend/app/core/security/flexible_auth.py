@@ -15,8 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 async def require_auth_or_signed_url(
-    request: Request,
-    current_user: Optional[User] = Depends(get_current_user_optional)
+    request: Request, current_user: Optional[User] = Depends(get_current_user_optional)
 ) -> Optional[User]:
     """
     Dependencia que requiere autenticación JWT O URL firmada válida
@@ -42,10 +41,12 @@ async def require_auth_or_signed_url(
 
     # Otherwise, require JWT authentication
     if not current_user:
-        logger.warning("❌ Access denied: No valid authentication (neither JWT nor signed URL)")
+        logger.warning(
+            "❌ Access denied: No valid authentication (neither JWT nor signed URL)"
+        )
         raise HTTPException(
             status_code=401,
-            detail="Authentication required. Provide JWT token or valid signed URL"
+            detail="Authentication required. Provide JWT token or valid signed URL",
         )
 
     logger.info(f"✅ Access granted via JWT for user: {current_user.email}")

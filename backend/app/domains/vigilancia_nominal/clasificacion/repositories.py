@@ -2,17 +2,18 @@
 Repository layer para el dominio de estrategias.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from sqlalchemy import and_, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from sqlmodel import col
 
 from app.domains.vigilancia_nominal.clasificacion.models import (
     ClassificationRule,
-    EventClassificationAudit,
     EstrategiaClasificacion,
+    EventClassificationAudit,
     FilterCondition,
     TipoClasificacion,
 )
@@ -51,7 +52,10 @@ class EstrategiaClasificacionRepository:
         # Join con Enfermedad para obtener el nombre
         query = (
             select(EstrategiaClasificacion)
-            .outerjoin(Enfermedad, EstrategiaClasificacion.id_enfermedad == Enfermedad.id)
+            .outerjoin(
+                Enfermedad,
+                col(EstrategiaClasificacion.id_enfermedad) == col(Enfermedad.id),
+            )
             .options(
                 selectinload(EstrategiaClasificacion.classification_rules).selectinload(
                     ClassificationRule.filters
@@ -60,12 +64,16 @@ class EstrategiaClasificacionRepository:
         )
 
         if active_only is not None:
-            query = query.where(EstrategiaClasificacion.is_active == active_only)
+            query = query.where(col(EstrategiaClasificacion.is_active) == active_only)
 
         if id_enfermedad is not None:
-            query = query.where(EstrategiaClasificacion.id_enfermedad == id_enfermedad)
+            query = query.where(
+                col(EstrategiaClasificacion.id_enfermedad) == id_enfermedad
+            )
 
-        query = query.order_by(EstrategiaClasificacion.name).offset(skip).limit(limit)
+        query = (
+            query.order_by(col(EstrategiaClasificacion.name)).offset(skip).limit(limit)
+        )
 
         result = await self.session.execute(query)
         strategies = list(result.scalars().all())
@@ -73,7 +81,9 @@ class EstrategiaClasificacionRepository:
         # Obtener los nombres de Enfermedad para cada estrategia
         if strategies:
             id_enfermedads = list(set(s.id_enfermedad for s in strategies))
-            tipo_query = select(Enfermedad).where(Enfermedad.id.in_(id_enfermedads))
+            tipo_query = select(Enfermedad).where(
+                col(Enfermedad.id).in_(id_enfermedads)
+            )
             tipo_result = await self.session.execute(tipo_query)
             tipos = {t.id: t for t in tipo_result.scalars().all()}
 
@@ -97,7 +107,9 @@ class EstrategiaClasificacionRepository:
         Returns:
             Estrategia encontrada o None
         """
-        query = select(EstrategiaClasificacion).where(EstrategiaClasificacion.id == strategy_id)
+        query = select(EstrategiaClasificacion).where(
+            col(EstrategiaClasificacion.id) == strategy_id
+        )
 
         if include_rules:
             query = query.options(
@@ -111,7 +123,9 @@ class EstrategiaClasificacionRepository:
 
         # Obtener el nombre del Enfermedad
         if strategy:
-            tipo_query = select(Enfermedad).where(Enfermedad.id == strategy.id_enfermedad)
+            tipo_query = select(Enfermedad).where(
+                col(Enfermedad.id) == strategy.id_enfermedad
+            )
             tipo_result = await self.session.execute(tipo_query)
             tipo_enfermedad = tipo_result.scalar_one_or_none()
             if tipo_enfermedad:
@@ -137,11 +151,11 @@ class EstrategiaClasificacionRepository:
             Estrategia encontrada o None
         """
         if fecha is None:
-            fecha = datetime.utcnow()
+            fecha = datetime.now(timezone.utc)
 
         query = (
             select(EstrategiaClasificacion)
-            .where(EstrategiaClasificacion.id_enfermedad == id_enfermedad)
+            .where(col(EstrategiaClasificacion.id_enfermedad) == id_enfermedad)
             .options(
                 selectinload(EstrategiaClasificacion.classification_rules).selectinload(
                     ClassificationRule.filters
@@ -150,7 +164,7 @@ class EstrategiaClasificacionRepository:
         )
 
         if active_only:
-            query = query.where(EstrategiaClasificacion.is_active.is_(True))
+            query = query.where(col(EstrategiaClasificacion.is_active).is_(True))
 
         # Filtrar por validez temporal:
         # La estrategia es válida si:
@@ -158,8 +172,9 @@ class EstrategiaClasificacionRepository:
         # - (valid_until IS NULL OR fecha < valid_until)
         query = query.where(
             and_(
-                EstrategiaClasificacion.valid_from <= fecha,
-                (EstrategiaClasificacion.valid_until.is_(None)) | (EstrategiaClasificacion.valid_until > fecha),
+                col(EstrategiaClasificacion.valid_from) <= fecha,
+                col(EstrategiaClasificacion.valid_until).is_(None)
+                | (col(EstrategiaClasificacion.valid_until) > fecha),
             )
         )
 
@@ -168,7 +183,9 @@ class EstrategiaClasificacionRepository:
 
         # Obtener el nombre del Enfermedad
         if strategy:
-            tipo_query = select(Enfermedad).where(Enfermedad.id == strategy.id_enfermedad)
+            tipo_query = select(Enfermedad).where(
+                col(Enfermedad.id) == strategy.id_enfermedad
+            )
             tipo_result = await self.session.execute(tipo_query)
             tipo_enfermedad = tipo_result.scalar_one_or_none()
             if tipo_enfermedad:
@@ -216,6 +233,9 @@ class EstrategiaClasificacionRepository:
         await self.session.flush()  # Para obtener el ID
 
         # Crear reglas de clasificación
+        if not strategy.id:
+            raise ValueError("Strategy ID not set after flush")
+
         for rule_data in strategy_data.classification_rules:
             rule = ClassificationRule(
                 strategy_id=strategy.id,
@@ -229,6 +249,9 @@ class EstrategiaClasificacionRepository:
             await self.session.flush()  # Para obtener el ID de la regla
 
             # Crear filtros para la regla
+            if not rule.id:
+                raise ValueError("Rule ID not set after flush")
+
             for filter_data in rule_data.filters:
                 filter_condition = FilterCondition(
                     rule_id=rule.id,
@@ -262,6 +285,9 @@ class EstrategiaClasificacionRepository:
         await self.session.refresh(strategy)
 
         # Log de creación
+        if not strategy.id:
+            raise ValueError("Strategy ID not returned after commit")
+
         await self._log_audit(
             strategy_id=strategy.id,
             action="CREATE",
@@ -270,7 +296,10 @@ class EstrategiaClasificacionRepository:
             changed_by=created_by,
         )
 
-        return await self.get_by_id(strategy.id)  # Retornar con relaciones cargadas
+        result = await self.get_by_id(strategy.id)
+        if not result:
+            raise ValueError("Strategy not found after creation")
+        return result
 
     async def update(
         self,
@@ -308,10 +337,7 @@ class EstrategiaClasificacionRepository:
             changes.append(f"active: {strategy.is_active} → {strategy_data.active}")
             strategy.is_active = strategy_data.active
 
-        if (
-            strategy_data.config is not None
-            and strategy_data.config != strategy.config
-        ):
+        if strategy_data.config is not None and strategy_data.config != strategy.config:
             changes.append("config updated")
             strategy.config = strategy_data.config
 
@@ -353,14 +379,14 @@ class EstrategiaClasificacionRepository:
             # Eliminar reglas existentes
             await self.session.execute(
                 select(ClassificationRule).where(
-                    ClassificationRule.strategy_id == strategy_id
+                    col(ClassificationRule.strategy_id) == strategy_id
                 )
             )
             existing_rules = (
                 (
                     await self.session.execute(
                         select(ClassificationRule).where(
-                            ClassificationRule.strategy_id == strategy_id
+                            col(ClassificationRule.strategy_id) == strategy_id
                         )
                     )
                 )
@@ -370,6 +396,10 @@ class EstrategiaClasificacionRepository:
 
             for rule in existing_rules:
                 await self.session.delete(rule)
+
+            # Verificar que strategy.id no sea None
+            if not strategy.id:
+                raise ValueError("Strategy ID is None")
 
             # Crear nuevas reglas
             for rule_data in strategy_data.classification_rules:
@@ -385,6 +415,9 @@ class EstrategiaClasificacionRepository:
                 await self.session.flush()
 
                 # Crear filtros para la regla
+                if not rule.id:
+                    raise ValueError("Rule ID not set after flush")
+
                 for filter_data in rule_data.filters:
                     filter_condition = FilterCondition(
                         rule_id=rule.id,
@@ -415,7 +448,10 @@ class EstrategiaClasificacionRepository:
                 changed_by=updated_by,
             )
 
-        return await self.get_by_id(strategy_id)
+        result = await self.get_by_id(strategy_id)
+        if not result:
+            raise ValueError(f"Strategy {strategy_id} not found")
+        return result
 
     async def delete(self, strategy_id: int, deleted_by: str = "system") -> bool:
         """
@@ -469,8 +505,9 @@ class EstrategiaClasificacionRepository:
         await self.session.execute(
             select(EstrategiaClasificacion).where(
                 and_(
-                    EstrategiaClasificacion.id_enfermedad == strategy.id_enfermedad,
-                    EstrategiaClasificacion.id != strategy_id,
+                    col(EstrategiaClasificacion.id_enfermedad)
+                    == strategy.id_enfermedad,
+                    col(EstrategiaClasificacion.id) != strategy_id,
                 )
             )
         )
@@ -479,9 +516,10 @@ class EstrategiaClasificacionRepository:
                 await self.session.execute(
                     select(EstrategiaClasificacion).where(
                         and_(
-                            EstrategiaClasificacion.id_enfermedad == strategy.id_enfermedad,
-                            EstrategiaClasificacion.id != strategy_id,
-                            EstrategiaClasificacion.is_active.is_(True),
+                            col(EstrategiaClasificacion.id_enfermedad)
+                            == strategy.id_enfermedad,
+                            col(EstrategiaClasificacion.id) != strategy_id,
+                            col(EstrategiaClasificacion.is_active).is_(True),
                         )
                     )
                 )
@@ -492,6 +530,8 @@ class EstrategiaClasificacionRepository:
 
         for other_strategy in other_strategies:
             other_strategy.is_active = False
+            if not other_strategy.id:
+                raise ValueError("Other strategy ID is None")
             await self._log_audit(
                 strategy_id=other_strategy.id,
                 action="DEACTIVATE",
@@ -517,7 +557,10 @@ class EstrategiaClasificacionRepository:
             changed_by=activated_by,
         )
 
-        return await self.get_by_id(strategy_id)
+        result = await self.get_by_id(strategy_id)
+        if not result:
+            raise ValueError(f"Strategy {strategy_id} not found")
+        return result
 
     async def get_audit_log(
         self, strategy_id: int, limit: int = 50
@@ -534,8 +577,8 @@ class EstrategiaClasificacionRepository:
         """
         result = await self.session.execute(
             select(EventClassificationAudit)
-            .where(EventClassificationAudit.id_caso == strategy_id)
-            .order_by(desc(EventClassificationAudit.created_at))
+            .where(col(EventClassificationAudit.id_caso) == strategy_id)
+            .order_by(desc(col(EventClassificationAudit.created_at)))
             .limit(limit)
         )
         return list(result.scalars().all())
@@ -560,11 +603,13 @@ class EstrategiaClasificacionRepository:
             Lista de estrategias que se solapan con el período especificado
         """
         # Construir query base
-        query = select(EstrategiaClasificacion).where(EstrategiaClasificacion.id_enfermedad == id_enfermedad)
+        query = select(EstrategiaClasificacion).where(
+            col(EstrategiaClasificacion.id_enfermedad) == id_enfermedad
+        )
 
         # Excluir estrategia específica si se proporciona (para updates)
         if exclude_strategy_id is not None:
-            query = query.where(EstrategiaClasificacion.id != exclude_strategy_id)
+            query = query.where(col(EstrategiaClasificacion.id) != exclude_strategy_id)
 
         # Lógica de solapamiento:
         # Dos rangos [A_start, A_end] y [B_start, B_end] se solapan si:
@@ -583,11 +628,11 @@ class EstrategiaClasificacionRepository:
             query = query.where(
                 and_(
                     # El nuevo período termina después de que empiece el existente
-                    valid_until > EstrategiaClasificacion.valid_from,
+                    valid_until > col(EstrategiaClasificacion.valid_from),
                     # El nuevo período empieza antes de que termine el existente (o el existente no tiene fin)
                     and_(
-                        (EstrategiaClasificacion.valid_until.is_(None))
-                        | (valid_from < EstrategiaClasificacion.valid_until)
+                        col(EstrategiaClasificacion.valid_until).is_(None)
+                        | (valid_from < col(EstrategiaClasificacion.valid_until))
                     ),
                 )
             )
@@ -596,8 +641,8 @@ class EstrategiaClasificacionRepository:
             # Hay solapamiento si el período existente termina después de que empiece el nuevo
             # o si el período existente tampoco tiene fin
             query = query.where(
-                (EstrategiaClasificacion.valid_until.is_(None))
-                | (EstrategiaClasificacion.valid_until > valid_from)
+                col(EstrategiaClasificacion.valid_until).is_(None)
+                | (col(EstrategiaClasificacion.valid_until) > valid_from)
             )
 
         result = await self.session.execute(query)
@@ -636,7 +681,7 @@ class EstrategiaClasificacionRepository:
                 "new_value": new_value,
                 "changed_by": changed_by,
                 "ip_address": ip_address,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             },
         )
         self.session.add(audit_entry)
@@ -667,17 +712,19 @@ class ClassificationRuleRepository:
             Lista de reglas encontradas
         """
         query = select(ClassificationRule).where(
-            ClassificationRule.strategy_id == strategy_id
+            col(ClassificationRule.strategy_id) == strategy_id
         )
 
         if classification:
-            query = query.where(ClassificationRule.classification == classification)
+            query = query.where(
+                col(ClassificationRule.classification) == classification
+            )
 
         if active_only:
-            query = query.where(ClassificationRule.is_active.is_(True))
+            query = query.where(col(ClassificationRule.is_active).is_(True))
 
         query = query.options(selectinload(ClassificationRule.filters)).order_by(
-            ClassificationRule.priority
+            col(ClassificationRule.priority)
         )
 
         result = await self.session.execute(query)
@@ -702,7 +749,7 @@ class FilterConditionRepository:
         """
         result = await self.session.execute(
             select(FilterCondition)
-            .where(FilterCondition.rule_id == rule_id)
-            .order_by(FilterCondition.order)
+            .where(col(FilterCondition.rule_id) == rule_id)
+            .order_by(col(FilterCondition.order))
         )
         return list(result.scalars().all())

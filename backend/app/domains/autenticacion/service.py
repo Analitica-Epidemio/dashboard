@@ -2,6 +2,7 @@
 Authentication service layer
 Handles user management, authentication, and session management
 """
+
 import logging
 from datetime import datetime, timezone
 from typing import List, Optional, Tuple
@@ -9,6 +10,7 @@ from typing import List, Optional, Tuple
 from fastapi import HTTPException, Request, status
 from sqlalchemy import and_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import col
 
 from .models import User, UserLogin, UserSession, UserStatus
 from .schemas import SessionInfo, Token, UserCreate, UserUpdate
@@ -38,19 +40,22 @@ class AuthService:
         if usuario_existente:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already registered"
+                detail="Email already registered",
             )
 
         # Validate password strength
-        es_valida, mensaje_error = PasswordSecurity.validar_fortaleza_contrasena(datos_usuario.contrasena)
+        es_valida, mensaje_error = PasswordSecurity.validar_fortaleza_contrasena(
+            datos_usuario.contrasena
+        )
         if not es_valida:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=mensaje_error
+                status_code=status.HTTP_400_BAD_REQUEST, detail=mensaje_error
             )
 
         # Create user
-        password_hasheada = PasswordSecurity.obtener_hash_contrasena(datos_usuario.contrasena)
+        password_hasheada = PasswordSecurity.obtener_hash_contrasena(
+            datos_usuario.contrasena
+        )
         token_verificacion = SecurityTokens.generar_token_verificacion()
 
         usuario = User(
@@ -61,7 +66,7 @@ class AuthService:
             rol=datos_usuario.rol,
             token_verificacion_email=token_verificacion,
             estado=UserStatus.ACTIVE,  # Auto-activate for now
-            es_email_verificado=False
+            es_email_verificado=False,
         )
 
         self.db.add(usuario)
@@ -72,9 +77,7 @@ class AuthService:
         return usuario
 
     async def autenticar_usuario(
-        self,
-        credenciales: UserLoginSchema,
-        request: Request
+        self, credenciales: UserLoginSchema, request: Request
     ) -> Tuple[User, Token]:
         """Authenticate user and create session - simplified and fixed"""
         # Get user with all needed data in single query
@@ -82,11 +85,16 @@ class AuthService:
         if not usuario:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid email or password"
+                detail="Invalid email or password",
             )
 
         # Extract ALL needed values BEFORE any database operations
         user_id = usuario.id
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="User ID is missing",
+            )
         user_email = usuario.email
         user_nombre = usuario.nombre
         user_apellido = usuario.apellido
@@ -99,21 +107,23 @@ class AuthService:
         if user_locked_until and user_locked_until > datetime.now(timezone.utc):
             raise HTTPException(
                 status_code=status.HTTP_423_LOCKED,
-                detail="Account is temporarily locked"
+                detail="Account is temporarily locked",
             )
 
         # Check user status
         if user_status != UserStatus.ACTIVE:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Account is {user_status.value}"
+                detail=f"Account is {user_status.value}",
             )
 
         # Verify password
-        if not PasswordSecurity.verificar_contrasena(credenciales.contrasena, user_hashed_password):
+        if not PasswordSecurity.verificar_contrasena(
+            credenciales.contrasena, user_hashed_password
+        ):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid email or password"
+                detail="Invalid email or password",
             )
 
         # Update user for successful login
@@ -192,33 +202,37 @@ class AuthService:
         """Logout user from all sessions"""
         await self.db.execute(
             update(UserSession)
-            .where(UserSession.user_id == user_id)
+            .where(col(UserSession.user_id) == user_id)
             .values(es_activa=False)
         )
         await self.db.commit()
         logger.info(f"All sessions for user {user_id} logged out")
 
-    async def obtener_sesiones_usuario(self, user_id: int, current_session_id: int = None) -> List[SessionInfo]:
+    async def obtener_sesiones_usuario(
+        self, user_id: int, current_session_id: Optional[int] = None
+    ) -> List[SessionInfo]:
         """Get active sessions for user"""
         resultado = await self.db.execute(
             select(UserSession)
-            .where(and_(
-                UserSession.user_id == user_id,
-                UserSession.es_activa.is_(True),
-                UserSession.expira_en > datetime.now(timezone.utc)
-            ))
-            .order_by(UserSession.ultima_actividad.desc())
+            .where(
+                and_(
+                    col(UserSession.user_id) == user_id,
+                    col(UserSession.es_activa).is_(True),
+                    col(UserSession.expira_en) > datetime.now(timezone.utc),
+                )
+            )
+            .order_by(col(UserSession.ultima_actividad).desc())
         )
         sesiones = resultado.scalars().all()
 
         return [
             SessionInfo(
-                id=sesion.id,
+                id=sesion.id if sesion.id is not None else 0,
                 direccion_ip=sesion.direccion_ip,
                 agente_usuario=sesion.agente_usuario,
                 created_at=sesion.created_at,
                 ultima_actividad=sesion.ultima_actividad,
-                es_actual=(sesion.id == current_session_id)
+                es_actual=(sesion.id == current_session_id),
             )
             for sesion in sesiones
         ]
@@ -228,8 +242,7 @@ class AuthService:
         usuario = await self._obtener_usuario_por_id(user_id)
         if not usuario:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
 
         # Check for email conflicts
@@ -238,7 +251,7 @@ class AuthService:
             if existente:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Email already registered"
+                    detail="Email already registered",
                 )
 
         # Update fields
@@ -253,32 +266,38 @@ class AuthService:
         logger.info(f"Updated user {usuario.email}")
         return usuario
 
-    async def cambiar_contrasena(self, user_id: int, password_actual: str, nueva_password: str) -> None:
+    async def cambiar_contrasena(
+        self, user_id: int, password_actual: str, nueva_password: str
+    ) -> None:
         """Change user password"""
         usuario = await self._obtener_usuario_por_id(user_id)
         if not usuario:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
 
         # Verify current password
-        if not PasswordSecurity.verificar_contrasena(password_actual, usuario.contrasena_hasheada):
+        if not PasswordSecurity.verificar_contrasena(
+            password_actual, usuario.contrasena_hasheada
+        ):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Current password is incorrect"
+                detail="Current password is incorrect",
             )
 
         # Validate new password
-        es_valida, mensaje_error = PasswordSecurity.validar_fortaleza_contrasena(nueva_password)
+        es_valida, mensaje_error = PasswordSecurity.validar_fortaleza_contrasena(
+            nueva_password
+        )
         if not es_valida:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=mensaje_error
+                status_code=status.HTTP_400_BAD_REQUEST, detail=mensaje_error
             )
 
         # Update password
-        usuario.contrasena_hasheada = PasswordSecurity.obtener_hash_contrasena(nueva_password)
+        usuario.contrasena_hasheada = PasswordSecurity.obtener_hash_contrasena(
+            nueva_password
+        )
         usuario.updated_at = datetime.now(timezone.utc)
         await self.db.commit()
 
@@ -291,31 +310,23 @@ class AuthService:
 
     async def _obtener_usuario_por_email(self, email: str) -> Optional[User]:
         """Get user by email"""
-        resultado = await self.db.execute(
-            select(User).where(User.email == email)
-        )
+        resultado = await self.db.execute(select(User).where(col(User.email) == email))
         return resultado.scalar_one_or_none()
 
     async def _obtener_usuario_por_id(self, user_id: int) -> Optional[User]:
         """Get user by ID"""
-        resultado = await self.db.execute(
-            select(User).where(User.id == user_id)
-        )
+        resultado = await self.db.execute(select(User).where(col(User.id) == user_id))
         return resultado.scalar_one_or_none()
 
     async def _obtener_sesion(self, session_id: int) -> Optional[UserSession]:
         """Get session by ID"""
         resultado = await self.db.execute(
-            select(UserSession).where(UserSession.id == session_id)
+            select(UserSession).where(col(UserSession.id) == session_id)
         )
         return resultado.scalar_one_or_none()
 
     async def _crear_sesion_usuario(
-        self,
-        user_id: int,
-        ip_address: str,
-        user_agent: str,
-        remember_me: bool = False
+        self, user_id: int, ip_address: str, user_agent: str, remember_me: bool = False
     ) -> UserSession:
         """Create new user session - fixed version without problematic cleanup"""
         # Session duration
@@ -326,7 +337,7 @@ class AuthService:
             token_sesion=SessionSecurity.generar_token_sesion(),
             direccion_ip=ip_address,
             agente_usuario=user_agent,
-            expira_en=SessionSecurity.obtener_expiracion_sesion(horas)
+            expira_en=SessionSecurity.obtener_expiracion_sesion(horas),
         )
 
         self.db.add(sesion)
@@ -340,23 +351,32 @@ class AuthService:
         # Deactivate expired sessions
         await self.db.execute(
             update(UserSession)
-            .where(and_(
-                UserSession.user_id == user_id,
-                UserSession.expira_en < datetime.now(timezone.utc)
-            ))
+            .where(
+                and_(
+                    col(UserSession.user_id) == user_id,
+                    col(UserSession.expira_en) < datetime.now(timezone.utc),
+                )
+            )
             .values(es_activa=False)
         )
 
         # Keep only the most recent active sessions - use subquery to avoid loading objects
-        subquery = select(UserSession.id).where(and_(
-            UserSession.user_id == user_id,
-            UserSession.es_activa.is_(True)
-        )).order_by(UserSession.ultima_actividad.desc()).offset(SecurityConfig.MAX_SESSIONS_PER_USER - 1)
+        subquery = (
+            select(col(UserSession.id))
+            .where(
+                and_(
+                    col(UserSession.user_id) == user_id,
+                    col(UserSession.es_activa).is_(True),
+                )
+            )
+            .order_by(col(UserSession.ultima_actividad).desc())
+            .offset(SecurityConfig.MAX_SESSIONS_PER_USER - 1)
+        )
 
         # Deactivate old sessions using direct UPDATE
         await self.db.execute(
             update(UserSession)
-            .where(UserSession.id.in_(subquery))
+            .where(col(UserSession.id).in_(subquery))
             .values(es_activa=False)
         )
 
@@ -364,13 +384,28 @@ class AuthService:
 
     def _crear_tokens(self, usuario: User, sesion: UserSession) -> Token:
         """Create JWT tokens for user session"""
+        if usuario.id is None:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="User ID is missing",
+            )
         return self._crear_tokens_con_datos(
-            usuario.id, usuario.email, usuario.nombre, usuario.apellido, usuario.rol, sesion
+            usuario.id,
+            usuario.email,
+            usuario.nombre,
+            usuario.apellido,
+            usuario.rol,
+            sesion,
         )
 
     def _crear_tokens_con_datos(
-        self, user_id: int, user_email: str, user_nombre: str, user_apellido: str,
-        user_role, sesion: UserSession
+        self,
+        user_id: int,
+        user_email: str,
+        user_nombre: str,
+        user_apellido: str,
+        user_role,
+        sesion: UserSession,
     ) -> Token:
         """Create JWT tokens using extracted data (avoids accessing expired user object)"""
         from .schemas import TokenUser
@@ -379,7 +414,7 @@ class AuthService:
             "sub": str(user_id),  # JWT standard requires sub to be a string
             "email": user_email,
             "role": user_role.value,
-            "session_id": sesion.id
+            "session_id": sesion.id,
         }
 
         access_token = TokenSecurity.crear_token_acceso(datos_token)
@@ -391,14 +426,14 @@ class AuthService:
             email=user_email,
             nombre=user_nombre,
             apellido=user_apellido,
-            rol=user_role
+            rol=user_role,
         )
 
         return Token(
             token_acceso=access_token,
             token_refresco=refresh_token,
             expira_en=SecurityConfig.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-            usuario=info_usuario
+            usuario=info_usuario,
         )
 
     async def _registrar_intento_login(
@@ -408,7 +443,7 @@ class AuthService:
         razon_fallo: Optional[str] = None,
         ip_address: Optional[str] = None,
         user_agent: Optional[str] = None,
-        user_id: Optional[int] = None
+        user_id: Optional[int] = None,
     ) -> None:
         """Log login attempt for audit purposes"""
         log_login = UserLogin(
@@ -417,7 +452,7 @@ class AuthService:
             exito=exito,
             motivo_fallo=razon_fallo,
             direccion_ip=ip_address,
-            agente_usuario=user_agent
+            agente_usuario=user_agent,
         )
 
         self.db.add(log_login)

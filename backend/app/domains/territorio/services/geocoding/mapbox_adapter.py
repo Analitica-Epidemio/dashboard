@@ -250,6 +250,6 @@ class MapboxAdapter(GeocodingAdapter):
         """Retorna el nombre del proveedor."""
         return "Mapbox"
 
-    async def close(self):
+    async def close(self) -> None:
         """Cierra el cliente HTTP."""
         await self.client.aclose()

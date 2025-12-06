@@ -10,9 +10,12 @@ Casos donde:
 
 import json
 from pathlib import Path
+from typing import Any, Dict, List, cast
 
 backend_dir = Path(__file__).parent.parent.parent.parent
-mapping_file = backend_dir / "app/scripts/seeds/data/establecimientos_mapping_final.json"
+mapping_file = (
+    backend_dir / "app/scripts/seeds/data/establecimientos_mapping_final.json"
+)
 
 # Mapeos con alta similitud de nombre (>90%) pero score 65-69
 # Todos verificados como correctos por nombre único y ubicación geográfica
@@ -25,7 +28,7 @@ mapeos_alta_similitud = [
         "score": 68.9,
         "similitud_nombre": 98.2,
         "razon": "Nombre casi idéntico (98.2%) + CABA. Localidad: Liniers (IGN) vs INDEC 2009010 (Comuna 9)",
-        "validacion": "OK - Hospital único en CABA, localidad es barrio vs código comuna"
+        "validacion": "OK - Hospital único en CABA, localidad es barrio vs código comuna",
     },
     {
         "snvs_nombre": "HOSPITAL INTERZONAL GENERAL DE AGUDOS GENERAL SAN MARTIN",
@@ -35,7 +38,7 @@ mapeos_alta_similitud = [
         "score": 68.9,
         "similitud_nombre": 98.2,
         "razon": "Nombre casi idéntico (98.2%) + La Plata. Localidad: Barrio Banco Provincia (IGN)",
-        "validacion": "OK - Hospital único en La Plata, localidad es barrio específico"
+        "validacion": "OK - Hospital único en La Plata, localidad es barrio específico",
     },
     {
         "snvs_nombre": "HOSPITAL SUB ZONAL RAWSON - SANTA TERESITA",
@@ -45,7 +48,7 @@ mapeos_alta_similitud = [
         "score": 68.8,
         "similitud_nombre": 73.0,
         "razon": "Mismo departamento Rawson + nombre coincide parcialmente",
-        "validacion": "OK - Hospital en Rawson, Chubut. Nombre corto vs nombre con zona"
+        "validacion": "OK - Hospital en Rawson, Chubut. Nombre corto vs nombre con zona",
     },
     {
         "snvs_nombre": "HOSPITAL GENERAL DE AGUDOS JOSE A. PENNA",
@@ -55,7 +58,7 @@ mapeos_alta_similitud = [
         "score": 68.5,
         "similitud_nombre": 97.5,
         "razon": "Nombre casi idéntico (97.5%) + CABA. Localidad: Barracas (IGN) vs INDEC 2004010 (Comuna 4)",
-        "validacion": "OK - Hospital único en CABA, localidad es barrio vs código comuna"
+        "validacion": "OK - Hospital único en CABA, localidad es barrio vs código comuna",
     },
     {
         "snvs_nombre": "HOSPITAL GENERAL DE AGUDOS DR. IGNACIO PIROVANO",
@@ -65,7 +68,7 @@ mapeos_alta_similitud = [
         "score": 66.9,
         "similitud_nombre": 94.8,
         "razon": "Nombre muy similar (94.8%) + CABA. Localidad: Saavedra (IGN) vs INDEC 2012010 (Comuna 12)",
-        "validacion": "OK - Hospital único en CABA, localidad es barrio vs código comuna"
+        "validacion": "OK - Hospital único en CABA, localidad es barrio vs código comuna",
     },
     {
         "snvs_nombre": "HOSPITAL ZONAL GENERAL DE AGUDOS SAN ROQUE",
@@ -75,7 +78,7 @@ mapeos_alta_similitud = [
         "score": 66.6,
         "similitud_nombre": 94.4,
         "razon": "Nombre muy similar (94.4%) + La Plata. Localidad: Dique N° 1 (IGN)",
-        "validacion": "OK - Hospital único en La Plata, pequeña diferencia en clasificación (Zonal vs Interzonal)"
+        "validacion": "OK - Hospital único en La Plata, pequeña diferencia en clasificación (Zonal vs Interzonal)",
     },
     {
         "snvs_nombre": "HOSPITAL GENERAL DE NIÑOS DR. RICARDO GUTIERREZ",
@@ -85,18 +88,18 @@ mapeos_alta_similitud = [
         "score": 65.7,
         "similitud_nombre": 92.8,
         "razon": "Nombre muy similar (92.8%) + CABA. Localidad: Recoleta (IGN) vs INDEC 2002010",
-        "validacion": "OK - Hospital pediátrico único en CABA, localidad coincide (INDEC 2002010 es Recoleta)"
+        "validacion": "OK - Hospital pediátrico único en CABA, localidad coincide (INDEC 2002010 es Recoleta)",
     },
 ]
 
 
-def cargar_mapping_actual():
+def cargar_mapping_actual() -> Dict[str, Any]:
     """Carga el archivo JSON actual."""
-    with open(mapping_file, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    with open(mapping_file, "r", encoding="utf-8") as f:
+        return cast(Dict[str, Any], json.load(f))
 
 
-def agregar_mapeos(data, mapeos):
+def agregar_mapeos(data: Dict[str, Any], mapeos: List[Dict[str, Any]]) -> int:
     """Agrega los mapeos al JSON."""
     count = 0
     for mapeo in mapeos:
@@ -109,12 +112,14 @@ def agregar_mapeos(data, mapeos):
                 "nombre": mapeo["ign_nombre"],
                 "confidence": "HIGH",
                 "score": mapeo["score"],
-                "similitud_nombre": mapeo["similitud_nombre"]
+                "similitud_nombre": mapeo["similitud_nombre"],
             }
             count += 1
             print(f"  ✓ Agregado: {snvs_key}")
             print(f"    → {mapeo['ign_nombre']}")
-            print(f"    Score: {mapeo['score']} (similitud nombre: {mapeo['similitud_nombre']}%)")
+            print(
+                f"    Score: {mapeo['score']} (similitud nombre: {mapeo['similitud_nombre']}%)"
+            )
             print(f"    Razón: {mapeo['razon']}")
             print()
         else:
@@ -123,7 +128,7 @@ def agregar_mapeos(data, mapeos):
     return count
 
 
-def actualizar_stats(data, nuevos_mapeos):
+def actualizar_stats(data: Dict[str, Any], nuevos_mapeos: int) -> None:
     """Actualiza las estadísticas."""
     matched_actual = data["_README"]["stats"]["matched"]
     total = data["_README"]["stats"]["total_csv_establecimientos"]
@@ -136,19 +141,19 @@ def actualizar_stats(data, nuevos_mapeos):
     data["_README"]["stats"]["cobertura"] = f"{nueva_cobertura:.1f}%"
 
 
-def guardar_mapping(data):
+def guardar_mapping(data: Dict[str, Any]) -> None:
     """Guarda el archivo JSON actualizado."""
     # Ordenar las claves del mapping alfabéticamente
     data["mapping"] = dict(sorted(data["mapping"].items()))
 
-    with open(mapping_file, 'w', encoding='utf-8') as f:
+    with open(mapping_file, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
-def main():
-    print("="*80)
+def main() -> None:
+    print("=" * 80)
     print("AGREGAR MAPEOS DE ALTA SIMILITUD DE NOMBRE (>90%)")
-    print("="*80)
+    print("=" * 80)
     print("\nEstos mapeos tienen:")
     print("  • Similitud de nombre > 90%")
     print("  • Misma provincia/departamento")
@@ -169,9 +174,9 @@ def main():
         actualizar_stats(data, nuevos)
         guardar_mapping(data)
 
-        print("="*80)
+        print("=" * 80)
         print("RESUMEN")
-        print("="*80)
+        print("=" * 80)
         print(f"  • Mapeos agregados: {nuevos}")
         print(f"  • Total mapeos: {data['_README']['stats']['matched']}")
         print(f"  • Nueva cobertura: {data['_README']['stats']['cobertura']}")

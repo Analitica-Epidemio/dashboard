@@ -1,6 +1,7 @@
 """Bulk processor for health-related data (samples, vaccines, treatments)."""
 
 import polars as pl
+from sqlalchemy import inspect
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.domains.vigilancia_nominal.models.salud import (
@@ -26,9 +27,7 @@ class SaludProcessor(BulkProcessorBase):
 class VacunasProcessor(BulkProcessorBase):
     """Handles vaccine operations."""
 
-    def upsert_vacunas_ciudadanos(
-        self, df: pl.DataFrame
-    ) -> BulkOperationResult:
+    def upsert_vacunas_ciudadanos(self, df: pl.DataFrame) -> BulkOperationResult:
         """Bulk upsert de vacunas de ciudadanos - POLARS PURO."""
         start_time = self._get_current_timestamp()
 
@@ -40,7 +39,11 @@ class VacunasProcessor(BulkProcessorBase):
             .filter(
                 pl.col(Columns.VACUNA.name).is_not_null()
                 | pl.col(Columns.FECHA_APLICACION.name).is_not_null()
-                | (pl.col(Columns.DOSIS.name).is_not_null() if has_dosis else pl.lit(False))
+                | (
+                    pl.col(Columns.DOSIS.name).is_not_null()
+                    if has_dosis
+                    else pl.lit(False)
+                )
             )
             .collect()
         )
@@ -57,34 +60,40 @@ class VacunasProcessor(BulkProcessorBase):
         timestamp = self._get_current_timestamp()
 
         # Crear mapping de vacunas para join: {vacuna_clean -> id_vacuna}
-        vacuna_df = pl.DataFrame({
-            "vacuna_clean": list(vacuna_mapping.keys()),
-            "id_vacuna": list(vacuna_mapping.values())
-        })
+        vacuna_df = pl.DataFrame(
+            {
+                "vacuna_clean": list(vacuna_mapping.keys()),
+                "id_vacuna": list(vacuna_mapping.values()),
+            }
+        )
 
         # Pipeline completo con Polars
         vacunas_prepared = (
             vacunas_df.lazy()
             # 1. Transformaciones básicas
-            .select([
-                pl_safe_int(Columns.CODIGO_CIUDADANO.name).alias("codigo_ciudadano"),
-                pl.col("id_caso"),
-                pl_clean_string(Columns.VACUNA.name).str.to_uppercase().alias("vacuna_clean"),
-                pl_safe_date(Columns.FECHA_APLICACION.name).alias("fecha_aplicacion"),
-                (
-                    pl.col(Columns.DOSIS.name).cast(pl.Utf8).str.strip_chars()
-                    if has_dosis
-                    else pl.lit(None, dtype=pl.Utf8)
-                ).alias("dosis"),
-                pl.lit(timestamp).alias("created_at"),
-                pl.lit(timestamp).alias("updated_at"),
-            ])
-            # 2. Join con vacuna_mapping
-            .join(
-                vacuna_df.lazy(),
-                on="vacuna_clean",
-                how="left"
+            .select(
+                [
+                    pl_safe_int(Columns.CODIGO_CIUDADANO.name).alias(
+                        "codigo_ciudadano"
+                    ),
+                    pl.col("id_caso"),
+                    pl_clean_string(Columns.VACUNA.name)
+                    .str.to_uppercase()
+                    .alias("vacuna_clean"),
+                    pl_safe_date(Columns.FECHA_APLICACION.name).alias(
+                        "fecha_aplicacion"
+                    ),
+                    (
+                        pl.col(Columns.DOSIS.name).cast(pl.Utf8).str.strip_chars()
+                        if has_dosis
+                        else pl.lit(None, dtype=pl.Utf8)
+                    ).alias("dosis"),
+                    pl.lit(timestamp).alias("created_at"),
+                    pl.lit(timestamp).alias("updated_at"),
+                ]
             )
+            # 2. Join con vacuna_mapping
+            .join(vacuna_df.lazy(), on="vacuna_clean", how="left")
             # 4. Filtrar registros válidos (must have ciudadano, vacuna, and fecha)
             .filter(
                 pl.col("codigo_ciudadano").is_not_null()
@@ -92,27 +101,31 @@ class VacunasProcessor(BulkProcessorBase):
                 & pl.col("fecha_aplicacion").is_not_null()
             )
             # 5. Limpiar dosis: convertir valores vacíos/nan a None
-            .with_columns([
-                pl.when(
-                    pl.col("dosis").is_null()
-                    | (pl.col("dosis") == "")
-                    | (pl.col("dosis").str.to_lowercase() == "nan")
-                    | (pl.col("dosis").str.to_lowercase() == "none")
-                )
-                .then(None)
-                .otherwise(pl.col("dosis"))
-                .alias("dosis")
-            ])
+            .with_columns(
+                [
+                    pl.when(
+                        pl.col("dosis").is_null()
+                        | (pl.col("dosis") == "")
+                        | (pl.col("dosis").str.to_lowercase() == "nan")
+                        | (pl.col("dosis").str.to_lowercase() == "none")
+                    )
+                    .then(None)
+                    .otherwise(pl.col("dosis"))
+                    .alias("dosis")
+                ]
+            )
             # 6. Seleccionar solo columnas finales
-            .select([
-                "codigo_ciudadano",
-                "id_caso",
-                "id_vacuna",
-                "fecha_aplicacion",
-                "dosis",
-                "created_at",
-                "updated_at",
-            ])
+            .select(
+                [
+                    "codigo_ciudadano",
+                    "id_caso",
+                    "id_vacuna",
+                    "fecha_aplicacion",
+                    "dosis",
+                    "created_at",
+                    "updated_at",
+                ]
+            )
             .collect()
         )
 
@@ -120,7 +133,8 @@ class VacunasProcessor(BulkProcessorBase):
         valid_records = vacunas_prepared.to_dicts()
 
         if valid_records:
-            stmt = pg_insert(VacunasCiudadano.__table__).values(valid_records)
+            table = inspect(VacunasCiudadano).local_table
+            stmt = pg_insert(table).values(valid_records)
             upsert_stmt = stmt.on_conflict_do_nothing(
                 index_elements=[
                     "codigo_ciudadano",
@@ -149,9 +163,15 @@ class VacunasProcessor(BulkProcessorBase):
         df_clean = (
             df.lazy()
             .filter(pl.col(Columns.VACUNA.name).is_not_null())
-            .select(pl_clean_string(Columns.VACUNA.name).str.to_uppercase().alias(Columns.VACUNA.name))
+            .select(
+                pl_clean_string(Columns.VACUNA.name)
+                .str.to_uppercase()
+                .alias(Columns.VACUNA.name)
+            )
             .unique()
-            .filter(pl.col(Columns.VACUNA.name).is_not_null())  # Filtrar strings vacíos convertidos a null
+            .filter(
+                pl.col(Columns.VACUNA.name).is_not_null()
+            )  # Filtrar strings vacíos convertidos a null
             .collect()
         )
 

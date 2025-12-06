@@ -121,10 +121,10 @@ class GoogleMapsAdapter(GeocodingAdapter):
             # Aceptar solo resultados de tipo dirección
             # Rechazar: locality, administrative_area, etc (muy genéricos)
             valid_types = {
-                "street_address",       # Dirección completa con número
-                "premise",              # Edificio/propiedad específica
-                "subpremise",          # Unidad dentro de edificio
-                "route",               # Calle (sin número pero válida)
+                "street_address",  # Dirección completa con número
+                "premise",  # Edificio/propiedad específica
+                "subpremise",  # Unidad dentro de edificio
+                "route",  # Calle (sin número pero válida)
             }
 
             if not any(t in valid_types for t in result_types):
@@ -175,10 +175,10 @@ class GoogleMapsAdapter(GeocodingAdapter):
 
             # Calcular confidence score basado en location_type
             confidence_map = {
-                "ROOFTOP": 1.0,              # Dirección exacta
-                "RANGE_INTERPOLATED": 0.9,   # Interpolado
-                "GEOMETRIC_CENTER": 0.75,    # Centro geométrico
-                "APPROXIMATE": 0.5,          # Aproximado (ya rechazamos antes)
+                "ROOFTOP": 1.0,  # Dirección exacta
+                "RANGE_INTERPOLATED": 0.9,  # Interpolado
+                "GEOMETRIC_CENTER": 0.75,  # Centro geométrico
+                "APPROXIMATE": 0.5,  # Aproximado (ya rechazamos antes)
             }
             confidence = confidence_map.get(location_type, 0.8)
 
@@ -312,6 +312,6 @@ class GoogleMapsAdapter(GeocodingAdapter):
         """Retorna el nombre del proveedor."""
         return "Google Maps"
 
-    async def close(self):
+    async def close(self) -> None:
         """Cierra el cliente HTTP."""
         await self.client.aclose()

@@ -15,12 +15,22 @@ en la visualización temporal del mapa:
 FUENTE: Sistema Nacional de Vigilancia de la Salud (SNVS) - Argentina
 """
 
+from typing import List, TypedDict
+
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+
+class GrupoEnoData(TypedDict):
+    nombre: str
+    codigo: str
+    descripcion: str
+    ventana_dias_default: int | None
+
+
 # Lista completa de grupos ENO con sus configuraciones
 # Excluye "Vigilancia Epidemiológica" que era un hack genérico
-GRUPOS_ENO = [
+GRUPOS_ENO: List[GrupoEnoData] = [
     # Enfermedades transmitidas por vectores
     {
         "nombre": "Dengue",
@@ -76,7 +86,6 @@ GRUPOS_ENO = [
         "descripcion": "Vigilancia de Enfermedad de Chagas aguda y crónica",
         "ventana_dias_default": None,  # Enfermedad crónica
     },
-
     # Enfermedades respiratorias
     {
         "nombre": "Infecciones Respiratorias Agudas",
@@ -120,7 +129,6 @@ GRUPOS_ENO = [
         "descripcion": "Vigilancia de Psitacosis (Chlamydia psittaci)",
         "ventana_dias_default": 14,
     },
-
     # ITS y enfermedades crónicas
     {
         "nombre": "VIH-SIDA",
@@ -146,7 +154,6 @@ GRUPOS_ENO = [
         "descripcion": "Vigilancia de Hepatitis A, B, C, D y E",
         "ventana_dias_default": None,  # B y C pueden ser crónicas
     },
-
     # Enfermedades gastrointestinales
     {
         "nombre": "Diarreas y Patógenos de Transmisión Alimentaria",
@@ -190,7 +197,6 @@ GRUPOS_ENO = [
         "descripcion": "Vigilancia de Cólera (evento de notificación internacional - RSI)",
         "ventana_dias_default": 7,
     },
-
     # Zoonosis
     {
         "nombre": "Rabia",
@@ -222,7 +228,6 @@ GRUPOS_ENO = [
         "descripcion": "Vigilancia de Carbunco/Ántrax cutáneo, inhalatorio y gastrointestinal",
         "ventana_dias_default": 14,
     },
-
     # Envenenamientos/intoxicaciones
     {
         "nombre": "Envenenamiento por Animales Ponzoñosos",
@@ -236,7 +241,6 @@ GRUPOS_ENO = [
         "descripcion": "Vigilancia de intoxicaciones por monóxido de carbono, plaguicidas, etc.",
         "ventana_dias_default": 7,
     },
-
     # Lesiones
     {
         "nombre": "Lesiones Intencionales",
@@ -250,7 +254,6 @@ GRUPOS_ENO = [
         "descripcion": "Vigilancia de accidentes de tránsito, caídas, quemaduras",
         "ventana_dias_default": 7,
     },
-
     # Enfermedades prevenibles por vacunas
     {
         "nombre": "Enfermedad Febril Exantemática (EFE)",
@@ -282,7 +285,6 @@ GRUPOS_ENO = [
         "descripcion": "Vigilancia de Difteria",
         "ventana_dias_default": 14,
     },
-
     # Meningitis/encefalitis
     {
         "nombre": "Meningoencefalitis",
@@ -296,7 +298,6 @@ GRUPOS_ENO = [
         "descripcion": "Vigilancia de infecciones invasivas bacterianas y otras",
         "ventana_dias_default": 14,
     },
-
     # Micosis
     {
         "nombre": "Micosis Sistémicas Endémicas",
@@ -310,7 +311,6 @@ GRUPOS_ENO = [
         "descripcion": "Vigilancia de Criptococosis, Aspergilosis, Candidiasis invasiva",
         "ventana_dias_default": None,
     },
-
     # Síndrome febril
     {
         "nombre": "Síndrome Febril Agudo Inespecífico (SFAI)",
@@ -318,7 +318,6 @@ GRUPOS_ENO = [
         "descripcion": "Vigilancia de síndromes febriles sin etiología definida",
         "ventana_dias_default": 14,
     },
-
     # Otras
     {
         "nombre": "Rickettsiosis",
@@ -368,7 +367,6 @@ GRUPOS_ENO = [
         "descripcion": "Vigilancia de enfermedades detectadas por pesquisa neonatal",
         "ventana_dias_default": None,
     },
-
     # Vigilancia especial
     {
         "nombre": "Vigilancia Animal",
@@ -423,17 +421,24 @@ def seed_grupos_eno(session: Session) -> int:
             RETURNING (xmax = 0) AS inserted
         """)
 
-        result = session.execute(stmt, {
-            "nombre": grupo["nombre"],
-            "slug": grupo["codigo"],
-            "descripcion": grupo["descripcion"],
-            "ventana_dias": grupo["ventana_dias_default"],
-        })
+        result = session.execute(
+            stmt,
+            {
+                "nombre": grupo["nombre"],
+                "slug": grupo["codigo"],
+                "descripcion": grupo["descripcion"],
+                "ventana_dias": grupo["ventana_dias_default"],
+            },
+        )
 
         row = result.fetchone()
         if row and row[0]:  # xmax = 0 means INSERT
             inserted += 1
-            ventana_str = f"{grupo['ventana_dias_default']} días" if grupo["ventana_dias_default"] else "acumulado"
+            ventana_str = (
+                f"{grupo['ventana_dias_default']} días"
+                if grupo["ventana_dias_default"]
+                else "acumulado"
+            )
             print(f"  ✓ {grupo['codigo']} ({ventana_str})")
         else:
             updated += 1
@@ -445,7 +450,7 @@ def seed_grupos_eno(session: Session) -> int:
     return inserted + updated
 
 
-def main():
+def main() -> None:
     """Función principal para ejecutar el seed."""
     import os
 
@@ -453,7 +458,7 @@ def main():
 
     database_url = os.getenv(
         "DATABASE_URL",
-        "postgresql://epidemiologia_user:epidemiologia_password@localhost:5432/epidemiologia_db"
+        "postgresql://epidemiologia_user:epidemiologia_password@localhost:5432/epidemiologia_db",
     )
 
     if "postgresql+asyncpg" in database_url:

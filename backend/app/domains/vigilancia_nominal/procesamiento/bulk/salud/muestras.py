@@ -4,6 +4,7 @@ from typing import Dict
 
 import polars as pl
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlmodel import SQLModel
 
 from app.domains.vigilancia_nominal.models.salud import (
     Muestra,
@@ -38,15 +39,19 @@ class MuestrasProcessor(BulkProcessorBase):
         start_time = self._get_current_timestamp()
 
         # Filtrar registros con información de muestra - POLARS LAZY
-        muestras_df = df.lazy().filter(
-            pl.col(Columns.ID_SNVS_MUESTRA.name).is_not_null()
-            | pl.col(Columns.MUESTRA.name).is_not_null()
-            | (
-                pl.col(Columns.FECHA_ESTUDIO.name).is_not_null()
-                if Columns.FECHA_ESTUDIO.name in df.columns
-                else pl.lit(False)
+        muestras_df = (
+            df.lazy()
+            .filter(
+                pl.col(Columns.ID_SNVS_MUESTRA.name).is_not_null()
+                | pl.col(Columns.MUESTRA.name).is_not_null()
+                | (
+                    pl.col(Columns.FECHA_ESTUDIO.name).is_not_null()
+                    if Columns.FECHA_ESTUDIO.name in df.columns
+                    else pl.lit(False)
+                )
             )
-        ).collect()
+            .collect()
+        )
 
         if muestras_df.height == 0:
             self.logger.info("No hay registros con información de muestra")
@@ -61,94 +66,98 @@ class MuestrasProcessor(BulkProcessorBase):
         timestamp = self._get_current_timestamp()
 
         # Construir establecimiento_mapping como DataFrame para JOIN
-        establecimiento_mapping_df = pl.DataFrame({
-            "estab_clean": list(establecimiento_mapping.keys()),
-            "id_establecimiento": list(establecimiento_mapping.values()),
-        })
+        establecimiento_mapping_df = pl.DataFrame(
+            {
+                "estab_clean": list(establecimiento_mapping.keys()),
+                "id_establecimiento": list(establecimiento_mapping.values()),
+            }
+        )
 
         # Construir muestra_mapping como DataFrame para JOIN
-        muestra_mapping_df = pl.DataFrame({
-            "tipo_muestra_clean": list(muestra_mapping.keys()),
-            "id_muestra": list(muestra_mapping.values()),
-        })
+        muestra_mapping_df = pl.DataFrame(
+            {
+                "tipo_muestra_clean": list(muestra_mapping.keys()),
+                "id_muestra": list(muestra_mapping.values()),
+            }
+        )
 
         # Preparar columnas base con lazy evaluation
         muestras_prepared = (
             muestras_df.lazy()
-            .select([
-                pl_safe_int(Columns.ID_SNVS_MUESTRA.name).alias("id_snvs_muestra"),
-                # Use id_evento directly - already added by main.py via JOIN
-                pl.col("id_caso"),
-                # Limpiar tipo de muestra
-                (
-                    pl_clean_string(Columns.MUESTRA.name).str.to_uppercase()
-                    if Columns.MUESTRA.name in muestras_df.columns
-                    else pl.lit(None)
-                ).alias("tipo_muestra_clean"),
-                # Limpiar establecimiento
-                (
-                    pl_clean_string(Columns.ESTABLECIMIENTO_MUESTRA.name).str.to_uppercase()
-                    if Columns.ESTABLECIMIENTO_MUESTRA.name in muestras_df.columns
-                    else pl.lit(None)
-                ).alias("estab_clean"),
-                # Fecha de toma
-                (
-                    pl_safe_date(Columns.FTM.name)
-                    if Columns.FTM.name in muestras_df.columns
-                    else pl.lit(None)
-                ).alias("fecha_toma_muestra"),
-                # Semana epidemiológica
-                (
-                    pl_safe_int(Columns.SEPI_MUESTRA.name)
-                    if Columns.SEPI_MUESTRA.name in muestras_df.columns
-                    else pl.lit(None)
-                ).alias("semana_epidemiologica_muestra"),
-                # Año epidemiológico
-                (
-                    pl_safe_int(Columns.ANIO_EPI_MUESTRA.name)
-                    if Columns.ANIO_EPI_MUESTRA.name in muestras_df.columns
-                    else pl.lit(None)
-                ).alias("anio_epidemiologico_muestra"),
-                # ID SNVS caso muestra
-                (
-                    pl_safe_int(Columns.ID_SNVS_EVENTO_MUESTRA.name)
-                    if Columns.ID_SNVS_EVENTO_MUESTRA.name in muestras_df.columns
-                    else pl.lit(None)
-                ).alias("id_snvs_caso_muestra"),  # Cambiado de id_snvs_evento_muestra a id_snvs_caso_muestra
-                # ID SNVS prueba muestra
-                (
-                    pl_safe_int(Columns.ID_SNVS_PRUEBA_MUESTRA.name)
-                    if Columns.ID_SNVS_PRUEBA_MUESTRA.name in muestras_df.columns
-                    else pl.lit(None)
-                ).alias("id_snvs_prueba_muestra"),
-                # Fecha papel
-                (
-                    pl_safe_date(Columns.FECHA_PAPEL.name)
-                    if Columns.FECHA_PAPEL.name in muestras_df.columns
-                    else pl.lit(None)
-                ).alias("fecha_papel"),
-                pl.lit(timestamp).alias("created_at"),
-                pl.lit(timestamp).alias("updated_at"),
-            ])
+            .select(
+                [
+                    pl_safe_int(Columns.ID_SNVS_MUESTRA.name).alias("id_snvs_muestra"),
+                    # Use id_evento directly - already added by main.py via JOIN
+                    pl.col("id_caso"),
+                    # Limpiar tipo de muestra
+                    (
+                        pl_clean_string(Columns.MUESTRA.name).str.to_uppercase()
+                        if Columns.MUESTRA.name in muestras_df.columns
+                        else pl.lit(None)
+                    ).alias("tipo_muestra_clean"),
+                    # Limpiar establecimiento
+                    (
+                        pl_clean_string(
+                            Columns.ESTABLECIMIENTO_MUESTRA.name
+                        ).str.to_uppercase()
+                        if Columns.ESTABLECIMIENTO_MUESTRA.name in muestras_df.columns
+                        else pl.lit(None)
+                    ).alias("estab_clean"),
+                    # Fecha de toma
+                    (
+                        pl_safe_date(Columns.FTM.name)
+                        if Columns.FTM.name in muestras_df.columns
+                        else pl.lit(None)
+                    ).alias("fecha_toma_muestra"),
+                    # Semana epidemiológica
+                    (
+                        pl_safe_int(Columns.SEPI_MUESTRA.name)
+                        if Columns.SEPI_MUESTRA.name in muestras_df.columns
+                        else pl.lit(None)
+                    ).alias("semana_epidemiologica_muestra"),
+                    # Año epidemiológico
+                    (
+                        pl_safe_int(Columns.ANIO_EPI_MUESTRA.name)
+                        if Columns.ANIO_EPI_MUESTRA.name in muestras_df.columns
+                        else pl.lit(None)
+                    ).alias("anio_epidemiologico_muestra"),
+                    # ID SNVS caso muestra
+                    (
+                        pl_safe_int(Columns.ID_SNVS_EVENTO_MUESTRA.name)
+                        if Columns.ID_SNVS_EVENTO_MUESTRA.name in muestras_df.columns
+                        else pl.lit(None)
+                    ).alias(
+                        "id_snvs_caso_muestra"
+                    ),  # Cambiado de id_snvs_evento_muestra a id_snvs_caso_muestra
+                    # ID SNVS prueba muestra
+                    (
+                        pl_safe_int(Columns.ID_SNVS_PRUEBA_MUESTRA.name)
+                        if Columns.ID_SNVS_PRUEBA_MUESTRA.name in muestras_df.columns
+                        else pl.lit(None)
+                    ).alias("id_snvs_prueba_muestra"),
+                    # Fecha papel
+                    (
+                        pl_safe_date(Columns.FECHA_PAPEL.name)
+                        if Columns.FECHA_PAPEL.name in muestras_df.columns
+                        else pl.lit(None)
+                    ).alias("fecha_papel"),
+                    pl.lit(timestamp).alias("created_at"),
+                    pl.lit(timestamp).alias("updated_at"),
+                ]
+            )
             # JOIN con muestra_mapping
-            .join(
-                muestra_mapping_df.lazy(),
-                on="tipo_muestra_clean",
-                how="left"
-            )
+            .join(muestra_mapping_df.lazy(), on="tipo_muestra_clean", how="left")
             # JOIN con establecimiento_mapping
-            .join(
-                establecimiento_mapping_df.lazy(),
-                on="estab_clean",
-                how="left"
-            )
+            .join(establecimiento_mapping_df.lazy(), on="estab_clean", how="left")
             # Usar "Desconocido" si no hay establecimiento
-            .with_columns([
-                pl.when(pl.col("id_establecimiento").is_null())
-                .then(pl.lit(establecimiento_mapping.get("DESCONOCIDO")))
-                .otherwise(pl.col("id_establecimiento"))
-                .alias("id_establecimiento")
-            ])
+            .with_columns(
+                [
+                    pl.when(pl.col("id_establecimiento").is_null())
+                    .then(pl.lit(establecimiento_mapping.get("DESCONOCIDO")))
+                    .otherwise(pl.col("id_establecimiento"))
+                    .alias("id_establecimiento")
+                ]
+            )
             # Filtrar registros válidos: debe tener id_snvs_muestra, id_evento, y id_muestra
             .filter(
                 pl.col("id_snvs_muestra").is_not_null()
@@ -158,20 +167,22 @@ class MuestrasProcessor(BulkProcessorBase):
             # Deduplicar por (id_snvs_muestra, id_evento) - mantener primer registro
             .unique(subset=["id_snvs_muestra", "id_caso"], keep="first")
             # Seleccionar columnas finales
-            .select([
-                "id_snvs_muestra",
-                "id_caso",
-                "id_muestra",
-                "id_establecimiento",
-                "fecha_toma_muestra",
-                "semana_epidemiologica_muestra",
-                "anio_epidemiologico_muestra",
-                "id_snvs_caso_muestra",  # Cambiado de id_snvs_evento_muestra a id_snvs_caso_muestra
-                "id_snvs_prueba_muestra",
-                "fecha_papel",
-                "created_at",
-                "updated_at",
-            ])
+            .select(
+                [
+                    "id_snvs_muestra",
+                    "id_caso",
+                    "id_muestra",
+                    "id_establecimiento",
+                    "fecha_toma_muestra",
+                    "semana_epidemiologica_muestra",
+                    "anio_epidemiologico_muestra",
+                    "id_snvs_caso_muestra",  # Cambiado de id_snvs_evento_muestra a id_snvs_caso_muestra
+                    "id_snvs_prueba_muestra",
+                    "fecha_papel",
+                    "created_at",
+                    "updated_at",
+                ]
+            )
             .collect()
         )
 
@@ -183,7 +194,8 @@ class MuestrasProcessor(BulkProcessorBase):
             # Si se sube el mismo archivo dos veces, el UPSERT actualizará todos los campos
             # en lugar de duplicar. Esto maneja correctamente el CSV desnormalizado donde un
             # IDEVENTOCASO puede aparecer en múltiples filas con diferentes muestras.
-            stmt = pg_insert(MuestraCasoEpidemiologico.__table__).values(muestras_eventos_data)
+            table = SQLModel.metadata.tables[MuestraCasoEpidemiologico.__tablename__]
+            stmt = pg_insert(table).values(muestras_eventos_data)
             upsert_stmt = stmt.on_conflict_do_update(
                 index_elements=["id_snvs_muestra", "id_caso"],
                 set_={
@@ -216,9 +228,13 @@ class MuestrasProcessor(BulkProcessorBase):
         tipos_muestra_clean = (
             df.lazy()
             .filter(pl.col(Columns.MUESTRA.name).is_not_null())
-            .select([
-                pl_clean_string(Columns.MUESTRA.name).str.to_uppercase().alias(Columns.MUESTRA.name)
-            ])
+            .select(
+                [
+                    pl_clean_string(Columns.MUESTRA.name)
+                    .str.to_uppercase()
+                    .alias(Columns.MUESTRA.name)
+                ]
+            )
             .unique()
             .filter(pl.col(Columns.MUESTRA.name).is_not_null())
             .collect()

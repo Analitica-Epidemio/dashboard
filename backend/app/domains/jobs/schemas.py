@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-from app.domains.jobs.models import JobStatus
+from app.domains.jobs.constants import JobStatus
 
 
 class JobStatusResponse(BaseModel):

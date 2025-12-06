@@ -13,16 +13,20 @@ Los datos agregados no tienen sujetos individuales.
 from datetime import date
 from typing import TYPE_CHECKING, Dict, List, Optional
 
-from sqlalchemy import BigInteger, Column, JSON
+from sqlalchemy import JSON, BigInteger, Column
+from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, UniqueConstraint
 
-from app.core.models import BaseModel
 from app.core.constants import SexoBiologico, TipoDocumento
+from app.core.models import BaseModel
 
 if TYPE_CHECKING:
-    from app.domains.vigilancia_nominal.models.caso import CasoEpidemiologico
-    from app.domains.vigilancia_nominal.models.salud import Comorbilidad, VacunasCiudadano
     from app.domains.territorio.geografia_models import Domicilio, Localidad
+    from app.domains.vigilancia_nominal.models.caso import CasoEpidemiologico
+    from app.domains.vigilancia_nominal.models.salud import (
+        Comorbilidad,
+        VacunasCiudadano,
+    )
 
 
 # =============================================================================
@@ -80,15 +84,19 @@ class Ciudadano(BaseModel, table=True):
     etnia: Optional[str] = Field(None, max_length=30, description="Etnia")
 
     # Relaciones
-    domicilios: List["CiudadanoDomicilio"] = Relationship(back_populates="ciudadano")
-    domicilios_historico: List["PersonaDomicilio"] = Relationship(back_populates="ciudadano")
-    datos: List["CiudadanoDatos"] = Relationship(back_populates="ciudadano")
-    casos: List["CasoEpidemiologico"] = Relationship(back_populates="ciudadano")
-    comorbilidades: List["CiudadanoComorbilidades"] = Relationship(
+    domicilios: Mapped[List["CiudadanoDomicilio"]] = Relationship(
         back_populates="ciudadano"
     )
-    viajes: List["ViajesCiudadano"] = Relationship(back_populates="ciudadano")
-    vacunas: List["VacunasCiudadano"] = Relationship(back_populates="ciudadano")
+    domicilios_historico: Mapped[List["PersonaDomicilio"]] = Relationship(
+        back_populates="ciudadano"
+    )
+    datos: Mapped[List["CiudadanoDatos"]] = Relationship(back_populates="ciudadano")
+    casos: Mapped[List["CasoEpidemiologico"]] = Relationship(back_populates="ciudadano")
+    comorbilidades: Mapped[List["CiudadanoComorbilidades"]] = Relationship(
+        back_populates="ciudadano"
+    )
+    viajes: Mapped[List["ViajesCiudadano"]] = Relationship(back_populates="ciudadano")
+    vacunas: Mapped[List["VacunasCiudadano"]] = Relationship(back_populates="ciudadano")
 
 
 class CiudadanoDomicilio(BaseModel, table=True):
@@ -114,8 +122,8 @@ class CiudadanoDomicilio(BaseModel, table=True):
     )
 
     # Relaciones
-    ciudadano: "Ciudadano" = Relationship(back_populates="domicilios")
-    domicilio: "Domicilio" = Relationship()
+    ciudadano: Mapped["Ciudadano"] = Relationship(back_populates="domicilios")
+    domicilio: Mapped["Domicilio"] = Relationship()
 
 
 class CiudadanoDatos(BaseModel, table=True):
@@ -160,7 +168,7 @@ class CiudadanoDatos(BaseModel, table=True):
     )
 
     # Relaciones
-    ciudadano: "Ciudadano" = Relationship(back_populates="datos")
+    ciudadano: Mapped["Ciudadano"] = Relationship(back_populates="datos")
 
 
 class CiudadanoComorbilidades(BaseModel, table=True):
@@ -179,8 +187,8 @@ class CiudadanoComorbilidades(BaseModel, table=True):
     )
 
     # Relaciones
-    ciudadano: "Ciudadano" = Relationship(back_populates="comorbilidades")
-    comorbilidad: "Comorbilidad" = Relationship()
+    ciudadano: Mapped["Ciudadano"] = Relationship(back_populates="comorbilidades")
+    comorbilidad: Mapped["Comorbilidad"] = Relationship()
 
 
 class PersonaDomicilio(BaseModel, table=True):
@@ -197,7 +205,7 @@ class PersonaDomicilio(BaseModel, table=True):
             "codigo_ciudadano",
             "id_domicilio",
             "fecha_desde",
-            name="uq_persona_domicilio_fecha"
+            name="uq_persona_domicilio_fecha",
         ),
     )
 
@@ -206,28 +214,23 @@ class PersonaDomicilio(BaseModel, table=True):
         sa_type=BigInteger,
         foreign_key="ciudadano.codigo_ciudadano",
         index=True,
-        description="Código del ciudadano"
+        description="Código del ciudadano",
     )
     id_domicilio: int = Field(
-        foreign_key="domicilio.id",
-        index=True,
-        description="ID del domicilio"
+        foreign_key="domicilio.id", index=True, description="ID del domicilio"
     )
 
     # Rango temporal
     fecha_desde: date = Field(
-        ...,
-        index=True,
-        description="Fecha desde la cual vive en este domicilio"
+        ..., index=True, description="Fecha desde la cual vive en este domicilio"
     )
     fecha_hasta: Optional[date] = Field(
-        None,
-        description="Fecha hasta la cual vivió (NULL = domicilio actual)"
+        None, description="Fecha hasta la cual vivió (NULL = domicilio actual)"
     )
 
     # Relaciones
-    ciudadano: "Ciudadano" = Relationship(back_populates="domicilios_historico")
-    domicilio: "Domicilio" = Relationship()
+    ciudadano: Mapped["Ciudadano"] = Relationship(back_populates="domicilios_historico")
+    domicilio: Mapped["Domicilio"] = Relationship()
 
 
 # =============================================================================
@@ -288,6 +291,9 @@ class Animal(BaseModel, table=True):
     )
 
     # Ubicación
+    provincia: Optional[str] = Field(
+        None, max_length=100, description="Provincia donde se encuentra el animal"
+    )
     id_localidad_indec: Optional[int] = Field(
         None,
         sa_type=BigInteger,
@@ -299,8 +305,8 @@ class Animal(BaseModel, table=True):
     )
 
     # Relaciones
-    localidad: Optional["Localidad"] = Relationship()
-    casos: List["CasoEpidemiologico"] = Relationship(back_populates="animal")
+    localidad: Mapped[Optional["Localidad"]] = Relationship()
+    casos: Mapped[List["CasoEpidemiologico"]] = Relationship(back_populates="animal")
 
 
 # =============================================================================
@@ -346,5 +352,5 @@ class ViajesCiudadano(BaseModel, table=True):
     )
 
     # Relaciones
-    ciudadano: "Ciudadano" = Relationship(back_populates="viajes")
-    localidad: Optional["Localidad"] = Relationship()
+    ciudadano: Mapped["Ciudadano"] = Relationship(back_populates="viajes")
+    localidad: Mapped[Optional["Localidad"]] = Relationship()

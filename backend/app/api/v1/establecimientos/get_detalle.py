@@ -6,25 +6,31 @@ todos los eventos/personas asociados según el tipo de relación (clínica, diag
 """
 
 from datetime import date
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from fastapi import Depends, Path, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import or_, select
-from sqlmodel import Session
+from sqlmodel import Session, col
 
 from app.core.database import get_session
 from app.core.schemas.response import SuccessResponse
+from app.domains.territorio.establecimientos_models import Establecimiento
+from app.domains.territorio.geografia_models import Departamento, Localidad, Provincia
 from app.domains.vigilancia_nominal.models.atencion import (
     DiagnosticoCasoEpidemiologico,
     TratamientoCasoEpidemiologico,
 )
+from app.domains.vigilancia_nominal.models.caso import (
+    CasoEpidemiologico,
+    CasoGrupoEnfermedad,
+)
+from app.domains.vigilancia_nominal.models.enfermedad import (
+    Enfermedad,
+    GrupoDeEnfermedades,
+)
 from app.domains.vigilancia_nominal.models.salud import MuestraCasoEpidemiologico
-from app.domains.vigilancia_nominal.models.enfermedad import GrupoDeEnfermedades, Enfermedad
-from app.domains.vigilancia_nominal.models.caso import (    CasoEpidemiologico, CasoGrupoEnfermedad)
 from app.domains.vigilancia_nominal.models.sujetos import Ciudadano
-from app.domains.territorio.establecimientos_models import Establecimiento
-from app.domains.territorio.geografia_models import Departamento, Localidad, Provincia
 
 
 class PersonaRelacionada(BaseModel):
@@ -34,19 +40,30 @@ class PersonaRelacionada(BaseModel):
     codigo_ciudadano: int = Field(..., description="Código del ciudadano")
     dni: Optional[str] = Field(None, description="DNI del ciudadano")
     nombre_completo: Optional[str] = Field(None, description="Nombre completo")
-    edad: Optional[int] = Field(None, description="Edad del ciudadano al momento del evento")
+    edad: Optional[int] = Field(
+        None, description="Edad del ciudadano al momento del evento"
+    )
     sexo: Optional[str] = Field(None, description="Sexo del ciudadano")
 
     # Datos del evento
     id_evento: int = Field(..., description="ID del evento")
     fecha_evento: Optional[date] = Field(None, description="Fecha del evento")
-    tipo_evento_nombre: Optional[str] = Field(None, description="Nombre del tipo de evento")
-    grupo_evento_nombre: Optional[str] = Field(None, description="Nombre del grupo de evento")
-    clasificacion_manual: Optional[str] = Field(None, description="Clasificación manual")
+    tipo_evento_nombre: Optional[str] = Field(
+        None, description="Nombre del tipo de evento"
+    )
+    grupo_evento_nombre: Optional[str] = Field(
+        None, description="Nombre del grupo de evento"
+    )
+    clasificacion_manual: Optional[str] = Field(
+        None, description="Clasificación manual"
+    )
     estado: Optional[str] = Field(None, description="Estado del caso")
 
     # Tipo de relación con el establecimiento
-    tipo_relacion: str = Field(..., description="Tipo de relación: consulta, notificacion, carga, muestra, diagnostico")
+    tipo_relacion: str = Field(
+        ...,
+        description="Tipo de relación: consulta, notificacion, carga, muestra, diagnostico",
+    )
 
 
 class EstablecimientoDetalleResponse(BaseModel):
@@ -62,12 +79,16 @@ class EstablecimientoDetalleResponse(BaseModel):
 
     # Datos geográficos
     localidad_nombre: Optional[str] = Field(None, description="Nombre de la localidad")
-    departamento_nombre: Optional[str] = Field(None, description="Nombre del departamento")
+    departamento_nombre: Optional[str] = Field(
+        None, description="Nombre del departamento"
+    )
     provincia_nombre: Optional[str] = Field(None, description="Nombre de la provincia")
 
     # Personas y eventos relacionados
     total_personas: int = Field(..., description="Total de personas relacionadas")
-    personas: List[PersonaRelacionada] = Field(default_factory=list, description="Lista de personas relacionadas")
+    personas: List[PersonaRelacionada] = Field(
+        default_factory=list, description="Lista de personas relacionadas"
+    )
 
     # Resumen por tipo de relación
     relaciones_por_tipo: dict = Field(
@@ -82,8 +103,12 @@ class EstablecimientoDetalleResponse(BaseModel):
 
 async def get_establecimiento_detalle(
     id_establecimiento: int = Path(..., description="ID del establecimiento"),
-    fecha_desde: Optional[date] = Query(None, description="Filtrar eventos desde esta fecha"),
-    fecha_hasta: Optional[date] = Query(None, description="Filtrar eventos hasta esta fecha"),
+    fecha_desde: Optional[date] = Query(
+        None, description="Filtrar eventos desde esta fecha"
+    ),
+    fecha_hasta: Optional[date] = Query(
+        None, description="Filtrar eventos hasta esta fecha"
+    ),
     session: Session = Depends(get_session),
 ) -> SuccessResponse[EstablecimientoDetalleResponse]:
     """
@@ -103,24 +128,31 @@ async def get_establecimiento_detalle(
     estab_stmt = (
         select(
             Establecimiento,
-            Localidad.nombre.label("localidad_nombre"),
-            Departamento.nombre.label("departamento_nombre"),
-            Provincia.nombre.label("provincia_nombre"),
+            col(Localidad.nombre).label("localidad_nombre"),
+            col(Departamento.nombre).label("departamento_nombre"),
+            col(Provincia.nombre).label("provincia_nombre"),
         )
-        .outerjoin(Localidad, Establecimiento.id_localidad_indec == Localidad.id_localidad_indec)
+        .outerjoin(
+            Localidad,
+            col(Establecimiento.id_localidad_indec)
+            == col(Localidad.id_localidad_indec),
+        )
         .outerjoin(
             Departamento,
-            Localidad.id_departamento_indec == Departamento.id_departamento_indec,
+            col(Localidad.id_departamento_indec)
+            == col(Departamento.id_departamento_indec),
         )
         .outerjoin(
-            Provincia, Departamento.id_provincia_indec == Provincia.id_provincia_indec
+            Provincia,
+            col(Departamento.id_provincia_indec) == col(Provincia.id_provincia_indec),
         )
-        .where(Establecimiento.id == id_establecimiento)
+        .where(col(Establecimiento.id) == id_establecimiento)
     )
     estab_result = session.exec(estab_stmt).first()
 
     if not estab_result:
         from fastapi import HTTPException
+
         raise HTTPException(status_code=404, detail="Establecimiento no encontrado")
 
     establecimiento = estab_result[0]
@@ -131,139 +163,216 @@ async def get_establecimiento_detalle(
     # ===== PASO 1: CasoEpidemiologicos con relación directa (consulta, notificación, carga) =====
     query_eventos = (
         select(
-            CasoEpidemiologico.id.label("id_evento"),
-            CasoEpidemiologico.fecha_minima_caso,
-            CasoEpidemiologico.fecha_nacimiento,
-            CasoEpidemiologico.clasificacion_manual,
-            CasoEpidemiologico.clasificacion_estrategia,
-            CasoEpidemiologico.id_establecimiento_consulta,
-            CasoEpidemiologico.id_establecimiento_notificacion,
-            CasoEpidemiologico.id_establecimiento_carga,
-            Ciudadano.codigo_ciudadano,
-            Ciudadano.numero_documento,
-            Ciudadano.nombre,
-            Ciudadano.apellido,
-            Ciudadano.sexo_biologico,
-            Enfermedad.nombre.label("tipo_nombre"),
-            GrupoDeEnfermedades.nombre.label("grupo_nombre"),
+            col(CasoEpidemiologico.id).label("id_evento"),
+            col(CasoEpidemiologico.fecha_minima_caso),
+            col(CasoEpidemiologico.fecha_nacimiento),
+            col(CasoEpidemiologico.clasificacion_manual),
+            col(CasoEpidemiologico.clasificacion_estrategia),
+            col(CasoEpidemiologico.id_establecimiento_consulta),
+            col(CasoEpidemiologico.id_establecimiento_notificacion),
+            col(CasoEpidemiologico.id_establecimiento_carga),
+            col(Ciudadano.codigo_ciudadano),
+            col(Ciudadano.numero_documento),
+            col(Ciudadano.nombre),
+            col(Ciudadano.apellido),
+            col(Ciudadano.sexo_biologico),
+            col(Enfermedad.nombre).label("tipo_nombre"),
+            col(GrupoDeEnfermedades.nombre).label("grupo_nombre"),
         )
         .select_from(CasoEpidemiologico)
-        .join(Ciudadano, CasoEpidemiologico.codigo_ciudadano == Ciudadano.codigo_ciudadano)
-        .outerjoin(Enfermedad, CasoEpidemiologico.id_enfermedad == Enfermedad.id)
-        .outerjoin(CasoGrupoEnfermedad, CasoEpidemiologico.id == CasoGrupoEnfermedad.id_caso)
-        .outerjoin(GrupoDeEnfermedades, CasoGrupoEnfermedad.id_grupo == GrupoDeEnfermedades.id)
+        .join(
+            Ciudadano,
+            col(CasoEpidemiologico.codigo_ciudadano) == col(Ciudadano.codigo_ciudadano),
+        )
+        .outerjoin(
+            Enfermedad, col(CasoEpidemiologico.id_enfermedad) == col(Enfermedad.id)
+        )
+        .outerjoin(
+            CasoGrupoEnfermedad,
+            col(CasoEpidemiologico.id) == col(CasoGrupoEnfermedad.id_caso),
+        )
+        .outerjoin(
+            GrupoDeEnfermedades,
+            col(CasoGrupoEnfermedad.id_grupo) == col(GrupoDeEnfermedades.id),
+        )
         .where(
             or_(
-                CasoEpidemiologico.id_establecimiento_consulta == id_establecimiento,
-                CasoEpidemiologico.id_establecimiento_notificacion == id_establecimiento,
-                CasoEpidemiologico.id_establecimiento_carga == id_establecimiento,
+                col(CasoEpidemiologico.id_establecimiento_consulta)
+                == id_establecimiento,
+                col(CasoEpidemiologico.id_establecimiento_notificacion)
+                == id_establecimiento,
+                col(CasoEpidemiologico.id_establecimiento_carga) == id_establecimiento,
             )
         )
     )
 
     # Aplicar filtros temporales
     if fecha_desde is not None:
-        query_eventos = query_eventos.where(CasoEpidemiologico.fecha_minima_caso >= fecha_desde)
+        query_eventos = query_eventos.where(
+            col(CasoEpidemiologico.fecha_minima_caso) >= fecha_desde
+        )
     if fecha_hasta is not None:
-        query_eventos = query_eventos.where(CasoEpidemiologico.fecha_minima_caso <= fecha_hasta)
+        query_eventos = query_eventos.where(
+            col(CasoEpidemiologico.fecha_minima_caso) <= fecha_hasta
+        )
 
-    results_eventos = session.exec(query_eventos).all()
+    results_eventos = session.execute(query_eventos).all()
 
     # ===== PASO 2: Muestras tomadas en este establecimiento =====
     query_muestras = (
         select(
-            CasoEpidemiologico.id.label("id_evento"),
-            CasoEpidemiologico.fecha_minima_caso,
-            CasoEpidemiologico.fecha_nacimiento,
-            CasoEpidemiologico.clasificacion_manual,
-            CasoEpidemiologico.clasificacion_estrategia,
-            Ciudadano.codigo_ciudadano,
-            Ciudadano.numero_documento,
-            Ciudadano.nombre,
-            Ciudadano.apellido,
-            Ciudadano.sexo_biologico,
-            Enfermedad.nombre.label("tipo_nombre"),
-            GrupoDeEnfermedades.nombre.label("grupo_nombre"),
+            col(CasoEpidemiologico.id).label("id_evento"),
+            col(CasoEpidemiologico.fecha_minima_caso),
+            col(CasoEpidemiologico.fecha_nacimiento),
+            col(CasoEpidemiologico.clasificacion_manual),
+            col(CasoEpidemiologico.clasificacion_estrategia),
+            col(Ciudadano.codigo_ciudadano),
+            col(Ciudadano.numero_documento),
+            col(Ciudadano.nombre),
+            col(Ciudadano.apellido),
+            col(Ciudadano.sexo_biologico),
+            col(Enfermedad.nombre).label("tipo_nombre"),
+            col(GrupoDeEnfermedades.nombre).label("grupo_nombre"),
         )
         .select_from(MuestraCasoEpidemiologico)
-        .join(CasoEpidemiologico, MuestraCasoEpidemiologico.id_caso == CasoEpidemiologico.id)
-        .join(Ciudadano, CasoEpidemiologico.codigo_ciudadano == Ciudadano.codigo_ciudadano)
-        .outerjoin(Enfermedad, CasoEpidemiologico.id_enfermedad == Enfermedad.id)
-        .outerjoin(CasoGrupoEnfermedad, CasoEpidemiologico.id == CasoGrupoEnfermedad.id_caso)
-        .outerjoin(GrupoDeEnfermedades, CasoGrupoEnfermedad.id_grupo == GrupoDeEnfermedades.id)
-        .where(MuestraCasoEpidemiologico.id_establecimiento == id_establecimiento)
+        .join(
+            CasoEpidemiologico,
+            col(MuestraCasoEpidemiologico.id_caso) == col(CasoEpidemiologico.id),
+        )
+        .join(
+            Ciudadano,
+            col(CasoEpidemiologico.codigo_ciudadano) == col(Ciudadano.codigo_ciudadano),
+        )
+        .outerjoin(
+            Enfermedad, col(CasoEpidemiologico.id_enfermedad) == col(Enfermedad.id)
+        )
+        .outerjoin(
+            CasoGrupoEnfermedad,
+            col(CasoEpidemiologico.id) == col(CasoGrupoEnfermedad.id_caso),
+        )
+        .outerjoin(
+            GrupoDeEnfermedades,
+            col(CasoGrupoEnfermedad.id_grupo) == col(GrupoDeEnfermedades.id),
+        )
+        .where(col(MuestraCasoEpidemiologico.id_establecimiento) == id_establecimiento)
     )
 
     if fecha_desde is not None:
-        query_muestras = query_muestras.where(CasoEpidemiologico.fecha_minima_caso >= fecha_desde)
+        query_muestras = query_muestras.where(
+            col(CasoEpidemiologico.fecha_minima_caso) >= fecha_desde
+        )
     if fecha_hasta is not None:
-        query_muestras = query_muestras.where(CasoEpidemiologico.fecha_minima_caso <= fecha_hasta)
+        query_muestras = query_muestras.where(
+            col(CasoEpidemiologico.fecha_minima_caso) <= fecha_hasta
+        )
 
-    results_muestras = session.exec(query_muestras).all()
+    results_muestras = session.execute(query_muestras).all()
 
     # ===== PASO 3: Diagnósticos realizados en este establecimiento =====
     query_diagnosticos = (
         select(
-            CasoEpidemiologico.id.label("id_evento"),
-            CasoEpidemiologico.fecha_minima_caso,
-            CasoEpidemiologico.fecha_nacimiento,
-            CasoEpidemiologico.clasificacion_manual,
-            CasoEpidemiologico.clasificacion_estrategia,
-            Ciudadano.codigo_ciudadano,
-            Ciudadano.numero_documento,
-            Ciudadano.nombre,
-            Ciudadano.apellido,
-            Ciudadano.sexo_biologico,
-            Enfermedad.nombre.label("tipo_nombre"),
-            GrupoDeEnfermedades.nombre.label("grupo_nombre"),
+            col(CasoEpidemiologico.id).label("id_evento"),
+            col(CasoEpidemiologico.fecha_minima_caso),
+            col(CasoEpidemiologico.fecha_nacimiento),
+            col(CasoEpidemiologico.clasificacion_manual),
+            col(CasoEpidemiologico.clasificacion_estrategia),
+            col(Ciudadano.codigo_ciudadano),
+            col(Ciudadano.numero_documento),
+            col(Ciudadano.nombre),
+            col(Ciudadano.apellido),
+            col(Ciudadano.sexo_biologico),
+            col(Enfermedad.nombre).label("tipo_nombre"),
+            col(GrupoDeEnfermedades.nombre).label("grupo_nombre"),
         )
         .select_from(DiagnosticoCasoEpidemiologico)
-        .join(CasoEpidemiologico, DiagnosticoCasoEpidemiologico.id_caso == CasoEpidemiologico.id)
-        .join(Ciudadano, CasoEpidemiologico.codigo_ciudadano == Ciudadano.codigo_ciudadano)
-        .outerjoin(Enfermedad, CasoEpidemiologico.id_enfermedad == Enfermedad.id)
-        .outerjoin(CasoGrupoEnfermedad, CasoEpidemiologico.id == CasoGrupoEnfermedad.id_caso)
-        .outerjoin(GrupoDeEnfermedades, CasoGrupoEnfermedad.id_grupo == GrupoDeEnfermedades.id)
-        .where(DiagnosticoCasoEpidemiologico.id_establecimiento_diagnostico == id_establecimiento)
+        .join(
+            CasoEpidemiologico,
+            col(DiagnosticoCasoEpidemiologico.id_caso) == col(CasoEpidemiologico.id),
+        )
+        .join(
+            Ciudadano,
+            col(CasoEpidemiologico.codigo_ciudadano) == col(Ciudadano.codigo_ciudadano),
+        )
+        .outerjoin(
+            Enfermedad, col(CasoEpidemiologico.id_enfermedad) == col(Enfermedad.id)
+        )
+        .outerjoin(
+            CasoGrupoEnfermedad,
+            col(CasoEpidemiologico.id) == col(CasoGrupoEnfermedad.id_caso),
+        )
+        .outerjoin(
+            GrupoDeEnfermedades,
+            col(CasoGrupoEnfermedad.id_grupo) == col(GrupoDeEnfermedades.id),
+        )
+        .where(
+            col(DiagnosticoCasoEpidemiologico.id_establecimiento_diagnostico)
+            == id_establecimiento
+        )
     )
 
     if fecha_desde is not None:
-        query_diagnosticos = query_diagnosticos.where(CasoEpidemiologico.fecha_minima_caso >= fecha_desde)
+        query_diagnosticos = query_diagnosticos.where(
+            col(CasoEpidemiologico.fecha_minima_caso) >= fecha_desde
+        )
     if fecha_hasta is not None:
-        query_diagnosticos = query_diagnosticos.where(CasoEpidemiologico.fecha_minima_caso <= fecha_hasta)
+        query_diagnosticos = query_diagnosticos.where(
+            col(CasoEpidemiologico.fecha_minima_caso) <= fecha_hasta
+        )
 
-    results_diagnosticos = session.exec(query_diagnosticos).all()
+    results_diagnosticos = session.execute(query_diagnosticos).all()
 
     # ===== PASO 4: Tratamientos dados en este establecimiento =====
     query_tratamientos = (
         select(
-            CasoEpidemiologico.id.label("id_evento"),
-            CasoEpidemiologico.fecha_minima_caso,
-            CasoEpidemiologico.fecha_nacimiento,
-            CasoEpidemiologico.clasificacion_manual,
-            CasoEpidemiologico.clasificacion_estrategia,
-            Ciudadano.codigo_ciudadano,
-            Ciudadano.numero_documento,
-            Ciudadano.nombre,
-            Ciudadano.apellido,
-            Ciudadano.sexo_biologico,
-            Enfermedad.nombre.label("tipo_nombre"),
-            GrupoDeEnfermedades.nombre.label("grupo_nombre"),
+            col(CasoEpidemiologico.id).label("id_evento"),
+            col(CasoEpidemiologico.fecha_minima_caso),
+            col(CasoEpidemiologico.fecha_nacimiento),
+            col(CasoEpidemiologico.clasificacion_manual),
+            col(CasoEpidemiologico.clasificacion_estrategia),
+            col(Ciudadano.codigo_ciudadano),
+            col(Ciudadano.numero_documento),
+            col(Ciudadano.nombre),
+            col(Ciudadano.apellido),
+            col(Ciudadano.sexo_biologico),
+            col(Enfermedad.nombre).label("tipo_nombre"),
+            col(GrupoDeEnfermedades.nombre).label("grupo_nombre"),
         )
         .select_from(TratamientoCasoEpidemiologico)
-        .join(CasoEpidemiologico, TratamientoCasoEpidemiologico.id_caso == CasoEpidemiologico.id)
-        .join(Ciudadano, CasoEpidemiologico.codigo_ciudadano == Ciudadano.codigo_ciudadano)
-        .outerjoin(Enfermedad, CasoEpidemiologico.id_enfermedad == Enfermedad.id)
-        .outerjoin(CasoGrupoEnfermedad, CasoEpidemiologico.id == CasoGrupoEnfermedad.id_caso)
-        .outerjoin(GrupoDeEnfermedades, CasoGrupoEnfermedad.id_grupo == GrupoDeEnfermedades.id)
-        .where(TratamientoCasoEpidemiologico.id_establecimiento_tratamiento == id_establecimiento)
+        .join(
+            CasoEpidemiologico,
+            col(TratamientoCasoEpidemiologico.id_caso) == col(CasoEpidemiologico.id),
+        )
+        .join(
+            Ciudadano,
+            col(CasoEpidemiologico.codigo_ciudadano) == col(Ciudadano.codigo_ciudadano),
+        )
+        .outerjoin(
+            Enfermedad, col(CasoEpidemiologico.id_enfermedad) == col(Enfermedad.id)
+        )
+        .outerjoin(
+            CasoGrupoEnfermedad,
+            col(CasoEpidemiologico.id) == col(CasoGrupoEnfermedad.id_caso),
+        )
+        .outerjoin(
+            GrupoDeEnfermedades,
+            col(CasoGrupoEnfermedad.id_grupo) == col(GrupoDeEnfermedades.id),
+        )
+        .where(
+            col(TratamientoCasoEpidemiologico.id_establecimiento_tratamiento)
+            == id_establecimiento
+        )
     )
 
     if fecha_desde is not None:
-        query_tratamientos = query_tratamientos.where(CasoEpidemiologico.fecha_minima_caso >= fecha_desde)
+        query_tratamientos = query_tratamientos.where(
+            col(CasoEpidemiologico.fecha_minima_caso) >= fecha_desde
+        )
     if fecha_hasta is not None:
-        query_tratamientos = query_tratamientos.where(CasoEpidemiologico.fecha_minima_caso <= fecha_hasta)
+        query_tratamientos = query_tratamientos.where(
+            col(CasoEpidemiologico.fecha_minima_caso) <= fecha_hasta
+        )
 
-    results_tratamientos = session.exec(query_tratamientos).all()
+    results_tratamientos = session.execute(query_tratamientos).all()
 
     # ===== PROCESAR TODOS LOS RESULTADOS =====
     personas_dict = {}
@@ -326,7 +435,7 @@ async def get_establecimiento_detalle(
         eventos_por_tipo[tipo_key] = eventos_por_tipo.get(tipo_key, 0) + 1
 
     # Helper function para procesar resultados comunes (muestras, diagnósticos, tratamientos)
-    def procesar_resultado_comun(row, tipo_relacion: str):
+    def procesar_resultado_comun(row: Any, tipo_relacion: str) -> None:
         """Procesa un resultado y agrega la persona al diccionario"""
         edad = None
         if row.fecha_nacimiento and row.fecha_minima_caso:
@@ -360,7 +469,9 @@ async def get_establecimiento_detalle(
                 tipo_relacion=tipo_relacion,
             )
             personas_dict[key] = persona
-            relaciones_por_tipo[tipo_relacion] = relaciones_por_tipo.get(tipo_relacion, 0) + 1
+            relaciones_por_tipo[tipo_relacion] = (
+                relaciones_por_tipo.get(tipo_relacion, 0) + 1
+            )
 
         # Contar por tipo de evento
         tipo_key = row.tipo_nombre or row.clasificacion_manual or "Sin clasificar"

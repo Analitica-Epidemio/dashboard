@@ -5,7 +5,7 @@ Permite cambiar de proveedor via configuración.
 """
 
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 from .base import GeocodingAdapter
 from .google_maps_adapter import GoogleMapsAdapter
@@ -29,7 +29,7 @@ class GeocodingFactory:
         cls,
         provider: str = "mapbox",
         api_key: Optional[str] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> GeocodingAdapter:
         """
         Crea un adapter de geocodificación.

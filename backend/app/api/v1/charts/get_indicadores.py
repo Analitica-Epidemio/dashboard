@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 class IndicadoresData(BaseModel):
     """Indicadores clave para reportes"""
+
     total_casos: int = 0
     tasa_incidencia: float = 0.0
     areas_afectadas: int = 0
@@ -114,7 +115,9 @@ async def get_indicadores(
         # Query 2: Población total
         if provincia_id:
             query_pob = "SELECT COALESCE(SUM(poblacion), 0) FROM departamento WHERE id_provincia_indec = :provincia_id"
-            result_pob = await db.execute(text(query_pob), {"provincia_id": provincia_id})
+            result_pob = await db.execute(
+                text(query_pob), {"provincia_id": provincia_id}
+            )
         else:
             query_pob = "SELECT COALESCE(SUM(poblacion), 0) FROM departamento"
             result_pob = await db.execute(text(query_pob), {})
@@ -122,7 +125,9 @@ async def get_indicadores(
         poblacion = result_pob.scalar() or 0
 
         # Calcular tasa de incidencia (por 100,000 habitantes)
-        tasa_incidencia = round((total_casos / poblacion) * 100000, 2) if poblacion > 0 else 0.0
+        tasa_incidencia = (
+            round((total_casos / poblacion) * 100000, 2) if poblacion > 0 else 0.0
+        )
 
         # TODO: Implementar cálculo de letalidad cuando se agregue la columna correspondiente
         # La tabla evento no tiene actualmente una columna para registrar fallecimientos

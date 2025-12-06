@@ -8,14 +8,18 @@ Consolidates:
 - Catalog get-or-create patterns
 """
 
-import re
+import logging
 from dataclasses import dataclass
-from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional, Type, TypeVar
+from datetime import datetime, timezone
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Type, TypeVar
+
+if TYPE_CHECKING:
+    from app.domains.vigilancia_nominal.procesamiento.config import ProcessingContext
 
 import polars as pl
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlmodel import SQLModel, col
 
 from app.core.constants import SexoBiologico, TipoDocumento
 
@@ -102,11 +106,7 @@ def pl_clean_string(col_name: str) -> pl.Expr:
     Usage:
         df.select(pl_clean_string("nombre").alias("nombre"))
     """
-    return (
-        pl.col(col_name)
-        .str.strip_chars()
-        .replace("", None)
-    )
+    return pl.col(col_name).str.strip_chars().replace("", None)
 
 
 def pl_map_sexo(col_name: str) -> pl.Expr:
@@ -124,20 +124,11 @@ def pl_map_sexo(col_name: str) -> pl.Expr:
     col_upper = pl.col(col_name).str.to_uppercase().str.strip_chars()
 
     return (
-        pl.when(
-            (col_upper == "M") |
-            (col_upper == "MASCULINO")
-        )
+        pl.when((col_upper == "M") | (col_upper == "MASCULINO"))
         .then(pl.lit(SexoBiologico.MASCULINO.value))
-        .when(
-            (col_upper == "F") |
-            (col_upper == "FEMENINO")
-        )
+        .when((col_upper == "F") | (col_upper == "FEMENINO"))
         .then(pl.lit(SexoBiologico.FEMENINO.value))
-        .when(
-            (col_upper == "X") |
-            (col_upper == "NO_ESPECIFICADO")
-        )
+        .when((col_upper == "X") | (col_upper == "NO_ESPECIFICADO"))
         .then(pl.lit(SexoBiologico.NO_ESPECIFICADO.value))
         .otherwise(None)
     )
@@ -216,7 +207,11 @@ def pl_clean_numero_domicilio(col_name: str) -> pl.Expr:
     )
 
 
-def pl_col_or_null(df: pl.DataFrame, col_name: str, transform_fn=None) -> pl.Expr:
+def pl_col_or_null(
+    df: pl.DataFrame,
+    col_name: str,
+    transform_fn: Optional[Callable[[str], pl.Expr]] = None,
+) -> pl.Expr:
     """
     Helper para columnas opcionales - retorna expresión o null.
 
@@ -250,7 +245,7 @@ def pl_col_or_null(df: pl.DataFrame, col_name: str, transform_fn=None) -> pl.Exp
 
 def get_current_timestamp() -> datetime:
     """Get current timestamp for created_at/updated_at."""
-    return datetime.utcnow()
+    return datetime.now(timezone.utc)
 
 
 def has_any_value(values: list) -> bool:
@@ -264,12 +259,13 @@ def has_any_value(values: list) -> bool:
 
 # ===== GET-OR-CREATE CATALOG PATTERN =====
 
-T = TypeVar("T")
+T = TypeVar("T", bound=SQLModel)
+
 
 def get_or_create_catalog(
     session: Any,  # Session type
     model: Type[T],
-    df,  # Accept both pandas and Polars DataFrames
+    df: pl.DataFrame,  # Accept both pandas and Polars DataFrames
     column: str,
     key_field: str = "codigo",
     name_field: str = "nombre",
@@ -299,7 +295,13 @@ def get_or_create_catalog(
     # 1. Extraer valores únicos del CSV - POLARS PURO
     if isinstance(df, pl.DataFrame):
         # Polars operations
-        valores = df.filter(pl.col(column).is_not_null()).select(column).unique().to_series().to_list()
+        valores = (
+            df.filter(pl.col(column).is_not_null())
+            .select(column)
+            .unique()
+            .to_series()
+            .to_list()
+        )
     else:
         # Pandas fallback (legacy, should not be used)
         valores = df[column].dropna().unique()
@@ -332,12 +334,13 @@ def get_or_create_catalog(
     # 3. Buscar existentes en BD usando las keys transformadas
     keys_to_search = list(set(valor_to_key.values()))
     model_key = getattr(model, key_field)
-    stmt = select(model.id, model_key)
+    model_id = getattr(model, "id")
+    stmt = select(col(model_id), col(model_key))
 
     if existing_filter:
         stmt = stmt.where(existing_filter)
     else:
-        stmt = stmt.where(model_key.in_(keys_to_search))
+        stmt = stmt.where(col(model_key).in_(keys_to_search))
 
     existing_mapping = {
         getattr(row, key_field): row.id for row in session.execute(stmt).all()
@@ -376,7 +379,8 @@ def get_or_create_catalog(
         nuevos.append(record)
 
     if nuevos:
-        stmt = pg_insert(model.__table__).values(nuevos)
+        model_table = getattr(model, "__table__")
+        stmt = pg_insert(model_table).values(nuevos)
 
         # Usar ON CONFLICT solo si la tabla tiene unique constraint
         if has_unique_constraint:
@@ -390,7 +394,9 @@ def get_or_create_catalog(
         session.flush()
 
         # 6. Re-query para obtener IDs de TODOS (existentes + nuevos)
-        stmt = select(model.id, model_key).where(model_key.in_(keys_to_search))
+        stmt = select(col(model_id), col(model_key)).where(
+            col(model_key).in_(keys_to_search)
+        )
         existing_mapping = {
             getattr(row, key_field): row.id for row in session.execute(stmt).all()
         }
@@ -411,7 +417,7 @@ class BulkProcessorBase:
     - timestamp helper
     """
 
-    def __init__(self, context, logger):
+    def __init__(self, context: "ProcessingContext", logger: logging.Logger) -> None:
         self.context = context
         self.logger = logger
 

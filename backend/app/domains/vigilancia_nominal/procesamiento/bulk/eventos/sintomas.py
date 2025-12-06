@@ -1,17 +1,18 @@
 """Bulk processor for symptoms - POLARS PURO optimizado."""
 
 from datetime import date, datetime
-from typing import Dict
+from typing import Any, Dict
 
 import polars as pl
-from sqlalchemy import select
+from sqlalchemy import inspect, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlmodel import col
 
-from app.domains.vigilancia_nominal.models.salud import Sintoma
-from app.domains.vigilancia_nominal.models.caso import DetalleCasoSintomas
 from app.core.epidemiology import (
     calcular_semana_epidemiologica,
 )
+from app.domains.vigilancia_nominal.models.caso import DetalleCasoSintomas
+from app.domains.vigilancia_nominal.models.salud import Sintoma
 
 from ...config.columns import Columns
 from ..shared import (
@@ -22,7 +23,7 @@ from ..shared import (
 )
 
 
-def safe_date(value) -> date | None:
+def safe_date(value: Any) -> date | None:
     """
     Safely convert value to date.
 
@@ -73,44 +74,47 @@ class SintomasProcessor(BulkProcessorBase):
         # 2. POLARS PURO: Preparar DataFrame de mapeo de síntomas
         # Convertir sintoma_mapping dict a DataFrame para join
         # IMPORTANTE: Las keys ya están en UPPERCASE en el mapping
-        sintoma_mapping_df = pl.DataFrame({
-            "sintoma_upper": list(sintoma_mapping.keys()),
-            "id_sintoma": list(sintoma_mapping.values()),
-        })
+        sintoma_mapping_df = pl.DataFrame(
+            {
+                "sintoma_upper": list(sintoma_mapping.keys()),
+                "id_sintoma": list(sintoma_mapping.values()),
+            }
+        )
 
         # 3. POLARS PURO: Preparar datos con lazy evaluation
         sintomas_prepared = (
             sintomas_df.lazy()
-            .select([
-                pl.col("id_caso"),  # Cambiado de id_evento a id_caso
-                pl_clean_string(Columns.SIGNO_SINTOMA.name).alias("sintoma_raw"),
-                (
-                    pl.col(Columns.FECHA_INICIO_SINTOMA.name)
-                    if Columns.FECHA_INICIO_SINTOMA.name in sintomas_df.columns
-                    else pl.lit(None)
-                ).alias("fecha_inicio_sintoma"),
-            ])
+            .select(
+                [
+                    pl.col("id_caso"),  # Cambiado de id_evento a id_caso
+                    pl_clean_string(Columns.SIGNO_SINTOMA.name).alias("sintoma_raw"),
+                    (
+                        pl.col(Columns.FECHA_INICIO_SINTOMA.name)
+                        if Columns.FECHA_INICIO_SINTOMA.name in sintomas_df.columns
+                        else pl.lit(None)
+                    ).alias("fecha_inicio_sintoma"),
+                ]
+            )
             .filter(
                 # Filtrar null después de conversión
-                pl.col("id_caso").is_not_null()
-                & pl.col("sintoma_raw").is_not_null()
+                pl.col("id_caso").is_not_null() & pl.col("sintoma_raw").is_not_null()
             )
             # 4. EXPLODE: Split de síntomas separados por coma (SIN LOOPS PYTHON!)
             # Si un síntoma tiene "FIEBRE,TOS", se convierte en 2 filas
-            .with_columns([
-                pl.col("sintoma_raw")
-                .str.split(",")
-                .alias("sintomas_list")
-            ])
+            .with_columns([pl.col("sintoma_raw").str.split(",").alias("sintomas_list")])
             .explode("sintomas_list")
             # Limpiar cada síntoma individual después del split
-            .with_columns([
-                pl.col("sintomas_list")
-                .str.strip_chars()
-                .str.to_uppercase()
-                .alias("sintoma_upper")
-            ])
-            .filter(pl.col("sintoma_upper").is_not_null() & (pl.col("sintoma_upper") != ""))
+            .with_columns(
+                [
+                    pl.col("sintomas_list")
+                    .str.strip_chars()
+                    .str.to_uppercase()
+                    .alias("sintoma_upper")
+                ]
+            )
+            .filter(
+                pl.col("sintoma_upper").is_not_null() & (pl.col("sintoma_upper") != "")
+            )
             # 5. JOIN: Mapear sintoma_id (SIN LOOPS PYTHON!)
             .join(sintoma_mapping_df.lazy(), on="sintoma_upper", how="left")
             .collect()
@@ -127,8 +131,7 @@ class SintomasProcessor(BulkProcessorBase):
         if sintomas_sin_mapear > 0:
             # Obtener ejemplos de síntomas sin mapear
             ejemplos = (
-                sintomas_prepared
-                .filter(pl.col("id_sintoma").is_null())
+                sintomas_prepared.filter(pl.col("id_sintoma").is_null())
                 .select("sintoma_upper")
                 .unique()
                 .head(5)
@@ -141,21 +144,17 @@ class SintomasProcessor(BulkProcessorBase):
             )
 
         # 8. POLARS: Filtrar solo síntomas mapeados
-        sintomas_validos = sintomas_prepared.filter(
-            pl.col("id_sintoma").is_not_null()
-        )
+        sintomas_validos = sintomas_prepared.filter(pl.col("id_sintoma").is_not_null())
 
         if sintomas_validos.height == 0:
             return BulkOperationResult(0, 0, 0, [], 0.0)
 
         # 9. POLARS: Deduplicar y agregrar por (id_caso, id_sintoma)
         # Mantener la fecha más temprana para cada combinación
-        sintomas_dedup = (
-            sintomas_validos
-            .group_by(["id_caso", "id_sintoma"])  # Cambiado de id_evento a id_caso
-            .agg([
-                pl.col("fecha_inicio_sintoma").min().alias("fecha_inicio_sintoma")
-            ])
+        sintomas_dedup = sintomas_validos.group_by(
+            ["id_caso", "id_sintoma"]
+        ).agg(  # Cambiado de id_evento a id_caso
+            [pl.col("fecha_inicio_sintoma").min().alias("fecha_inicio_sintoma")]
         )
 
         duplicados_removidos = sintomas_validos.height - sintomas_dedup.height
@@ -182,23 +181,30 @@ class SintomasProcessor(BulkProcessorBase):
             if fecha_inicio:
                 semana_epi, anio_epi = calcular_semana_epidemiologica(fecha_inicio)
 
-            sintomas_eventos_data.append({
-                "id_caso": int(record["id_caso"]),  # Cambiado de id_evento a id_caso
-                "id_sintoma": int(record["id_sintoma"]),
-                "fecha_inicio_sintoma": fecha_inicio,
-                "semana_epidemiologica_aparicion_sintoma": semana_epi,
-                "anio_epidemiologico_sintoma": anio_epi,
-                "created_at": timestamp,
-                "updated_at": timestamp,
-            })
+            sintomas_eventos_data.append(
+                {
+                    "id_caso": int(
+                        record["id_caso"]
+                    ),  # Cambiado de id_evento a id_caso
+                    "id_sintoma": int(record["id_sintoma"]),
+                    "fecha_inicio_sintoma": fecha_inicio,
+                    "semana_epidemiologica_aparicion_sintoma": semana_epi,
+                    "anio_epidemiologico_sintoma": anio_epi,
+                    "created_at": timestamp,
+                    "updated_at": timestamp,
+                }
+            )
 
         # 12. Bulk upsert
         if sintomas_eventos_data:
-            stmt = pg_insert(DetalleCasoSintomas.__table__).values(
+            stmt = pg_insert(inspect(DetalleCasoSintomas).local_table).values(
                 sintomas_eventos_data
             )
             upsert_stmt = stmt.on_conflict_do_update(
-                index_elements=["id_caso", "id_sintoma"],  # Cambiado de id_evento a id_caso
+                index_elements=[
+                    "id_caso",
+                    "id_sintoma",
+                ],  # Cambiado de id_evento a id_caso
                 set_={
                     "fecha_inicio_sintoma": stmt.excluded.fecha_inicio_sintoma,
                     "semana_epidemiologica_aparicion_sintoma": stmt.excluded.semana_epidemiologica_aparicion_sintoma,
@@ -239,29 +245,27 @@ class SintomasProcessor(BulkProcessorBase):
 
         # 2. POLARS PURO: Preparar y explotar síntomas
         sintomas_prepared = (
-            df_valid
-            .select([
-                pl.col(Columns.SIGNO_SINTOMA.name).alias("sintoma_raw"),
-                pl_safe_int(Columns.ID_SNVS_SIGNO_SINTOMA.name).alias("id_snvs"),
-            ])
+            df_valid.select(
+                [
+                    pl.col(Columns.SIGNO_SINTOMA.name).alias("sintoma_raw"),
+                    pl_safe_int(Columns.ID_SNVS_SIGNO_SINTOMA.name).alias("id_snvs"),
+                ]
+            )
             .filter(pl.col("id_snvs").is_not_null())
             # EXPLODE: Split de síntomas separados por coma
-            .with_columns([
-                pl.col("sintoma_raw")
-                .str.split(",")
-                .alias("sintomas_list")
-            ])
+            .with_columns([pl.col("sintoma_raw").str.split(",").alias("sintomas_list")])
             .explode("sintomas_list")
             # Limpiar cada síntoma individual
-            .with_columns([
-                pl.col("sintomas_list")
-                .str.strip_chars()
-                .str.to_uppercase()
-                .alias("sintoma_clean")
-            ])
+            .with_columns(
+                [
+                    pl.col("sintomas_list")
+                    .str.strip_chars()
+                    .str.to_uppercase()
+                    .alias("sintoma_clean")
+                ]
+            )
             .filter(
-                pl.col("sintoma_clean").is_not_null()
-                & (pl.col("sintoma_clean") != "")
+                pl.col("sintoma_clean").is_not_null() & (pl.col("sintoma_clean") != "")
             )
             # Deduplicar: último valor gana si hay duplicados
             .unique(subset=["sintoma_clean"], keep="last", maintain_order=False)
@@ -280,13 +284,13 @@ class SintomasProcessor(BulkProcessorBase):
         sintomas_data = dict(
             zip(
                 sintomas_prepared["sintoma_clean"].to_list(),
-                sintomas_prepared["id_snvs"].to_list()
+                sintomas_prepared["id_snvs"].to_list(),
             )
         )
 
         # 4. Verificar existentes
-        stmt = select(Sintoma.id, Sintoma.signo_sintoma).where(
-            Sintoma.signo_sintoma.in_(list(sintomas_data.keys()))
+        stmt = select(col(Sintoma.id), col(Sintoma.signo_sintoma)).where(
+            col(Sintoma.signo_sintoma).in_(list(sintomas_data.keys()))
         )
         existing_mapping = {
             signo_sintoma: sintoma_id
@@ -299,22 +303,26 @@ class SintomasProcessor(BulkProcessorBase):
 
         for signo_sintoma, id_snvs in sintomas_data.items():
             if signo_sintoma not in existing_mapping:
-                nuevos_sintomas.append({
-                    "id_snvs_signo_sintoma": id_snvs,
-                    "signo_sintoma": signo_sintoma,
-                    "created_at": timestamp,
-                    "updated_at": timestamp,
-                })
+                nuevos_sintomas.append(
+                    {
+                        "id_snvs_signo_sintoma": id_snvs,
+                        "signo_sintoma": signo_sintoma,
+                        "created_at": timestamp,
+                        "updated_at": timestamp,
+                    }
+                )
 
         if nuevos_sintomas:
-            stmt = pg_insert(Sintoma.__table__).values(nuevos_sintomas)
+            stmt = pg_insert(inspect(Sintoma).local_table).values(nuevos_sintomas)
             self.context.session.execute(stmt.on_conflict_do_nothing())
 
         # 6. SIEMPRE re-obtener mapping completo después de cualquier inserción
         # Usar id_snvs_signo_sintoma para el mapping ya que es único y consistente
         stmt = select(
-            Sintoma.id, Sintoma.id_snvs_signo_sintoma, Sintoma.signo_sintoma
-        ).where(Sintoma.id_snvs_signo_sintoma.in_(list(sintomas_data.values())))
+            col(Sintoma.id),
+            col(Sintoma.id_snvs_signo_sintoma),
+            col(Sintoma.signo_sintoma),
+        ).where(col(Sintoma.id_snvs_signo_sintoma).in_(list(sintomas_data.values())))
 
         all_results = list(self.context.session.execute(stmt).all())
         self.logger.info(f"Mapping de síntomas: {len(all_results)} encontrados en BD")

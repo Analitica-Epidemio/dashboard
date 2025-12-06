@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
-from app.domains.charts.schemas import SolicitudSpecGrafico, RespuestaSpecGrafico
+from app.domains.charts.schemas import RespuestaSpecGrafico, SolicitudSpecGrafico
 from app.domains.charts.services.spec_generator import ChartSpecGenerator
 
 logger = logging.getLogger(__name__)
@@ -39,7 +39,7 @@ async def generate_chart_spec(
 
         return RespuestaSpecGrafico(
             spec=spec,
-            generado_en=spec.generado_en,
+            generado_en=spec.generado_en if spec.generado_en is not None else "",
         )
 
     except ValueError as e:
@@ -48,8 +48,7 @@ async def generate_chart_spec(
     except Exception as e:
         logger.error(f"Error generando chart spec: {e}", exc_info=True)
         raise HTTPException(
-            status_code=500,
-            detail=f"Error generando chart spec: {str(e)}"
+            status_code=500, detail=f"Error generando chart spec: {str(e)}"
         )
 
 

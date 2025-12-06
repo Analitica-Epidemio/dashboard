@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 async def unlock_user(
     user_id: int,
     current_user: User = Depends(require_superadmin),
-    auth_service: AuthService = Depends(get_auth_service)
+    auth_service: AuthService = Depends(get_auth_service),
 ):
     """
     Unlock user account (Superadmin only)
@@ -26,8 +26,7 @@ async def unlock_user(
     user = await auth_service._obtener_usuario_por_id(user_id)
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
 
     user.intentos_login = 0

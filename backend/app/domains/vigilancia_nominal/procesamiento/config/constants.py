@@ -23,6 +23,33 @@ from .columns import (
     Columns,
 )
 
+__all__ = [
+    "BOOLEAN_COLUMNS_LIST",
+    "DATE_COLUMNS_LIST",
+    "NUMERIC_COLUMNS_LIST",
+    "ProcessingStage",
+    "ProcessingStatus",
+    "BATCH_SIZES",
+    "PERFORMANCE_CONFIG",
+    "UPPERCASE_COLUMNS",
+    "DOCUMENTO_MAPPING",
+    "SEXO_MAPPING",
+    "PROVINCIA_MAPPING",
+    "VALIDATION_LIMITS",
+    "ALERT_THRESHOLDS",
+    "METADATA_EXTRACTION_TYPES",
+    "LOG_FIELDS",
+    "BOOLEAN_COLUMNS",
+    "DATE_COLUMNS",
+    "INTEGER_COLUMNS",
+    "NUMERIC_COLUMNS",
+    "STRING_COLUMNS",
+    "REQUIRED_COLUMNS",
+    "TEXT_COLUMNS",
+    "BOOLEAN_MAPPING",
+    "NULL_VALUES",
+]
+
 
 class ProcessingStage(Enum):
     """Etapas del procesamiento de archivos."""
@@ -125,35 +152,9 @@ PROVINCIA_MAPPING: Dict[str, str] = {
     "TDF": "TIERRA DEL FUEGO, ANTÁRTIDA E ISLAS DEL ATLÁNTICO SUR",
 }
 
-# Mapeo de valores booleanos
-BOOLEAN_MAPPING: Dict[str, bool] = {
-    "SI": True,
-    "SÍ": True,
-    "S": True,
-    "1": True,
-    "TRUE": True,
-    "YES": True,
-    "NO": False,
-    "N": False,
-    "0": False,
-    "FALSE": False,
-}
 
 # === VALIDACIÓN ===
 
-# Valores que se consideran nulos/vacíos
-NULL_VALUES: Set[str] = {
-    "",
-    " ",
-    "N/A",
-    "n/a",
-    "NULL",
-    "null",
-    "None",
-    "NONE",
-    "nan",
-    "NaN",
-}
 
 # Límites de validación
 VALIDATION_LIMITS = {

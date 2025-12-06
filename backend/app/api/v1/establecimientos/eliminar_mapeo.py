@@ -21,14 +21,14 @@ async def eliminar_mapeo_snvs_ign(
     if not estab_snvs or estab_snvs.source != "SNVS":
         raise HTTPException(
             status_code=404,
-            detail=f"Establecimiento SNVS con ID {id_establecimiento_snvs} no encontrado"
+            detail=f"Establecimiento SNVS con ID {id_establecimiento_snvs} no encontrado",
         )
 
     # Verificar que tenga mapeo
     if not estab_snvs.codigo_refes:
         raise HTTPException(
             status_code=400,
-            detail="El establecimiento SNVS no tiene un mapeo para eliminar"
+            detail="El establecimiento SNVS no tiene un mapeo para eliminar",
         )
 
     codigo_refes_eliminado = estab_snvs.codigo_refes

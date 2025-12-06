@@ -9,10 +9,11 @@ from datetime import date
 from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import BigInteger, UniqueConstraint
+from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship
 
-from app.core.models import BaseModel
 from app.core.constants import FrecuenciaOcurrencia
+from app.core.models import BaseModel
 
 if TYPE_CHECKING:
     from app.domains.territorio.geografia_models import Localidad
@@ -28,12 +29,12 @@ class AmbitosConcurrenciaCaso(BaseModel, table=True):
     """
 
     __tablename__ = "ambitos_concurrencia_caso"
-    __table_args__ = (
-        UniqueConstraint('id_caso', name='uq_ambito_caso'),
-    )
+    __table_args__ = (UniqueConstraint("id_caso", name="uq_ambito_caso"),)
 
     # Foreign Keys
-    id_caso: int = Field(foreign_key="caso_epidemiologico.id", description="ID del caso")
+    id_caso: int = Field(
+        foreign_key="caso_epidemiologico.id", description="ID del caso"
+    )
     id_localidad_ambito_ocurrencia: Optional[int] = Field(
         None,
         sa_type=BigInteger,
@@ -65,5 +66,7 @@ class AmbitosConcurrenciaCaso(BaseModel, table=True):
     )
 
     # Relaciones
-    caso: "CasoEpidemiologico" = Relationship(back_populates="ambitos_concurrencia")
-    localidad: Optional["Localidad"] = Relationship()
+    caso: Mapped["CasoEpidemiologico"] = Relationship(
+        back_populates="ambitos_concurrencia"
+    )
+    localidad: Mapped[Optional["Localidad"]] = Relationship()

@@ -11,13 +11,14 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from sqlmodel import col
 
 from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAnyRole
-from app.domains.vigilancia_nominal.models.salud import MuestraCasoEpidemiologico
 from app.domains.autenticacion.models import User
 from app.domains.vigilancia_nominal.models.caso import CasoEpidemiologico
+from app.domains.vigilancia_nominal.models.salud import MuestraCasoEpidemiologico
 
 
 class CasoEpidemiologicoTimelineItem(BaseModel):
@@ -32,8 +33,11 @@ class CasoEpidemiologicoTimelineItem(BaseModel):
 class CasoEpidemiologicoTimelineResponse(BaseModel):
     """Respuesta del timeline de un evento"""
 
-    items: List[CasoEpidemiologicoTimelineItem] = Field(..., description="Items del timeline")
+    items: List[CasoEpidemiologicoTimelineItem] = Field(
+        ..., description="Items del timeline"
+    )
     total: int = Field(..., description="Total de items")
+
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +45,7 @@ logger = logging.getLogger(__name__)
 async def get_evento_timeline(
     evento_id: int,
     db: AsyncSession = Depends(get_async_session),
-    current_user: User = Depends(RequireAnyRole())
+    current_user: User = Depends(RequireAnyRole()),
 ) -> SuccessResponse[CasoEpidemiologicoTimelineResponse]:
     """
     Obtiene el timeline cronológico de un evento.
@@ -58,16 +62,20 @@ async def get_evento_timeline(
     Ordenado cronológicamente.
     """
 
-    logger.info(f"📅 Generando timeline para evento {evento_id} - usuario: {current_user.email}")
+    logger.info(
+        f"📅 Generando timeline para evento {evento_id} - usuario: {current_user.email}"
+    )
 
     try:
         # Obtener evento con todas las relaciones temporales
         query = (
             select(CasoEpidemiologico)
-            .where(CasoEpidemiologico.id == evento_id)
+            .where(col(CasoEpidemiologico.id) == evento_id)
             .options(
                 selectinload(CasoEpidemiologico.sintomas),
-                selectinload(CasoEpidemiologico.muestras).selectinload(MuestraCasoEpidemiologico.muestra),
+                selectinload(CasoEpidemiologico.muestras).selectinload(
+                    MuestraCasoEpidemiologico.muestra
+                ),
                 selectinload(CasoEpidemiologico.diagnosticos),
                 selectinload(CasoEpidemiologico.internaciones),
                 selectinload(CasoEpidemiologico.vacunas),
@@ -121,7 +129,11 @@ async def get_evento_timeline(
 
         # Agregar síntomas detallados
         for sintoma in evento.sintomas or []:
-            if sintoma.fecha_inicio_sintoma and sintoma.sintoma and sintoma.sintoma.signo_sintoma:
+            if (
+                sintoma.fecha_inicio_sintoma
+                and sintoma.sintoma
+                and sintoma.sintoma.signo_sintoma
+            ):
                 timeline_items.append(
                     CasoEpidemiologicoTimelineItem(
                         fecha=sintoma.fecha_inicio_sintoma,
@@ -133,7 +145,11 @@ async def get_evento_timeline(
 
         # Agregar muestras
         for muestra in evento.muestras or []:
-            if muestra.fecha_toma_muestra and muestra.muestra and muestra.muestra.descripcion:
+            if (
+                muestra.fecha_toma_muestra
+                and muestra.muestra
+                and muestra.muestra.descripcion
+            ):
                 timeline_items.append(
                     CasoEpidemiologicoTimelineItem(
                         fecha=muestra.fecha_toma_muestra,
@@ -157,7 +173,9 @@ async def get_evento_timeline(
                             fecha=diagnostico.fecha_diagnostico_referido,
                             tipo="diagnostico",
                             descripcion=f"Diagnóstico: {diagnostico_text}",
-                            detalles={"clasificacion": diagnostico.clasificacion_manual},
+                            detalles={
+                                "clasificacion": diagnostico.clasificacion_manual
+                            },
                         )
                     )
 

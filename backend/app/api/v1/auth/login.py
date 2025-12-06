@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 async def login(
     credentials: UserLogin,
     request: Request,
-    auth_service: AuthService = Depends(get_auth_service)
+    auth_service: AuthService = Depends(get_auth_service),
 ) -> Token:
     """
     Authenticate user and return JWT tokens
@@ -33,8 +33,7 @@ async def login(
 
 
 async def refresh_access_token(
-    refresh_data: RefreshToken,
-    auth_service: AuthService = Depends(get_auth_service)
+    refresh_data: RefreshToken, auth_service: AuthService = Depends(get_auth_service)
 ) -> Token:
     """
     Refresh access token using refresh token

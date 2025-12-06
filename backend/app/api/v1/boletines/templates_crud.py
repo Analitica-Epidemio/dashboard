@@ -8,6 +8,7 @@ from typing import List, Optional
 from fastapi import Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import col
 
 from app.api.v1.boletines.schemas import (
     BoletinTemplateCreate,
@@ -31,16 +32,12 @@ async def create_template(
     """
     Crear un nuevo template de boletín.
     """
-    # Convertir Pydantic models a dict para JSON columns
     template = BoletinTemplate(
         name=template_data.name,
         description=template_data.description,
         category=template_data.category,
-        thumbnail=template_data.thumbnail,
-        layout=template_data.layout.model_dump(),
         cover=template_data.cover.model_dump() if template_data.cover else None,
-        widgets=[w.model_dump() for w in template_data.widgets],
-        global_filters=template_data.global_filters.model_dump() if template_data.global_filters else None,
+        content=template_data.content,
         is_public=template_data.is_public,
         created_by=current_user.id if current_user else None,
     )
@@ -70,23 +67,23 @@ async def list_templates(
 
     # Filtros
     if category:
-        stmt = stmt.where(BoletinTemplate.category == category)
+        stmt = stmt.where(col(BoletinTemplate.category) == category)
 
     if is_public is not None:
-        stmt = stmt.where(BoletinTemplate.is_public == is_public)
+        stmt = stmt.where(col(BoletinTemplate.is_public) == is_public)
 
     if search:
         search_pattern = f"%{search}%"
         stmt = stmt.where(
-            (BoletinTemplate.name.ilike(search_pattern)) |
-            (BoletinTemplate.description.ilike(search_pattern))
+            (col(BoletinTemplate.name).ilike(search_pattern))
+            | (col(BoletinTemplate.description).ilike(search_pattern))
         )
 
     # Si no es admin, solo mostrar templates públicos o propios
-    if current_user and not getattr(current_user, 'is_admin', False):
+    if current_user and not getattr(current_user, "is_admin", False):
         stmt = stmt.where(
-            (BoletinTemplate.is_public.is_(True)) |
-            (BoletinTemplate.created_by == current_user.id)
+            (col(BoletinTemplate.is_public).is_(True))
+            | (col(BoletinTemplate.created_by) == current_user.id)
         )
 
     # Paginación
@@ -108,7 +105,7 @@ async def get_template(
     """
     Obtener un template específico por ID.
     """
-    stmt = select(BoletinTemplate).where(BoletinTemplate.id == template_id)
+    stmt = select(BoletinTemplate).where(col(BoletinTemplate.id) == template_id)
     result = await db.execute(stmt)
     template = result.scalar_one_or_none()
 
@@ -117,8 +114,13 @@ async def get_template(
 
     # Verificar permisos (solo si no es público y no es el creador)
     if not template.is_public:
-        if not current_user or (template.created_by != current_user.id and not getattr(current_user, 'is_admin', False)):
-            raise HTTPException(status_code=403, detail="No tiene permisos para ver este template")
+        if not current_user or (
+            template.created_by != current_user.id
+            and not getattr(current_user, "is_admin", False)
+        ):
+            raise HTTPException(
+                status_code=403, detail="No tiene permisos para ver este template"
+            )
 
     return SuccessResponse(data=BoletinTemplateResponse.model_validate(template))
 
@@ -132,7 +134,7 @@ async def update_template(
     """
     Actualizar un template existente.
     """
-    stmt = select(BoletinTemplate).where(BoletinTemplate.id == template_id)
+    stmt = select(BoletinTemplate).where(col(BoletinTemplate.id) == template_id)
     result = await db.execute(stmt)
     template = result.scalar_one_or_none()
 
@@ -141,10 +143,17 @@ async def update_template(
 
     # Verificar permisos
     if template.is_system:
-        raise HTTPException(status_code=403, detail="No se pueden editar templates del sistema")
+        raise HTTPException(
+            status_code=403, detail="No se pueden editar templates del sistema"
+        )
 
-    if not current_user or (template.created_by != current_user.id and not getattr(current_user, 'is_admin', False)):
-        raise HTTPException(status_code=403, detail="No tiene permisos para editar este template")
+    if not current_user or (
+        template.created_by != current_user.id
+        and not getattr(current_user, "is_admin", False)
+    ):
+        raise HTTPException(
+            status_code=403, detail="No tiene permisos para editar este template"
+        )
 
     # Actualizar campos
     update_data = template_data.model_dump(exclude_unset=True)
@@ -152,11 +161,8 @@ async def update_template(
     for field, value in update_data.items():
         if value is not None:
             # Convertir Pydantic models a dict para JSON columns
-            if field in ['layout', 'cover', 'global_filters'] and hasattr(value, 'model_dump'):
+            if field == "cover" and hasattr(value, "model_dump"):
                 value = value.model_dump()
-            elif field == 'widgets' and isinstance(value, list):
-                value = [w.model_dump() if hasattr(w, 'model_dump') else w for w in value]
-
             setattr(template, field, value)
 
     await db.commit()
@@ -175,7 +181,7 @@ async def delete_template(
     """
     Eliminar un template.
     """
-    stmt = select(BoletinTemplate).where(BoletinTemplate.id == template_id)
+    stmt = select(BoletinTemplate).where(col(BoletinTemplate.id) == template_id)
     result = await db.execute(stmt)
     template = result.scalar_one_or_none()
 
@@ -184,10 +190,17 @@ async def delete_template(
 
     # Verificar permisos
     if template.is_system:
-        raise HTTPException(status_code=403, detail="No se pueden eliminar templates del sistema")
+        raise HTTPException(
+            status_code=403, detail="No se pueden eliminar templates del sistema"
+        )
 
-    if not current_user or (template.created_by != current_user.id and not getattr(current_user, 'is_admin', False)):
-        raise HTTPException(status_code=403, detail="No tiene permisos para eliminar este template")
+    if not current_user or (
+        template.created_by != current_user.id
+        and not getattr(current_user, "is_admin", False)
+    ):
+        raise HTTPException(
+            status_code=403, detail="No tiene permisos para eliminar este template"
+        )
 
     await db.delete(template)
     await db.commit()
@@ -207,7 +220,7 @@ async def duplicate_template(
     Duplicar un template existente.
     """
     # Obtener template original
-    stmt = select(BoletinTemplate).where(BoletinTemplate.id == template_id)
+    stmt = select(BoletinTemplate).where(col(BoletinTemplate.id) == template_id)
     result = await db.execute(stmt)
     original = result.scalar_one_or_none()
 
@@ -216,19 +229,21 @@ async def duplicate_template(
 
     # Verificar permisos de lectura
     if not original.is_public:
-        if not current_user or (original.created_by != current_user.id and not getattr(current_user, 'is_admin', False)):
-            raise HTTPException(status_code=403, detail="No tiene permisos para duplicar este template")
+        if not current_user or (
+            original.created_by != current_user.id
+            and not getattr(current_user, "is_admin", False)
+        ):
+            raise HTTPException(
+                status_code=403, detail="No tiene permisos para duplicar este template"
+            )
 
     # Crear copia
     duplicate = BoletinTemplate(
         name=new_name,
         description=f"Copia de: {original.description or original.name}",
         category=original.category,
-        thumbnail=original.thumbnail,
-        layout=original.layout,
         cover=original.cover,
-        widgets=original.widgets,
-        global_filters=original.global_filters,
+        content=original.content,
         is_public=False,  # El duplicado es privado por defecto
         created_by=current_user.id if current_user else None,
     )

@@ -1,12 +1,13 @@
 """Address and citizen-address link operations - Polars puro optimizado."""
 
 import polars as pl
-from sqlalchemy import select
+from sqlalchemy import inspect, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlmodel import col
 
 from app.core.config import settings
-from app.domains.vigilancia_nominal.models.sujetos import CiudadanoDomicilio
 from app.domains.territorio.geografia_models import Domicilio, Localidad
+from app.domains.vigilancia_nominal.models.sujetos import CiudadanoDomicilio
 
 from ...config.columns import Columns
 from ..shared import (
@@ -92,8 +93,12 @@ class DomiciliosProcessor(BulkProcessorBase):
 
             # Agregar columna de validación y filtrar - POLARS
             filtrado = filtrado.with_row_count("_row_idx")
-            indices_validos = [i for i, valido in enumerate(mascara_calle_valida) if valido]
-            filtrado = filtrado.filter(pl.col("_row_idx").is_in(indices_validos)).drop("_row_idx")
+            indices_validos = [
+                i for i, valido in enumerate(mascara_calle_valida) if valido
+            ]
+            filtrado = filtrado.filter(pl.col("_row_idx").is_in(indices_validos)).drop(
+                "_row_idx"
+            )
 
             # Log de registros filtrados
             registros_filtrados = df.height - filtrado.height
@@ -121,7 +126,9 @@ class DomiciliosProcessor(BulkProcessorBase):
         """
         # Ensure localities exist
         ids_localidad = (
-            df_domicilios.filter(pl.col(Columns.ID_LOC_INDEC_RESIDENCIA.name).is_not_null())
+            df_domicilios.filter(
+                pl.col(Columns.ID_LOC_INDEC_RESIDENCIA.name).is_not_null()
+            )
             .select(Columns.ID_LOC_INDEC_RESIDENCIA.name)
             .unique()
             .to_series()
@@ -132,11 +139,13 @@ class DomiciliosProcessor(BulkProcessorBase):
         # LAZY EVALUATION - Extract unique addresses
         domicilios_unicos = (
             df_domicilios.lazy()
-            .select([
-                Columns.CALLE_DOMICILIO.name,
-                Columns.NUMERO_DOMICILIO.name,
-                Columns.ID_LOC_INDEC_RESIDENCIA.name,
-            ])
+            .select(
+                [
+                    Columns.CALLE_DOMICILIO.name,
+                    Columns.NUMERO_DOMICILIO.name,
+                    Columns.ID_LOC_INDEC_RESIDENCIA.name,
+                ]
+            )
             .unique()
             .collect()
         )
@@ -147,11 +156,17 @@ class DomiciliosProcessor(BulkProcessorBase):
         # LAZY EVALUATION - Map locality IDs and prepare data
         domicilios_preparados = (
             domicilios_unicos.lazy()
-            .select([
-                pl_clean_string(Columns.CALLE_DOMICILIO.name).alias("calle"),
-                pl_clean_numero_domicilio(Columns.NUMERO_DOMICILIO.name).alias("numero"),
-                pl_safe_int(Columns.ID_LOC_INDEC_RESIDENCIA.name).alias("id_localidad_raw"),
-            ])
+            .select(
+                [
+                    pl_clean_string(Columns.CALLE_DOMICILIO.name).alias("calle"),
+                    pl_clean_numero_domicilio(Columns.NUMERO_DOMICILIO.name).alias(
+                        "numero"
+                    ),
+                    pl_safe_int(Columns.ID_LOC_INDEC_RESIDENCIA.name).alias(
+                        "id_localidad_raw"
+                    ),
+                ]
+            )
             .collect()
         )
 
@@ -167,7 +182,9 @@ class DomiciliosProcessor(BulkProcessorBase):
             id_localidad_raw = registro["id_localidad_raw"]
 
             # Map localidad
-            id_localidad = mapeo_localidad.get(id_localidad_raw) if id_localidad_raw else None
+            id_localidad = (
+                mapeo_localidad.get(id_localidad_raw) if id_localidad_raw else None
+            )
             if not id_localidad:
                 continue
 
@@ -179,13 +196,15 @@ class DomiciliosProcessor(BulkProcessorBase):
                 )
                 continue
 
-            datos_domicilios.append({
-                "calle": calle_val,
-                "numero": numero_val,
-                "id_localidad_indec": int(id_localidad),
-                "created_at": timestamp,
-                "updated_at": timestamp,
-            })
+            datos_domicilios.append(
+                {
+                    "calle": calle_val,
+                    "numero": numero_val,
+                    "id_localidad_indec": int(id_localidad),
+                    "created_at": timestamp,
+                    "updated_at": timestamp,
+                }
+            )
 
         if conteo_saltados_invalidos > 0:
             self.logger.info(
@@ -205,7 +224,7 @@ class DomiciliosProcessor(BulkProcessorBase):
             )
 
         # UPSERT addresses
-        stmt = pg_insert(Domicilio.__table__).values(datos_domicilios)
+        stmt = pg_insert(inspect(Domicilio).local_table).values(datos_domicilios)
         upsert_stmt = stmt.on_conflict_do_nothing(
             index_elements=["calle", "numero", "id_localidad_indec"]
         )
@@ -221,25 +240,27 @@ class DomiciliosProcessor(BulkProcessorBase):
         from sqlalchemy import tuple_
 
         llaves_domicilios = [
-            (d["calle"], d["numero"], d["id_localidad_indec"])
-            for d in datos_domicilios
+            (d["calle"], d["numero"], d["id_localidad_indec"]) for d in datos_domicilios
         ]
 
         stmt = select(
-            Domicilio.id,
-            Domicilio.calle,
-            Domicilio.numero,
-            Domicilio.id_localidad_indec,
+            col(Domicilio.id),
+            col(Domicilio.calle),
+            col(Domicilio.numero),
+            col(Domicilio.id_localidad_indec),
         ).where(
-            tuple_(Domicilio.calle, Domicilio.numero, Domicilio.id_localidad_indec).in_(
-                llaves_domicilios
-            )
+            tuple_(
+                col(Domicilio.calle),
+                col(Domicilio.numero),
+                col(Domicilio.id_localidad_indec),
+            ).in_(llaves_domicilios)
         )
 
         resultados = self.context.session.execute(stmt).all()
 
         return {
-            (fila.calle, fila.numero, fila.id_localidad_indec): fila.id for fila in resultados
+            (fila.calle, fila.numero, fila.id_localidad_indec): fila.id
+            for fila in resultados
         }
 
     def _activar_geocodificacion_si_habilitada(self, conteo_domicilios: int) -> None:
@@ -297,12 +318,20 @@ class DomiciliosProcessor(BulkProcessorBase):
         # LAZY EVALUATION - Prepare clean data con expresiones Polars
         df_preparado = (
             df_domicilios.lazy()
-            .select([
-                pl_safe_int(Columns.CODIGO_CIUDADANO.name).alias("codigo_ciudadano"),
-                pl_clean_string(Columns.CALLE_DOMICILIO.name).alias("calle_clean"),
-                pl_clean_numero_domicilio(Columns.NUMERO_DOMICILIO.name).alias("numero_clean"),
-                pl_safe_int(Columns.ID_LOC_INDEC_RESIDENCIA.name).alias("localidad_id"),
-            ])
+            .select(
+                [
+                    pl_safe_int(Columns.CODIGO_CIUDADANO.name).alias(
+                        "codigo_ciudadano"
+                    ),
+                    pl_clean_string(Columns.CALLE_DOMICILIO.name).alias("calle_clean"),
+                    pl_clean_numero_domicilio(Columns.NUMERO_DOMICILIO.name).alias(
+                        "numero_clean"
+                    ),
+                    pl_safe_int(Columns.ID_LOC_INDEC_RESIDENCIA.name).alias(
+                        "localidad_id"
+                    ),
+                ]
+            )
             .collect()
         )
 
@@ -319,21 +348,25 @@ class DomiciliosProcessor(BulkProcessorBase):
             localidad_id = registro["localidad_id"]
 
             # Lookup domicilio ID
-            id_domicilio = mapa_ids_domicilios.get((calle_clean, numero_clean, localidad_id))
+            id_domicilio = mapa_ids_domicilios.get(
+                (calle_clean, numero_clean, localidad_id)
+            )
 
             # Only create link if both ciudadano and domicilio are valid
             if codigo_ciudadano and id_domicilio:
-                datos_vinculos.append({
-                    "codigo_ciudadano": codigo_ciudadano,
-                    "id_domicilio": id_domicilio,
-                    "created_at": timestamp,
-                    "updated_at": timestamp,
-                })
+                datos_vinculos.append(
+                    {
+                        "codigo_ciudadano": codigo_ciudadano,
+                        "id_domicilio": id_domicilio,
+                        "created_at": timestamp,
+                        "updated_at": timestamp,
+                    }
+                )
 
         if not datos_vinculos:
             return 0
 
-        stmt = pg_insert(CiudadanoDomicilio.__table__).values(datos_vinculos)
+        stmt = pg_insert(inspect(CiudadanoDomicilio).local_table).values(datos_vinculos)
         upsert_stmt = stmt.on_conflict_do_nothing()
 
         try:
@@ -355,8 +388,8 @@ class DomiciliosProcessor(BulkProcessorBase):
             return {}
 
         # Get existing localities
-        stmt = select(Localidad.id_localidad_indec).where(
-            Localidad.id_localidad_indec.in_(ids_localidad)
+        stmt = select(col(Localidad.id_localidad_indec)).where(
+            col(Localidad.id_localidad_indec).in_(ids_localidad)
         )
         existentes = set(
             id_loc for (id_loc,) in self.context.session.execute(stmt).all()
@@ -390,7 +423,7 @@ class DomiciliosProcessor(BulkProcessorBase):
 
             # Insert placeholders
             if placeholders:
-                stmt = pg_insert(Localidad.__table__).values(placeholders)
+                stmt = pg_insert(inspect(Localidad).local_table).values(placeholders)
                 upsert_stmt = stmt.on_conflict_do_nothing(
                     index_elements=["id_localidad_indec"]
                 )

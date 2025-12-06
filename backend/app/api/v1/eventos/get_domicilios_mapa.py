@@ -12,12 +12,10 @@ from typing import List, Optional
 from fastapi import Depends, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
-from sqlmodel import Session
+from sqlmodel import Session, col
 
 from app.core.database import get_session
 from app.core.schemas.response import SuccessResponse
-from app.domains.vigilancia_nominal.models.enfermedad import Enfermedad
-from app.domains.vigilancia_nominal.models.caso import (    CasoEpidemiologico, CasoGrupoEnfermedad)
 from app.domains.territorio.geografia_models import (
     Departamento,
     Domicilio,
@@ -25,6 +23,11 @@ from app.domains.territorio.geografia_models import (
     Localidad,
     Provincia,
 )
+from app.domains.vigilancia_nominal.models.caso import (
+    CasoEpidemiologico,
+    CasoGrupoEnfermedad,
+)
+from app.domains.vigilancia_nominal.models.enfermedad import Enfermedad
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +71,7 @@ class DomicilioMapaItem(BaseModel):
     # Lista de fechas (fecha_inicio_sintomas o fecha_minima_caso) para timeline
     fechas_eventos: List[date] = Field(
         default_factory=list,
-        description="Lista de fechas de eventos para animación temporal"
+        description="Lista de fechas de eventos para animación temporal",
     )
 
 
@@ -127,79 +130,90 @@ async def get_domicilios_mapa(
     # Query principal: agrupar eventos por domicilio geocodificado
     query = (
         select(
-            Domicilio.id,
-            Domicilio.calle,
-            Domicilio.numero,
-            Domicilio.latitud,
-            Domicilio.longitud,
-            Localidad.id_localidad_indec,
-            Localidad.nombre.label("localidad_nombre"),
-            Departamento.id_departamento_indec,
-            Departamento.nombre.label("departamento_nombre"),
-            Provincia.id_provincia_indec,
-            Provincia.nombre.label("provincia_nombre"),
-            func.count(CasoEpidemiologico.id).label("total_eventos"),
-            func.min(CasoEpidemiologico.fecha_minima_caso).label("primer_evento_fecha"),
+            col(Domicilio.id),
+            col(Domicilio.calle),
+            col(Domicilio.numero),
+            col(Domicilio.latitud),
+            col(Domicilio.longitud),
+            col(Localidad.id_localidad_indec),
+            col(Localidad.nombre).label("localidad_nombre"),
+            col(Departamento.id_departamento_indec),
+            col(Departamento.nombre).label("departamento_nombre"),
+            col(Provincia.id_provincia_indec),
+            col(Provincia.nombre).label("provincia_nombre"),
+            func.count(col(CasoEpidemiologico.id)).label("total_eventos"),
+            func.min(col(CasoEpidemiologico.fecha_minima_caso)).label(
+                "primer_evento_fecha"
+            ),
         )
         .select_from(CasoEpidemiologico)
-        .join(Domicilio, CasoEpidemiologico.id_domicilio == Domicilio.id)
-        .join(Localidad, Domicilio.id_localidad_indec == Localidad.id_localidad_indec)
+        .join(Domicilio, col(CasoEpidemiologico.id_domicilio) == col(Domicilio.id))
+        .join(
+            Localidad,
+            col(Domicilio.id_localidad_indec) == col(Localidad.id_localidad_indec),
+        )
         .join(
             Departamento,
-            Localidad.id_departamento_indec == Departamento.id_departamento_indec,
+            col(Localidad.id_departamento_indec)
+            == col(Departamento.id_departamento_indec),
         )
         .join(
-            Provincia, Departamento.id_provincia_indec == Provincia.id_provincia_indec
+            Provincia,
+            col(Departamento.id_provincia_indec) == col(Provincia.id_provincia_indec),
         )
         # Solo domicilios geocodificados exitosamente
-        .where(Domicilio.latitud.is_not(None))
-        .where(Domicilio.longitud.is_not(None))
-        .where(Domicilio.estado_geocodificacion == EstadoGeocodificacion.GEOCODIFICADO)
+        .where(col(Domicilio.latitud).is_not(None))
+        .where(col(Domicilio.longitud).is_not(None))
+        .where(
+            col(Domicilio.estado_geocodificacion) == EstadoGeocodificacion.GEOCODIFICADO
+        )
     )
 
     # Aplicar filtros geográficos
     if id_provincia_indec is not None:
-        query = query.where(Provincia.id_provincia_indec == id_provincia_indec)
+        query = query.where(col(Provincia.id_provincia_indec) == id_provincia_indec)
     if id_departamento_indec is not None:
-        query = query.where(Departamento.id_departamento_indec == id_departamento_indec)
+        query = query.where(
+            col(Departamento.id_departamento_indec) == id_departamento_indec
+        )
     if id_localidad_indec is not None:
-        query = query.where(Localidad.id_localidad_indec == id_localidad_indec)
+        query = query.where(col(Localidad.id_localidad_indec) == id_localidad_indec)
 
     # Aplicar filtros de tipo de evento
     if id_grupo is not None:
         query = query.where(
-            CasoEpidemiologico.id.in_(
-                select(CasoGrupoEnfermedad.id_caso).where(
-                    CasoGrupoEnfermedad.id_grupo == id_grupo
+            col(CasoEpidemiologico.id).in_(
+                select(col(CasoGrupoEnfermedad.id_caso)).where(
+                    col(CasoGrupoEnfermedad.id_grupo) == id_grupo
                 )
             )
         )
     if id_enfermedad is not None:
-        query = query.where(CasoEpidemiologico.id_enfermedad == id_enfermedad)
+        query = query.where(col(CasoEpidemiologico.id_enfermedad) == id_enfermedad)
 
     # Filtro temporal
     if fecha_hasta is not None:
-        query = query.where(CasoEpidemiologico.fecha_minima_caso <= fecha_hasta)
+        query = query.where(col(CasoEpidemiologico.fecha_minima_caso) <= fecha_hasta)
 
     # Agrupar por domicilio
     query = query.group_by(
-        Domicilio.id,
-        Domicilio.calle,
-        Domicilio.numero,
-        Domicilio.latitud,
-        Domicilio.longitud,
-        Localidad.id_localidad_indec,
-        Localidad.nombre,
-        Departamento.id_departamento_indec,
-        Departamento.nombre,
-        Provincia.id_provincia_indec,
-        Provincia.nombre,
+        col(Domicilio.id),
+        col(Domicilio.calle),
+        col(Domicilio.numero),
+        col(Domicilio.latitud),
+        col(Domicilio.longitud),
+        col(Localidad.id_localidad_indec),
+        col(Localidad.nombre),
+        col(Departamento.id_departamento_indec),
+        col(Departamento.nombre),
+        col(Provincia.id_provincia_indec),
+        col(Provincia.nombre),
     )
 
     # Ordenar por cantidad de eventos (priorizar hotspots) y limitar
-    query = query.order_by(func.count(CasoEpidemiologico.id).desc()).limit(limit)
+    query = query.order_by(func.count(col(CasoEpidemiologico.id)).desc()).limit(limit)
 
-    result = session.exec(query).all()
+    result = session.execute(query).all()
 
     if not result:
         logger.info(
@@ -220,17 +234,19 @@ async def get_domicilios_mapa(
         # Query para obtener conteo de tipos por domicilio
         tipos_query = (
             select(
-                CasoEpidemiologico.id_domicilio,
-                Enfermedad.nombre.label("tipo_nombre"),
-                func.count(CasoEpidemiologico.id).label("count"),
+                col(CasoEpidemiologico.id_domicilio),
+                col(Enfermedad.nombre).label("tipo_nombre"),
+                func.count(col(CasoEpidemiologico.id)).label("count"),
             )
             .select_from(CasoEpidemiologico)
-            .outerjoin(Enfermedad, CasoEpidemiologico.id_enfermedad == Enfermedad.id)
-            .where(CasoEpidemiologico.id_domicilio.in_(domicilio_ids))
-            .group_by(CasoEpidemiologico.id_domicilio, Enfermedad.nombre)
+            .outerjoin(
+                Enfermedad, col(CasoEpidemiologico.id_enfermedad) == col(Enfermedad.id)
+            )
+            .where(col(CasoEpidemiologico.id_domicilio).in_(domicilio_ids))
+            .group_by(col(CasoEpidemiologico.id_domicilio), col(Enfermedad.nombre))
         )
 
-        tipos_result = session.exec(tipos_query).all()
+        tipos_result = session.execute(tipos_query).all()
 
         # Organizar por domicilio
         for tipo_row in tipos_result:
@@ -250,14 +266,14 @@ async def get_domicilios_mapa(
         # Obtener fecha_minima_caso de cada evento por domicilio
         fechas_query = (
             select(
-                CasoEpidemiologico.id_domicilio,
-                CasoEpidemiologico.fecha_minima_caso,
+                col(CasoEpidemiologico.id_domicilio),
+                col(CasoEpidemiologico.fecha_minima_caso),
             )
-            .where(CasoEpidemiologico.id_domicilio.in_(domicilio_ids))
-            .where(CasoEpidemiologico.fecha_minima_caso.is_not(None))
+            .where(col(CasoEpidemiologico.id_domicilio).in_(domicilio_ids))
+            .where(col(CasoEpidemiologico.fecha_minima_caso).is_not(None))
         )
 
-        fechas_result = session.exec(fechas_query).all()
+        fechas_result = session.execute(fechas_query).all()
 
         # Organizar fechas por domicilio
         for fecha_row in fechas_result:

@@ -20,12 +20,25 @@ FUENTES DE REFERENCIA:
 - MSal Argentina: https://www.argentina.gob.ar/salud/epidemiologia
 """
 
+from typing import List, Optional, TypedDict
+
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+
+class EnoData(TypedDict):
+    nombre: str
+    slug: str
+    descripcion: str
+    incubacion_min: Optional[int]
+    incubacion_max: Optional[int]
+    grupos: List[str]
+    fuente: str
+
+
 # Lista de tipos ENO con datos epidemiológicos
 # Cada entrada tiene: nombre, codigo, descripcion, incubacion_min, incubacion_max, grupos, fuente
-TIPOS_ENO = [
+TIPOS_ENO: List[EnoData] = [
     # =========================================================================
     # DENGUE Y ARBOVIROSIS
     # =========================================================================
@@ -44,7 +57,10 @@ TIPOS_ENO = [
         "descripcion": "Infección por flavivirus transmitido por Aedes. Generalmente leve, pero con riesgo de microcefalia y malformaciones congénitas en embarazadas infectadas.",
         "incubacion_min": 3,
         "incubacion_max": 14,
-        "grupos": ["infeccion-por-virus-del-zika", "sindrome-febril-agudo-inespecifico"],
+        "grupos": [
+            "infeccion-por-virus-del-zika",
+            "sindrome-febril-agudo-inespecifico",
+        ],
         "fuente": "https://www.who.int/news-room/fact-sheets/detail/zika-virus",
     },
     {
@@ -83,7 +99,6 @@ TIPOS_ENO = [
         "grupos": ["sindrome-febril-agudo-inespecifico"],
         "fuente": "https://www.cdc.gov/sle/about/index.html",
     },
-
     # =========================================================================
     # HANTAVIRUS Y FIEBRES HEMORRÁGICAS
     # =========================================================================
@@ -114,7 +129,6 @@ TIPOS_ENO = [
         "grupos": ["fiebre-hemorragica-argentina"],
         "fuente": "https://www.argentina.gob.ar/salud/epidemiologia/fha",
     },
-
     # =========================================================================
     # ENFERMEDADES RESPIRATORIAS
     # =========================================================================
@@ -142,7 +156,10 @@ TIPOS_ENO = [
         "descripcion": "COVID-19 en contextos de vigilancia especial: brotes institucionales, nuevas variantes de preocupación, reinfecciones, casos en vacunados.",
         "incubacion_min": 2,
         "incubacion_max": 14,
-        "grupos": ["estudio-de-sars-cov-2-en-situaciones-especiales", "infecciones-respiratorias-agudas"],
+        "grupos": [
+            "estudio-de-sars-cov-2-en-situaciones-especiales",
+            "infecciones-respiratorias-agudas",
+        ],
         "fuente": "https://www.who.int/emergencies/diseases/novel-coronavirus-2019",
     },
     {
@@ -151,7 +168,10 @@ TIPOS_ENO = [
         "descripcion": "Secuenciación genómica de muestras de SARS-CoV-2 para identificar y monitorear variantes circulantes y detectar variantes de preocupación.",
         "incubacion_min": None,  # Vigilancia de laboratorio
         "incubacion_max": None,
-        "grupos": ["vigilancia-genomica-de-sars-cov-2", "infecciones-respiratorias-agudas"],
+        "grupos": [
+            "vigilancia-genomica-de-sars-cov-2",
+            "infecciones-respiratorias-agudas",
+        ],
         "fuente": "https://www.who.int/activities/tracking-SARS-CoV-2-variants",
     },
     {
@@ -199,7 +219,6 @@ TIPOS_ENO = [
         "grupos": ["psitacosis"],
         "fuente": "https://www.cdc.gov/psittacosis/about/index.html",
     },
-
     # =========================================================================
     # ENFERMEDADES GASTROINTESTINALES
     # =========================================================================
@@ -209,7 +228,10 @@ TIPOS_ENO = [
         "descripcion": "Síndrome diarreico agudo de etiología infecciosa múltiple: viral (rotavirus, norovirus), bacteriana (Salmonella, Shigella, Campylobacter) o parasitaria.",
         "incubacion_min": 0,
         "incubacion_max": 3,
-        "grupos": ["diarreas-y-patogenos-de-transmision-alimentaria", "suh-y-diarreas-por-stec"],
+        "grupos": [
+            "diarreas-y-patogenos-de-transmision-alimentaria",
+            "suh-y-diarreas-por-stec",
+        ],
         "fuente": "https://www.who.int/news-room/fact-sheets/detail/diarrhoeal-disease",
     },
     {
@@ -293,7 +315,6 @@ TIPOS_ENO = [
         "grupos": ["colera"],
         "fuente": "https://www.who.int/news-room/fact-sheets/detail/cholera",
     },
-
     # =========================================================================
     # ZOONOSIS
     # =========================================================================
@@ -387,7 +408,6 @@ TIPOS_ENO = [
         "grupos": ["carbunco"],
         "fuente": "https://www.cdc.gov/anthrax/about/index.html",
     },
-
     # =========================================================================
     # ENVENENAMIENTO POR ANIMALES PONZOÑOSOS
     # =========================================================================
@@ -463,7 +483,6 @@ TIPOS_ENO = [
         "grupos": ["envenenamiento-por-animales-ponzonosos"],
         "fuente": "https://www.argentina.gob.ar/salud/epidemiologia/alacranismo",
     },
-
     # =========================================================================
     # INTOXICACIONES
     # =========================================================================
@@ -512,7 +531,6 @@ TIPOS_ENO = [
         "grupos": ["intoxicaciones"],
         "fuente": "https://www.who.int/news-room/fact-sheets/detail/poisoning-prevention-and-management",
     },
-
     # =========================================================================
     # LESIONES
     # =========================================================================
@@ -543,7 +561,6 @@ TIPOS_ENO = [
         "grupos": ["lesiones-intencionales"],
         "fuente": "https://www.who.int/news-room/fact-sheets/detail/violence-against-women",
     },
-
     # =========================================================================
     # VIH/SIDA
     # =========================================================================
@@ -583,7 +600,6 @@ TIPOS_ENO = [
         "grupos": ["vih-sida"],
         "fuente": "https://www.who.int/news-room/fact-sheets/detail/hiv-aids",
     },
-
     # =========================================================================
     # INFECCIONES DE TRANSMISIÓN SEXUAL
     # =========================================================================
@@ -602,7 +618,10 @@ TIPOS_ENO = [
         "descripcion": "Sífilis detectada durante control prenatal. El tratamiento oportuno de la madre previene la sífilis congénita en el recién nacido.",
         "incubacion_min": None,  # Screening
         "incubacion_max": None,
-        "grupos": ["infecciones-de-transmision-sexual", "infecciones-de-transmision-vertical"],
+        "grupos": [
+            "infecciones-de-transmision-sexual",
+            "infecciones-de-transmision-vertical",
+        ],
         "fuente": "https://www.who.int/news-room/fact-sheets/detail/syphilis",
     },
     {
@@ -611,7 +630,10 @@ TIPOS_ENO = [
         "descripcion": "Infección transplacentaria por T. pallidum. Puede causar muerte fetal, prematurez, malformaciones óseas, neurosífilis. Completamente prevenible.",
         "incubacion_min": None,  # Transmisión intrauterina
         "incubacion_max": None,
-        "grupos": ["infecciones-de-transmision-sexual", "infecciones-de-transmision-vertical"],
+        "grupos": [
+            "infecciones-de-transmision-sexual",
+            "infecciones-de-transmision-vertical",
+        ],
         "fuente": "https://www.who.int/news-room/fact-sheets/detail/syphilis",
     },
     {
@@ -659,7 +681,6 @@ TIPOS_ENO = [
         "grupos": ["infecciones-de-transmision-sexual"],
         "fuente": "https://www.who.int/news-room/fact-sheets/detail/sexually-transmitted-infections-(stis)",
     },
-
     # =========================================================================
     # CHAGAS
     # =========================================================================
@@ -717,7 +738,6 @@ TIPOS_ENO = [
         "grupos": ["chagas"],
         "fuente": "https://www.argentina.gob.ar/salud/epidemiologia/chagas",
     },
-
     # =========================================================================
     # HEPATITIS VIRALES
     # =========================================================================
@@ -793,7 +813,6 @@ TIPOS_ENO = [
         "grupos": ["hepatitis-virales"],
         "fuente": "https://www.who.int/news-room/fact-sheets/detail/hepatitis-e",
     },
-
     # =========================================================================
     # TRANSMISIÓN VERTICAL - OTRAS
     # =========================================================================
@@ -821,7 +840,10 @@ TIPOS_ENO = [
         "descripcion": "Infección por virus de rubéola durante embarazo, especialmente primer trimestre. Alto riesgo de síndrome de rubéola congénita.",
         "incubacion_min": 14,
         "incubacion_max": 21,
-        "grupos": ["infecciones-de-transmision-vertical", "enfermedad-febril-exantematica-efe"],
+        "grupos": [
+            "infecciones-de-transmision-vertical",
+            "enfermedad-febril-exantematica-efe",
+        ],
         "fuente": "https://www.who.int/news-room/fact-sheets/detail/rubella",
     },
     {
@@ -851,7 +873,6 @@ TIPOS_ENO = [
         "grupos": ["infecciones-de-transmision-vertical"],
         "fuente": "https://www.who.int/news-room/fact-sheets/detail/herpes-simplex-virus",
     },
-
     # =========================================================================
     # LEISHMANIASIS Y PARASITOSIS
     # =========================================================================
@@ -909,7 +930,6 @@ TIPOS_ENO = [
         "grupos": ["parasitosis-hematicas-y-tisulares-otras"],
         "fuente": "https://www.cdc.gov/naegleria/about/index.html",
     },
-
     # =========================================================================
     # MENINGITIS Y OTRAS INFECCIONES INVASIVAS
     # =========================================================================
@@ -985,7 +1005,6 @@ TIPOS_ENO = [
         "grupos": ["otras-infecciones-invasivas"],
         "fuente": "https://www.cdc.gov/group-b-strep/about/index.html",
     },
-
     # =========================================================================
     # ENFERMEDADES PREVENIBLES POR VACUNAS
     # =========================================================================
@@ -1079,7 +1098,6 @@ TIPOS_ENO = [
         "grupos": ["viruela"],
         "fuente": "https://www.who.int/news-room/fact-sheets/detail/monkeypox",
     },
-
     # =========================================================================
     # MICOSIS SISTÉMICAS
     # =========================================================================
@@ -1173,7 +1191,6 @@ TIPOS_ENO = [
         "grupos": ["micosis-sistemicas-oportunistas"],
         "fuente": "https://www.cdc.gov/pneumocystis-pneumonia/about/index.html",
     },
-
     # =========================================================================
     # CITOMEGALOVIRUS
     # =========================================================================
@@ -1186,7 +1203,6 @@ TIPOS_ENO = [
         "grupos": ["citomegalovirosis"],
         "fuente": "https://www.cdc.gov/cmv/about/index.html",
     },
-
     # =========================================================================
     # PESQUISA NEONATAL
     # =========================================================================
@@ -1262,7 +1278,6 @@ TIPOS_ENO = [
         "grupos": ["pesquisa-neonatal"],
         "fuente": "https://www.argentina.gob.ar/salud/pesquisa-neonatal",
     },
-
     # =========================================================================
     # OTROS
     # =========================================================================
@@ -1329,7 +1344,6 @@ TIPOS_ENO = [
         "grupos": ["rickettsiosis"],
         "fuente": "https://www.cdc.gov/lyme/about/index.html",
     },
-
     # =========================================================================
     # TIPOS ADICIONALES DEL SNVS (códigos legacy en uso)
     # Estos tipos tienen eventos asociados en la DB con estos códigos exactos
@@ -1457,7 +1471,10 @@ TIPOS_ENO = [
         "descripcion": "COVID-19 en contextos de vigilancia especial: brotes institucionales, nuevas variantes de preocupación, reinfecciones, casos en vacunados.",
         "incubacion_min": 2,
         "incubacion_max": 14,
-        "grupos": ["estudio-de-sars-cov-2-en-situaciones-especiales", "infecciones-respiratorias-agudas"],
+        "grupos": [
+            "estudio-de-sars-cov-2-en-situaciones-especiales",
+            "infecciones-respiratorias-agudas",
+        ],
         "fuente": "https://www.who.int/emergencies/diseases/novel-coronavirus-2019",
     },
     {
@@ -1637,7 +1654,10 @@ TIPOS_ENO = [
         "descripcion": "Sífilis detectada durante control prenatal. El tratamiento oportuno de la madre previene la sífilis congénita en el recién nacido.",
         "incubacion_min": None,
         "incubacion_max": None,
-        "grupos": ["infecciones-de-transmision-sexual", "infecciones-de-transmision-vertical"],
+        "grupos": [
+            "infecciones-de-transmision-sexual",
+            "infecciones-de-transmision-vertical",
+        ],
         "fuente": "https://www.who.int/news-room/fact-sheets/detail/syphilis",
     },
     {
@@ -1700,7 +1720,10 @@ TIPOS_ENO = [
         "descripcion": "Secuenciación genómica de muestras de SARS-CoV-2 para identificar y monitorear variantes circulantes y detectar variantes de preocupación.",
         "incubacion_min": None,
         "incubacion_max": None,
-        "grupos": ["vigilancia-genomica-de-sars-cov-2", "infecciones-respiratorias-agudas"],
+        "grupos": [
+            "vigilancia-genomica-de-sars-cov-2",
+            "infecciones-respiratorias-agudas",
+        ],
         "fuente": "https://www.who.int/activities/tracking-SARS-CoV-2-variants",
     },
     {
@@ -1721,7 +1744,6 @@ TIPOS_ENO = [
         "grupos": ["viruela"],
         "fuente": "https://www.who.int/news-room/fact-sheets/detail/monkeypox",
     },
-
     # =========================================================================
     # CÓDIGOS SNVS VARIANTES (diferentes códigos para mismo tipo en el SNVS)
     # =========================================================================
@@ -1827,7 +1849,9 @@ def seed_tipos_eno(session: Session) -> int:
             grupos_faltantes.update(grupos_invalidos)
 
         if not grupos_validos:
-            print(f"  ⚠️  Omitido: {tipo['codigo']} - grupos no encontrados: {tipo['grupos']}")
+            print(
+                f"  ⚠️  Omitido: {tipo['slug']} - grupos no encontrados: {grupos_invalidos}"
+            )
             skipped += 1
             continue
 
@@ -1845,14 +1869,17 @@ def seed_tipos_eno(session: Session) -> int:
             RETURNING id, (xmax = 0) AS inserted
         """)
 
-        result = session.execute(stmt, {
-            "nombre": tipo["nombre"],
-            "slug": tipo["slug"],
-            "descripcion": tipo["descripcion"],
-            "incubacion_min": tipo["incubacion_min"],
-            "incubacion_max": tipo["incubacion_max"],
-            "fuente_referencia": tipo["fuente"],
-        })
+        result = session.execute(
+            stmt,
+            {
+                "nombre": tipo["nombre"],
+                "codigo": tipo["slug"],
+                "descripcion": tipo["descripcion"],
+                "incubacion_min": tipo["incubacion_min"],
+                "incubacion_max": tipo["incubacion_max"],
+                "fuente_referencia": tipo["fuente"],
+            },
+        )
 
         row = result.fetchone()
         tipo_id = row[0]
@@ -1860,22 +1887,28 @@ def seed_tipos_eno(session: Session) -> int:
 
         if was_inserted:
             inserted += 1
-            print(f"  ✓ Nuevo: {tipo['codigo']}")
+            print(f"  ✓ Nuevo: {tipo['slug']}")
         else:
             updated += 1
 
         # Crear relaciones con grupos (limpiar existentes primero)
-        session.execute(text("""
+        session.execute(
+            text("""
             DELETE FROM tipo_eno_grupo_eno WHERE id_enfermedad = :tipo_id
-        """), {"tipo_id": tipo_id})
+        """),
+            {"tipo_id": tipo_id},
+        )
 
         for grupo_codigo in grupos_validos:
             grupo_id = grupo_map[grupo_codigo]
-            session.execute(text("""
+            session.execute(
+                text("""
                 INSERT INTO tipo_eno_grupo_eno (id_enfermedad, id_grupo, created_at, updated_at)
                 VALUES (:tipo_id, :grupo_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 ON CONFLICT DO NOTHING
-            """), {"tipo_id": tipo_id, "grupo_id": grupo_id})
+            """),
+                {"tipo_id": tipo_id, "grupo_id": grupo_id},
+            )
 
     # Eliminar tipos huérfanos (no en el seed Y sin referencias)
     codigos_seed = {t["slug"] for t in TIPOS_ENO}
@@ -1888,7 +1921,9 @@ def seed_tipos_eno(session: Session) -> int:
         FROM tipo_eno t
         WHERE t.codigo NOT IN :codigos
     """)
-    huerfanos = session.execute(huerfanos_query, {"codigos": tuple(codigos_seed)}).fetchall()
+    huerfanos = session.execute(
+        huerfanos_query, {"codigos": tuple(codigos_seed)}
+    ).fetchall()
 
     eliminados = 0
     con_referencias = []
@@ -1897,9 +1932,14 @@ def seed_tipos_eno(session: Session) -> int:
         tipo_id, codigo, nombre, ref_count = h
         if ref_count == 0:
             # Eliminar relaciones primero
-            session.execute(text("DELETE FROM tipo_eno_grupo_eno WHERE id_enfermedad = :id"), {"id": tipo_id})
+            session.execute(
+                text("DELETE FROM tipo_eno_grupo_eno WHERE id_enfermedad = :id"),
+                {"id": tipo_id},
+            )
             # Luego eliminar el tipo
-            session.execute(text("DELETE FROM tipo_eno WHERE id = :id"), {"id": tipo_id})
+            session.execute(
+                text("DELETE FROM tipo_eno WHERE id = :id"), {"id": tipo_id}
+            )
             eliminados += 1
             print(f"  🗑️  Eliminado huérfano: {codigo}")
         else:
@@ -1907,7 +1947,9 @@ def seed_tipos_eno(session: Session) -> int:
 
     session.commit()
 
-    print(f"\n✅ Tipos ENO: {inserted} nuevos, {updated} actualizados, {skipped} omitidos")
+    print(
+        f"\n✅ Tipos ENO: {inserted} nuevos, {updated} actualizados, {skipped} omitidos"
+    )
     print(f"   Total procesados: {len(TIPOS_ENO)} tipos")
 
     if eliminados > 0:
@@ -1926,7 +1968,7 @@ def seed_tipos_eno(session: Session) -> int:
     return inserted + updated
 
 
-def main():
+def main() -> None:
     """Función principal para ejecutar el seed."""
     import os
 
@@ -1934,7 +1976,7 @@ def main():
 
     database_url = os.getenv(
         "DATABASE_URL",
-        "postgresql://epidemiologia_user:epidemiologia_password@localhost:5432/epidemiologia_db"
+        "postgresql://epidemiologia_user:epidemiologia_password@localhost:5432/epidemiologia_db",
     )
 
     if "postgresql+asyncpg" in database_url:

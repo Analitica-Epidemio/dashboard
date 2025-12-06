@@ -3,6 +3,7 @@
 import polars as pl
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlmodel import SQLModel, col
 
 from app.domains.vigilancia_nominal.models.salud import Comorbilidad
 from app.domains.vigilancia_nominal.models.sujetos import (
@@ -43,25 +44,29 @@ class ComorbilidadesProcessor(BulkProcessorBase):
 
         # Get existing citizens
         codigos_ciudadanos = (
-            comorbilidades_df.filter(pl.col(Columns.CODIGO_CIUDADANO.name).is_not_null())
+            comorbilidades_df.filter(
+                pl.col(Columns.CODIGO_CIUDADANO.name).is_not_null()
+            )
             .select(Columns.CODIGO_CIUDADANO.name)
             .unique()
             .to_series()
             .to_list()
         )
 
-        stmt = select(Ciudadano.codigo_ciudadano).where(
-            Ciudadano.codigo_ciudadano.in_(codigos_ciudadanos)
+        stmt = select(col(Ciudadano.codigo_ciudadano)).where(
+            col(Ciudadano.codigo_ciudadano).in_(codigos_ciudadanos)
         )
         ciudadanos_existentes = set(
             codigo for (codigo,) in self.context.session.execute(stmt).all()
         )
 
         # Crear DataFrame de mapeo para hacer join en Polars
-        mapping_df = pl.DataFrame({
-            "comorbilidad_clean": list(comorbilidad_mapping.keys()),
-            "id_comorbilidad": list(comorbilidad_mapping.values()),
-        })
+        mapping_df = pl.DataFrame(
+            {
+                "comorbilidad_clean": list(comorbilidad_mapping.keys()),
+                "id_comorbilidad": list(comorbilidad_mapping.values()),
+            }
+        )
 
         # LAZY EVALUATION con join - TODO en expresiones Polars
         timestamp = self._get_current_timestamp()
@@ -71,25 +76,33 @@ class ComorbilidadesProcessor(BulkProcessorBase):
             .filter(
                 pl.col(Columns.CODIGO_CIUDADANO.name).is_not_null()
                 & pl.col(Columns.COMORBILIDAD.name).is_not_null()
-                & pl.col(Columns.CODIGO_CIUDADANO.name).is_in(list(ciudadanos_existentes))
+                & pl.col(Columns.CODIGO_CIUDADANO.name).is_in(
+                    list(ciudadanos_existentes)
+                )
             )
-            .select([
-                # Usar helper functions - sin casts redundantes
-                pl_safe_int(Columns.CODIGO_CIUDADANO.name).alias("codigo_ciudadano"),
-                # Limpiar comorbilidad para join
-                (
-                    pl.col(Columns.COMORBILIDAD.name)
-                    .str.strip_chars()
-                    .str.to_uppercase()
-                ).alias("comorbilidad_clean"),
-            ])
+            .select(
+                [
+                    # Usar helper functions - sin casts redundantes
+                    pl_safe_int(Columns.CODIGO_CIUDADANO.name).alias(
+                        "codigo_ciudadano"
+                    ),
+                    # Limpiar comorbilidad para join
+                    (
+                        pl.col(Columns.COMORBILIDAD.name)
+                        .str.strip_chars()
+                        .str.to_uppercase()
+                    ).alias("comorbilidad_clean"),
+                ]
+            )
             # JOIN en Polars para mapear IDs - mucho más rápido que loop Python
             .join(mapping_df.lazy(), on="comorbilidad_clean", how="inner")
             .drop("comorbilidad_clean")  # Ya no necesitamos este campo
-            .with_columns([
-                pl.lit(timestamp).alias("created_at"),
-                pl.lit(timestamp).alias("updated_at"),
-            ])
+            .with_columns(
+                [
+                    pl.lit(timestamp).alias("created_at"),
+                    pl.lit(timestamp).alias("updated_at"),
+                ]
+            )
             .collect()  # Ejecutar todo el query plan optimizado
         )
 
@@ -100,7 +113,8 @@ class ComorbilidadesProcessor(BulkProcessorBase):
         valid_records = comorbilidades_prepared.to_dicts()
 
         # Insert
-        stmt = pg_insert(CiudadanoComorbilidades.__table__).values(valid_records)
+        table = SQLModel.metadata.tables[CiudadanoComorbilidades.__tablename__]
+        stmt = pg_insert(table).values(valid_records)
         upsert_stmt = stmt.on_conflict_do_nothing()
         self.context.session.execute(upsert_stmt)
 
@@ -131,14 +145,16 @@ class ComorbilidadesProcessor(BulkProcessorBase):
         df_clean = (
             df.lazy()
             .filter(pl.col(Columns.COMORBILIDAD.name).is_not_null())
-            .select([
-                # Limpiar descripciones con expresiones Polars
-                (
-                    pl.col(Columns.COMORBILIDAD.name)
-                    .str.strip_chars()
-                    .str.to_uppercase()
-                ).alias(Columns.COMORBILIDAD.name)
-            ])
+            .select(
+                [
+                    # Limpiar descripciones con expresiones Polars
+                    (
+                        pl.col(Columns.COMORBILIDAD.name)
+                        .str.strip_chars()
+                        .str.to_uppercase()
+                    ).alias(Columns.COMORBILIDAD.name)
+                ]
+            )
             .unique()
             .filter(
                 # Filtrar strings vacíos

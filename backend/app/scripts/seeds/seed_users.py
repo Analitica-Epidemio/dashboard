@@ -1,6 +1,7 @@
 """
 Seed de usuarios iniciales del sistema
 """
+
 from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session

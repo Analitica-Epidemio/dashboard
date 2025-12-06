@@ -14,6 +14,7 @@ from sqlmodel import Session
 
 from app.core.bulk import BulkOperationResult
 from app.core.csv_reader import load_file
+
 from .bulk import MainProcessor as MainBulkProcessor
 from .classifier import EventClassifier
 from .config import ProcessingContext
@@ -39,7 +40,11 @@ class SimpleEpidemiologicalProcessor:
     ):
         self.session = session
         self.callback_progreso = callback_progreso
-        self.estadisticas = {"filas_procesadas": 0, "entidades_creadas": 0, "errores": []}
+        self.estadisticas: Dict[str, Any] = {
+            "filas_procesadas": 0,
+            "entidades_creadas": 0,
+            "errores": [],
+        }
 
     def procesar_archivo(
         self, ruta_archivo: Path, nombre_hoja: Optional[str] = None
@@ -56,6 +61,7 @@ class SimpleEpidemiologicalProcessor:
         """
         logger.info(f"Procesando: {ruta_archivo}")
 
+        df_datos: Optional[pl.DataFrame] = None
         try:
             # 1. Cargar archivo (5% del trabajo)
             self._actualizar_progreso(5, "Cargando archivo")
@@ -86,7 +92,9 @@ class SimpleEpidemiologicalProcessor:
                 "entities_created": self.estadisticas["entidades_creadas"],
                 "ciudadanos_created": self.estadisticas.get("ciudadanos_creados", 0),
                 "eventos_created": self.estadisticas.get("eventos_creados", 0),
-                "diagnosticos_created": self.estadisticas.get("diagnosticos_creados", 0),
+                "diagnosticos_created": self.estadisticas.get(
+                    "diagnosticos_creados", 0
+                ),
                 "errors": self.estadisticas["errores"],
             }
 
@@ -97,7 +105,7 @@ class SimpleEpidemiologicalProcessor:
             return {
                 "status": "FAILED",
                 "error": mensaje_error,
-                "total_rows": len(df_datos) if "df_datos" in locals() else 0,
+                "total_rows": len(df_datos) if df_datos is not None else 0,
                 "processed_rows": 0,
                 "entities_created": 0,
                 "errors": [mensaje_error],
@@ -111,7 +119,9 @@ class SimpleEpidemiologicalProcessor:
         # Usar el nuevo sistema de validación
         from .config.columns import get_column_names, validate_dataframe
 
-        resultado_validacion = validate_dataframe(df)
+        # validate_dataframe expects pd.DataFrame, so convert
+        df_pandas = df.to_pandas()
+        resultado_validacion = validate_dataframe(df_pandas)
 
         if not resultado_validacion["is_valid"]:
             faltantes_requeridas = resultado_validacion["missing_required"]
@@ -143,6 +153,7 @@ class SimpleEpidemiologicalProcessor:
 
         Reporta progreso granular durante las ~18 operaciones de BD (25%-95%).
         """
+
         # Crear callback wrapper que mapea progreso interno (0-100) a rango 25-95
         def callback_progreso_wrapper(porcentaje_interno: int, mensaje: str):
             # Mapear 0-100 interno → 25-95 externo
@@ -163,13 +174,21 @@ class SimpleEpidemiologicalProcessor:
         self.estadisticas["entidades_creadas"] = total_entidades
 
         # Calcular contadores específicos por tipo
-        self.estadisticas["ciudadanos_creados"] = resultados.get("ciudadanos", BulkOperationResult(0, 0, 0, [], 0.0)).inserted_count
-        self.estadisticas["eventos_creados"] = resultados.get("eventos", BulkOperationResult(0, 0, 0, [], 0.0)).inserted_count
-        self.estadisticas["diagnosticos_creados"] = resultados.get("diagnosticos_eventos", BulkOperationResult(0, 0, 0, [], 0.0)).inserted_count
+        self.estadisticas["ciudadanos_creados"] = resultados.get(
+            "ciudadanos", BulkOperationResult(0, 0, 0, [], 0.0)
+        ).inserted_count
+        self.estadisticas["eventos_creados"] = resultados.get(
+            "eventos", BulkOperationResult(0, 0, 0, [], 0.0)
+        ).inserted_count
+        self.estadisticas["diagnosticos_creados"] = resultados.get(
+            "diagnosticos_eventos", BulkOperationResult(0, 0, 0, [], 0.0)
+        ).inserted_count
 
         # Agregar errores si los hay
-        for res in resultados.values():
-            self.estadisticas["errores"].extend(res.errors)
+        errores_list = self.estadisticas.get("errores")
+        if errores_list is not None and isinstance(errores_list, list):
+            for res in resultados.values():
+                errores_list.extend(res.errors)
 
         # NOTA: Los commits ya se hicieron en cada operación individual del MainProcessor
         logger.info(f"Procesamiento completado: {total_entidades} entidades creadas")

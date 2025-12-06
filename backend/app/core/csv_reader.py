@@ -33,7 +33,7 @@ def load_file(file_path: Path, sheet_name: Optional[str] = None) -> pl.DataFrame
         df_polars = pl.read_csv(
             file_path,
             encoding="latin1",  # SNVS siempre usa Latin-1 (ISO-8859-1)
-            null_values=['', ' ', '  '],
+            null_values=["", " ", "  "],
             try_parse_dates=True,
             infer_schema_length=10000,
             truncate_ragged_lines=True,  # CSV del SNVS tienen filas irregulares
@@ -44,7 +44,9 @@ def load_file(file_path: Path, sheet_name: Optional[str] = None) -> pl.DataFrame
 
         # Polars requiere nombre de hoja, no índice
         if not sheet_name:
-            raise ValueError("Excel requiere sheet_name - debe especificarse la hoja a procesar")
+            raise ValueError(
+                "Excel requiere sheet_name - debe especificarse la hoja a procesar"
+            )
 
         df_polars = pl.read_excel(
             file_path,
@@ -55,7 +57,9 @@ def load_file(file_path: Path, sheet_name: Optional[str] = None) -> pl.DataFrame
         raise ValueError(f"Formato no soportado: {file_path.suffix}")
 
     # Log columnas encontradas
-    logger.info(f"✅ Archivo cargado con Polars: {df_polars.shape[0]:,} filas × {df_polars.shape[1]} columnas")
+    logger.info(
+        f"✅ Archivo cargado con Polars: {df_polars.shape[0]:,} filas × {df_polars.shape[1]} columnas"
+    )
 
     # POLARS PURO - no convertir a pandas
     # Todo el pipeline usa Polars para máximo rendimiento y mínima memoria

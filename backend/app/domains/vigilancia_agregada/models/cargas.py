@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Annotated, List, Optional
 
 from pydantic import field_validator
 from sqlalchemy import BigInteger, Index, SmallInteger
+from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship
 
 from app.core.models import BaseModel
@@ -196,19 +197,19 @@ class NotificacionSemanal(BaseModel, table=True):
     # Relaciones
     # ═══════════════════════════════════════════════════════════════
 
-    establecimiento: Optional["Establecimiento"] = Relationship()
+    establecimiento: Mapped[Optional["Establecimiento"]] = Relationship()
 
-    conteos_clinicos: List["ConteoCasosClinicos"] = Relationship(
+    conteos_clinicos: Mapped[List["ConteoCasosClinicos"]] = Relationship(
         back_populates="notificacion",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
 
-    conteos_laboratorio: List["ConteoEstudiosLab"] = Relationship(
+    conteos_laboratorio: Mapped[List["ConteoEstudiosLab"]] = Relationship(
         back_populates="notificacion",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
 
-    conteos_internacion: List["ConteoCamasIRA"] = Relationship(
+    conteos_internacion: Mapped[List["ConteoCamasIRA"]] = Relationship(
         back_populates="notificacion",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )

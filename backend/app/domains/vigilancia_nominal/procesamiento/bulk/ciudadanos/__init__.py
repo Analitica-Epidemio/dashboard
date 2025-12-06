@@ -52,9 +52,7 @@ class CiudadanosManager:
         """Bulk upsert addresses and citizen-address links."""
         return self.domicilios.upsert_ciudadanos_domicilios(df)
 
-    def upsert_ciudadanos_datos(
-        self, df: pl.DataFrame
-    ) -> BulkOperationResult:
+    def upsert_ciudadanos_datos(self, df: pl.DataFrame) -> BulkOperationResult:
         """Bulk upsert citizen data linked to events."""
         return self.ciudadanos.upsert_ciudadanos_datos(df)
 

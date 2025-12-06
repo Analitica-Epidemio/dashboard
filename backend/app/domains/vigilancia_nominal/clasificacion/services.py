@@ -39,7 +39,12 @@ class EventClassificationService:
         self.session = session
         self.strategy_repo = EstrategiaClasificacionRepository(session)
         self.rule_repo = ClassificationRuleRepository(session)
+        self.rule_repo = ClassificationRuleRepository(session)
         self._cache: Dict[int, EstrategiaClasificacion] = {}
+        self.POSITIVE_CLASSIFICATIONS = {
+            TipoClasificacion.CONFIRMADOS.value,
+            TipoClasificacion.CON_RESULTADO_MORTAL.value,
+        }
 
     async def classify_events(
         self, df: pd.DataFrame, id_enfermedad: int, use_cache: bool = True
@@ -89,12 +94,12 @@ class EventClassificationService:
 
             # Aplicar clasificación donde se cumple la regla
             indices = df[unclassified_mask][rule_mask].index
-            df.loc[indices, "clasificacion"] = rule.classification.value
+            df.loc[indices, "clasificacion"] = rule.classification
 
             # Marcar como positivo si corresponde
             if rule.classification in [
-                TipoClasificacion.CONFIRMADOS,
-                TipoClasificacion.CON_RESULTADO_MORTAL,
+                TipoClasificacion.CONFIRMADOS.value,
+                TipoClasificacion.CON_RESULTADO_MORTAL.value,
             ]:
                 df.loc[indices, "es_positivo"] = True
 
@@ -121,7 +126,10 @@ class EventClassificationService:
             DataFrame modificado
         """
         # Aplicar filtro de provincia si corresponde
-        if strategy.usa_provincia_carga and "PROVINCIA_CARGA" in df.columns:
+        usa_provincia_carga = (
+            strategy.config.get("usa_provincia_carga") if strategy.config else False
+        )
+        if usa_provincia_carga and "PROVINCIA_CARGA" in df.columns:
             df = df[df["PROVINCIA_CARGA"] == "Chubut"].copy()
         elif "PROVINCIA_RESIDENCIA" in df.columns:
             df = df[df["PROVINCIA_RESIDENCIA"] == "Chubut"].copy()
@@ -188,15 +196,16 @@ class EventClassificationService:
 
         # Aplicar según tipo de filtro
         if filter_type == TipoFiltro.CAMPO_IGUAL:
-            return df[field_name] == condition.value
+            val = condition.config.get("value")
+            return df[field_name] == val
 
         elif filter_type == TipoFiltro.CAMPO_EN_LISTA:
-            return df[field_name].isin(condition.values or [])
+            vals = condition.config.get("values") or []
+            return df[field_name].isin(vals)
 
         elif filter_type == TipoFiltro.CAMPO_CONTIENE:
-            return df[field_name].str.contains(
-                condition.value or "", na=False, case=False
-            )
+            val = condition.config.get("value") or ""
+            return df[field_name].str.contains(val, na=False, case=False)
 
         elif filter_type == TipoFiltro.CAMPO_EXISTE:
             return df[field_name].notna()
@@ -234,7 +243,7 @@ class EventClassificationService:
         """
         config = condition.config or {}
         extraction_fields = config.get("extraction_fields", [])
-        pattern = condition.pattern
+        pattern = config.get("pattern")
         normalization = config.get("normalization", {})
         case_insensitive = config.get("case_insensitive", True)
         create_field = config.get("create_field")
@@ -466,9 +475,9 @@ class EventClassificationService:
 
             # Aplicar clasificación a las filas que cumplen la regla
             matching_indices = unclassified_df[rule_mask].index
-            df.loc[matching_indices, "clasificacion"] = rule.classification.value
+            df.loc[matching_indices, "clasificacion"] = rule.classification
             df.loc[matching_indices, "es_positivo"] = (
-                rule.classification.value in self.POSITIVE_CLASSIFICATIONS
+                rule.classification in self.POSITIVE_CLASSIFICATIONS
             )
 
         # Marcar casos no clasificados como 'todos'
@@ -538,7 +547,10 @@ class StrategyValidationService:
         errors = []
 
         # Validar que valid_from sea anterior a valid_until
-        if strategy.valid_until is not None and strategy.valid_from >= strategy.valid_until:
+        if (
+            strategy.valid_until is not None
+            and strategy.valid_from >= strategy.valid_until
+        ):
             errors.append(
                 f"valid_from ({strategy.valid_from}) debe ser anterior a valid_until ({strategy.valid_until})"
             )
@@ -576,7 +588,10 @@ class StrategyValidationService:
             "totales_historicos",
         ]
 
-        for chart in strategy.graficos_disponibles:
+        graficos = (
+            strategy.config.get("graficos_disponibles", []) if strategy.config else []
+        )
+        for chart in graficos:
             if chart not in valid_charts:
                 errors.append(f"Tipo de gráfico inválido: {chart}")
 
@@ -630,28 +645,31 @@ class StrategyValidationService:
 
         # Validar según tipo
         if condition.filter_type == TipoFiltro.CAMPO_IGUAL:
-            if not condition.value:
+            if not condition.config.get("value"):
                 errors.append(
                     f"Condición {condition.id}: CAMPO_IGUAL requiere un valor"
                 )
 
         elif condition.filter_type == TipoFiltro.CAMPO_EN_LISTA:
-            if not condition.values or len(condition.values) == 0:
+            vals = condition.config.get("values")
+            if not vals or len(vals) == 0:
                 errors.append(
                     f"Condición {condition.id}: CAMPO_EN_LISTA requiere una lista de valores"
                 )
 
         elif condition.filter_type == TipoFiltro.REGEX_EXTRACCION:
-            if not condition.pattern:
+            pat = condition.config.get("pattern")
+            if not pat:
                 errors.append(
                     f"Condición {condition.id}: REGEX_EXTRACCION requiere un patrón"
                 )
 
             # Validar regex
-            try:
-                re.compile(condition.pattern)
-            except re.error:
-                errors.append(f"Condición {condition.id}: Patrón regex inválido")
+            if pat:
+                try:
+                    re.compile(str(pat))
+                except re.error:
+                    errors.append(f"Condición {condition.id}: Patrón regex inválido")
 
             # Validar configuración
             if condition.config:

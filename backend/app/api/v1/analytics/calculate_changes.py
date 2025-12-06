@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 async def calculate_changes(
     request: CalculateChangesRequest,
     db: AsyncSession = Depends(get_async_session),
-    current_user: Optional[User] = RequireAuthOrSignedUrl
+    current_user: Optional[User] = RequireAuthOrSignedUrl,
 ) -> SuccessResponse[CalculateChangesResponse]:
     """
     Calcula cambios para eventos custom seleccionados por el usuario.
@@ -114,13 +114,16 @@ async def calculate_changes(
         ORDER BY a.tipo_eno_nombre
     """)
 
-    result = await db.execute(query, {
-        "fecha_inicio_actual": fecha_inicio_actual,
-        "fecha_fin_actual": fecha_fin_actual,
-        "fecha_inicio_anterior": fecha_inicio_anterior,
-        "fecha_fin_anterior": fecha_fin_anterior,
-        "tipo_eno_ids": request.tipo_eno_ids
-    })
+    result = await db.execute(
+        query,
+        {
+            "fecha_inicio_actual": fecha_inicio_actual,
+            "fecha_fin_actual": fecha_fin_actual,
+            "fecha_inicio_anterior": fecha_inicio_anterior,
+            "fecha_fin_anterior": fecha_fin_anterior,
+            "tipo_eno_ids": request.tipo_eno_ids,
+        },
+    )
     rows = result.fetchall()
 
     # Procesar resultados
@@ -135,17 +138,19 @@ async def calculate_changes(
         else:
             categoria = "estable"
 
-        eventos.append(CasoEpidemiologicoCambioConCategoria(
-            tipo_eno_id=row.tipo_eno_id,
-            tipo_eno_nombre=row.tipo_eno_nombre,
-            grupo_eno_id=row.id_grupo,
-            grupo_eno_nombre=row.grupo_nombre,
-            casos_actuales=int(row.casos_actuales),
-            casos_anteriores=int(row.casos_anteriores),
-            diferencia_absoluta=int(row.diferencia_absoluta),
-            diferencia_porcentual=round(diferencia_pct, 2),
-            categoria=categoria
-        ))
+        eventos.append(
+            CasoEpidemiologicoCambioConCategoria(
+                tipo_eno_id=row.tipo_eno_id,
+                tipo_eno_nombre=row.tipo_eno_nombre,
+                grupo_eno_id=row.id_grupo,
+                grupo_eno_nombre=row.grupo_nombre,
+                casos_actuales=int(row.casos_actuales),
+                casos_anteriores=int(row.casos_anteriores),
+                diferencia_absoluta=int(row.diferencia_absoluta),
+                diferencia_porcentual=round(diferencia_pct, 2),
+                categoria=categoria,
+            )
+        )
 
     logger.info(f"Calculados cambios para {len(eventos)} eventos")
 

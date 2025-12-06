@@ -8,20 +8,20 @@ Este módulo contiene:
 
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict
 
-from sqlmodel import and_, select
+from sqlmodel import and_, col, select
 
+import app.domains.vigilancia_agregada.procesamiento  # noqa: F401
+
+# IMPORTANTE: Importar módulos de procesamiento para registrar processors
+import app.domains.vigilancia_nominal.procesamiento  # noqa: F401
 from app.core.celery_app import file_processing_task, maintenance_task
 from app.core.database import Session, engine
 from app.domains.jobs.models import Job, JobStatus
 from app.domains.jobs.registry import get_processor
-
-# IMPORTANTE: Importar módulos de procesamiento para registrar processors
-import app.domains.vigilancia_nominal.procesamiento  # noqa: F401
-import app.domains.vigilancia_agregada.procesamiento  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
@@ -59,9 +59,10 @@ def execute_job(self, job_id: str) -> Dict[str, Any]:
     job = None
     ruta_archivo_obj = None
 
+    session = None
     try:
         with Session(engine) as session:
-            statement = select(Job).where(Job.id == job_id)
+            statement = select(Job).where(col(Job.id) == job_id)
             job = session.exec(statement).first()
 
             if not job:
@@ -86,10 +87,11 @@ def execute_job(self, job_id: str) -> Dict[str, Any]:
 
             def update_progress(percentage: int, message: str):
                 try:
-                    job.update_progress(percentage, message)
-                    session.add(job)
-                    session.commit()
-                    session.refresh(job)
+                    if job is not None:
+                        job.update_progress(percentage, message)
+                        session.add(job)
+                        session.commit()
+                        session.refresh(job)
                     self.update_state(
                         state="PROGRESS",
                         meta={"percentage": percentage, "step": message},
@@ -104,7 +106,9 @@ def execute_job(self, job_id: str) -> Dict[str, Any]:
 
             result_data = {
                 "ruta_archivo": str(ruta_archivo),
-                "tamano_archivo": ruta_archivo_obj.stat().st_size if ruta_archivo_obj.exists() else 0,
+                "tamano_archivo": ruta_archivo_obj.stat().st_size
+                if ruta_archivo_obj.exists()
+                else 0,
                 **result,
             }
 
@@ -118,12 +122,12 @@ def execute_job(self, job_id: str) -> Dict[str, Any]:
                     pass
 
                 with Session(engine) as new_session:
-                    statement = select(Job).where(Job.id == job_id)
+                    statement = select(Job).where(col(Job.id) == job_id)
                     job = new_session.exec(statement).first()
                     if job:
                         job.mark_failed(
                             result.get("error", "Error desconocido"),
-                            json.dumps(result_data, default=str)
+                            json.dumps(result_data, default=str),
                         )
                         new_session.add(job)
                         new_session.commit()
@@ -137,7 +141,8 @@ def execute_job(self, job_id: str) -> Dict[str, Any]:
 
     except Exception as e:
         try:
-            session.rollback()
+            if session is not None:
+                session.rollback()
         except Exception:
             pass
 
@@ -147,10 +152,13 @@ def execute_job(self, job_id: str) -> Dict[str, Any]:
         if job:
             try:
                 with Session(engine) as session:
-                    statement = select(Job).where(Job.id == job_id)
+                    statement = select(Job).where(col(Job.id) == job_id)
                     job = session.exec(statement).first()
                     if job:
-                        job.mark_failed(error_msg, json.dumps({"error_type": type(e).__name__}, default=str))
+                        job.mark_failed(
+                            error_msg,
+                            json.dumps({"error_type": type(e).__name__}, default=str),
+                        )
                         session.add(job)
                         session.commit()
             except Exception as session_error:
@@ -182,9 +190,9 @@ def cleanup_old_jobs() -> Dict[str, Any]:
             total_cleaned = 0
 
             for status, retention_time in retention_policies.items():
-                cutoff_time = datetime.utcnow() - retention_time
+                cutoff_time = datetime.now(timezone.utc) - retention_time
                 query = select(Job).where(
-                    and_(Job.created_at < cutoff_time, Job.status == status)
+                    and_(col(Job.created_at) < cutoff_time, col(Job.status) == status)
                 )
                 jobs_to_clean = session.exec(query).all()
                 for job in jobs_to_clean:
@@ -241,7 +249,7 @@ def cleanup_temp_uploads() -> Dict[str, Any]:
             "status": "completed",
             "files_cleaned": result["deleted_count"],
             "size_freed_mb": result["deleted_size_mb"],
-            "errors": result["errors"]
+            "errors": result["errors"],
         }
     except Exception as e:
         logger.error(f"Error limpiando archivos temporales: {e}")

@@ -16,11 +16,18 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, Tuple
 
 import polars as pl
-from sqlalchemy import text, select
+from sqlalchemy import inspect, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlmodel import col
 
-from app.core.bulk import BulkOperationResult, get_current_timestamp, pl_safe_date, pl_safe_int
+from app.core.bulk import (
+    BulkOperationResult,
+    get_current_timestamp,
+    pl_safe_date,
+    pl_safe_int,
+)
 from app.domains.territorio.establecimientos_models import Establecimiento
+
 from ..config.columns import Columns
 from .ciudadanos import CiudadanosManager
 from .diagnosticos import DiagnosticosProcessor
@@ -121,14 +128,18 @@ class MainProcessor:
             Tuple de (df_ciudadanos, df_eventos, df_completo)
         """
         # Vista para processors de ciudadanos
-        df_ciudadanos = df.filter(
-            pl.col(Columns.CODIGO_CIUDADANO.name).is_not_null()
-        ) if Columns.CODIGO_CIUDADANO.name in df.columns else df
+        df_ciudadanos = (
+            df.filter(pl.col(Columns.CODIGO_CIUDADANO.name).is_not_null())
+            if Columns.CODIGO_CIUDADANO.name in df.columns
+            else df
+        )
 
         # Vista para processors de eventos
-        df_eventos = df.filter(
-            pl.col(Columns.IDEVENTOCASO.name).is_not_null()
-        ) if Columns.IDEVENTOCASO.name in df.columns else df
+        df_eventos = (
+            df.filter(pl.col(Columns.IDEVENTOCASO.name).is_not_null())
+            if Columns.IDEVENTOCASO.name in df.columns
+            else df
+        )
 
         return df_ciudadanos, df_eventos, df
 
@@ -152,10 +163,12 @@ class MainProcessor:
             return df
 
         # Crear DataFrame de mapping una sola vez
-        df_mapeo = pl.DataFrame({
-            "id_evento_caso_original": list(mapeo_eventos.keys()),
-            "id_caso": list(mapeo_eventos.values()),
-        })
+        df_mapeo = pl.DataFrame(
+            {
+                "id_evento_caso_original": list(mapeo_eventos.keys()),
+                "id_caso": list(mapeo_eventos.values()),
+            }
+        )
 
         # Join con el DataFrame principal
         # Usar left join para no perder registros sin evento
@@ -163,7 +176,7 @@ class MainProcessor:
             df_mapeo,
             left_on=Columns.IDEVENTOCASO.name,
             right_on="id_evento_caso_original",
-            how="left"
+            how="left",
         )
 
         return df_con_evento
@@ -228,7 +241,7 @@ class MainProcessor:
 
             # Asegurar que existe establecimiento "Desconocido" (usado por defecto en muestras)
             if "DESCONOCIDO" not in mapeo_establecimientos:
-                stmt = pg_insert(Establecimiento.__table__).values(
+                stmt = pg_insert(inspect(Establecimiento).local_table).values(
                     {
                         "nombre": "Desconocido",
                         "created_at": get_current_timestamp(),
@@ -238,17 +251,19 @@ class MainProcessor:
                 self.context.session.execute(stmt.on_conflict_do_nothing())
 
                 stmt = (
-                    select(Establecimiento.id)
-                    .where(Establecimiento.nombre == "Desconocido")
+                    select(col(Establecimiento.id))
+                    .where(col(Establecimiento.nombre) == "Desconocido")
                     .limit(1)
                 )
                 id_desconocido = self.context.session.execute(stmt).scalar()
-                if id_desconocido:
+                if id_desconocido is not None:
                     mapeo_establecimientos["DESCONOCIDO"] = id_desconocido
 
             # 2. CIUDADANOS - Base citizen data
             # OPTIMIZACIÓN: Usar vista pre-filtrada df_ciudadanos
-            resultados["ciudadanos"] = self.manager_ciudadanos.upsert_ciudadanos(df_ciudadanos)
+            resultados["ciudadanos"] = self.manager_ciudadanos.upsert_ciudadanos(
+                df_ciudadanos
+            )
 
             # Solo procesar domicilios si las columnas requeridas están presentes
             # DOMICILIOS, VIAJES & COMORBILIDADES - Ejecutar pero NO hacer commit aún
@@ -258,17 +273,21 @@ class MainProcessor:
                 )
 
             if Columns.PAIS_VIAJE in df.columns:
-                resultados["viajes"] = self.manager_ciudadanos.upsert_viajes(df_ciudadanos)
+                resultados["viajes"] = self.manager_ciudadanos.upsert_viajes(
+                    df_ciudadanos
+                )
 
             if Columns.COMORBILIDAD in df.columns:
-                resultados["comorbilidades"] = self.manager_ciudadanos.upsert_comorbilidades(
-                    df_ciudadanos
+                resultados["comorbilidades"] = (
+                    self.manager_ciudadanos.upsert_comorbilidades(df_ciudadanos)
                 )
 
             # COMMIT CRÍTICO 1: Establecimientos + Ciudadanos + datos asociados
             # Combina establecimientos (flushed antes) + ciudadanos + domicilios + viajes + comorbilidades
             self.context.session.commit()
-            self.logger.info("✅ Establecimientos, ciudadanos y datos asociados committed")
+            self.logger.info(
+                "✅ Establecimientos, ciudadanos y datos asociados committed"
+            )
             self._actualizar_progreso_operacion("establecimientos y ciudadanos")
 
             # 3. EVENTOS - Requiere ciudadanos y establecimientos
@@ -289,70 +308,74 @@ class MainProcessor:
             # Esto elimina ~10 joins redundantes en los processors
             self.logger.info("Agregando id_evento al DataFrame (join centralizado)...")
             df_con_evento = self._agregar_mapeo_evento_a_df(df, mapeo_eventos)
-            df_eventos_con_id = self._agregar_mapeo_evento_a_df(df_eventos, mapeo_eventos)
+            df_eventos_con_id = self._agregar_mapeo_evento_a_df(
+                df_eventos, mapeo_eventos
+            )
 
             # === TODAS LAS OPERACIONES SIGUIENTES NO NECESITAN COMMIT INTERMEDIO ===
             # OPTIMIZACIÓN: Ejecutar en PARALELO con ThreadPoolExecutor
             # IMPORTANTE: Dividir en 2 fases por dependencias (estudios depende de muestras)
 
             # FASE 1: Operaciones independientes (incluyendo muestras y agentes)
-            self.logger.info("🚀 Fase 1: Ejecutando 12 operaciones independientes en paralelo...")
+            self.logger.info(
+                "🚀 Fase 1: Ejecutando 12 operaciones independientes en paralelo..."
+            )
 
             operaciones_fase1 = [
                 (
                     self.manager_ciudadanos.upsert_ciudadanos_datos,
                     (df_con_evento,),
-                    "ciudadanos_datos"
+                    "ciudadanos_datos",
                 ),
                 (
                     self.manager_eventos.upsert_sintomas_eventos,
                     (df_eventos_con_id, mapeo_sintomas),
-                    "sintomas_eventos"
+                    "sintomas_eventos",
                 ),
                 (
                     self.manager_eventos.upsert_antecedentes_epidemiologicos,
                     (df_eventos_con_id,),
-                    "antecedentes_eventos"
+                    "antecedentes_eventos",
                 ),
                 (
                     self.manager_salud.upsert_muestras_eventos,
                     (df_eventos_con_id, mapeo_establecimientos, mapeo_eventos),
-                    "muestras_eventos"
+                    "muestras_eventos",
                 ),
                 (
                     self.manager_salud.upsert_vacunas_ciudadanos,
                     (df_eventos_con_id,),
-                    "vacunas_ciudadanos"
+                    "vacunas_ciudadanos",
                 ),
                 (
                     self.procesador_diagnosticos.upsert_diagnosticos_eventos,
                     (df_eventos_con_id,),
-                    "diagnosticos_eventos"
+                    "diagnosticos_eventos",
                 ),
                 (
                     self.procesador_diagnosticos.upsert_tratamientos_eventos,
                     (df_eventos_con_id,),
-                    "tratamientos_eventos"
+                    "tratamientos_eventos",
                 ),
                 (
                     self.procesador_diagnosticos.upsert_internaciones_eventos,
                     (df_eventos_con_id,),
-                    "internaciones_eventos"
+                    "internaciones_eventos",
                 ),
                 (
                     self.procesador_investigaciones.upsert_investigaciones_eventos,
                     (df_eventos_con_id,),
-                    "investigaciones_eventos"
+                    "investigaciones_eventos",
                 ),
                 (
                     self.procesador_investigaciones.upsert_contactos_notificaciones,
                     (df_eventos_con_id,),
-                    "contactos_notificaciones"
+                    "contactos_notificaciones",
                 ),
                 (
                     self.manager_eventos.upsert_agentes_eventos,
                     (df_eventos_con_id, mapeo_eventos),
-                    "agentes_eventos"
+                    "agentes_eventos",
                 ),
             ]
 
@@ -362,7 +385,7 @@ class MainProcessor:
                     (
                         self.manager_eventos.upsert_ambitos_concurrencia,
                         (df_eventos_con_id,),
-                        "ambitos_concurrencia"
+                        "ambitos_concurrencia",
                     )
                 )
 
@@ -380,7 +403,9 @@ class MainProcessor:
                     try:
                         resultado = futuro.result()
                         resultados[nombre_op] = resultado
-                        self.logger.info(f"✅ {nombre_op}: {resultado.inserted_count} registros en {resultado.duration_seconds:.2f}s")
+                        self.logger.info(
+                            f"✅ {nombre_op}: {resultado.inserted_count} registros en {resultado.duration_seconds:.2f}s"
+                        )
                     except Exception as exc:
                         self.logger.error(f"❌ {nombre_op} generó excepción: {exc}")
                         raise
@@ -392,9 +417,13 @@ class MainProcessor:
 
             # Estudios depende de que muestras_eventos ya esté en BD
             try:
-                resultado = self.procesador_diagnosticos.upsert_estudios_eventos(df_eventos_con_id)
+                resultado = self.procesador_diagnosticos.upsert_estudios_eventos(
+                    df_eventos_con_id
+                )
                 resultados["estudios_eventos"] = resultado
-                self.logger.info(f"✅ estudios_eventos: {resultado.inserted_count} registros en {resultado.duration_seconds:.2f}s")
+                self.logger.info(
+                    f"✅ estudios_eventos: {resultado.inserted_count} registros en {resultado.duration_seconds:.2f}s"
+                )
             except Exception as exc:
                 self.logger.error(f"❌ estudios_eventos generó excepción: {exc}")
                 raise
@@ -421,10 +450,14 @@ class MainProcessor:
             except Exception:
                 pass  # Ignorar si no hay transacción activa
             try:
-                self.context.session.execute(text("SET session_replication_role = DEFAULT"))
+                self.context.session.execute(
+                    text("SET session_replication_role = DEFAULT")
+                )
                 self.context.session.commit()
             except Exception as e:
-                self.logger.warning(f"No se pudo restaurar session_replication_role: {e}")
+                self.logger.warning(
+                    f"No se pudo restaurar session_replication_role: {e}"
+                )
 
     def _loguear_resumen(self, resultados: Dict[str, BulkOperationResult]) -> None:
         """Log a summary of all bulk operations."""

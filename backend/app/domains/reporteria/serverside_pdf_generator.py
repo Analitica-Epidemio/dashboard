@@ -64,38 +64,44 @@ class ServerSidePDFGenerator:
 
     def _setup_custom_styles(self):
         """Crear estilos personalizados"""
-        self.styles.add(ParagraphStyle(
-            name='CustomTitle',
-            parent=self.styles['Heading1'],
-            fontSize=18,
-            textColor='#1a1a1a',
-            spaceAfter=12,
-            alignment=TA_CENTER
-        ))
+        self.styles.add(
+            ParagraphStyle(
+                name="CustomTitle",
+                parent=self.styles["Heading1"],
+                fontSize=18,
+                textColor="#1a1a1a",
+                spaceAfter=12,
+                alignment=TA_CENTER,
+            )
+        )
 
-        self.styles.add(ParagraphStyle(
-            name='SubTitle',
-            parent=self.styles['Heading2'],
-            fontSize=14,
-            textColor='#333333',
-            spaceAfter=10,
-            alignment=TA_LEFT
-        ))
+        self.styles.add(
+            ParagraphStyle(
+                name="SubTitle",
+                parent=self.styles["Heading2"],
+                fontSize=14,
+                textColor="#333333",
+                spaceAfter=10,
+                alignment=TA_LEFT,
+            )
+        )
 
-        self.styles.add(ParagraphStyle(
-            name='InfoText',
-            parent=self.styles['Normal'],
-            fontSize=10,
-            textColor='#666666',
-            spaceAfter=6
-        ))
+        self.styles.add(
+            ParagraphStyle(
+                name="InfoText",
+                parent=self.styles["Normal"],
+                fontSize=10,
+                textColor="#666666",
+                spaceAfter=6,
+            )
+        )
 
     async def generate_pdf(
         self,
         db: AsyncSession,
         combination: Dict[str, Any],
         date_range: Dict[str, str],
-        chart_codes: List[str] = None
+        chart_codes: Optional[List[str]] = None,
     ) -> bytes:
         """
         Genera un PDF para una combinación de filtros
@@ -110,7 +116,9 @@ class ServerSidePDFGenerator:
         Returns:
             Bytes del PDF generado
         """
-        logger.info(f"Generando PDF server-side para {combination.get('group_name', 'Unknown')}")
+        logger.info(
+            f"Generando PDF server-side para {combination.get('group_name', 'Unknown')}"
+        )
 
         # Charts por defecto si no se especifican
         if not chart_codes:
@@ -127,10 +135,10 @@ class ServerSidePDFGenerator:
         doc = SimpleDocTemplate(
             buffer,
             pagesize=A4,
-            rightMargin=0.5*inch,
-            leftMargin=0.5*inch,
-            topMargin=0.5*inch,
-            bottomMargin=0.5*inch
+            rightMargin=0.5 * inch,
+            leftMargin=0.5 * inch,
+            topMargin=0.5 * inch,
+            bottomMargin=0.5 * inch,
         )
 
         # Contenido del PDF
@@ -155,7 +163,7 @@ class ServerSidePDFGenerator:
                 spec = await generator.generar_spec(
                     codigo_grafico=chart_code,
                     filtros=filters,
-                    configuracion={"height": 400}
+                    configuracion={"height": 400},
                 )
 
                 # Renderizar a imagen con alta resolución
@@ -168,9 +176,9 @@ class ServerSidePDFGenerator:
                 # story.append(Spacer(1, 0.2*inch))
 
                 # Crear imagen de ReportLab
-                img = Image(io.BytesIO(img_bytes), width=6.5*inch, height=4*inch)
+                img = Image(io.BytesIO(img_bytes), width=6.5 * inch, height=4 * inch)
                 story.append(img)
-                story.append(Spacer(1, 0.3*inch))
+                story.append(Spacer(1, 0.3 * inch))
 
                 logger.info(f"Chart {chart_code} agregado al PDF")
 
@@ -178,8 +186,8 @@ class ServerSidePDFGenerator:
                 logger.error(f"Error generando chart {chart_code}: {e}")
                 # Agregar mensaje de error
                 error_text = f"Error generando {chart_code}: {str(e)}"
-                story.append(Paragraph(error_text, self.styles['Normal']))
-                story.append(Spacer(1, 0.2*inch))
+                story.append(Paragraph(error_text, self.styles["Normal"]))
+                story.append(Spacer(1, 0.2 * inch))
 
         # Generar PDF
         doc.build(story)
@@ -190,28 +198,20 @@ class ServerSidePDFGenerator:
         return pdf_bytes
 
     def _create_cover_page(
-        self,
-        combination: Dict[str, Any],
-        date_range: Dict[str, str]
+        self, combination: Dict[str, Any], date_range: Dict[str, str]
     ) -> List:
         """Crea la portada del reporte"""
         story = []
 
         # Título principal
-        story.append(Spacer(1, 1.5*inch))
-        story.append(Paragraph(
-            "Reporte Epidemiológico",
-            self.styles['CustomTitle']
-        ))
-        story.append(Spacer(1, 0.3*inch))
+        story.append(Spacer(1, 1.5 * inch))
+        story.append(Paragraph("Reporte Epidemiológico", self.styles["CustomTitle"]))
+        story.append(Spacer(1, 0.3 * inch))
 
         # Subtítulo con nombre del grupo
-        group_name = combination.get('group_name', 'Sin especificar')
-        story.append(Paragraph(
-            group_name,
-            self.styles['SubTitle']
-        ))
-        story.append(Spacer(1, 0.5*inch))
+        group_name = combination.get("group_name", "Sin especificar")
+        story.append(Paragraph(group_name, self.styles["SubTitle"]))
+        story.append(Spacer(1, 0.5 * inch))
 
         # Información del reporte
         info_lines = [
@@ -221,44 +221,46 @@ class ServerSidePDFGenerator:
         ]
 
         # Agregar eventos si existen
-        if combination.get('event_names'):
-            events = ', '.join(combination['event_names'][:5])
-            if len(combination['event_names']) > 5:
+        if combination.get("event_names"):
+            events = ", ".join(combination["event_names"][:5])
+            if len(combination["event_names"]) > 5:
                 events += f" y {len(combination['event_names']) - 5} más"
             info_lines.append(f"<b>CasoEpidemiologicos:</b> {events}")
 
         # Agregar clasificaciones si existen
-        if combination.get('clasificaciones'):
-            clasif = ', '.join(combination['clasificaciones'])
+        if combination.get("clasificaciones"):
+            clasif = ", ".join(combination["clasificaciones"])
             info_lines.append(f"<b>Clasificaciones:</b> {clasif}")
 
         for line in info_lines:
-            story.append(Paragraph(line, self.styles['InfoText']))
-            story.append(Spacer(1, 0.1*inch))
+            story.append(Paragraph(line, self.styles["InfoText"]))
+            story.append(Spacer(1, 0.1 * inch))
 
-        story.append(Spacer(1, 1*inch))
+        story.append(Spacer(1, 1 * inch))
 
         # Pie de portada
-        story.append(Paragraph(
-            "Sistema de Vigilancia Epidemiológica<br/>Provincia del Chubut",
-            self.styles['InfoText']
-        ))
+        story.append(
+            Paragraph(
+                "Sistema de Vigilancia Epidemiológica<br/>Provincia del Chubut",
+                self.styles["InfoText"],
+            )
+        )
 
         return story
 
     def _combination_to_filters(
-        self,
-        combination: Dict[str, Any],
-        date_range: Dict[str, str]
+        self, combination: Dict[str, Any], date_range: Dict[str, str]
     ) -> FiltrosGrafico:
         """Convierte combinación a FiltrosGrafico"""
         return FiltrosGrafico(
-            ids_grupo_eno=[combination['group_id']] if combination.get('group_id') else None,
-            ids_tipo_eno=combination.get('event_ids'),
-            clasificacion=combination.get('clasificaciones'),
+            ids_grupo_eno=[combination["group_id"]]
+            if combination.get("group_id")
+            else None,
+            ids_tipo_eno=combination.get("event_ids"),
+            clasificacion=combination.get("clasificaciones"),
             id_provincia=[26],  # Chubut por defecto
-            fecha_desde=date_range.get('from'),
-            fecha_hasta=date_range.get('to'),
+            fecha_desde=date_range.get("from"),
+            fecha_hasta=date_range.get("to"),
         )
 
     async def generate_pdf_from_html(

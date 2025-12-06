@@ -9,36 +9,36 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domains.dashboard.processors import ChartDataProcessor
 from app.domains.charts.schemas import (
     ConfiguracionGraficoArea,
-    WrapperConfiguracionGraficoArea,
-    DatosGraficoArea,
     ConfiguracionGraficoBarra,
-    WrapperConfiguracionGraficoBarra,
+    ConfiguracionGraficoLinea,
+    ConfiguracionGraficoMapa,
+    ConfiguracionGraficoPiramide,
+    ConfiguracionGraficoTorta,
+    ConjuntoDatos,
+    DatosDepartamentoMapa,
+    DatosGraficoArea,
     DatosGraficoBarra,
     DatosGraficoBase,
-    FiltrosGrafico,
-    ConjuntoDatos,
-    ConfiguracionGraficoLinea,
-    WrapperConfiguracionGraficoLinea,
     # Discriminated union wrappers
     DatosGraficoLinea,
-    ConfiguracionGraficoMapa,
-    WrapperConfiguracionGraficoMapa,
     DatosGraficoMapa,
-    WrapperDatosGraficoMapa,
-    DatosDepartamentoMapa,
-    ConfiguracionGraficoTorta,
-    WrapperConfiguracionGraficoTorta,
-    DatosGraficoTorta,
-    ConfiguracionGraficoPiramide,
-    WrapperConfiguracionGraficoPiramide,
     DatosGraficoPiramide,
-    PuntoDatosPiramide,
+    DatosGraficoTorta,
     EspecificacionGraficoUniversal,
+    FiltrosGrafico,
     MetadataSemana,
+    PuntoDatosPiramide,
+    WrapperConfiguracionGraficoArea,
+    WrapperConfiguracionGraficoBarra,
+    WrapperConfiguracionGraficoLinea,
+    WrapperConfiguracionGraficoMapa,
+    WrapperConfiguracionGraficoPiramide,
+    WrapperConfiguracionGraficoTorta,
+    WrapperDatosGraficoMapa,
 )
+from app.domains.dashboard.processors import ChartDataProcessor
 
 
 class ChartSpecGenerator:
@@ -81,10 +81,14 @@ class ChartSpecGenerator:
     def _convertir_filtros_a_dict(self, filtros: FiltrosGrafico) -> Dict[str, Any]:
         """Convierte FiltrosGrafico a dict para ChartDataProcessor"""
         return {
-            "grupo_id": filtros.ids_grupo_eno[0] if filtros.ids_grupo_eno and len(filtros.ids_grupo_eno) > 0 else None,
+            "grupo_id": filtros.ids_grupo_eno[0]
+            if filtros.ids_grupo_eno and len(filtros.ids_grupo_eno) > 0
+            else None,
             "tipo_eno_ids": filtros.ids_tipo_eno,
             "clasificaciones": filtros.clasificacion,
-            "provincia_id": filtros.id_provincia[0] if filtros.id_provincia and len(filtros.id_provincia) > 0 else None,
+            "provincia_id": filtros.id_provincia[0]
+            if filtros.id_provincia and len(filtros.id_provincia) > 0
+            else None,
             "fecha_desde": filtros.fecha_desde,
             "fecha_hasta": filtros.fecha_hasta,
         }
@@ -94,7 +98,7 @@ class ChartSpecGenerator:
         filtros: FiltrosGrafico,
         configuracion: Optional[Dict[str, Any]] = None,
         configuracion_series: Optional[List[Dict[str, Any]]] = None,
-        agrupar_por: Optional[str] = None
+        agrupar_por: Optional[str] = None,
     ) -> EspecificacionGraficoUniversal:
         """
         Genera spec para curva epidemiológica (casos por semana)
@@ -120,7 +124,9 @@ class ChartSpecGenerator:
                 # Sin tipo_eno_ids, no hay series
                 configuracion_series = []
 
-        resultado = await self.processor.procesar_curva_epidemiologica(filtros_dict, configuracion_series, agrupar_por=agrupar_por)
+        resultado = await self.processor.procesar_curva_epidemiologica(
+            filtros_dict, configuracion_series, agrupar_por=agrupar_por
+        )
 
         # Convertir resultado del processor al formato EspecificacionGraficoUniversal
         datos_crudos = resultado.get("data", {})
@@ -133,7 +139,7 @@ class ChartSpecGenerator:
                     etiqueta=ds.get("label"),
                     datos=ds.get("data", []),
                     color=ds.get("borderColor"),
-                    tipo=ds.get("type")  # "line" o "area"
+                    tipo=ds.get("type"),  # "line" o "area"
                 )
             )
 
@@ -145,18 +151,21 @@ class ChartSpecGenerator:
                     anio=m["year"],
                     semana=m["week"],
                     fecha_inicio=m["start_date"],
-                    fecha_fin=m["end_date"]
-                ) for m in datos_crudos["metadata"]
+                    fecha_fin=m["end_date"],
+                )
+                for m in datos_crudos["metadata"]
             ]
 
         datos_base = DatosGraficoBase(
             etiquetas=datos_crudos.get("labels", []),
             conjuntos_datos=conjuntos_datos,
-            metadata=metadata
+            metadata=metadata,
         )
 
         # Determinar tipo de chart basado en config.chart_type
-        tipo_grafico = configuracion.get("chart_type", "line") if configuracion else "line"
+        tipo_grafico = (
+            configuracion.get("chart_type", "line") if configuracion else "line"
+        )
         es_apilado = tipo_grafico == "stacked_bar"
         es_barra = tipo_grafico in ("bar", "stacked_bar", "grouped_bar")
 
@@ -167,14 +176,19 @@ class ChartSpecGenerator:
                 mostrar_leyenda=True,
                 mostrar_grilla=True,
                 apilado=es_apilado,
+                ancho=None,
+                colores=None,
             )
             return EspecificacionGraficoUniversal(
                 id=str(uuid.uuid4()),
                 titulo="Casos por Semana Epidemiológica",
+                descripcion=None,
                 codigo="curva_epidemiologica",
                 tipo="bar",
                 datos=DatosGraficoBarra(tipo="bar", datos=datos_base),
-                configuracion=WrapperConfiguracionGraficoBarra(tipo="bar", configuracion=config_barra),
+                configuracion=WrapperConfiguracionGraficoBarra(
+                    tipo="bar", configuracion=config_barra
+                ),
                 filtros=filtros,
             )
         else:
@@ -184,14 +198,20 @@ class ChartSpecGenerator:
                 mostrar_leyenda=True,
                 mostrar_grilla=True,
                 mostrar_puntos=True,
+                ancho=None,
+                colores=None,
+                curvado=False,
             )
             return EspecificacionGraficoUniversal(
                 id=str(uuid.uuid4()),
                 titulo="Casos por Semana Epidemiológica",
+                descripcion=None,
                 codigo="curva_epidemiologica",
                 tipo="line",
                 datos=DatosGraficoLinea(tipo="line", datos=datos_base),
-                configuracion=WrapperConfiguracionGraficoLinea(tipo="line", configuracion=config_linea),
+                configuracion=WrapperConfiguracionGraficoLinea(
+                    tipo="line", configuracion=config_linea
+                ),
                 filtros=filtros,
             )
 
@@ -228,7 +248,7 @@ class ChartSpecGenerator:
                     etiqueta=ds.get("label"),
                     datos=ds.get("data", []),
                     color=ds.get("color"),  # Usar "color" directamente
-                    tipo=ds.get("type")  # No default - respetar el tipo del backend
+                    tipo=ds.get("type"),  # No default - respetar el tipo del backend
                 )
             )
 
@@ -239,14 +259,15 @@ class ChartSpecGenerator:
                     anio=m["year"],
                     semana=m["week"],
                     fecha_inicio=m["start_date"],
-                    fecha_fin=m["end_date"]
-                ) for m in datos_crudos["metadata"]
+                    fecha_fin=m["end_date"],
+                )
+                for m in datos_crudos["metadata"]
             ]
 
         datos_base = DatosGraficoBase(
             etiquetas=datos_crudos.get("labels", []),
             conjuntos_datos=conjuntos_datos,
-            metadata=metadata
+            metadata=metadata,
         )
 
         config_grafico = ConfiguracionGraficoArea(
@@ -254,15 +275,21 @@ class ChartSpecGenerator:
             mostrar_leyenda=True,
             apilado=False,
             opacidad_relleno=0.2,
+            ancho=None,
+            mostrar_grilla=True,
+            colores=None,
         )
 
         return EspecificacionGraficoUniversal(
             id=str(uuid.uuid4()),
             titulo="Corredor Endémico",
+            descripcion=None,
             codigo="corredor_endemico",
             tipo="area",
             datos=DatosGraficoArea(tipo="area", datos=datos_base),
-            configuracion=WrapperConfiguracionGraficoArea(tipo="area", configuracion=config_grafico),
+            configuracion=WrapperConfiguracionGraficoArea(
+                tipo="area", configuracion=config_grafico
+            ),
             filtros=filtros,
             error=error_grafico,
         )
@@ -287,7 +314,7 @@ class ChartSpecGenerator:
             PuntoDatosPiramide(
                 grupo_edad=item["age_group"],
                 masculino=item["male"],
-                femenino=item["female"]
+                femenino=item["female"],
             )
             for item in piramide_cruda
         ]
@@ -295,15 +322,22 @@ class ChartSpecGenerator:
         config_grafico = ConfiguracionGraficoPiramide(
             alto=configuracion.get("height", 500) if configuracion else 500,
             mostrar_etiquetas_ejes=True,
+            ancho=None,
+            mostrar_leyenda=True,
+            mostrar_grilla=True,
+            colores=None,
         )
 
         return EspecificacionGraficoUniversal(
             id=str(uuid.uuid4()),
             titulo="Pirámide Poblacional por Edad y Sexo",
+            descripcion=None,
             codigo="piramide_edad",
             tipo="d3_pyramid",
             datos=DatosGraficoPiramide(tipo="d3_pyramid", datos=datos_piramide),
-            configuracion=WrapperConfiguracionGraficoPiramide(tipo="d3_pyramid", configuracion=config_grafico),
+            configuracion=WrapperConfiguracionGraficoPiramide(
+                tipo="d3_pyramid", configuracion=config_grafico
+            ),
             filtros=filtros,
         )
 
@@ -327,29 +361,35 @@ class ChartSpecGenerator:
                 zona_ugd=dept["zona_ugd"],
                 poblacion=dept["poblacion"],
                 casos=dept["casos"],
-                tasa_incidencia=dept["tasa_incidencia"]
+                tasa_incidencia=dept["tasa_incidencia"],
             )
             for dept in datos_crudos.get("departamentos", [])
         ]
 
         datos_mapa = DatosGraficoMapa(
-            departamentos=departamentos,
-            total_casos=datos_crudos.get("total_casos", 0)
+            departamentos=departamentos, total_casos=datos_crudos.get("total_casos", 0)
         )
 
         config_grafico = ConfiguracionGraficoMapa(
             alto=configuracion.get("height", 600) if configuracion else 600,
             provincia="chubut",
             escala_color="sequential",
+            ancho=None,
+            mostrar_leyenda=True,
+            mostrar_grilla=False,
+            colores=None,
         )
 
         return EspecificacionGraficoUniversal(
             id=str(uuid.uuid4()),
             titulo="Mapa de Casos - Chubut",
+            descripcion=None,
             codigo="mapa_chubut",
             tipo="mapa",
             datos=WrapperDatosGraficoMapa(tipo="mapa", datos=datos_mapa),
-            configuracion=WrapperConfiguracionGraficoMapa(tipo="mapa", configuracion=config_grafico),
+            configuracion=WrapperConfiguracionGraficoMapa(
+                tipo="mapa", configuracion=config_grafico
+            ),
             filtros=filtros,
         )
 
@@ -372,6 +412,7 @@ class ChartSpecGenerator:
                     etiqueta=ds.get("label"),
                     datos=ds.get("data", []),
                     color=ds.get("backgroundColor"),
+                    tipo=None,
                 )
             )
 
@@ -384,15 +425,21 @@ class ChartSpecGenerator:
             alto=configuracion.get("height", 400) if configuracion else 400,
             mostrar_leyenda=False,
             mostrar_grilla=True,
+            ancho=None,
+            colores=None,
+            apilado=False,
         )
 
         return EspecificacionGraficoUniversal(
             id=str(uuid.uuid4()),
             titulo="Estacionalidad Mensual",
+            descripcion=None,
             codigo="estacionalidad",
             tipo="bar",
             datos=DatosGraficoBarra(tipo="bar", datos=datos_base),
-            configuracion=WrapperConfiguracionGraficoBarra(tipo="bar", configuracion=config_grafico),
+            configuracion=WrapperConfiguracionGraficoBarra(
+                tipo="bar", configuracion=config_grafico
+            ),
             filtros=filtros,
         )
 
@@ -401,7 +448,7 @@ class ChartSpecGenerator:
         filtros: FiltrosGrafico,
         configuracion: Optional[Dict[str, Any]] = None,
         configuracion_series: Optional[List[Dict[str, Any]]] = None,
-        agrupar_por: Optional[str] = None
+        agrupar_por: Optional[str] = None,
     ) -> EspecificacionGraficoUniversal:
         """
         Genera spec para casos por grupo de edad (con soporte para múltiples series)
@@ -426,7 +473,9 @@ class ChartSpecGenerator:
             else:
                 configuracion_series = []
 
-        resultado = await self.processor.procesar_casos_edad(filtros_dict, series_config=configuracion_series, agrupar_por=agrupar_por)
+        resultado = await self.processor.procesar_casos_edad(
+            filtros_dict, series_config=configuracion_series, agrupar_por=agrupar_por
+        )
 
         datos_crudos = resultado.get("data", {})
 
@@ -437,6 +486,7 @@ class ChartSpecGenerator:
                     etiqueta=ds.get("label"),
                     datos=ds.get("data", []),
                     color=ds.get("backgroundColor") or ds.get("color"),
+                    tipo=None,
                 )
             )
 
@@ -451,22 +501,29 @@ class ChartSpecGenerator:
         # Determinar si debe ser stacked - puede venir como flag "stacked" o como chart_type "stacked_bar"
         es_apilado = False
         if configuracion:
-            es_apilado = configuracion.get("stacked", False) or configuracion.get("chart_type") == "stacked_bar"
+            es_apilado = (
+                configuracion.get("stacked", False)
+                or configuracion.get("chart_type") == "stacked_bar"
+            )
 
         config_grafico = ConfiguracionGraficoBarra(
             alto=configuracion.get("height", 400) if configuracion else 400,
             mostrar_leyenda=mostrar_leyenda,
             mostrar_grilla=True,
             apilado=es_apilado,
+            ancho=None,
+            colores=None,
         )
-
         return EspecificacionGraficoUniversal(
             id=str(uuid.uuid4()),
             titulo="Casos por Grupo de Edad",
+            descripcion=None,
             codigo="casos_edad",
             tipo="bar",
             datos=DatosGraficoBarra(tipo="bar", datos=datos_base),
-            configuracion=WrapperConfiguracionGraficoBarra(tipo="bar", configuracion=config_grafico),
+            configuracion=WrapperConfiguracionGraficoBarra(
+                tipo="bar", configuracion=config_grafico
+            ),
             filtros=filtros,
         )
 
@@ -487,7 +544,9 @@ class ChartSpecGenerator:
         Usa datos REALES del processor
         """
         filtros_dict = self._convertir_filtros_a_dict(filtros)
-        resultado = await self.processor.procesar_distribucion_clasificacion(filtros_dict)
+        resultado = await self.processor.procesar_distribucion_clasificacion(
+            filtros_dict
+        )
 
         datos_crudos = resultado.get("data", {})
 
@@ -498,6 +557,7 @@ class ChartSpecGenerator:
                     etiqueta=ds.get("label", "Casos"),
                     datos=ds.get("data", []),
                     color=None,  # Pie chart usa backgroundColor del dataset
+                    tipo=None,
                 )
             )
 
@@ -507,17 +567,24 @@ class ChartSpecGenerator:
         )
 
         config_grafico = ConfiguracionGraficoTorta(
-            alto=configuracion.get("height", 400) if configuracion else 400,
             mostrar_leyenda=True,
             mostrar_porcentajes=True,
+            alto=configuracion.get("height", 400) if configuracion else 400,
+            ancho=None,
+            mostrar_grilla=False,
+            colores=None,
+            radio_interno=0,
         )
 
         return EspecificacionGraficoUniversal(
             id=str(uuid.uuid4()),
             titulo="Distribución por Clasificación",
+            descripcion=None,
             codigo="distribucion_clasificacion",
             tipo="pie",
             datos=DatosGraficoTorta(tipo="pie", datos=datos_base),
-            configuracion=WrapperConfiguracionGraficoTorta(tipo="pie", configuracion=config_grafico),
+            configuracion=WrapperConfiguracionGraficoTorta(
+                tipo="pie", configuracion=config_grafico
+            ),
             filtros=filtros,
         )

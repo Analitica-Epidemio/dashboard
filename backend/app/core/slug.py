@@ -5,6 +5,7 @@ Funciones para generar slugs estables (kebab-case) y nombres capitalizados.
 Se usa en uploads, seeds y cualquier lugar donde se necesite un identificador
 URL-friendly y estable.
 """
+
 import re
 
 
@@ -35,20 +36,26 @@ def generar_slug(nombre: str) -> str:
 
     # Remover acentos
     acentos = {
-        'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ü': 'u',
-        'ñ': 'n', 'ç': 'c'
+        "á": "a",
+        "é": "e",
+        "í": "i",
+        "ó": "o",
+        "ú": "u",
+        "ü": "u",
+        "ñ": "n",
+        "ç": "c",
     }
     for acento, plain in acentos.items():
         texto = texto.replace(acento, plain)
 
     # Remover paréntesis y contenido
-    texto = re.sub(r'\([^)]*\)', '', texto)
+    texto = re.sub(r"\([^)]*\)", "", texto)
 
     # Solo letras, números, espacios y guiones
-    texto = re.sub(r'[^\w\s-]', '', texto)
-    texto = re.sub(r'[\s_]+', '-', texto)
-    texto = re.sub(r'-+', '-', texto)
-    texto = texto.strip('-')
+    texto = re.sub(r"[^\w\s-]", "", texto)
+    texto = re.sub(r"[\s_]+", "-", texto)
+    texto = re.sub(r"-+", "-", texto)
+    texto = texto.strip("-")
 
     return texto[:50] if texto else "unknown"
 
@@ -72,11 +79,27 @@ def capitalizar_nombre(nombre: str) -> str:
     if not nombre or not isinstance(nombre, str):
         return "Unknown"
 
-    texto = re.sub(r'\s+', ' ', nombre.strip()).lower()
+    texto = re.sub(r"\s+", " ", nombre.strip()).lower()
 
     palabras_menores = {
-        'y', 'e', 'o', 'u', 'de', 'del', 'la', 'el', 'los', 'las',
-        'en', 'con', 'por', 'para', 'sin', 'sobre', 'tras', 'a'
+        "y",
+        "e",
+        "o",
+        "u",
+        "de",
+        "del",
+        "la",
+        "el",
+        "los",
+        "las",
+        "en",
+        "con",
+        "por",
+        "para",
+        "sin",
+        "sobre",
+        "tras",
+        "a",
     }
 
     palabras = texto.split()
@@ -90,15 +113,12 @@ def capitalizar_nombre(nombre: str) -> str:
         else:
             resultado.append(palabra.capitalize())
 
-    texto_final = ' '.join(resultado)
+    texto_final = " ".join(resultado)
 
     # Siglas conocidas
-    for sigla in ['COVID', 'VIH', 'SIDA', 'IRA', 'IRAG', 'ETI', 'ESI', 'VSR']:
+    for sigla in ["COVID", "VIH", "SIDA", "IRA", "IRAG", "ETI", "ESI", "VSR"]:
         texto_final = re.sub(
-            f'\\b{sigla.lower()}\\b',
-            sigla,
-            texto_final,
-            flags=re.IGNORECASE
+            f"\\b{sigla.lower()}\\b", sigla, texto_final, flags=re.IGNORECASE
         )
 
     return texto_final

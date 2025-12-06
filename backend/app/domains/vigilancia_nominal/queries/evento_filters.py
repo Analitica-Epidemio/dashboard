@@ -9,19 +9,19 @@ no domicilio del ciudadano, para consistencia epidemiológica.
 """
 
 from datetime import date
-from typing import List, Optional
+from typing import Any, List, Optional
 
-from sqlalchemy import String, and_, func, or_
+from sqlalchemy import String, and_, cast, func, or_
+from sqlmodel import col
 
+from app.domains.territorio.establecimientos_models import Establecimiento
+from app.domains.territorio.geografia_models import Departamento, Localidad, Provincia
+from app.domains.vigilancia_nominal.models.caso import CasoEpidemiologico
 from app.domains.vigilancia_nominal.models.enfermedad import (
     Enfermedad,
     EnfermedadGrupo,
 )
-from app.domains.vigilancia_nominal.models.caso import CasoEpidemiologico
-from app.domains.vigilancia_nominal.models.sujetos import Animal
-from app.domains.vigilancia_nominal.models.sujetos import Ciudadano
-from app.domains.territorio.establecimientos_models import Establecimiento
-from app.domains.territorio.geografia_models import Departamento, Localidad, Provincia
+from app.domains.vigilancia_nominal.models.sujetos import Animal, Ciudadano
 
 
 class CasoEpidemiologicoQueryBuilder:
@@ -35,7 +35,7 @@ class CasoEpidemiologicoQueryBuilder:
     """
 
     @staticmethod
-    def add_base_joins(query):
+    def add_base_joins(query: Any) -> Any:
         """
         Agrega los JOINs base necesarios para filtrar eventos.
 
@@ -50,15 +50,32 @@ class CasoEpidemiologicoQueryBuilder:
             Query con JOINs aplicados
         """
         return (
-            query
-            .outerjoin(Enfermedad, CasoEpidemiologico.id_enfermedad == Enfermedad.id)
-            .outerjoin(Ciudadano, CasoEpidemiologico.codigo_ciudadano == Ciudadano.codigo_ciudadano)
+            query.outerjoin(
+                Enfermedad, CasoEpidemiologico.id_enfermedad == Enfermedad.id
+            )
+            .outerjoin(
+                Ciudadano,
+                CasoEpidemiologico.codigo_ciudadano == Ciudadano.codigo_ciudadano,
+            )
             .outerjoin(Animal, CasoEpidemiologico.id_animal == Animal.id)
             # JOINs para filtro de provincia por ESTABLECIMIENTO DE NOTIFICACIÓN
-            .outerjoin(Establecimiento, CasoEpidemiologico.id_establecimiento_notificacion == Establecimiento.id)
-            .outerjoin(Localidad, Establecimiento.id_localidad_indec == Localidad.id_localidad_indec)
-            .outerjoin(Departamento, Localidad.id_departamento_indec == Departamento.id_departamento_indec)
-            .outerjoin(Provincia, Departamento.id_provincia_indec == Provincia.id_provincia_indec)
+            .outerjoin(
+                Establecimiento,
+                CasoEpidemiologico.id_establecimiento_notificacion
+                == Establecimiento.id,
+            )
+            .outerjoin(
+                Localidad,
+                Establecimiento.id_localidad_indec == Localidad.id_localidad_indec,
+            )
+            .outerjoin(
+                Departamento,
+                Localidad.id_departamento_indec == Departamento.id_departamento_indec,
+            )
+            .outerjoin(
+                Provincia,
+                Departamento.id_provincia_indec == Provincia.id_provincia_indec,
+            )
         )
 
     @staticmethod
@@ -99,52 +116,65 @@ class CasoEpidemiologicoQueryBuilder:
 
         # Filtro de tipo ENO
         if tipo_eno_ids:
-            conditions.append(CasoEpidemiologico.id_enfermedad.in_(tipo_eno_ids))
+            conditions.append(col(CasoEpidemiologico.id_enfermedad).in_(tipo_eno_ids))
 
         # Filtro por grupos de ENO
         if grupo_eno_ids:
-            conditions.append(EnfermedadGrupo.id_grupo.in_(grupo_eno_ids))
+            conditions.append(col(EnfermedadGrupo.id_grupo).in_(grupo_eno_ids))
 
         # Filtros de fecha
         if fecha_desde:
-            conditions.append(CasoEpidemiologico.fecha_minima_caso >= fecha_desde)
+            conditions.append(col(CasoEpidemiologico.fecha_minima_caso) >= fecha_desde)
 
         if fecha_hasta:
-            conditions.append(CasoEpidemiologico.fecha_minima_caso <= fecha_hasta)
+            conditions.append(col(CasoEpidemiologico.fecha_minima_caso) <= fecha_hasta)
 
         # Clasificaciones múltiples
         if clasificacion:
             if isinstance(clasificacion, list):
-                conditions.append(CasoEpidemiologico.clasificacion_estrategia.in_(clasificacion))
+                conditions.append(
+                    col(CasoEpidemiologico.clasificacion_estrategia).in_(clasificacion)
+                )
             else:
-                conditions.append(CasoEpidemiologico.clasificacion_estrategia == clasificacion)
+                conditions.append(
+                    col(CasoEpidemiologico.clasificacion_estrategia) == clasificacion
+                )
 
         # Provincias múltiples (por código INDEC - ESTABLECIMIENTO DE NOTIFICACIÓN)
         if provincia_ids_establecimiento_notificacion:
-            conditions.append(Provincia.id_provincia_indec.in_(provincia_ids_establecimiento_notificacion))
+            conditions.append(
+                col(Provincia.id_provincia_indec).in_(
+                    provincia_ids_establecimiento_notificacion
+                )
+            )
 
         # Tipo de sujeto
         if tipo_sujeto:
             if tipo_sujeto == "humano":
-                conditions.append(CasoEpidemiologico.codigo_ciudadano.isnot(None))
+                conditions.append(col(CasoEpidemiologico.codigo_ciudadano).isnot(None))
             elif tipo_sujeto == "animal":
-                conditions.append(CasoEpidemiologico.id_animal.isnot(None))
+                conditions.append(col(CasoEpidemiologico.id_animal).isnot(None))
 
         # Requiere revisión
         if requiere_revision is not None:
-            conditions.append(CasoEpidemiologico.requiere_revision_especie == requiere_revision)
+            conditions.append(
+                col(CasoEpidemiologico.requiere_revision_especie) == requiere_revision
+            )
 
         # Filtros de edad (calcular edad a partir de fecha_nacimiento y fecha_apertura_caso)
         # Solo aplica si tenemos ambas fechas
         if edad_min is not None or edad_max is not None:
             # Calcular edad usando AGE(fecha_apertura_caso, fecha_nacimiento)
             edad_calculada = func.extract(
-                'year',
-                func.age(CasoEpidemiologico.fecha_apertura_caso, CasoEpidemiologico.fecha_nacimiento)
+                "year",
+                func.age(
+                    CasoEpidemiologico.fecha_apertura_caso,
+                    CasoEpidemiologico.fecha_nacimiento,
+                ),
             )
             # Asegurarse de que ambas fechas existan
-            conditions.append(CasoEpidemiologico.fecha_nacimiento.isnot(None))
-            conditions.append(CasoEpidemiologico.fecha_apertura_caso.isnot(None))
+            conditions.append(col(CasoEpidemiologico.fecha_nacimiento).isnot(None))
+            conditions.append(col(CasoEpidemiologico.fecha_apertura_caso).isnot(None))
 
             if edad_min is not None:
                 conditions.append(edad_calculada >= edad_min)
@@ -156,18 +186,18 @@ class CasoEpidemiologicoQueryBuilder:
             search_term = f"%{search}%"
             conditions.append(
                 or_(
-                    CasoEpidemiologico.id_snvs.cast(String).ilike(search_term),
-                    Ciudadano.nombre.ilike(search_term),
-                    Ciudadano.apellido.ilike(search_term),
-                    Ciudadano.numero_documento.cast(String).ilike(search_term),
-                    Animal.especie.ilike(search_term),
+                    cast(col(CasoEpidemiologico.id_snvs), String).ilike(search_term),
+                    col(Ciudadano.nombre).ilike(search_term),
+                    col(Ciudadano.apellido).ilike(search_term),
+                    cast(col(Ciudadano.numero_documento), String).ilike(search_term),
+                    col(Animal.especie).ilike(search_term),
                 )
             )
 
         return conditions
 
     @staticmethod
-    def apply_filters(query, **filter_kwargs):
+    def apply_filters(query: Any, **filter_kwargs: Any) -> Any:
         """
         Aplica JOINs y filtros a una query de manera consistente.
 
@@ -183,11 +213,15 @@ class CasoEpidemiologicoQueryBuilder:
 
         # Si hay filtro de grupos, agregar JOIN con EnfermedadGrupo
         # (solo cuando se necesita para evitar duplicados)
-        if filter_kwargs.get('grupo_eno_ids'):
-            query = query.outerjoin(EnfermedadGrupo, Enfermedad.id == EnfermedadGrupo.id_enfermedad)
+        if filter_kwargs.get("grupo_eno_ids"):
+            query = query.outerjoin(
+                EnfermedadGrupo, Enfermedad.id == EnfermedadGrupo.id_enfermedad
+            )
 
         # Construir y aplicar condiciones
-        conditions = CasoEpidemiologicoQueryBuilder.build_filter_conditions(**filter_kwargs)
+        conditions = CasoEpidemiologicoQueryBuilder.build_filter_conditions(
+            **filter_kwargs
+        )
 
         if conditions:
             query = query.where(and_(*conditions))

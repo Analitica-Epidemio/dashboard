@@ -26,7 +26,10 @@ class SyncGeocodingService:
     """Servicio de geocodificación síncrono para bulk processors."""
 
     def __init__(
-        self, session: Session, provider: Optional[str] = None, api_key: Optional[str] = None
+        self,
+        session: Session,
+        provider: Optional[str] = None,
+        api_key: Optional[str] = None,
     ):
         """
         Inicializa el servicio de geocodificación.
@@ -89,7 +92,9 @@ class SyncGeocodingService:
 
         # Si no se proveen nombres de localidad/provincia, intentar obtenerlos de BD
         if id_localidad_indec and not (localidad or provincia):
-            localidad, provincia = self._resolver_nombres_geograficos(id_localidad_indec)
+            localidad, provincia = self._resolver_nombres_geograficos(
+                id_localidad_indec
+            )
 
         # Validar que tengamos suficiente información
         if not (calle or localidad):
@@ -162,8 +167,15 @@ class SyncGeocodingService:
             # Buscar localidad con join a departamento y provincia
             stmt = (
                 select(Localidad, Departamento, Provincia)
-                .join(Departamento, Localidad.id_departamento_indec == Departamento.id_departamento_indec)
-                .join(Provincia, Departamento.id_provincia_indec == Provincia.id_provincia_indec)  # FIX: usar id_provincia_indec
+                .join(
+                    Departamento,
+                    Localidad.id_departamento_indec
+                    == Departamento.id_departamento_indec,
+                )
+                .join(
+                    Provincia,
+                    Departamento.id_provincia_indec == Provincia.id_provincia_indec,
+                )  # FIX: usar id_provincia_indec
                 .where(Localidad.id_localidad_indec == id_localidad_indec)
             )
 
@@ -171,20 +183,28 @@ class SyncGeocodingService:
 
             if resultado:
                 localidad, departamento, provincia = resultado
-                logger.debug(f"✅ Resuelto: {localidad.nombre}, {provincia.nombre} (INDEC: {id_localidad_indec})")
+                logger.debug(
+                    f"✅ Resuelto: {localidad.nombre}, {provincia.nombre} (INDEC: {id_localidad_indec})"
+                )
                 return localidad.nombre, provincia.nombre
             else:
-                logger.warning(f"⚠️ No se encontró localidad con INDEC: {id_localidad_indec}")
+                logger.warning(
+                    f"⚠️ No se encontró localidad con INDEC: {id_localidad_indec}"
+                )
 
         except Exception as e:
-            logger.warning(f"❌ Error resolviendo nombres geográficos para INDEC {id_localidad_indec}: {e}")
+            logger.warning(
+                f"❌ Error resolviendo nombres geográficos para INDEC {id_localidad_indec}: {e}"
+            )
 
         return None, None
 
-    def cerrar(self):
+    def cerrar(self) -> None:
         """Cierra el adapter si es necesario."""
-        if self.adapter and hasattr(self.adapter, "close"):
-            try:
-                asyncio.run(self.adapter.close())
-            except Exception as e:
-                logger.warning(f"Error cerrando adapter: {e}")
+        if self.adapter:
+            close_method = getattr(self.adapter, "close", None)
+            if callable(close_method):
+                try:
+                    asyncio.run(close_method())
+                except Exception as e:
+                    logger.warning(f"Error cerrando adapter: {e}")

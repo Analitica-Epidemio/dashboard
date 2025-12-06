@@ -14,6 +14,8 @@ from sqlmodel import JSON, Column, Field
 from app.core.models import BaseModel
 from app.domains.jobs.constants import JobPriority, JobStatus
 
+__all__ = ["Job", "JobStatus", "JobPriority"]
+
 
 class Job(BaseModel, table=True):
     """
@@ -35,7 +37,7 @@ class Job(BaseModel, table=True):
     id: str = Field(
         default_factory=lambda: str(uuid.uuid4()),
         primary_key=True,
-        description="UUID único del trabajo",
+        description="ID único del trabajo (UUID)",
     )
     job_type: str = Field(
         ...,
@@ -109,25 +111,27 @@ class Job(BaseModel, table=True):
         percentage: int,
         step: Optional[str] = None,
         increment_completed_steps: bool = False,
-    ):
+    ) -> None:
         """Actualiza el progreso del trabajo."""
         self.progress_percentage = max(0, min(100, percentage))
         if step:
             self.current_step = step
+
         if increment_completed_steps:
             self.completed_steps += 1
         elif self.total_steps > 0:
             self.completed_steps = int((percentage / 100) * self.total_steps)
+
         self.updated_at = datetime.now()
 
-    def mark_started(self, celery_task_id: str):
+    def mark_started(self, celery_task_id: str) -> None:
         """Marca el trabajo como iniciado."""
         self.status = JobStatus.IN_PROGRESS
         self.started_at = datetime.now()
         self.updated_at = datetime.now()
         self.celery_task_id = celery_task_id
 
-    def mark_completed(self, **result_data):
+    def mark_completed(self, **result_data: Any) -> None:
         """Marca el trabajo como completado."""
         self.status = JobStatus.COMPLETED
         self.progress_percentage = 100
@@ -138,7 +142,9 @@ class Job(BaseModel, table=True):
         if result_data:
             self.output_data = {**(self.output_data or {}), **result_data}
 
-    def mark_failed(self, error_message: str, error_traceback: Optional[str] = None):
+    def mark_failed(
+        self, error_message: str, error_traceback: Optional[str] = None
+    ) -> None:
         """Marca el trabajo como fallido."""
         self.status = JobStatus.FAILED
         self.error_message = error_message
@@ -171,7 +177,7 @@ class Job(BaseModel, table=True):
             return default
         return self.input_data.get(key, default)
 
-    def set_input(self, key: str, value: Any):
+    def set_input(self, key: str, value: Any) -> None:
         """Establece un valor en input_data."""
         if not self.input_data:
             self.input_data = {}

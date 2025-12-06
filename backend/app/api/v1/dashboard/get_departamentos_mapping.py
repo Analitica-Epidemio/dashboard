@@ -64,7 +64,9 @@ async def get_departamentos_mapping() -> Dict[str, Any]:
             / "_components"
             / "departamentos_ids.json",
             # Ruta absoluta
-            Path("/Users/ignacio/Documents/work/epidemiologia/dashboard/frontend/src/app/dashboard/mapa/_components/departamentos_ids.json"),
+            Path(
+                "/Users/ignacio/Documents/work/epidemiologia/dashboard/frontend/src/app/dashboard/mapa/_components/departamentos_ids.json"
+            ),
         ]
 
         for mapping_path in possible_paths:
@@ -72,7 +74,9 @@ async def get_departamentos_mapping() -> Dict[str, Any]:
             if mapping_path.exists():
                 logger.info(f"Loading mapping from {mapping_path}")
                 with open(mapping_path, "r", encoding="utf-8") as f:
-                    mapping = json.load(f)
+                    from typing import cast
+
+                    mapping = cast(Dict[str, Any], json.load(f))
                 logger.info(f"Loaded mapping with {len(mapping)} entries from file")
                 return mapping
 

@@ -8,8 +8,9 @@ Contiene los catálogos específicos del SNVS para datos de vigilancia pasiva:
 
 from typing import TYPE_CHECKING, List, Optional
 
-from pydantic import field_validator
+from pydantic import ValidationInfo, field_validator
 from sqlalchemy import Index, SmallInteger
+from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship
 
 from app.core.models import BaseModel
@@ -110,11 +111,11 @@ class TipoCasoEpidemiologicoPasivo(BaseModel, table=True):
     # Relaciones
     # ═══════════════════════════════════════════════════════════════
 
-    conteos_clinicos: List["ConteoCasosClinicos"] = Relationship(
+    conteos_clinicos: Mapped[List["ConteoCasosClinicos"]] = Relationship(
         back_populates="tipo_evento"
     )
     # NOTA: conteos_laboratorio ahora usa AgenteEtiologico del catalogo compartido
-    conteos_internacion: List["ConteoCamasIRA"] = Relationship(
+    conteos_internacion: Mapped[List["ConteoCamasIRA"]] = Relationship(
         back_populates="tipo_evento"
     )
 
@@ -137,9 +138,7 @@ class RangoEtario(BaseModel, table=True):
     """
 
     __tablename__ = "rango_etario"
-    __table_args__ = (
-        Index("ix_rango_etario_snvs", "id_snvs"),
-    )
+    __table_args__ = (Index("ix_rango_etario_snvs", "id_snvs"),)
 
     # ═══════════════════════════════════════════════════════════════
     # Identificación SNVS
@@ -167,7 +166,7 @@ class RangoEtario(BaseModel, table=True):
     # ═══════════════════════════════════════════════════════════════
 
     edad_desde: Optional[int] = Field(
-        None,
+        default=None,
         ge=0,
         le=150,
         sa_type=SmallInteger,
@@ -175,7 +174,7 @@ class RangoEtario(BaseModel, table=True):
     )
 
     edad_hasta: Optional[int] = Field(
-        None,
+        default=None,
         ge=0,
         le=150,
         sa_type=SmallInteger,
@@ -203,7 +202,9 @@ class RangoEtario(BaseModel, table=True):
 
     @field_validator("edad_hasta")
     @classmethod
-    def edad_hasta_mayor_que_desde(cls, v: Optional[int], info) -> Optional[int]:
+    def edad_hasta_mayor_que_desde(
+        cls, v: Optional[int], info: ValidationInfo
+    ) -> Optional[int]:
         """Valida que edad_hasta >= edad_desde si ambos están definidos."""
         edad_desde = info.data.get("edad_desde")
         if v is not None and edad_desde is not None and v < edad_desde:
@@ -214,12 +215,12 @@ class RangoEtario(BaseModel, table=True):
     # Relaciones
     # ═══════════════════════════════════════════════════════════════
 
-    conteos_clinicos: List["ConteoCasosClinicos"] = Relationship(
+    conteos_clinicos: Mapped[List["ConteoCasosClinicos"]] = Relationship(
         back_populates="rango_etario"
     )
-    conteos_laboratorio: List["ConteoEstudiosLab"] = Relationship(
+    conteos_laboratorio: Mapped[List["ConteoEstudiosLab"]] = Relationship(
         back_populates="rango_etario"
     )
-    conteos_internacion: List["ConteoCamasIRA"] = Relationship(
+    conteos_internacion: Mapped[List["ConteoCamasIRA"]] = Relationship(
         back_populates="rango_etario"
     )

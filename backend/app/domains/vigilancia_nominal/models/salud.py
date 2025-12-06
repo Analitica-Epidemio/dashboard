@@ -12,11 +12,13 @@ from datetime import date
 from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import BigInteger, UniqueConstraint
+from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship
 
 from app.core.models import BaseModel
 
 if TYPE_CHECKING:
+    from app.domains.territorio.establecimientos_models import Establecimiento
     from app.domains.vigilancia_nominal.models.caso import (
         CasoEpidemiologico,
         DetalleCasoSintomas,
@@ -25,7 +27,6 @@ if TYPE_CHECKING:
         Ciudadano,
         CiudadanoComorbilidades,
     )
-    from app.domains.territorio.establecimientos_models import Establecimiento
 
 
 # =============================================================================
@@ -56,7 +57,7 @@ class Determinacion(BaseModel, table=True):
     )
 
     # Relaciones
-    tecnicas: List["Tecnica"] = Relationship(back_populates="determinacion")
+    tecnicas: Mapped[List["Tecnica"]] = Relationship(back_populates="determinacion")
 
 
 class Tecnica(BaseModel, table=True):
@@ -87,8 +88,8 @@ class Tecnica(BaseModel, table=True):
     )
 
     # Relaciones
-    determinacion: "Determinacion" = Relationship(back_populates="tecnicas")
-    resultados_tecnica: List["ResultadoTecnica"] = Relationship(
+    determinacion: Mapped["Determinacion"] = Relationship(back_populates="tecnicas")
+    resultados_tecnica: Mapped[List["ResultadoTecnica"]] = Relationship(
         back_populates="tecnica"
     )
 
@@ -121,7 +122,7 @@ class ResultadoTecnica(BaseModel, table=True):
     id_tecnica: int = Field(foreign_key="tecnica.id", description="ID de la técnica")
 
     # Relaciones
-    tecnica: "Tecnica" = Relationship(back_populates="resultados_tecnica")
+    tecnica: Mapped["Tecnica"] = Relationship(back_populates="resultados_tecnica")
 
 
 class Sintoma(BaseModel, table=True):
@@ -142,7 +143,7 @@ class Sintoma(BaseModel, table=True):
     )
 
     # Relaciones
-    detalle_casos: List["DetalleCasoSintomas"] = Relationship(
+    detalle_casos: Mapped[List["DetalleCasoSintomas"]] = Relationship(
         back_populates="sintoma"
     )
 
@@ -165,7 +166,7 @@ class Comorbilidad(BaseModel, table=True):
     )
 
     # Relaciones
-    ciudadanos_comorbilidades: List["CiudadanoComorbilidades"] = Relationship(
+    ciudadanos_comorbilidades: Mapped[List["CiudadanoComorbilidades"]] = Relationship(
         back_populates="comorbilidad"
     )
 
@@ -178,16 +179,16 @@ class Muestra(BaseModel, table=True):
     """
 
     __tablename__ = "muestra"
-    __table_args__ = (
-        UniqueConstraint("descripcion", name="uq_muestra_descripcion"),
-    )
+    __table_args__ = (UniqueConstraint("descripcion", name="uq_muestra_descripcion"),)
 
     descripcion: Optional[str] = Field(
         None, max_length=150, description="Descripción de muestra"
     )
 
     # Relaciones
-    muestras_casos: List["MuestraCasoEpidemiologico"] = Relationship(back_populates="muestra")
+    muestras_casos: Mapped[List["MuestraCasoEpidemiologico"]] = Relationship(
+        back_populates="muestra"
+    )
 
 
 class Vacuna(BaseModel, table=True):
@@ -198,16 +199,16 @@ class Vacuna(BaseModel, table=True):
     """
 
     __tablename__ = "vacuna"
-    __table_args__ = (
-        UniqueConstraint("nombre", name="uq_vacuna_nombre"),
-    )
+    __table_args__ = (UniqueConstraint("nombre", name="uq_vacuna_nombre"),)
 
     nombre: Optional[str] = Field(
         None, max_length=150, description="Nombre de la vacuna"
     )
 
     # Relaciones
-    vacunas_ciudadanos: List["VacunasCiudadano"] = Relationship(back_populates="vacuna")
+    vacunas_ciudadanos: Mapped[List["VacunasCiudadano"]] = Relationship(
+        back_populates="vacuna"
+    )
 
 
 # =============================================================================
@@ -225,7 +226,7 @@ class MuestraCasoEpidemiologico(BaseModel, table=True):
 
     __tablename__ = "muestra_caso_epidemiologico"
     __table_args__ = (
-        UniqueConstraint('id_snvs_muestra', 'id_caso', name='uq_muestra_caso'),
+        UniqueConstraint("id_snvs_muestra", "id_caso", name="uq_muestra_caso"),
     )
 
     # Campos propios
@@ -257,12 +258,13 @@ class MuestraCasoEpidemiologico(BaseModel, table=True):
     id_snvs_resultado: Optional[int] = Field(None, description="ID del resultado")
     fecha_papel: Optional[date] = Field(None, description="Fecha en papel")
     id_snvs_muestra: Optional[int] = Field(
-        None, sa_type=BigInteger, index=True,
-        description="ID SNVS de la muestra"
+        None, sa_type=BigInteger, index=True, description="ID SNVS de la muestra"
     )
 
     # Foreign Keys
-    id_caso: int = Field(foreign_key="caso_epidemiologico.id", description="ID del caso")
+    id_caso: int = Field(
+        foreign_key="caso_epidemiologico.id", description="ID del caso"
+    )
     id_establecimiento: int = Field(
         foreign_key="establecimiento.id", description="ID del establecimiento"
     )
@@ -271,10 +273,12 @@ class MuestraCasoEpidemiologico(BaseModel, table=True):
     )
 
     # Relaciones
-    caso: "CasoEpidemiologico" = Relationship(back_populates="muestras")
-    establecimiento: "Establecimiento" = Relationship(back_populates="muestras")
-    muestra: "Muestra" = Relationship(back_populates="muestras_casos")
-    estudios: List["EstudioCasoEpidemiologico"] = Relationship(back_populates="muestra_caso")
+    caso: Mapped["CasoEpidemiologico"] = Relationship(back_populates="muestras")
+    establecimiento: Mapped["Establecimiento"] = Relationship(back_populates="muestras")
+    muestra: Mapped["Muestra"] = Relationship(back_populates="muestras_casos")
+    estudios: Mapped[List["EstudioCasoEpidemiologico"]] = Relationship(
+        back_populates="muestra_caso"
+    )
 
 
 class EstudioCasoEpidemiologico(BaseModel, table=True):
@@ -306,7 +310,9 @@ class EstudioCasoEpidemiologico(BaseModel, table=True):
     )
 
     # Relaciones
-    muestra_caso: "MuestraCasoEpidemiologico" = Relationship(back_populates="estudios")
+    muestra_caso: Mapped["MuestraCasoEpidemiologico"] = Relationship(
+        back_populates="estudios"
+    )
 
 
 class VacunasCiudadano(BaseModel, table=True):
@@ -319,8 +325,13 @@ class VacunasCiudadano(BaseModel, table=True):
 
     __tablename__ = "vacunas_ciudadano"
     __table_args__ = (
-        UniqueConstraint('codigo_ciudadano', 'id_vacuna', 'fecha_aplicacion', 'dosis',
-                        name='uq_vacuna_ciudadano'),
+        UniqueConstraint(
+            "codigo_ciudadano",
+            "id_vacuna",
+            "fecha_aplicacion",
+            "dosis",
+            name="uq_vacuna_ciudadano",
+        ),
     )
 
     dosis: Optional[str] = Field(
@@ -334,7 +345,7 @@ class VacunasCiudadano(BaseModel, table=True):
     codigo_ciudadano: int = Field(
         sa_type=BigInteger,
         foreign_key="ciudadano.codigo_ciudadano",
-        description="Código del ciudadano"
+        description="Código del ciudadano",
     )
     id_vacuna: int = Field(foreign_key="vacuna.id", description="ID de la vacuna")
     id_caso: Optional[int] = Field(
@@ -342,6 +353,8 @@ class VacunasCiudadano(BaseModel, table=True):
     )
 
     # Relaciones
-    ciudadano: "Ciudadano" = Relationship(back_populates="vacunas")
-    vacuna: "Vacuna" = Relationship(back_populates="vacunas_ciudadanos")
-    caso: Optional["CasoEpidemiologico"] = Relationship(back_populates="vacunas")
+    ciudadano: Mapped["Ciudadano"] = Relationship(back_populates="vacunas")
+    vacuna: Mapped["Vacuna"] = Relationship(back_populates="vacunas_ciudadanos")
+    caso: Mapped[Optional["CasoEpidemiologico"]] = Relationship(
+        back_populates="vacunas"
+    )

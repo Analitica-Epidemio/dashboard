@@ -45,6 +45,13 @@ class BulletinHTMLRenderer:
 
         TODO: Implementar conversion de graficos. Por ahora retorna el contenido sin cambios.
         """
-        logger.debug("BulletinHTMLRenderer.renderizar_html_con_graficos called (stub implementation)")
+        logger.debug(
+            "BulletinHTMLRenderer.renderizar_html_con_graficos called (stub implementation)"
+        )
         # TODO: Implementar logica de conversion
         return html_content
+
+    # Alias para compatibilidad con código existente
+    async def render_html_with_charts(self, html_content: str) -> str:
+        """Alias para renderizar_html_con_graficos."""
+        return await self.renderizar_html_con_graficos(html_content)

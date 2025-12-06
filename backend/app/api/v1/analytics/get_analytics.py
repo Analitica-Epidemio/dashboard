@@ -33,7 +33,9 @@ from app.domains.autenticacion.models import User
 logger = logging.getLogger(__name__)
 
 
-def calculate_metric_value(valor_actual: float, valor_anterior: Optional[float]) -> MetricValue:
+def calculate_metric_value(
+    valor_actual: float, valor_anterior: Optional[float]
+) -> MetricValue:
     """
     Calcula un MetricValue con la comparación entre valores.
     """
@@ -43,7 +45,7 @@ def calculate_metric_value(valor_actual: float, valor_anterior: Optional[float])
             valor_anterior=valor_anterior,
             diferencia_absoluta=None,
             diferencia_porcentual=None,
-            tendencia=None
+            tendencia=None,
         )
 
     dif_abs = valor_actual - valor_anterior
@@ -62,7 +64,7 @@ def calculate_metric_value(valor_actual: float, valor_anterior: Optional[float])
         valor_anterior=valor_anterior,
         diferencia_absoluta=round(dif_abs, 2),
         diferencia_porcentual=round(dif_pct, 2),
-        tendencia=tendencia
+        tendencia=tendencia,
     )
 
 
@@ -73,18 +75,18 @@ async def query_casos_metrics(
     grupo_id: Optional[int],
     tipo_eno_ids: Optional[List[int]],
     clasificaciones: Optional[List[str]],
-    provincia_id: Optional[int]
+    provincia_id: Optional[int],
 ) -> Dict[str, Any]:
     """
     Consulta métricas de casos para un período específico.
     """
-    params: Dict[str, Any] = {
-        "fecha_desde": fecha_desde,
-        "fecha_hasta": fecha_hasta
-    }
+    params: Dict[str, Any] = {"fecha_desde": fecha_desde, "fecha_hasta": fecha_hasta}
 
     # Base query
-    where_clauses = ["e.fecha_minima_caso >= :fecha_desde", "e.fecha_minima_caso <= :fecha_hasta"]
+    where_clauses = [
+        "e.fecha_minima_caso >= :fecha_desde",
+        "e.fecha_minima_caso <= :fecha_hasta",
+    ]
 
     if provincia_id:
         where_clauses.append("d.id_provincia_indec = :provincia_id")
@@ -130,7 +132,9 @@ async def query_casos_metrics(
         result_pob = await db.execute(text(query_pob), {})
 
     poblacion = result_pob.scalar() or 0
-    incidencia_100k = round((total_casos / poblacion) * 100000, 2) if poblacion > 0 else 0
+    incidencia_100k = (
+        round((total_casos / poblacion) * 100000, 2) if poblacion > 0 else 0
+    )
 
     # Query casos por semana
     query_semanal = f"""
@@ -152,11 +156,9 @@ async def query_casos_metrics(
     total_semanas = 0
 
     for row in result_semanal:
-        casos_por_semana.append({
-            "anio_epi": row.anio_epi,
-            "semana_epi": row.semana_epi,
-            "casos": row.casos
-        })
+        casos_por_semana.append(
+            {"anio_epi": row.anio_epi, "semana_epi": row.semana_epi, "casos": row.casos}
+        )
         total_semanas += 1
 
     promedio_semanal = round(total_casos / total_semanas, 2) if total_semanas > 0 else 0
@@ -165,7 +167,7 @@ async def query_casos_metrics(
         "total_casos": total_casos,
         "incidencia_100k": incidencia_100k,
         "promedio_semanal": promedio_semanal,
-        "casos_por_semana": casos_por_semana
+        "casos_por_semana": casos_por_semana,
     }
 
 
@@ -178,17 +180,17 @@ async def query_cobertura_metrics(
     grupo_id: Optional[int],
     tipo_eno_ids: Optional[List[int]],
     clasificaciones: Optional[List[str]],
-    provincia_id: Optional[int]
+    provincia_id: Optional[int],
 ) -> Dict[str, Any]:
     """
     Consulta métricas de cobertura geográfica.
     """
-    params: Dict[str, Any] = {
-        "fecha_desde": fecha_desde,
-        "fecha_hasta": fecha_hasta
-    }
+    params: Dict[str, Any] = {"fecha_desde": fecha_desde, "fecha_hasta": fecha_hasta}
 
-    where_clauses = ["e.fecha_minima_caso >= :fecha_desde", "e.fecha_minima_caso <= :fecha_hasta"]
+    where_clauses = [
+        "e.fecha_minima_caso >= :fecha_desde",
+        "e.fecha_minima_caso <= :fecha_hasta",
+    ]
 
     if provincia_id:
         where_clauses.append("d.id_provincia_indec = :provincia_id")
@@ -244,11 +246,13 @@ async def query_cobertura_metrics(
     result_top = await db.execute(text(query_top), params)
     top_departamentos = []
     for row in result_top:
-        top_departamentos.append({
-            "departamento_id": row.id_departamento_indec,
-            "departamento_nombre": row.departamento_nombre,
-            "casos": row.casos
-        })
+        top_departamentos.append(
+            {
+                "departamento_id": row.id_departamento_indec,
+                "departamento_nombre": row.departamento_nombre,
+                "casos": row.casos,
+            }
+        )
 
     # Nuevas áreas y áreas sin casos (si hay período de comparación)
     nuevas_areas = 0
@@ -273,7 +277,12 @@ async def query_cobertura_metrics(
         params_comp["fecha_desde"] = fecha_desde_comp
         params_comp["fecha_hasta"] = fecha_hasta_comp
 
-        where_clauses_comp = [clause.replace(":fecha_desde", ":fecha_desde").replace(":fecha_hasta", ":fecha_hasta") for clause in where_clauses]
+        where_clauses_comp = [
+            clause.replace(":fecha_desde", ":fecha_desde").replace(
+                ":fecha_hasta", ":fecha_hasta"
+            )
+            for clause in where_clauses
+        ]
         where_sql_comp = " AND ".join(where_clauses_comp)
 
         query_deptos_comp = f"""
@@ -295,7 +304,7 @@ async def query_cobertura_metrics(
         "areas_afectadas": areas_afectadas,
         "nuevas_areas": nuevas_areas,
         "areas_sin_casos": areas_sin_casos,
-        "top_departamentos": top_departamentos
+        "top_departamentos": top_departamentos,
     }
 
 
@@ -306,17 +315,17 @@ async def query_performance_metrics(
     grupo_id: Optional[int],
     tipo_eno_ids: Optional[List[int]],
     clasificaciones: Optional[List[str]],
-    provincia_id: Optional[int]
+    provincia_id: Optional[int],
 ) -> Dict[str, Any]:
     """
     Consulta métricas de performance de clasificación.
     """
-    params: Dict[str, Any] = {
-        "fecha_desde": fecha_desde,
-        "fecha_hasta": fecha_hasta
-    }
+    params: Dict[str, Any] = {"fecha_desde": fecha_desde, "fecha_hasta": fecha_hasta}
 
-    where_clauses = ["e.fecha_minima_caso >= :fecha_desde", "e.fecha_minima_caso <= :fecha_hasta"]
+    where_clauses = [
+        "e.fecha_minima_caso >= :fecha_desde",
+        "e.fecha_minima_caso <= :fecha_hasta",
+    ]
 
     if provincia_id:
         where_clauses.append("d.id_provincia_indec = :provincia_id")
@@ -362,7 +371,9 @@ async def query_performance_metrics(
     confirmados = casos_por_clasificacion.get("CONFIRMADOS", 0)
     en_estudio = casos_por_clasificacion.get("EN_ESTUDIO", 0)
 
-    tasa_confirmacion = round((confirmados / total_casos) * 100, 2) if total_casos > 0 else 0
+    tasa_confirmacion = (
+        round((confirmados / total_casos) * 100, 2) if total_casos > 0 else 0
+    )
 
     # Confianza promedio (si existe el campo)
     query_confianza = f"""
@@ -376,28 +387,45 @@ async def query_performance_metrics(
 
     result_conf = await db.execute(text(query_confianza), params)
     confianza_promedio = result_conf.scalar() or 0
-    confianza_promedio = round(float(confianza_promedio), 4) if confianza_promedio else 0
+    confianza_promedio = (
+        round(float(confianza_promedio), 4) if confianza_promedio else 0
+    )
 
     return {
         "tasa_confirmacion": tasa_confirmacion,
         "tiempo_promedio_clasificacion": None,  # TODO: Implementar cuando tengamos fecha de clasificación
         "casos_en_estudio": en_estudio,
-        "confianza_promedio": confianza_promedio
+        "confianza_promedio": confianza_promedio,
     }
 
 
 async def get_analytics(
-    period_type: PeriodType = Query(PeriodType.ULTIMAS_4_SEMANAS_EPI, description="Tipo de período predefinido"),
-    fecha_desde: Optional[date] = Query(None, description="Fecha desde (solo si period_type=personalizado)"),
-    fecha_hasta: Optional[date] = Query(None, description="Fecha hasta (solo si period_type=personalizado)"),
-    comparison_type: ComparisonType = Query(ComparisonType.ROLLING, description="Tipo de comparación"),
-    fecha_referencia: Optional[date] = Query(None, description="Fecha de referencia para 'viajar en el tiempo' y ver métricas históricas (ej: 2023-03-15)"),
+    period_type: PeriodType = Query(
+        PeriodType.ULTIMAS_4_SEMANAS_EPI, description="Tipo de período predefinido"
+    ),
+    fecha_desde: Optional[date] = Query(
+        None, description="Fecha desde (solo si period_type=personalizado)"
+    ),
+    fecha_hasta: Optional[date] = Query(
+        None, description="Fecha hasta (solo si period_type=personalizado)"
+    ),
+    comparison_type: ComparisonType = Query(
+        ComparisonType.ROLLING, description="Tipo de comparación"
+    ),
+    fecha_referencia: Optional[date] = Query(
+        None,
+        description="Fecha de referencia para 'viajar en el tiempo' y ver métricas históricas (ej: 2023-03-15)",
+    ),
     grupo_id: Optional[int] = Query(None, description="ID del grupo seleccionado"),
-    tipo_eno_ids: Optional[List[int]] = Query(None, description="IDs de los eventos a filtrar"),
-    clasificaciones: Optional[List[str]] = Query(None, description="Filtrar por clasificaciones estratégicas"),
+    tipo_eno_ids: Optional[List[int]] = Query(
+        None, description="IDs de los eventos a filtrar"
+    ),
+    clasificaciones: Optional[List[str]] = Query(
+        None, description="Filtrar por clasificaciones estratégicas"
+    ),
     provincia_id: Optional[int] = Query(None, description="Código INDEC de provincia"),
     db: AsyncSession = Depends(get_async_session),
-    current_user: Optional[User] = RequireAuthOrSignedUrl
+    current_user: Optional[User] = RequireAuthOrSignedUrl,
 ) -> SuccessResponse[AnalyticsResponse]:
     """
     Endpoint principal de analytics.
@@ -417,29 +445,40 @@ async def get_analytics(
     # Determinar fechas del período actual
     if period_type == PeriodType.PERSONALIZADO:
         if not fecha_desde or not fecha_hasta:
-            raise ValueError("Para período personalizado debe especificar fecha_desde y fecha_hasta")
+            raise ValueError(
+                "Para período personalizado debe especificar fecha_desde y fecha_hasta"
+            )
         periodo_desde = fecha_desde
         periodo_hasta = fecha_hasta
     else:
         periodo_desde, periodo_hasta = get_period_dates(
-            period_type,
-            fecha_referencia=fecha_referencia
+            period_type, fecha_referencia=fecha_referencia
         )
 
     # Crear PeriodInfo del período actual
-    descripcion_actual = get_period_description(period_type, periodo_desde, periodo_hasta)
-    periodo_actual = create_period_info(periodo_desde, periodo_hasta, descripcion_actual)
+    descripcion_actual = get_period_description(
+        period_type, periodo_desde, periodo_hasta
+    )
+    periodo_actual = create_period_info(
+        periodo_desde, periodo_hasta, descripcion_actual
+    )
 
     # Determinar período de comparación
     if comparison_type == ComparisonType.ROLLING:
-        comp_desde, comp_hasta = get_comparison_period(periodo_desde, periodo_hasta, "rolling")
+        comp_desde, comp_hasta = get_comparison_period(
+            periodo_desde, periodo_hasta, "rolling"
+        )
         descripcion_comp = f"Período anterior ({comp_desde.strftime('%d/%m')} - {comp_hasta.strftime('%d/%m')})"
     elif comparison_type == ComparisonType.YEAR_OVER_YEAR:
-        comp_desde, comp_hasta = get_comparison_period(periodo_desde, periodo_hasta, "year_over_year")
+        comp_desde, comp_hasta = get_comparison_period(
+            periodo_desde, periodo_hasta, "year_over_year"
+        )
         descripcion_comp = f"Mismo período {comp_desde.year}"
     else:
         # BOTH - por ahora solo hacemos rolling, TODO: implementar ambos
-        comp_desde, comp_hasta = get_comparison_period(periodo_desde, periodo_hasta, "rolling")
+        comp_desde, comp_hasta = get_comparison_period(
+            periodo_desde, periodo_hasta, "rolling"
+        )
         descripcion_comp = f"Período anterior ({comp_desde.strftime('%d/%m')} - {comp_hasta.strftime('%d/%m')})"
 
     periodo_comparacion = create_period_info(comp_desde, comp_hasta, descripcion_comp)
@@ -450,58 +489,108 @@ async def get_analytics(
 
     # Consultar métricas para período actual
     casos_actual = await query_casos_metrics(
-        db, periodo_desde, periodo_hasta,
-        grupo_id, tipo_eno_ids, clasificaciones, provincia_id
+        db,
+        periodo_desde,
+        periodo_hasta,
+        grupo_id,
+        tipo_eno_ids,
+        clasificaciones,
+        provincia_id,
     )
 
     # Consultar métricas para período de comparación
     casos_comp = await query_casos_metrics(
-        db, comp_desde, comp_hasta,
-        grupo_id, tipo_eno_ids, clasificaciones, provincia_id
+        db,
+        comp_desde,
+        comp_hasta,
+        grupo_id,
+        tipo_eno_ids,
+        clasificaciones,
+        provincia_id,
     )
 
     # Construir CasosMetrics con comparación
     casos_metrics = CasosMetrics(
-        total_casos=calculate_metric_value(casos_actual["total_casos"], casos_comp["total_casos"]),
-        incidencia_100k=calculate_metric_value(casos_actual["incidencia_100k"], casos_comp["incidencia_100k"]),
-        promedio_semanal=calculate_metric_value(casos_actual["promedio_semanal"], casos_comp["promedio_semanal"]),
-        casos_por_semana=casos_actual["casos_por_semana"]
+        total_casos=calculate_metric_value(
+            casos_actual["total_casos"], casos_comp["total_casos"]
+        ),
+        incidencia_100k=calculate_metric_value(
+            casos_actual["incidencia_100k"], casos_comp["incidencia_100k"]
+        ),
+        promedio_semanal=calculate_metric_value(
+            casos_actual["promedio_semanal"], casos_comp["promedio_semanal"]
+        ),
+        casos_por_semana=casos_actual["casos_por_semana"],
     )
 
     # Cobertura
     cobertura_actual = await query_cobertura_metrics(
-        db, periodo_desde, periodo_hasta, comp_desde, comp_hasta,
-        grupo_id, tipo_eno_ids, clasificaciones, provincia_id
+        db,
+        periodo_desde,
+        periodo_hasta,
+        comp_desde,
+        comp_hasta,
+        grupo_id,
+        tipo_eno_ids,
+        clasificaciones,
+        provincia_id,
     )
 
     cobertura_comp = await query_cobertura_metrics(
-        db, comp_desde, comp_hasta, None, None,
-        grupo_id, tipo_eno_ids, clasificaciones, provincia_id
+        db,
+        comp_desde,
+        comp_hasta,
+        None,
+        None,
+        grupo_id,
+        tipo_eno_ids,
+        clasificaciones,
+        provincia_id,
     )
 
     cobertura_metrics = CoberturaMetrics(
-        areas_afectadas=calculate_metric_value(cobertura_actual["areas_afectadas"], cobertura_comp["areas_afectadas"]),
+        areas_afectadas=calculate_metric_value(
+            cobertura_actual["areas_afectadas"], cobertura_comp["areas_afectadas"]
+        ),
         nuevas_areas=cobertura_actual["nuevas_areas"],
         areas_sin_casos=cobertura_actual["areas_sin_casos"],
-        top_departamentos=cobertura_actual["top_departamentos"]
+        top_departamentos=cobertura_actual["top_departamentos"],
     )
 
     # Performance
     performance_actual = await query_performance_metrics(
-        db, periodo_desde, periodo_hasta,
-        grupo_id, tipo_eno_ids, clasificaciones, provincia_id
+        db,
+        periodo_desde,
+        periodo_hasta,
+        grupo_id,
+        tipo_eno_ids,
+        clasificaciones,
+        provincia_id,
     )
 
     performance_comp = await query_performance_metrics(
-        db, comp_desde, comp_hasta,
-        grupo_id, tipo_eno_ids, clasificaciones, provincia_id
+        db,
+        comp_desde,
+        comp_hasta,
+        grupo_id,
+        tipo_eno_ids,
+        clasificaciones,
+        provincia_id,
     )
 
     performance_metrics = PerformanceMetrics(
-        tasa_confirmacion=calculate_metric_value(performance_actual["tasa_confirmacion"], performance_comp["tasa_confirmacion"]),
+        tasa_confirmacion=calculate_metric_value(
+            performance_actual["tasa_confirmacion"],
+            performance_comp["tasa_confirmacion"],
+        ),
         tiempo_promedio_clasificacion=None,
-        casos_en_estudio=calculate_metric_value(performance_actual["casos_en_estudio"], performance_comp["casos_en_estudio"]),
-        confianza_promedio=calculate_metric_value(performance_actual["confianza_promedio"], performance_comp["confianza_promedio"])
+        casos_en_estudio=calculate_metric_value(
+            performance_actual["casos_en_estudio"], performance_comp["casos_en_estudio"]
+        ),
+        confianza_promedio=calculate_metric_value(
+            performance_actual["confianza_promedio"],
+            performance_comp["confianza_promedio"],
+        ),
     )
 
     response = AnalyticsResponse(
@@ -515,8 +604,8 @@ async def get_analytics(
             "grupo_id": grupo_id,
             "tipo_eno_ids": tipo_eno_ids,
             "clasificaciones": clasificaciones,
-            "provincia_id": provincia_id
-        }
+            "provincia_id": provincia_id,
+        },
     )
 
     return SuccessResponse(data=response)

@@ -7,7 +7,7 @@ from typing import List, Optional
 from fastapi import Depends, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import select
-from sqlmodel import Session
+from sqlmodel import Session, col
 
 from app.core.database import get_session
 from app.core.schemas.response import SuccessResponse
@@ -27,7 +27,9 @@ class EstablecimientoMapaItem(BaseModel):
     # Datos geográficos
     id_localidad_indec: Optional[int] = Field(None, description="ID INDEC localidad")
     localidad_nombre: Optional[str] = Field(None, description="Nombre de la localidad")
-    departamento_nombre: Optional[str] = Field(None, description="Nombre del departamento")
+    departamento_nombre: Optional[str] = Field(
+        None, description="Nombre del departamento"
+    )
     provincia_nombre: Optional[str] = Field(None, description="Nombre de la provincia")
 
 
@@ -41,11 +43,15 @@ class EstablecimientosMapaResponse(BaseModel):
 
 
 async def get_establecimientos_mapa(
-    id_provincia_indec: Optional[int] = Query(None, description="Filtrar por provincia"),
+    id_provincia_indec: Optional[int] = Query(
+        None, description="Filtrar por provincia"
+    ),
     id_departamento_indec: Optional[int] = Query(
         None, description="Filtrar por departamento"
     ),
-    id_localidad_indec: Optional[int] = Query(None, description="Filtrar por localidad"),
+    id_localidad_indec: Optional[int] = Query(
+        None, description="Filtrar por localidad"
+    ),
     limit: Optional[int] = Query(10000, description="Límite de resultados", le=50000),
     session: Session = Depends(get_session),
 ) -> SuccessResponse[EstablecimientosMapaResponse]:
@@ -59,48 +65,53 @@ async def get_establecimientos_mapa(
     # Query base: solo establecimientos con coordenadas
     query = (
         select(
-            Establecimiento.id,
-            Establecimiento.codigo_refes,
-            Establecimiento.nombre,
-            Establecimiento.latitud,
-            Establecimiento.longitud,
-            Establecimiento.id_localidad_indec,
-            Localidad.nombre.label("localidad_nombre"),
-            Departamento.nombre.label("departamento_nombre"),
-            Provincia.nombre.label("provincia_nombre"),
+            col(Establecimiento.id),
+            col(Establecimiento.codigo_refes),
+            col(Establecimiento.nombre),
+            col(Establecimiento.latitud),
+            col(Establecimiento.longitud),
+            col(Establecimiento.id_localidad_indec),
+            col(Localidad.nombre).label("localidad_nombre"),
+            col(Departamento.nombre).label("departamento_nombre"),
+            col(Provincia.nombre).label("provincia_nombre"),
         )
         .select_from(Establecimiento)
         .outerjoin(
             Localidad,
-            Establecimiento.id_localidad_indec == Localidad.id_localidad_indec,
+            col(Establecimiento.id_localidad_indec)
+            == col(Localidad.id_localidad_indec),
         )
         .outerjoin(
             Departamento,
-            Localidad.id_departamento_indec == Departamento.id_departamento_indec,
+            col(Localidad.id_departamento_indec)
+            == col(Departamento.id_departamento_indec),
         )
         .outerjoin(
-            Provincia, Departamento.id_provincia_indec == Provincia.id_provincia_indec
+            Provincia,
+            col(Departamento.id_provincia_indec) == col(Provincia.id_provincia_indec),
         )
-        .where(Establecimiento.latitud.isnot(None))
-        .where(Establecimiento.longitud.isnot(None))
+        .where(col(Establecimiento.latitud).isnot(None))
+        .where(col(Establecimiento.longitud).isnot(None))
     )
 
     # Aplicar filtros geográficos
     if id_provincia_indec is not None:
-        query = query.where(Provincia.id_provincia_indec == id_provincia_indec)
+        query = query.where(col(Provincia.id_provincia_indec) == id_provincia_indec)
 
     if id_departamento_indec is not None:
-        query = query.where(Departamento.id_departamento_indec == id_departamento_indec)
+        query = query.where(
+            col(Departamento.id_departamento_indec) == id_departamento_indec
+        )
 
     if id_localidad_indec is not None:
-        query = query.where(Localidad.id_localidad_indec == id_localidad_indec)
+        query = query.where(col(Localidad.id_localidad_indec) == id_localidad_indec)
 
     # Limitar resultados
     if limit:
         query = query.limit(limit)
 
     # Ejecutar query
-    results = session.exec(query).all()
+    results = session.execute(query).all()
 
     # Construir items
     items = [

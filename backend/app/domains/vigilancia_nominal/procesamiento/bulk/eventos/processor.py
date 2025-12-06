@@ -1,36 +1,44 @@
 """Bulk processor for events and related entities - Optimizado con Polars puro."""
 
+import logging
 import os
 from datetime import date
 from decimal import Decimal
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import polars as pl
-from sqlalchemy import select
+from sqlalchemy import inspect, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlmodel import col
 
-from app.domains.vigilancia_nominal.models.enfermedad import GrupoDeEnfermedades, Enfermedad
-from app.domains.vigilancia_nominal.models.caso import CasoEpidemiologico
-from app.core.slug import capitalizar_nombre, generar_slug
 from app.core.epidemiology import (
     calcular_semana_epidemiologica,
+)
+from app.core.slug import capitalizar_nombre, generar_slug
+from app.domains.vigilancia_nominal.models.caso import CasoEpidemiologico
+from app.domains.vigilancia_nominal.models.enfermedad import (
+    Enfermedad,
+    GrupoDeEnfermedades,
 )
 
 from ...config.columns import Columns
 from ..shared import (
     BulkProcessorBase,
-    get_or_create_catalog,
     es_nombre_calle_valido,
+    get_or_create_catalog,
     pl_clean_numero_domicilio,
     pl_clean_string,
 )
+
+if TYPE_CHECKING:
+    from ...config import ProcessingContext
 
 
 class CasoEpidemiologicosProcessor(BulkProcessorBase):
     """Handles event-related bulk operations with Polars optimization."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, context: "ProcessingContext", logger: logging.Logger) -> None:
+        super().__init__(context, logger)
 
         # Inicializar servicio de geocodificación si está habilitado
         self.geocoding_enabled = (
@@ -99,9 +107,7 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
         # OPTIMIZACIÓN: Extraer tipos únicos usando Polars lazy
         tipos_df = (
             df.lazy()
-            .select([
-                pl_clean_string(Columns.EVENTO.name).alias("evento_clean")
-            ])
+            .select([pl_clean_string(Columns.EVENTO.name).alias("evento_clean")])
             .filter(pl.col("evento_clean").is_not_null())
             .unique()
             .collect()
@@ -117,10 +123,7 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
         for tipo_str in tipos_unicos:
             if tipo_str:
                 codigo = generar_slug(tipo_str)
-                tipo_data_list.append({
-                    "tipo_str": tipo_str,
-                    "slug": codigo
-                })
+                tipo_data_list.append({"tipo_str": tipo_str, "slug": codigo})
 
         if not tipo_data_list:
             return {}, {}
@@ -130,8 +133,8 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
         tipos_set = set(tipos_codes_df["slug"].to_list())
 
         # Verificar existentes por código
-        stmt = select(Enfermedad.id, Enfermedad.slug).where(
-            Enfermedad.slug.in_(list(tipos_set))
+        stmt = select(col(Enfermedad.id), col(Enfermedad.slug)).where(
+            col(Enfermedad.slug).in_(list(tipos_set))
         )
         existing_mapping = {
             codigo: tipo_id
@@ -154,13 +157,13 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
                 )
 
         if nuevos_tipos:
-            stmt = pg_insert(Enfermedad.__table__).values(nuevos_tipos)
+            stmt = pg_insert(inspect(Enfermedad).local_table).values(nuevos_tipos)
             upsert_stmt = stmt.on_conflict_do_nothing(index_elements=["slug"])
             self.context.session.execute(upsert_stmt)
 
             # Re-obtener el mapping completo
-            stmt = select(Enfermedad.id, Enfermedad.slug).where(
-                Enfermedad.slug.in_(list(tipos_set))
+            stmt = select(col(Enfermedad.id), col(Enfermedad.slug)).where(
+                col(Enfermedad.slug).in_(list(tipos_set))
             )
             existing_mapping = {
                 codigo: tipo_id
@@ -173,13 +176,15 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
         # Preparar DataFrame con tipos y grupos limpios
         tipo_grupo_df = (
             df.lazy()
-            .select([
-                pl_clean_string(Columns.EVENTO.name).alias("evento_clean"),
-                pl_clean_string(Columns.GRUPO_EVENTO.name).alias("grupo_clean")
-            ])
+            .select(
+                [
+                    pl_clean_string(Columns.EVENTO.name).alias("evento_clean"),
+                    pl_clean_string(Columns.GRUPO_EVENTO.name).alias("grupo_clean"),
+                ]
+            )
             .filter(
-                pl.col("evento_clean").is_not_null() &
-                pl.col("grupo_clean").is_not_null()
+                pl.col("evento_clean").is_not_null()
+                & pl.col("grupo_clean").is_not_null()
             )
             .unique()
             .collect()
@@ -188,6 +193,7 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
         if tipo_grupo_df.height > 0:
             # Convertir a lista de dicts para procesamiento
             from collections import defaultdict
+
             tipo_grupos_temp = defaultdict(set)
 
             for row_dict in tipo_grupo_df.to_dicts():
@@ -222,7 +228,9 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
                     )
 
             if relaciones_tipo_grupo:
-                stmt = pg_insert(EnfermedadGrupo.__table__).values(relaciones_tipo_grupo)
+                stmt = pg_insert(inspect(EnfermedadGrupo).local_table).values(
+                    relaciones_tipo_grupo
+                )
                 upsert_stmt = stmt.on_conflict_do_nothing(
                     index_elements=["id_enfermedad", "id_grupo"]
                 )
@@ -234,7 +242,9 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
 
         return existing_mapping, tipo_grupos_mapping
 
-    def _bulk_load_domicilios(self, agg_results: pl.DataFrame) -> dict[int, Optional[int]]:
+    def _bulk_load_domicilios(
+        self, agg_results: pl.DataFrame
+    ) -> dict[int, Optional[int]]:
         """
         Bulk load de domicilios - elimina N+1 queries.
 
@@ -252,20 +262,28 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
         # 1. Extraer domicilios únicos del DataFrame agregado
         domicilios_df = (
             agg_results.lazy()
-            .select([
-                pl.col(Columns.IDEVENTOCASO.name),
-                pl.col("calle_domicilio"),
-                pl.col("numero_domicilio"),
-                pl.col("id_localidad_indec"),
-                pl.col("localidad_residencia"),
-                pl.col("provincia_residencia"),
-            ])
+            .select(
+                [
+                    pl.col(Columns.IDEVENTOCASO.name),
+                    pl.col("calle_domicilio"),
+                    pl.col("numero_domicilio"),
+                    pl.col("id_localidad_indec"),
+                    pl.col("localidad_residencia"),
+                    pl.col("provincia_residencia"),
+                ]
+            )
             # Limpiar y normalizar claves para matchear con tabla domicilio
-            .with_columns([
-                pl_clean_string("calle_domicilio").alias("calle_domicilio_clean"),
-                pl_clean_numero_domicilio("numero_domicilio").alias("numero_domicilio_clean"),
-                pl.col("id_localidad_indec").cast(pl.Int64, strict=False).alias("id_localidad_indec_int"),
-            ])
+            .with_columns(
+                [
+                    pl_clean_string("calle_domicilio").alias("calle_domicilio_clean"),
+                    pl_clean_numero_domicilio("numero_domicilio").alias(
+                        "numero_domicilio_clean"
+                    ),
+                    pl.col("id_localidad_indec")
+                    .cast(pl.Int64, strict=False)
+                    .alias("id_localidad_indec_int"),
+                ]
+            )
             .collect()
         )
 
@@ -280,7 +298,7 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
             id_localidad = row_dict.get("id_localidad_indec_int")
 
             # Validar
-            if not es_nombre_calle_valido(calle) or not id_localidad:
+            if not calle or not es_nombre_calle_valido(str(calle)) or not id_localidad:
                 evento_to_domicilio[id_evento_caso] = None
                 continue
 
@@ -289,7 +307,7 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
             domicilios_validos.append(domicilio_key)
 
         if not domicilios_validos:
-            return evento_to_domicilio
+            return {k: None for k in evento_to_domicilio}
 
         # 3. Bulk SELECT de domicilios existentes (1 query para todos)
         domicilios_unicos = list(set(domicilios_validos))
@@ -297,13 +315,11 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
 
         # Query todos los domicilios de estas localidades
         stmt = select(
-            Domicilio.id,
-            Domicilio.calle,
-            Domicilio.numero,
-            Domicilio.id_localidad_indec
-        ).where(
-            Domicilio.id_localidad_indec.in_(localidades_ids)
-        )
+            col(Domicilio.id),
+            col(Domicilio.calle),
+            col(Domicilio.numero),
+            col(Domicilio.id_localidad_indec),
+        ).where(col(Domicilio.id_localidad_indec).in_(localidades_ids))
 
         existing_domicilios = {}
         for dom_id, calle, numero, id_loc in self.context.session.execute(stmt).all():
@@ -321,20 +337,22 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
         for domicilio_key in domicilios_unicos:
             if domicilio_key not in existing_domicilios:
                 calle, numero, id_localidad = domicilio_key
-                nuevos_domicilios.append({
-                    "calle": calle,
-                    "numero": numero,
-                    "id_localidad_indec": id_localidad,
-                    # estado_geocodificacion usa el default (PENDIENTE) del modelo
-                    "created_at": timestamp,
-                    "updated_at": timestamp,
-                })
+                nuevos_domicilios.append(
+                    {
+                        "calle": calle,
+                        "numero": numero,
+                        "id_localidad_indec": id_localidad,
+                        # estado_geocodificacion usa el default (PENDIENTE) del modelo
+                        "created_at": timestamp,
+                        "updated_at": timestamp,
+                    }
+                )
 
         # 5. Batch insert de nuevos domicilios
         if nuevos_domicilios:
             from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-            stmt = pg_insert(Domicilio.__table__).values(nuevos_domicilios)
+            stmt = pg_insert(inspect(Domicilio).local_table).values(nuevos_domicilios)
             upsert_stmt = stmt.on_conflict_do_nothing(
                 index_elements=["calle", "numero", "id_localidad_indec"]
             )
@@ -343,16 +361,16 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
 
             # Re-query para obtener los IDs de los recién insertados
             stmt = select(
-                Domicilio.id,
-                Domicilio.calle,
-                Domicilio.numero,
-                Domicilio.id_localidad_indec
-            ).where(
-                Domicilio.id_localidad_indec.in_(localidades_ids)
-            )
+                col(Domicilio.id),
+                col(Domicilio.calle),
+                col(Domicilio.numero),
+                col(Domicilio.id_localidad_indec),
+            ).where(col(Domicilio.id_localidad_indec).in_(localidades_ids))
 
             existing_domicilios = {}
-            for dom_id, calle, numero, id_loc in self.context.session.execute(stmt).all():
+            for dom_id, calle, numero, id_loc in self.context.session.execute(
+                stmt
+            ).all():
                 key = (
                     (calle.strip() if isinstance(calle, str) else calle),
                     (numero.strip() if isinstance(numero, str) else numero),
@@ -398,7 +416,11 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
         # Create when/then chain for mapping
         expr = pl.lit(None, dtype=pl.Int64)
         for estab_name, estab_id in establecimiento_mapping.items():
-            expr = pl.when(pl.col(col_name) == estab_name).then(pl.lit(estab_id)).otherwise(expr)
+            expr = (
+                pl.when(pl.col(col_name) == estab_name)
+                .then(pl.lit(estab_id))
+                .otherwise(expr)
+            )
         return expr
 
     def upsert_eventos(
@@ -413,7 +435,9 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
         - JOINs en lugar de loops para mapeo de IDs
         - Expresiones Polars para transformaciones
         """
-        self.logger.info(f"🏥 Recibido mapping de establecimientos: {len(establecimiento_mapping)} establecimientos")
+        self.logger.info(
+            f"🏥 Recibido mapping de establecimientos: {len(establecimiento_mapping)} establecimientos"
+        )
         if establecimiento_mapping and len(establecimiento_mapping) <= 5:
             self.logger.info(f"   Ejemplos: {list(establecimiento_mapping.keys())[:5]}")
 
@@ -442,53 +466,74 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
         # Crear mappings como DataFrames para hacer JOINs
 
         # 1. Crear DataFrame de mapping de grupos
-        grupo_mapping_df = pl.DataFrame({
-            "grupo_nombre_clean": list(grupo_mapping.keys()),
-            "grupo_id": list(grupo_mapping.values())
-        })
+        grupo_mapping_df = pl.DataFrame(
+            {
+                "grupo_nombre_clean": list(grupo_mapping.keys()),
+                "grupo_id": list(grupo_mapping.values()),
+            }
+        )
 
         # 2. Crear DataFrame de mapping de tipos
-        tipo_mapping_df = pl.DataFrame({
-            "tipo_codigo": list(tipo_mapping.keys()),
-            "tipo_id": list(tipo_mapping.values())
-        })
+        tipo_mapping_df = pl.DataFrame(
+            {
+                "tipo_codigo": list(tipo_mapping.keys()),
+                "tipo_id": list(tipo_mapping.values()),
+            }
+        )
 
         # 3. OPTIMIZACIÓN: Pre-calcular códigos kebab UNA SOLA VEZ (elimina map_elements)
         # Crear DataFrame con valores limpios
         df_cleaned = (
             df.lazy()
-            .with_columns([
-                # Limpiar strings de establecimientos
-                pl_clean_string(Columns.ESTAB_CLINICA.name).alias("estab_consulta_clean"),
-                pl_clean_string(Columns.ESTABLECIMIENTO_EPI.name).alias("estab_notif_clean"),
-                pl_clean_string(Columns.ESTABLECIMIENTO_CARGA.name).alias("estab_carga_clean"),
-
-                # Limpiar grupo y evento
-                pl_clean_string(Columns.GRUPO_EVENTO.name).alias("grupo_nombre_clean"),
-                pl_clean_string(Columns.EVENTO.name).alias("evento_nombre_clean"),
-            ])
+            .with_columns(
+                [
+                    # Limpiar strings de establecimientos
+                    pl_clean_string(Columns.ESTAB_CLINICA.name).alias(
+                        "estab_consulta_clean"
+                    ),
+                    pl_clean_string(Columns.ESTABLECIMIENTO_EPI.name).alias(
+                        "estab_notif_clean"
+                    ),
+                    pl_clean_string(Columns.ESTABLECIMIENTO_CARGA.name).alias(
+                        "estab_carga_clean"
+                    ),
+                    # Limpiar grupo y evento
+                    pl_clean_string(Columns.GRUPO_EVENTO.name).alias(
+                        "grupo_nombre_clean"
+                    ),
+                    pl_clean_string(Columns.EVENTO.name).alias("evento_nombre_clean"),
+                ]
+            )
             .collect()
         )
 
         # Extraer valores únicos LIMPIOS y generar códigos (solo para valores únicos)
-        grupos_unicos = df_cleaned["grupo_nombre_clean"].drop_nulls().unique().to_list()
-        eventos_unicos = df_cleaned["evento_nombre_clean"].drop_nulls().unique().to_list()
+        grupos_unicos_list = (
+            df_cleaned["grupo_nombre_clean"].drop_nulls().unique().to_list()
+        )
+        eventos_unicos = (
+            df_cleaned["evento_nombre_clean"].drop_nulls().unique().to_list()
+        )
 
         # Generar códigos solo para valores únicos (no para cada fila)
         # Ahora el mapping usa los valores limpios como keys
-        grupo_kebab_map = {g: generar_slug(g)
-                           for g in grupos_unicos if g}
-        evento_kebab_map = {e: generar_slug(e)
-                            for e in eventos_unicos if e}
+        grupo_kebab_map = {g: generar_slug(g) for g in grupos_unicos_list if g}
+        evento_kebab_map = {e: generar_slug(e) for e in eventos_unicos if e}
 
         # Aplicar mapping vectorizado
         df_prepared = (
             df_cleaned.lazy()
-            .with_columns([
-                # Mapear a códigos usando replace (VECTORIZADO en Rust, no Python loop)
-                pl.col("grupo_nombre_clean").replace(grupo_kebab_map, default=None).alias("grupo_codigo"),
-                pl.col("evento_nombre_clean").replace(evento_kebab_map, default=None).alias("tipo_codigo"),
-            ])
+            .with_columns(
+                [
+                    # Mapear a códigos usando replace (VECTORIZADO en Rust, no Python loop)
+                    pl.col("grupo_nombre_clean")
+                    .replace(grupo_kebab_map, default=None)
+                    .alias("grupo_codigo"),
+                    pl.col("evento_nombre_clean")
+                    .replace(evento_kebab_map, default=None)
+                    .alias("tipo_codigo"),
+                ]
+            )
             .collect()
         )
 
@@ -500,14 +545,10 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
                 grupo_mapping_df.lazy(),
                 left_on="grupo_codigo",
                 right_on="grupo_nombre_clean",
-                how="left"
+                how="left",
             )
             # Join tipo
-            .join(
-                tipo_mapping_df.lazy(),
-                on="tipo_codigo",
-                how="left"
-            )
+            .join(tipo_mapping_df.lazy(), on="tipo_codigo", how="left")
             .collect()
         )
 
@@ -516,43 +557,73 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
         agg_results = (
             df_with_ids.lazy()
             .group_by(Columns.IDEVENTOCASO.name)
-            .agg([
-                # Fechas: tomar la mínima de cada columna
-                pl.col(Columns.FECHA_APERTURA.name).min().alias("fecha_apertura_min"),
-                pl.col(Columns.FECHA_INICIO_SINTOMA.name).min().alias("fecha_inicio_sintoma_min"),
-                pl.col(Columns.FECHA_CONSULTA.name).min().alias("fecha_consulta_min"),
-                pl.col(Columns.FTM.name).min().alias("ftm_min"),
-
-                # Establecimientos: tomar el primer valor no nulo
-                pl.col("estab_consulta_clean").drop_nulls().first().alias("estab_consulta_final"),
-                pl.col("estab_notif_clean").drop_nulls().first().alias("estab_notif_final"),
-                pl.col("estab_carga_clean").drop_nulls().first().alias("estab_carga_final"),
-
-                # Grupos ENO: recolectar TODOS los IDs únicos
-                pl.col("grupo_id").drop_nulls().unique().alias("grupos_ids"),
-
-                # Tipo ENO: tomar el primero (debería ser único por evento)
-                pl.col("tipo_id").drop_nulls().first().alias("tipo_id"),
-
-                # Tomar primera fila de datos base para campos que no se agregan
-                pl.col(Columns.CODIGO_CIUDADANO.name).first().alias("codigo_ciudadano_first"),
-                pl.col(Columns.FECHA_NACIMIENTO.name).first().alias("fecha_nacimiento_first"),
-
-                # Campos de clasificación
-                pl.col("clasificacion_estrategia").first().alias("clasificacion_estrategia_first"),
-                pl.col("id_estrategia_aplicada").first().alias("id_estrategia_aplicada_first"),
-                pl.col("trazabilidad_clasificacion").first().alias("trazabilidad_clasificacion_first"),
-
-                # OPTIMIZACIÓN: Incluir datos de domicilio en la agregación
-                pl.col(Columns.CALLE_DOMICILIO.name).first().alias("calle_domicilio"),
-                pl.col(Columns.NUMERO_DOMICILIO.name).first().alias("numero_domicilio"),
-                pl.col(Columns.ID_LOC_INDEC_RESIDENCIA.name).first().alias("id_localidad_indec"),
-                pl.col(Columns.LOCALIDAD_RESIDENCIA.name).first().alias("localidad_residencia"),
-                pl.col(Columns.PROVINCIA_RESIDENCIA.name).first().alias("provincia_residencia"),
-
-                # Contar filas para debug
-                pl.count().alias("num_filas"),
-            ])
+            .agg(
+                [
+                    # Fechas: tomar la mínima de cada columna
+                    pl.col(Columns.FECHA_APERTURA.name)
+                    .min()
+                    .alias("fecha_apertura_min"),
+                    pl.col(Columns.FECHA_INICIO_SINTOMA.name)
+                    .min()
+                    .alias("fecha_inicio_sintoma_min"),
+                    pl.col(Columns.FECHA_CONSULTA.name)
+                    .min()
+                    .alias("fecha_consulta_min"),
+                    pl.col(Columns.FTM.name).min().alias("ftm_min"),
+                    # Establecimientos: tomar el primer valor no nulo
+                    pl.col("estab_consulta_clean")
+                    .drop_nulls()
+                    .first()
+                    .alias("estab_consulta_final"),
+                    pl.col("estab_notif_clean")
+                    .drop_nulls()
+                    .first()
+                    .alias("estab_notif_final"),
+                    pl.col("estab_carga_clean")
+                    .drop_nulls()
+                    .first()
+                    .alias("estab_carga_final"),
+                    # Grupos ENO: recolectar TODOS los IDs únicos
+                    pl.col("grupo_id").drop_nulls().unique().alias("grupos_ids"),
+                    # Tipo ENO: tomar el primero (debería ser único por evento)
+                    pl.col("tipo_id").drop_nulls().first().alias("tipo_id"),
+                    # Tomar primera fila de datos base para campos que no se agregan
+                    pl.col(Columns.CODIGO_CIUDADANO.name)
+                    .first()
+                    .alias("codigo_ciudadano_first"),
+                    pl.col(Columns.FECHA_NACIMIENTO.name)
+                    .first()
+                    .alias("fecha_nacimiento_first"),
+                    # Campos de clasificación
+                    pl.col("clasificacion_estrategia")
+                    .first()
+                    .alias("clasificacion_estrategia_first"),
+                    pl.col("id_estrategia_aplicada")
+                    .first()
+                    .alias("id_estrategia_aplicada_first"),
+                    pl.col("trazabilidad_clasificacion")
+                    .first()
+                    .alias("trazabilidad_clasificacion_first"),
+                    # OPTIMIZACIÓN: Incluir datos de domicilio en la agregación
+                    pl.col(Columns.CALLE_DOMICILIO.name)
+                    .first()
+                    .alias("calle_domicilio"),
+                    pl.col(Columns.NUMERO_DOMICILIO.name)
+                    .first()
+                    .alias("numero_domicilio"),
+                    pl.col(Columns.ID_LOC_INDEC_RESIDENCIA.name)
+                    .first()
+                    .alias("id_localidad_indec"),
+                    pl.col(Columns.LOCALIDAD_RESIDENCIA.name)
+                    .first()
+                    .alias("localidad_residencia"),
+                    pl.col(Columns.PROVINCIA_RESIDENCIA.name)
+                    .first()
+                    .alias("provincia_residencia"),
+                    # Contar filas para debug
+                    pl.count().alias("num_filas"),
+                ]
+            )
             .collect()
         )
 
@@ -601,7 +672,9 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
             # Obtener grupos
             grupos_ids = agg_row.get("grupos_ids", [])
             if not grupos_ids:
-                self.logger.warning(f"⚠️  CasoEpidemiologico {id_evento_caso}: sin grupo ENO. Se omitirá.")
+                self.logger.warning(
+                    f"⚠️  CasoEpidemiologico {id_evento_caso}: sin grupo ENO. Se omitirá."
+                )
                 continue
 
             # OPTIMIZACIÓN: Lookup de domicilio en dict (O(1) en lugar de query)
@@ -625,10 +698,14 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
 
             # Procesar clasificación
             clasificacion_estrategia = agg_row.get("clasificacion_estrategia_first")
-            if clasificacion_estrategia is None or not str(clasificacion_estrategia).strip():
+            if (
+                clasificacion_estrategia is None
+                or not str(clasificacion_estrategia).strip()
+            ):
                 from app.domains.vigilancia_nominal.clasificacion.models import (
                     TipoClasificacion,
                 )
+
                 clasificacion_estrategia = TipoClasificacion.REQUIERE_REVISION
 
             # Calcular semanas epidemiológicas
@@ -673,7 +750,9 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
                 "fecha_inicio_sintomas": fecha_inicio_sintomas_mas_temprana,
                 "clasificacion_estrategia": clasificacion_estrategia,
                 "id_estrategia_aplicada": agg_row.get("id_estrategia_aplicada_first"),
-                "trazabilidad_clasificacion": agg_row.get("trazabilidad_clasificacion_first"),
+                "trazabilidad_clasificacion": agg_row.get(
+                    "trazabilidad_clasificacion_first"
+                ),
                 "fecha_minima_caso": fecha_minima_caso,
                 "semana_epidemiologica_apertura": semana_epidemiologica_apertura,
                 "anio_epidemiologico_apertura": anio_epidemiologico_apertura,
@@ -695,10 +774,9 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
 
             # Preparar relaciones evento-grupo
             for id_grupo in grupos_ids:
-                eventos_grupos_data.append({
-                    "id_evento_caso": id_evento_caso,
-                    "id_grupo": id_grupo
-                })
+                eventos_grupos_data.append(
+                    {"id_evento_caso": id_evento_caso, "id_grupo": id_grupo}
+                )
 
             # Log para casos con muchas filas
             num_filas = agg_row.get("num_filas", 1)
@@ -712,9 +790,17 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
             return {}
 
         # Estadísticas de establecimientos asignados
-        eventos_con_consulta = sum(1 for e in eventos_data if e.get("id_establecimiento_consulta") is not None)
-        eventos_con_notif = sum(1 for e in eventos_data if e.get("id_establecimiento_notificacion") is not None)
-        eventos_con_carga = sum(1 for e in eventos_data if e.get("id_establecimiento_carga") is not None)
+        eventos_con_consulta = sum(
+            1 for e in eventos_data if e.get("id_establecimiento_consulta") is not None
+        )
+        eventos_con_notif = sum(
+            1
+            for e in eventos_data
+            if e.get("id_establecimiento_notificacion") is not None
+        )
+        eventos_con_carga = sum(
+            1 for e in eventos_data if e.get("id_establecimiento_carga") is not None
+        )
 
         self.logger.info(
             f"Bulk upserting {len(eventos_data)} eventos únicos (de {df.height} filas totales)"
@@ -725,7 +811,7 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
         )
 
         # PostgreSQL UPSERT
-        stmt = pg_insert(CasoEpidemiologico.__table__).values(eventos_data)
+        stmt = pg_insert(inspect(CasoEpidemiologico).local_table).values(eventos_data)
 
         update_fields = {
             "fecha_inicio_sintomas": stmt.excluded.fecha_inicio_sintomas,
@@ -757,9 +843,9 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
 
         # Obtener mapping de id_snvs -> id (PK) para los eventos insertados
         id_eventos_casos = [e["id_snvs"] for e in eventos_data]
-        stmt = select(CasoEpidemiologico.id, CasoEpidemiologico.id_snvs).where(
-            CasoEpidemiologico.id_snvs.in_(id_eventos_casos)
-        )
+        stmt = select(
+            col(CasoEpidemiologico.id), col(CasoEpidemiologico.id_snvs)
+        ).where(col(CasoEpidemiologico.id_snvs).in_(id_eventos_casos))
 
         evento_mapping = {
             id_snvs: evento_id
@@ -790,12 +876,19 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
                 )
 
         if relaciones_eventos_grupos:
-            stmt = pg_insert(CasoGrupoEnfermedad.__table__).values(relaciones_eventos_grupos)
+            stmt = pg_insert(inspect(CasoGrupoEnfermedad).local_table).values(
+                relaciones_eventos_grupos
+            )
             upsert_stmt = stmt.on_conflict_do_nothing(
-                index_elements=["id_caso", "id_grupo"]  # Cambiado de id_evento a id_caso
+                index_elements=[
+                    "id_caso",
+                    "id_grupo",
+                ]  # Cambiado de id_evento a id_caso
             )
             self.context.session.execute(upsert_stmt)
-            casos_unicos = len(set(r["id_caso"] for r in relaciones_eventos_grupos))  # Cambiado de id_evento a id_caso
+            casos_unicos = len(
+                set(r["id_caso"] for r in relaciones_eventos_grupos)
+            )  # Cambiado de id_evento a id_caso
             self.logger.info(
                 f"{len(relaciones_eventos_grupos)} relaciones evento-grupo creadas "
                 f"({casos_unicos} casos con uno o más grupos)"  # Cambiado de eventos_unicos a casos_unicos
@@ -825,7 +918,7 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
             numero = str(numero).strip() if str(numero).strip() else None
 
         # Validar calle
-        if not es_nombre_calle_valido(calle):
+        if not calle or not es_nombre_calle_valido(calle):
             self.logger.warning(
                 f"Calle inválida para geocodificación: '{calle}' "
                 f"(numero={numero}, id_localidad={id_localidad_indec})"
@@ -838,10 +931,10 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
 
         try:
             # Buscar domicilio existente (UNIQUE constraint: calle, numero, id_localidad_indec)
-            stmt = select(Domicilio.id).where(
-                Domicilio.calle == calle,
-                Domicilio.numero == numero,
-                Domicilio.id_localidad_indec == id_localidad_indec,
+            stmt = select(col(Domicilio.id)).where(
+                col(Domicilio.calle) == calle,
+                col(Domicilio.numero) == numero,
+                col(Domicilio.id_localidad_indec) == id_localidad_indec,
             )
             existing_domicilio = self.context.session.execute(stmt).scalars().first()
 
@@ -855,17 +948,21 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
             confidence_geocoding = None
             geocodificado = False
 
-            if self.geocoding_enabled and self.geocoding_service:
+            if self.geocoding_enabled and self.geocoding_service is not None:
                 try:
                     localidad = row.get(Columns.LOCALIDAD_RESIDENCIA.name)
                     provincia = row.get(Columns.PROVINCIA_RESIDENCIA.name)
 
                     if localidad is not None:
-                        localidad = str(localidad).strip() if str(localidad).strip() else None
+                        localidad = (
+                            str(localidad).strip() if str(localidad).strip() else None
+                        )
                     if provincia is not None:
-                        provincia = str(provincia).strip() if str(provincia).strip() else None
+                        provincia = (
+                            str(provincia).strip() if str(provincia).strip() else None
+                        )
 
-                    geocoding_result = self.geocoding_service.geocode_address(
+                    geocoding_result = self.geocoding_service.geocodificar_direccion(
                         calle=calle,
                         numero=numero,
                         localidad=localidad,

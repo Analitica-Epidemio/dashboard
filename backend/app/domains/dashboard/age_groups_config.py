@@ -18,6 +18,7 @@ from typing import List
 @dataclass
 class GrupoEdad:
     """Representa un grupo etario"""
+
     etiqueta: str  # Etiqueta mostrada (ej: "0-4 años", "Neonato")
     edad_minima_anios: float  # Edad mínima en años (puede ser decimal para días/meses)
     edad_maxima_anios: float | None  # Edad máxima en años (None = sin límite superior)
@@ -31,23 +32,108 @@ class GrupoEdad:
 # =============================================================================
 
 GRUPOS_EDAD_ESTANDAR: List[GrupoEdad] = [
-    GrupoEdad(etiqueta="0-4", edad_minima_anios=0, edad_maxima_anios=4, descripcion="Primera infancia"),
-    GrupoEdad(etiqueta="5-9", edad_minima_anios=5, edad_maxima_anios=9, descripcion="Niñez temprana"),
-    GrupoEdad(etiqueta="10-14", edad_minima_anios=10, edad_maxima_anios=14, descripcion="Niñez tardía/Adolescencia temprana"),
-    GrupoEdad(etiqueta="15-19", edad_minima_anios=15, edad_maxima_anios=19, descripcion="Adolescencia"),
-    GrupoEdad(etiqueta="20-24", edad_minima_anios=20, edad_maxima_anios=24, descripcion="Adulto joven"),
-    GrupoEdad(etiqueta="25-29", edad_minima_anios=25, edad_maxima_anios=29, descripcion="Adulto joven"),
-    GrupoEdad(etiqueta="30-34", edad_minima_anios=30, edad_maxima_anios=34, descripcion="Adulto"),
-    GrupoEdad(etiqueta="35-39", edad_minima_anios=35, edad_maxima_anios=39, descripcion="Adulto"),
-    GrupoEdad(etiqueta="40-44", edad_minima_anios=40, edad_maxima_anios=44, descripcion="Adulto"),
-    GrupoEdad(etiqueta="45-49", edad_minima_anios=45, edad_maxima_anios=49, descripcion="Adulto"),
-    GrupoEdad(etiqueta="50-54", edad_minima_anios=50, edad_maxima_anios=54, descripcion="Adulto mayor temprano"),
-    GrupoEdad(etiqueta="55-59", edad_minima_anios=55, edad_maxima_anios=59, descripcion="Adulto mayor temprano"),
-    GrupoEdad(etiqueta="60-64", edad_minima_anios=60, edad_maxima_anios=64, descripcion="Adulto mayor"),
-    GrupoEdad(etiqueta="65-69", edad_minima_anios=65, edad_maxima_anios=69, descripcion="Adulto mayor"),
-    GrupoEdad(etiqueta="70-74", edad_minima_anios=70, edad_maxima_anios=74, descripcion="Adulto mayor"),
-    GrupoEdad(etiqueta="75-79", edad_minima_anios=75, edad_maxima_anios=79, descripcion="Adulto mayor"),
-    GrupoEdad(etiqueta="80+", edad_minima_anios=80, edad_maxima_anios=None, descripcion="Adulto mayor avanzado"),
+    GrupoEdad(
+        etiqueta="0-4",
+        edad_minima_anios=0,
+        edad_maxima_anios=4,
+        descripcion="Primera infancia",
+    ),
+    GrupoEdad(
+        etiqueta="5-9",
+        edad_minima_anios=5,
+        edad_maxima_anios=9,
+        descripcion="Niñez temprana",
+    ),
+    GrupoEdad(
+        etiqueta="10-14",
+        edad_minima_anios=10,
+        edad_maxima_anios=14,
+        descripcion="Niñez tardía/Adolescencia temprana",
+    ),
+    GrupoEdad(
+        etiqueta="15-19",
+        edad_minima_anios=15,
+        edad_maxima_anios=19,
+        descripcion="Adolescencia",
+    ),
+    GrupoEdad(
+        etiqueta="20-24",
+        edad_minima_anios=20,
+        edad_maxima_anios=24,
+        descripcion="Adulto joven",
+    ),
+    GrupoEdad(
+        etiqueta="25-29",
+        edad_minima_anios=25,
+        edad_maxima_anios=29,
+        descripcion="Adulto joven",
+    ),
+    GrupoEdad(
+        etiqueta="30-34",
+        edad_minima_anios=30,
+        edad_maxima_anios=34,
+        descripcion="Adulto",
+    ),
+    GrupoEdad(
+        etiqueta="35-39",
+        edad_minima_anios=35,
+        edad_maxima_anios=39,
+        descripcion="Adulto",
+    ),
+    GrupoEdad(
+        etiqueta="40-44",
+        edad_minima_anios=40,
+        edad_maxima_anios=44,
+        descripcion="Adulto",
+    ),
+    GrupoEdad(
+        etiqueta="45-49",
+        edad_minima_anios=45,
+        edad_maxima_anios=49,
+        descripcion="Adulto",
+    ),
+    GrupoEdad(
+        etiqueta="50-54",
+        edad_minima_anios=50,
+        edad_maxima_anios=54,
+        descripcion="Adulto mayor temprano",
+    ),
+    GrupoEdad(
+        etiqueta="55-59",
+        edad_minima_anios=55,
+        edad_maxima_anios=59,
+        descripcion="Adulto mayor temprano",
+    ),
+    GrupoEdad(
+        etiqueta="60-64",
+        edad_minima_anios=60,
+        edad_maxima_anios=64,
+        descripcion="Adulto mayor",
+    ),
+    GrupoEdad(
+        etiqueta="65-69",
+        edad_minima_anios=65,
+        edad_maxima_anios=69,
+        descripcion="Adulto mayor",
+    ),
+    GrupoEdad(
+        etiqueta="70-74",
+        edad_minima_anios=70,
+        edad_maxima_anios=74,
+        descripcion="Adulto mayor",
+    ),
+    GrupoEdad(
+        etiqueta="75-79",
+        edad_minima_anios=75,
+        edad_maxima_anios=79,
+        descripcion="Adulto mayor",
+    ),
+    GrupoEdad(
+        etiqueta="80+",
+        edad_minima_anios=80,
+        edad_maxima_anios=None,
+        descripcion="Adulto mayor avanzado",
+    ),
 ]
 
 
@@ -82,11 +168,36 @@ GRUPOS_EDAD_PEDIATRICOS: List[GrupoEdad] = [
         edad_maxima_dias=365,
         descripcion="Lactante menor",
     ),
-    GrupoEdad(etiqueta="1 año", edad_minima_anios=1, edad_maxima_anios=1, descripcion="Lactante mayor"),
-    GrupoEdad(etiqueta="2-4 años", edad_minima_anios=2, edad_maxima_anios=4, descripcion="Preescolar"),
-    GrupoEdad(etiqueta="5-9 años", edad_minima_anios=5, edad_maxima_anios=9, descripcion="Escolar"),
-    GrupoEdad(etiqueta="10-14 años", edad_minima_anios=10, edad_maxima_anios=14, descripcion="Adolescente temprano"),
-    GrupoEdad(etiqueta="15-19 años", edad_minima_anios=15, edad_maxima_anios=19, descripcion="Adolescente"),
+    GrupoEdad(
+        etiqueta="1 año",
+        edad_minima_anios=1,
+        edad_maxima_anios=1,
+        descripcion="Lactante mayor",
+    ),
+    GrupoEdad(
+        etiqueta="2-4 años",
+        edad_minima_anios=2,
+        edad_maxima_anios=4,
+        descripcion="Preescolar",
+    ),
+    GrupoEdad(
+        etiqueta="5-9 años",
+        edad_minima_anios=5,
+        edad_maxima_anios=9,
+        descripcion="Escolar",
+    ),
+    GrupoEdad(
+        etiqueta="10-14 años",
+        edad_minima_anios=10,
+        edad_maxima_anios=14,
+        descripcion="Adolescente temprano",
+    ),
+    GrupoEdad(
+        etiqueta="15-19 años",
+        edad_minima_anios=15,
+        edad_maxima_anios=19,
+        descripcion="Adolescente",
+    ),
 ]
 
 
@@ -95,10 +206,30 @@ GRUPOS_EDAD_PEDIATRICOS: List[GrupoEdad] = [
 # =============================================================================
 
 GRUPOS_EDAD_SIMPLIFICADOS: List[GrupoEdad] = [
-    GrupoEdad(etiqueta="0-17", edad_minima_anios=0, edad_maxima_anios=17, descripcion="Menores de edad"),
-    GrupoEdad(etiqueta="18-39", edad_minima_anios=18, edad_maxima_anios=39, descripcion="Adultos jóvenes"),
-    GrupoEdad(etiqueta="40-59", edad_minima_anios=40, edad_maxima_anios=59, descripcion="Adultos"),
-    GrupoEdad(etiqueta="60+", edad_minima_anios=60, edad_maxima_anios=None, descripcion="Adultos mayores"),
+    GrupoEdad(
+        etiqueta="0-17",
+        edad_minima_anios=0,
+        edad_maxima_anios=17,
+        descripcion="Menores de edad",
+    ),
+    GrupoEdad(
+        etiqueta="18-39",
+        edad_minima_anios=18,
+        edad_maxima_anios=39,
+        descripcion="Adultos jóvenes",
+    ),
+    GrupoEdad(
+        etiqueta="40-59",
+        edad_minima_anios=40,
+        edad_maxima_anios=59,
+        descripcion="Adultos",
+    ),
+    GrupoEdad(
+        etiqueta="60+",
+        edad_minima_anios=60,
+        edad_maxima_anios=None,
+        descripcion="Adultos mayores",
+    ),
 ]
 
 
@@ -107,20 +238,58 @@ GRUPOS_EDAD_SIMPLIFICADOS: List[GrupoEdad] = [
 # =============================================================================
 
 GRUPOS_EDAD_DECENALES: List[GrupoEdad] = [
-    GrupoEdad(etiqueta="0-9", edad_minima_anios=0, edad_maxima_anios=9, descripcion="Niñez"),
-    GrupoEdad(etiqueta="10-19", edad_minima_anios=10, edad_maxima_anios=19, descripcion="Adolescencia"),
-    GrupoEdad(etiqueta="20-29", edad_minima_anios=20, edad_maxima_anios=29, descripcion="Adulto joven"),
-    GrupoEdad(etiqueta="30-39", edad_minima_anios=30, edad_maxima_anios=39, descripcion="Adulto"),
-    GrupoEdad(etiqueta="40-49", edad_minima_anios=40, edad_maxima_anios=49, descripcion="Adulto"),
-    GrupoEdad(etiqueta="50-59", edad_minima_anios=50, edad_maxima_anios=59, descripcion="Adulto maduro"),
-    GrupoEdad(etiqueta="60-69", edad_minima_anios=60, edad_maxima_anios=69, descripcion="Adulto mayor"),
-    GrupoEdad(etiqueta="70+", edad_minima_anios=70, edad_maxima_anios=None, descripcion="Adulto mayor avanzado"),
+    GrupoEdad(
+        etiqueta="0-9", edad_minima_anios=0, edad_maxima_anios=9, descripcion="Niñez"
+    ),
+    GrupoEdad(
+        etiqueta="10-19",
+        edad_minima_anios=10,
+        edad_maxima_anios=19,
+        descripcion="Adolescencia",
+    ),
+    GrupoEdad(
+        etiqueta="20-29",
+        edad_minima_anios=20,
+        edad_maxima_anios=29,
+        descripcion="Adulto joven",
+    ),
+    GrupoEdad(
+        etiqueta="30-39",
+        edad_minima_anios=30,
+        edad_maxima_anios=39,
+        descripcion="Adulto",
+    ),
+    GrupoEdad(
+        etiqueta="40-49",
+        edad_minima_anios=40,
+        edad_maxima_anios=49,
+        descripcion="Adulto",
+    ),
+    GrupoEdad(
+        etiqueta="50-59",
+        edad_minima_anios=50,
+        edad_maxima_anios=59,
+        descripcion="Adulto maduro",
+    ),
+    GrupoEdad(
+        etiqueta="60-69",
+        edad_minima_anios=60,
+        edad_maxima_anios=69,
+        descripcion="Adulto mayor",
+    ),
+    GrupoEdad(
+        etiqueta="70+",
+        edad_minima_anios=70,
+        edad_maxima_anios=None,
+        descripcion="Adulto mayor avanzado",
+    ),
 ]
 
 
 # =============================================================================
 # FUNCIONES AUXILIARES
 # =============================================================================
+
 
 def generar_sql_case_when(grupos_edad: List[GrupoEdad]) -> str:
     """
@@ -177,7 +346,9 @@ def obtener_etiquetas_grupos_edad(grupos_edad: List[GrupoEdad]) -> List[str]:
     return [grupo.etiqueta for grupo in grupos_edad]
 
 
-def obtener_configuracion_grupos_edad(nombre_config: str = "standard") -> List[GrupoEdad]:
+def obtener_configuracion_grupos_edad(
+    nombre_config: str = "standard",
+) -> List[GrupoEdad]:
     """
     Obtiene la configuración de grupos etarios por nombre
 
@@ -199,7 +370,9 @@ def obtener_configuracion_grupos_edad(nombre_config: str = "standard") -> List[G
     }
 
     if nombre_config not in configs:
-        raise ValueError(f"Configuración desconocida: {nombre_config}. Opciones: {list(configs.keys())}")
+        raise ValueError(
+            f"Configuración desconocida: {nombre_config}. Opciones: {list(configs.keys())}"
+        )
 
     return configs[nombre_config]
 

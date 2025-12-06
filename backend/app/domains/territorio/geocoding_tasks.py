@@ -29,9 +29,10 @@ Mejora de rendimiento:
 
 import logging
 from datetime import datetime
+from typing import Any, Dict
 
 from sqlalchemy import select
-from sqlmodel import Session
+from sqlmodel import Session, col
 
 from app.core.celery_app import celery_app
 from app.core.config import settings
@@ -51,7 +52,9 @@ logger = logging.getLogger(__name__)
     max_retries=3,
     default_retry_delay=300,  # 5 minutos entre reintentos
 )
-def geocode_pending_domicilios(self, batch_size: int = 500, max_attempts: int = 3):
+def geocode_pending_domicilios(
+    self: Any, batch_size: int = 500, max_attempts: int = 3
+) -> Dict[str, Any]:
     """
     Geocodifica un batch de domicilios pendientes.
 
@@ -72,7 +75,7 @@ def geocode_pending_domicilios(self, batch_size: int = 500, max_attempts: int = 
         stmt = (
             select(Domicilio)
             .where(
-                Domicilio.estado_geocodificacion.in_(
+                col(Domicilio.estado_geocodificacion).in_(
                     [
                         EstadoGeocodificacion.PENDIENTE,
                         EstadoGeocodificacion.EN_COLA,
@@ -80,7 +83,7 @@ def geocode_pending_domicilios(self, batch_size: int = 500, max_attempts: int = 
                     ]
                 )
             )
-            .where(Domicilio.intentos_geocodificacion < max_attempts)
+            .where(col(Domicilio.intentos_geocodificacion) < max_attempts)
             .limit(batch_size)
         )
 
@@ -126,13 +129,13 @@ def geocode_pending_domicilios(self, batch_size: int = 500, max_attempts: int = 
         # 🚀 OPTIMIZACIÓN: Geocodificar en paralelo con rate limiting
         import asyncio
 
-        async def geocode_batch_async(domicilios_list):
+        async def geocode_batch_async(domicilios_list: list[Domicilio]) -> list[str]:
             """Geocodifica batch completo en paralelo con rate limiting."""
             # Rate limiting: procesar en chunks de 10 con delay entre chunks
             CONCURRENT_LIMIT = 10  # Máximo 10 requests simultáneas
             CHUNK_DELAY = 0.5  # 500ms entre chunks
 
-            async def geocode_one(domicilio):
+            async def geocode_one(domicilio: Domicilio) -> str:
                 """Geocodifica un domicilio individual."""
                 # Marcar como PROCESANDO
                 domicilio.estado_geocodificacion = EstadoGeocodificacion.PROCESANDO
@@ -159,6 +162,7 @@ def geocode_pending_domicilios(self, batch_size: int = 500, max_attempts: int = 
                         )
 
                     # Geocodificar usando adapter async directamente
+                    assert geocoding_service.adapter is not None
                     result = await geocoding_service.adapter.geocode(
                         calle=domicilio.calle,
                         numero=domicilio.numero,
@@ -218,7 +222,7 @@ def geocode_pending_domicilios(self, batch_size: int = 500, max_attempts: int = 
             for i in range(0, len(domicilios_list), CONCURRENT_LIMIT):
                 chunk = domicilios_list[i : i + CONCURRENT_LIMIT]
                 logger.info(
-                    f"   📍 Procesando chunk {i//CONCURRENT_LIMIT + 1}/{(len(domicilios_list) + CONCURRENT_LIMIT - 1)//CONCURRENT_LIMIT} ({len(chunk)} domicilios)"
+                    f"   📍 Procesando chunk {i // CONCURRENT_LIMIT + 1}/{(len(domicilios_list) + CONCURRENT_LIMIT - 1) // CONCURRENT_LIMIT} ({len(chunk)} domicilios)"
                 )
 
                 chunk_results = await asyncio.gather(
@@ -265,16 +269,16 @@ def geocode_pending_domicilios(self, batch_size: int = 500, max_attempts: int = 
     logger.info(f"   ❌ Fallos: {failed_count}")
     logger.info(f"   ⚠️  No geocodificables: {no_geocodificable_count}")
     logger.info(f"   ⏱️  Tiempo total: {elapsed:.2f}s")
-    logger.info(f"   ⚡ Velocidad: {len(domicilios)/elapsed:.1f} domicilios/segundo")
+    logger.info(f"   ⚡ Velocidad: {len(domicilios) / elapsed:.1f} domicilios/segundo")
     logger.info("=" * 70)
 
     # Si quedan más domicilios pendientes, encolar otro batch
     # (con un pequeño delay para respetar rate limits)
     with Session(engine) as session:
-        remaining = session.exec(
+        stmt = (
             select(Domicilio)
             .where(
-                Domicilio.estado_geocodificacion.in_(
+                col(Domicilio.estado_geocodificacion).in_(
                     [
                         EstadoGeocodificacion.PENDIENTE,
                         EstadoGeocodificacion.EN_COLA,
@@ -282,9 +286,10 @@ def geocode_pending_domicilios(self, batch_size: int = 500, max_attempts: int = 
                     ]
                 )
             )
-            .where(Domicilio.intentos_geocodificacion < max_attempts)
+            .where(col(Domicilio.intentos_geocodificacion) < max_attempts)
             .limit(1)
-        ).first()
+        )
+        remaining = session.scalars(stmt).first()
 
         if remaining:
             logger.info(

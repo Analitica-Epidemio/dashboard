@@ -4,6 +4,8 @@
 División territorial sanitaria para gestión epidemiológica.
 """
 
+from typing import Dict
+
 from app.core.static_data.geografia.argentina import POBLACION_DEPARTAMENTOS
 
 # NOMBRES DE ÁREAS PROGRAMÁTICAS
@@ -24,7 +26,7 @@ AP_DEPARTAMENTOS = {TRELEW: AP_TRELEW, NORTE: AP_NORTE, SUR: AP_SUR, ESQUEL: AP_
 
 
 # POBLACIÓN POR ÁREA PROGRAMÁTICA (CALCULADA)
-def calcular_poblacion_areas():
+def calcular_poblacion_areas() -> Dict[str, int]:
     """Calcula población por área programática."""
     poblaciones = {}
     for area, deptos in AP_DEPARTAMENTOS.items():

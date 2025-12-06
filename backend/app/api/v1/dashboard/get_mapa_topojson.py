@@ -56,6 +56,7 @@ async def get_topojson_data(
     - `/api/v1/dashboard/mapa/topojson?nivel=departamentos&compress=false` - Sin comprimir
     """
 
+    filename = ""
     try:
         # Construir nombre de archivo
         # "departamentos" → departamentos-argentina.topojson
@@ -94,8 +95,7 @@ async def get_topojson_data(
             headers["Content-Encoding"] = "gzip"
 
         logger.info(
-            f"TopoJSON served: {len(data)} bytes "
-            f"(compressed={len(data) < 1_000_000})"
+            f"TopoJSON served: {len(data)} bytes (compressed={len(data) < 1_000_000})"
         )
 
         return Response(

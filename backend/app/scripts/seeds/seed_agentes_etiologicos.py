@@ -14,6 +14,7 @@ from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import col
 
 from app.domains.catalogos.agentes.models import (
     AgenteEtiologico,
@@ -236,7 +237,14 @@ EXTRACCION_CONFIGS: list[dict[str, Any]] = [
         "campo_busqueda": "DETERMINACION",
         "patron_busqueda": r"VSR|Sincicial",
         "campo_resultado": "RESULTADO",
-        "valores_positivos": ["Positivo", "Detectable", "Reactivo", "Positivo (+)", "Positivo (++)", "Positivo (+++)"],
+        "valores_positivos": [
+            "Positivo",
+            "Detectable",
+            "Reactivo",
+            "Positivo (+)",
+            "Positivo (++)",
+            "Positivo (+++)",
+        ],
         "metodo_deteccion_default": "Antígeno/PCR",
     },
     {
@@ -245,7 +253,14 @@ EXTRACCION_CONFIGS: list[dict[str, Any]] = [
         "campo_busqueda": "DETERMINACION",
         "patron_busqueda": r"[Ii]nfluenza\s*A|Influenza A",
         "campo_resultado": "RESULTADO",
-        "valores_positivos": ["Positivo", "Detectable", "Reactivo", "Positivo (+)", "Positivo (++)", "Positivo (+++)"],
+        "valores_positivos": [
+            "Positivo",
+            "Detectable",
+            "Reactivo",
+            "Positivo (+)",
+            "Positivo (++)",
+            "Positivo (+++)",
+        ],
         "metodo_deteccion_default": "Antígeno/PCR",
     },
     {
@@ -263,7 +278,14 @@ EXTRACCION_CONFIGS: list[dict[str, Any]] = [
         "campo_busqueda": "DETERMINACION",
         "patron_busqueda": r"[Mm]etaneumovirus",
         "campo_resultado": "RESULTADO",
-        "valores_positivos": ["Positivo", "Detectable", "Reactivo", "Positivo (+)", "Positivo (++)", "Positivo (+++)"],
+        "valores_positivos": [
+            "Positivo",
+            "Detectable",
+            "Reactivo",
+            "Positivo (+)",
+            "Positivo (++)",
+            "Positivo (+++)",
+        ],
         "metodo_deteccion_default": "PCR",
     },
     {
@@ -505,7 +527,7 @@ async def seed_agentes_etiologicos(db: AsyncSession) -> None:
         codigo = agente_data["slug"]
 
         # Buscar existente
-        stmt = select(AgenteEtiologico).where(AgenteEtiologico.slug == codigo)
+        stmt = select(AgenteEtiologico).where(col(AgenteEtiologico.slug) == codigo)
         result = await db.execute(stmt)
         existing = result.scalar_one_or_none()
 
@@ -524,7 +546,9 @@ async def seed_agentes_etiologicos(db: AsyncSession) -> None:
 
     await db.flush()  # Para obtener IDs
 
-    logger.info(f"  Agentes: {agentes_creados} creados, {agentes_actualizados} actualizados")
+    logger.info(
+        f"  Agentes: {agentes_creados} creados, {agentes_actualizados} actualizados"
+    )
 
     # =========================================================================
     # 2. Crear configuraciones de extracción
@@ -543,11 +567,12 @@ async def seed_agentes_etiologicos(db: AsyncSession) -> None:
         evento_nombre = config_data.pop("evento_nombre")
 
         # Buscar agente
-        agente = agentes_map.get(agente_codigo)
-        if not agente:
+        agente_opt = agentes_map.get(agente_codigo)
+        if not agente_opt:
             logger.warning(f"  ⚠ Agente no encontrado: {agente_codigo}")
             configs_error += 1
             continue
+        agente = agente_opt
 
         # Buscar tipo_eno
         tipo_eno = tipo_enos.get(evento_nombre)
@@ -556,11 +581,22 @@ async def seed_agentes_etiologicos(db: AsyncSession) -> None:
             configs_error += 1
             continue
 
+        # Verificar que los IDs no sean None
+        if agente.id is None:
+            logger.warning(f"  ⚠ Agente sin ID: {agente_codigo}")
+            configs_error += 1
+            continue
+
+        if tipo_eno.id is None:
+            logger.warning(f"  ⚠ Enfermedad sin ID: {evento_nombre}")
+            configs_error += 1
+            continue
+
         # Buscar config existente
         stmt = select(AgenteExtraccionConfig).where(
-            AgenteExtraccionConfig.id_agente == agente.id,
-            AgenteExtraccionConfig.id_enfermedad == tipo_eno.id,
-            AgenteExtraccionConfig.campo_busqueda == config_data["campo_busqueda"],
+            col(AgenteExtraccionConfig.id_agente) == agente.id,
+            col(AgenteExtraccionConfig.id_enfermedad) == tipo_eno.id,
+            col(AgenteExtraccionConfig.campo_busqueda) == config_data["campo_busqueda"],
         )
         result = await db.execute(stmt)
         existing_config = result.scalar_one_or_none()
@@ -573,19 +609,21 @@ async def seed_agentes_etiologicos(db: AsyncSession) -> None:
         else:
             # Crear nueva
             config = AgenteExtraccionConfig(
-                id_agente=agente.id,
-                id_enfermedad=tipo_eno.id,
-                **config_data
+                id_agente=agente.id, id_enfermedad=tipo_eno.id, **config_data
             )
             db.add(config)
             configs_creadas += 1
 
     await db.commit()
 
-    logger.info(f"  Configs: {configs_creadas} creadas, {configs_actualizadas} actualizadas, {configs_error} errores")
+    logger.info(
+        f"  Configs: {configs_creadas} creadas, {configs_actualizadas} actualizadas, {configs_error} errores"
+    )
     logger.info("")
     logger.info("  Grupos de agentes:")
-    logger.info("    - Respiratorios: VSR, Influenza A/B, Metaneumovirus, SARS-CoV-2, etc.")
+    logger.info(
+        "    - Respiratorios: VSR, Influenza A/B, Metaneumovirus, SARS-CoV-2, etc."
+    )
     logger.info("    - Entéricos: STEC O157, Salmonella, Shigella, Rotavirus, etc.")
     logger.info("    - Vectoriales: Dengue serotipos 1-4")
     logger.info("")

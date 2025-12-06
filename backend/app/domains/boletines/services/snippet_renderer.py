@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 from jinja2 import Environment, TemplateSyntaxError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import col
 
 from app.domains.boletines.models import BoletinSnippet
 
@@ -23,7 +24,7 @@ class SnippetRenderer:
     con valores dinámicos basados en datos epidemiológicos.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Configurar entorno de Jinja2
         self.jinja_env = Environment(
             autoescape=True,  # Escapar HTML automáticamente para seguridad
@@ -61,9 +62,7 @@ class SnippetRenderer:
             raise
 
     async def get_snippet_by_codigo(
-        self,
-        db: AsyncSession,
-        codigo: str
+        self, db: AsyncSession, codigo: str
     ) -> Optional[BoletinSnippet]:
         """
         Obtiene un snippet por su código.
@@ -76,16 +75,14 @@ class SnippetRenderer:
             El snippet encontrado o None
         """
         query = select(BoletinSnippet).where(
-            BoletinSnippet.codigo == codigo,
-            BoletinSnippet.is_active == True
+            col(BoletinSnippet.codigo) == codigo,
+            col(BoletinSnippet.is_active).is_(True),
         )
         result = await db.execute(query)
         return result.scalar_one_or_none()
 
     async def get_snippets_by_categoria(
-        self,
-        db: AsyncSession,
-        categoria: str
+        self, db: AsyncSession, categoria: str
     ) -> List[BoletinSnippet]:
         """
         Obtiene todos los snippets de una categoría.
@@ -100,18 +97,16 @@ class SnippetRenderer:
         query = (
             select(BoletinSnippet)
             .where(
-                BoletinSnippet.categoria == categoria,
-                BoletinSnippet.is_active == True
+                col(BoletinSnippet.categoria) == categoria,
+                col(BoletinSnippet.is_active).is_(True),
             )
-            .order_by(BoletinSnippet.orden)
+            .order_by(col(BoletinSnippet.orden))
         )
         result = await db.execute(query)
         return list(result.scalars().all())
 
     def get_applicable_snippets(
-        self,
-        snippets: List[BoletinSnippet],
-        context: Dict[str, Any]
+        self, snippets: List[BoletinSnippet], context: Dict[str, Any]
     ) -> List[BoletinSnippet]:
         """
         Filtra snippets basándose en sus condiciones.
@@ -138,7 +133,7 @@ class SnippetRenderer:
         applicable = []
 
         for snippet in snippets:
-            if not snippet.condiciones:
+            if snippet.condiciones is None or not snippet.condiciones:
                 # Sin condiciones = siempre aplicable
                 applicable.append(snippet)
                 continue
@@ -155,10 +150,16 @@ class SnippetRenderer:
                 # Manejar diferentes tipos de condiciones
                 if isinstance(expected_value, dict):
                     # Condiciones con operadores (ej: {"min": 50, "max": 100})
-                    if "min" in expected_value and context_value < expected_value["min"]:
+                    if (
+                        "min" in expected_value
+                        and context_value < expected_value["min"]
+                    ):
                         matches = False
                         break
-                    if "max" in expected_value and context_value > expected_value["max"]:
+                    if (
+                        "max" in expected_value
+                        and context_value > expected_value["max"]
+                    ):
                         matches = False
                         break
                 else:
@@ -178,10 +179,7 @@ class SnippetRenderer:
         return applicable
 
     async def render_snippet_by_codigo(
-        self,
-        db: AsyncSession,
-        codigo: str,
-        variables: Dict[str, Any]
+        self, db: AsyncSession, codigo: str, variables: Dict[str, Any]
     ) -> Optional[str]:
         """
         Renderiza un snippet buscándolo por código.
@@ -202,9 +200,7 @@ class SnippetRenderer:
         return self.render(snippet, variables)
 
     def validate_variables(
-        self,
-        snippet: BoletinSnippet,
-        variables: Dict[str, Any]
+        self, snippet: BoletinSnippet, variables: Dict[str, Any]
     ) -> List[str]:
         """
         Valida que todas las variables requeridas estén presentes.

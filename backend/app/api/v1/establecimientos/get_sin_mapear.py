@@ -2,24 +2,33 @@
 
 from fastapi import Depends, Query
 from sqlalchemy import func, or_, select
-from sqlmodel import Session
+from sqlmodel import Session, col
 
 from app.core.database import get_session
-from app.domains.vigilancia_nominal.models.caso import CasoEpidemiologico
+from app.core.schemas.response import SuccessResponse
 from app.domains.territorio.establecimientos_models import Establecimiento
 from app.domains.territorio.geografia_models import Departamento, Localidad, Provincia
+from app.domains.vigilancia_nominal.models.caso import CasoEpidemiologico
 
-from .mapeo_schemas import EstablecimientoSinMapear, EstablecimientosSinMapearResponse
+from .mapeo_schemas import (
+    EstablecimientoSinMapear,
+    EstablecimientosSinMapearResponse,
+    SugerenciaMapeo,
+)
 from .suggestions_service import buscar_sugerencias_para_establecimiento
 
 
 async def get_establecimientos_sin_mapear(
     limit: int = Query(50, ge=1, le=200, description="Número de resultados por página"),
     offset: int = Query(0, ge=0, description="Número de resultados a saltar"),
-    con_eventos_solo: bool = Query(True, description="Solo mostrar establecimientos con eventos"),
-    incluir_sugerencias: bool = Query(True, description="Incluir sugerencias automáticas"),
+    con_eventos_solo: bool = Query(
+        True, description="Solo mostrar establecimientos con eventos"
+    ),
+    incluir_sugerencias: bool = Query(
+        True, description="Incluir sugerencias automáticas"
+    ),
     session: Session = Depends(get_session),
-) -> EstablecimientosSinMapearResponse:
+) -> SuccessResponse[EstablecimientosSinMapearResponse]:
     """
     Obtiene establecimientos SNVS sin mapear a IGN, con sugerencias automáticas.
 
@@ -29,46 +38,57 @@ async def get_establecimientos_sin_mapear(
     # Query base: establecimientos SNVS sin REFES
     base_query = (
         select(
-            Establecimiento.id,
-            Establecimiento.nombre,
-            Establecimiento.codigo_snvs,
-            Localidad.nombre.label("localidad_nombre"),
-            Departamento.nombre.label("departamento_nombre"),
-            Provincia.nombre.label("provincia_nombre"),
-            func.count(CasoEpidemiologico.id).label("total_eventos")
+            col(Establecimiento.id),
+            col(Establecimiento.nombre),
+            col(Establecimiento.codigo_snvs),
+            col(Localidad.nombre).label("localidad_nombre"),
+            col(Departamento.nombre).label("departamento_nombre"),
+            col(Provincia.nombre).label("provincia_nombre"),
+            func.count(col(CasoEpidemiologico.id)).label("total_eventos"),
         )
-        .outerjoin(Localidad, Establecimiento.id_localidad_indec == Localidad.id_localidad_indec)
-        .outerjoin(Departamento, Localidad.id_departamento_indec == Departamento.id_departamento_indec)
-        .outerjoin(Provincia, Departamento.id_provincia_indec == Provincia.id_provincia_indec)
+        .outerjoin(
+            Localidad,
+            Establecimiento.id_localidad_indec == Localidad.id_localidad_indec,
+        )
+        .outerjoin(
+            Departamento,
+            Localidad.id_departamento_indec == Departamento.id_departamento_indec,
+        )
+        .outerjoin(
+            Provincia, Departamento.id_provincia_indec == Provincia.id_provincia_indec
+        )
         .outerjoin(
             CasoEpidemiologico,
             or_(
-                CasoEpidemiologico.id_establecimiento_carga == Establecimiento.id,
-                CasoEpidemiologico.id_establecimiento_consulta == Establecimiento.id,
-                CasoEpidemiologico.id_establecimiento_notificacion == Establecimiento.id
-            )
+                col(CasoEpidemiologico.id_establecimiento_carga)
+                == col(Establecimiento.id),
+                col(CasoEpidemiologico.id_establecimiento_consulta)
+                == col(Establecimiento.id),
+                col(CasoEpidemiologico.id_establecimiento_notificacion)
+                == col(Establecimiento.id),
+            ),
         )
-        .where(Establecimiento.source == "SNVS")
-        .where(Establecimiento.codigo_refes.is_(None))  # Sin mapear
+        .where(col(Establecimiento.source) == "SNVS")
+        .where(col(Establecimiento.codigo_refes).is_(None))
         .group_by(
-            Establecimiento.id,
-            Establecimiento.nombre,
-            Establecimiento.codigo_snvs,
-            Localidad.nombre,
-            Departamento.nombre,
-            Provincia.nombre
+            col(Establecimiento.id),
+            col(Establecimiento.nombre),
+            col(Establecimiento.codigo_snvs),
+            col(Localidad.nombre),
+            col(Departamento.nombre),
+            col(Provincia.nombre),
         )
     )
 
     if con_eventos_solo:
-        base_query = base_query.having(func.count(CasoEpidemiologico.id) > 0)
+        base_query = base_query.having(func.count(col(CasoEpidemiologico.id)) > 0)
 
     # Ordenar por número de eventos descendente (más impacto primero)
-    base_query = base_query.order_by(func.count(CasoEpidemiologico.id).desc())
+    base_query = base_query.order_by(func.count(col(CasoEpidemiologico.id)).desc())
 
     # Contar total
     count_query = select(func.count()).select_from(base_query.subquery())
-    total = session.exec(count_query).one()
+    total = session.exec(count_query).one()[0]
 
     # Obtener resultados paginados
     results_query = base_query.offset(offset).limit(limit)
@@ -85,7 +105,7 @@ async def get_establecimientos_sin_mapear(
             departamento_nombre=row[4],
             provincia_nombre=row[5],
             total_eventos=row[6],
-            sugerencias=[]
+            sugerencias=[],
         )
 
         # Buscar sugerencias si está habilitado
@@ -96,37 +116,47 @@ async def get_establecimientos_sin_mapear(
                 provincia_nombre_snvs=row[5],
                 departamento_nombre_snvs=row[4],
                 localidad_nombre_snvs=row[3],
-                limit=3  # Top 3 sugerencias por establecimiento
+                limit=3,  # Top 3 sugerencias por establecimiento
             )
-            estab.sugerencias = sugerencias
+            estab.sugerencias = [SugerenciaMapeo(**s) for s in sugerencias]
 
         items.append(estab)
 
     # Contar estadísticas generales
-    stats_query = select(
-        func.count(Establecimiento.id).label("sin_mapear_count"),
-        func.coalesce(func.sum(
-            func.count(CasoEpidemiologico.id)
-        ), 0).label("eventos_sin_mapear_count")
-    ).select_from(Establecimiento).outerjoin(
-        CasoEpidemiologico,
-        or_(
-            CasoEpidemiologico.id_establecimiento_carga == Establecimiento.id,
-            CasoEpidemiologico.id_establecimiento_consulta == Establecimiento.id,
-            CasoEpidemiologico.id_establecimiento_notificacion == Establecimiento.id
+    stats_query = (
+        select(
+            func.count(func.distinct(col(Establecimiento.id))).label(
+                "sin_mapear_count"
+            ),
+            func.count(col(CasoEpidemiologico.id)).label("eventos_sin_mapear_count"),
         )
-    ).where(
-        Establecimiento.source == "SNVS",
-        Establecimiento.codigo_refes.is_(None)
-    ).group_by(Establecimiento.id)
+        .select_from(Establecimiento)
+        .outerjoin(
+            CasoEpidemiologico,
+            or_(
+                col(CasoEpidemiologico.id_establecimiento_carga)
+                == col(Establecimiento.id),
+                col(CasoEpidemiologico.id_establecimiento_consulta)
+                == col(Establecimiento.id),
+                col(CasoEpidemiologico.id_establecimiento_notificacion)
+                == col(Establecimiento.id),
+            ),
+        )
+        .where(
+            col(Establecimiento.source) == "SNVS",
+            col(Establecimiento.codigo_refes).is_(None),
+        )
+    )
 
     stats = session.exec(stats_query).first()
     sin_mapear_count = stats[0] if stats else 0
     eventos_sin_mapear_count = stats[1] if stats else 0
 
-    return EstablecimientosSinMapearResponse(
-        items=items,
-        total=total,
-        sin_mapear_count=sin_mapear_count,
-        eventos_sin_mapear_count=eventos_sin_mapear_count
+    return SuccessResponse(
+        data=EstablecimientosSinMapearResponse(
+            items=items,
+            total=total,
+            sin_mapear_count=sin_mapear_count,
+            eventos_sin_mapear_count=eventos_sin_mapear_count,
+        )
     )

@@ -2,6 +2,7 @@
 Schemas para la arquitectura Browse-First de charts
 Simplificados y enfocados en UX
 """
+
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
@@ -11,6 +12,7 @@ from pydantic import BaseModel, Field
 
 class ChartVisualizationType(str, Enum):
     """Tipos de visualización disponibles"""
+
     LINE = "LINE"
     BAR = "BAR"
     PIE = "PIE"
@@ -21,8 +23,10 @@ class ChartVisualizationType(str, Enum):
     TABLE = "TABLE"
     METRIC = "METRIC"
 
+
 class ChartCategory(str, Enum):
     """Categorías de charts"""
+
     EPIDEMIOLOGICAL = "EPIDEMIOLOGICAL"
     DEMOGRAPHIC = "DEMOGRAPHIC"
     GEOGRAPHIC = "GEOGRAPHIC"
@@ -30,8 +34,10 @@ class ChartCategory(str, Enum):
     COMPARATIVE = "COMPARATIVE"
     GENERAL = "GENERAL"
 
+
 class FilterType(str, Enum):
     """Tipos de filtros disponibles"""
+
     DATE_RANGE = "DATE_RANGE"
     SINGLE_SELECT = "SINGLE_SELECT"
     MULTI_SELECT = "MULTI_SELECT"
@@ -41,10 +47,13 @@ class FilterType(str, Enum):
     ENO_SELECTOR = "ENO_SELECTOR"
     DEPARTMENT_SELECTOR = "DEPARTMENT_SELECTOR"
 
+
 # ====== RESPONSES PRINCIPALES ======
+
 
 class ChartTemplateResponse(BaseModel):
     """Template de chart para browse-first UI"""
+
     id: int
     codigo: str
     nombre: str
@@ -68,8 +77,10 @@ class ChartTemplateResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+
 class ChartDataResponse(BaseModel):
     """Datos de un chart ejecutado"""
+
     id_grafico: int
     codigo_grafico: str
     titulo: str
@@ -91,8 +102,10 @@ class ChartDataResponse(BaseModel):
     registros_filtrados: Optional[int] = None
     mensaje: Optional[str] = None
 
+
 class FilterDefinitionResponse(BaseModel):
     """Definición de un filtro disponible"""
+
     codigo: str
     nombre: str
     descripcion: Optional[str]
@@ -105,8 +118,10 @@ class FilterDefinitionResponse(BaseModel):
 
 # ====== REQUESTS ======
 
+
 class ExecuteChartRequest(BaseModel):
     """Request para ejecutar un chart"""
+
     codigo_grafico: str
     filtros: Dict[str, Any] = Field(default_factory=dict)
     parametros: Dict[str, Any] = Field(default_factory=dict)
@@ -116,16 +131,20 @@ class ExecuteChartRequest(BaseModel):
 
 class ChartPreviewRequest(BaseModel):
     """Request para vista previa de chart"""
+
     codigo_grafico: str
     filtros: Dict[str, Any] = Field(default_factory=dict)
     parametros: Dict[str, Any] = Field(default_factory=dict)
     usar_datos_muestra: bool = True
     limite_registros: int = Field(default=100, ge=10, le=1000)
 
+
 # ====== DASHBOARD Y LAYOUTS ======
+
 
 class DashboardChartItem(BaseModel):
     """Item de chart en dashboard"""
+
     codigo_grafico: str
     titulo_personalizado: Optional[str] = None
     filtros_aplicados: Dict[str, Any] = Field(default_factory=dict)
@@ -135,28 +154,34 @@ class DashboardChartItem(BaseModel):
     posicion_x: int = 0
     posicion_y: int = 0
     ancho: int = 6  # grid columns (12 total)
-    alto: int = 4   # grid rows
+    alto: int = 4  # grid rows
 
     # Display options
     mostrar_titulo: bool = True
     mostrar_controles: bool = True
 
+
 class DashboardLayoutRequest(BaseModel):
     """Request para crear/actualizar dashboard"""
+
     nombre: str
     descripcion: Optional[str] = None
     charts: List[DashboardChartItem]
     filtros_globales: Dict[str, Any] = Field(default_factory=dict)
     es_publico: bool = False
 
+
 class ChartAvailabilityResponse(BaseModel):
     """Disponibilidad de charts para un contexto específico"""
+
     total_graficos: int
     graficos_disponibles: List[ChartTemplateResponse]
     filtros_disponibles: List[FilterDefinitionResponse]
 
+
 class ExportConfigRequest(BaseModel):
     """Request para exportar configuraciones"""
+
     incluir_templates: bool = True
     incluir_preferencias_usuario: bool = False
     formato: str = Field(default="json")

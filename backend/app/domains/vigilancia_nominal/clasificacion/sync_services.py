@@ -2,10 +2,10 @@
 Servicios síncronos para clasificación de eventos usando estrategias de DB.
 """
 
-from typing import Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from app.domains.vigilancia_nominal.clasificacion.models import (
     ClassificationRule,
@@ -51,13 +51,14 @@ class SyncEventClassificationService:
         text = text.lower().strip()
 
         # Eliminar acentos
-        text = ''.join(
-            c for c in unicodedata.normalize('NFD', text)
-            if unicodedata.category(c) != 'Mn'
+        text = "".join(
+            c
+            for c in unicodedata.normalize("NFD", text)
+            if unicodedata.category(c) != "Mn"
         )
 
         # Reemplazar múltiples espacios por uno solo
-        text = ' '.join(text.split())
+        text = " ".join(text.split())
 
         return text
 
@@ -91,9 +92,9 @@ class SyncEventClassificationService:
                 lambda row: {
                     "razon": "sin_estrategia",
                     "mensaje": f"No existe estrategia definida para id_enfermedad={id_enfermedad}",
-                    "estrategia_evaluada": False
+                    "estrategia_evaluada": False,
                 },
-                axis=1
+                axis=1,
             )
             return df
 
@@ -156,7 +157,7 @@ class SyncEventClassificationService:
                         "razon": "evaluando",
                         "estrategia_id": strategy.id,
                         "estrategia_nombre": strategy.name,
-                        "reglas_evaluadas": []
+                        "reglas_evaluadas": [],
                     }
 
                 # Agregar regla evaluada que NO cumplió
@@ -164,18 +165,22 @@ class SyncEventClassificationService:
                     if "reglas_evaluadas" not in df.at[idx, "trazabilidad"]:
                         df.at[idx, "trazabilidad"]["reglas_evaluadas"] = []
 
-                    df.at[idx, "trazabilidad"]["reglas_evaluadas"].append({
-                        "regla_id": rule.id,
-                        "regla_nombre": rule.name,
-                        "regla_prioridad": rule.priority,
-                        "cumplida": False,
-                        "condiciones": traceability.get(idx, [])
-                    })
+                    df.at[idx, "trazabilidad"]["reglas_evaluadas"].append(
+                        {
+                            "regla_id": rule.id,
+                            "regla_nombre": rule.name,
+                            "regla_prioridad": rule.priority,
+                            "cumplida": False,
+                            "condiciones": traceability.get(idx, []),
+                        }
+                    )
 
         # Clasificar filas restantes como REQUIERE_REVISION
         remaining_mask = df["clasificacion"].isna()
         if remaining_mask.any():
-            df.loc[remaining_mask, "clasificacion"] = TipoClasificacion.REQUIERE_REVISION.value
+            df.loc[remaining_mask, "clasificacion"] = (
+                TipoClasificacion.REQUIERE_REVISION.value
+            )
 
             # Actualizar trazabilidad para registros sin clasificación
             for idx in df[remaining_mask].index:
@@ -184,7 +189,9 @@ class SyncEventClassificationService:
 
                 if isinstance(df.at[idx, "trazabilidad"], dict):
                     df.at[idx, "trazabilidad"]["razon"] = "requiere_revision"
-                    df.at[idx, "trazabilidad"]["mensaje"] = f"Ninguna regla cumplió las condiciones. Total reglas evaluadas: {len(rules)}"
+                    df.at[idx, "trazabilidad"]["mensaje"] = (
+                        f"Ninguna regla cumplió las condiciones. Total reglas evaluadas: {len(rules)}"
+                    )
 
         return df
 
@@ -196,13 +203,20 @@ class SyncEventClassificationService:
             return self._cache[id_enfermedad]
 
         # Buscar estrategia activa
-        result = self.session.execute(
-            select(EstrategiaClasificacion)
-            .where(EstrategiaClasificacion.id_enfermedad == id_enfermedad)
-            .where(EstrategiaClasificacion.is_active.is_(True))
-        ).scalars().first()
+        result: Optional[EstrategiaClasificacion] = (
+            self.session.execute(
+                select(EstrategiaClasificacion)
+                .where(EstrategiaClasificacion.id_enfermedad == id_enfermedad)
+                .where(col(EstrategiaClasificacion.is_active).is_(True))
+            )
+            .scalars()
+            .first()
+        )
 
         if result and use_cache:
+            self.session.refresh(
+                result, ["classification_rules"]
+            )  # Ensure relations are loaded
             self._cache[id_enfermedad] = result
 
         return result
@@ -213,7 +227,11 @@ class SyncEventClassificationService:
         """Aplica configuración específica de la estrategia."""
 
         # Configuración de fechas si está definida
-        if strategy.config and isinstance(strategy.config, dict) and strategy.config.get("date_config"):
+        if (
+            strategy.config
+            and isinstance(strategy.config, dict)
+            and strategy.config.get("date_config")
+        ):
             date_config = strategy.config["date_config"]
 
             # Aplicar configuración de fechas
@@ -223,7 +241,11 @@ class SyncEventClassificationService:
                     df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
 
         # Normalización de columnas si está definida
-        if strategy.config and isinstance(strategy.config, dict) and strategy.config.get("column_mapping"):
+        if (
+            strategy.config
+            and isinstance(strategy.config, dict)
+            and strategy.config.get("column_mapping")
+        ):
             column_mapping = strategy.config["column_mapping"]
 
             # Renombrar columnas según mapeo
@@ -278,16 +300,18 @@ class SyncEventClassificationService:
             Tupla con (máscara booleana, diccionario de trazabilidad por índice)
         """
         # Diccionario para almacenar trazabilidad por índice de fila
-        traceability = {}
+        traceability: Dict[int, List[Dict[str, Any]]] = {}
 
         # Si no hay condiciones, la regla aplica a todas las filas
         if not rule.filters:
             for idx in df.index:
-                traceability[idx] = [{
-                    "tipo": "sin_condiciones",
-                    "resultado": True,
-                    "mensaje": "Regla sin condiciones, aplica a todos los registros"
-                }]
+                traceability[idx] = [
+                    {
+                        "tipo": "sin_condiciones",
+                        "resultado": True,
+                        "mensaje": "Regla sin condiciones, aplica a todos los registros",
+                    }
+                ]
             return pd.Series([True] * len(df), index=df.index), traceability
 
         # Iniciar con máscara verdadera
@@ -304,12 +328,16 @@ class SyncEventClassificationService:
             # Capturar información de trazabilidad para cada fila
             config = condition.config if condition.config else {}
             for idx in df.index:
-                condition_result = condition_mask.loc[idx] if idx in condition_mask.index else False
+                condition_result = (
+                    condition_mask.loc[idx] if idx in condition_mask.index else False
+                )
 
                 trace_item = {
                     "condicion_id": condition.id,
                     "campo": condition.field_name,
-                    "tipo_filtro": condition.filter_type.value if condition.filter_type else "desconocido",
+                    "tipo_filtro": condition.filter_type.value
+                    if condition.filter_type
+                    else "desconocido",
                     "operador_logico": condition.logical_operator,
                     "resultado": bool(condition_result),
                     "config": config,
@@ -318,7 +346,9 @@ class SyncEventClassificationService:
                 # Agregar valor del campo si está disponible
                 if condition.field_name in df.columns:
                     field_value = df.loc[idx, condition.field_name]
-                    trace_item["valor_campo"] = str(field_value) if pd.notna(field_value) else None
+                    trace_item["valor_campo"] = (
+                        str(field_value) if pd.notna(field_value) else None
+                    )
 
                 traceability[idx].append(trace_item)
 
@@ -357,55 +387,69 @@ class SyncEventClassificationService:
 
         # Evaluar según tipo de filtro
         if condition.filter_type == TipoFiltro.CAMPO_IGUAL:
-            value = config.get('value', '')
-            strict_mode = config.get('strict', False)
+            value = config.get("value", "")
+            strict_mode = config.get("strict", False)
 
             if strict_mode:
                 return column == value
             else:
                 # Modo insensible por defecto
                 normalized_value = self.normalize_text(str(value))
-                return column.apply(lambda x: self.normalize_text(str(x)) == normalized_value if pd.notna(x) else False)
+                return column.apply(
+                    lambda x: self.normalize_text(str(x)) == normalized_value
+                    if pd.notna(x)
+                    else False
+                )
 
         elif condition.filter_type == TipoFiltro.CAMPO_CONTIENE:
-            value = config.get('value', '')
-            strict_mode = config.get('strict', False)
+            value = config.get("value", "")
+            strict_mode = config.get("strict", False)
 
             if column.dtype == "object":
                 if strict_mode:
-                    case_sensitive = config.get('case_sensitive', True)
+                    case_sensitive = config.get("case_sensitive", True)
                     return column.str.contains(value, na=False, case=case_sensitive)
                 else:
                     # Modo insensible por defecto
                     normalized_value = self.normalize_text(str(value))
-                    return column.apply(lambda x: normalized_value in self.normalize_text(str(x)) if pd.notna(x) else False)
+                    return column.apply(
+                        lambda x: normalized_value in self.normalize_text(str(x))
+                        if pd.notna(x)
+                        else False
+                    )
             return pd.Series([False] * len(df), index=df.index)
 
         elif condition.filter_type == TipoFiltro.CAMPO_EN_LISTA:
             # Obtener lista de valores desde config
-            values = config.get('values', [])
+            values = config.get("values", [])
             if not isinstance(values, list):
                 # Si viene como string separado por comas (retrocompatibilidad)
                 values = [v.strip() for v in str(values).split(",")]
 
-            strict_mode = config.get('strict', False)
+            strict_mode = config.get("strict", False)
 
             if strict_mode:
                 return column.isin(values)
             else:
                 # Modo insensible por defecto - normalizar tanto valores como columna
                 normalized_values = [self.normalize_text(str(v)) for v in values]
-                return column.apply(lambda x: self.normalize_text(str(x)) in normalized_values if pd.notna(x) else False)
+                return column.apply(
+                    lambda x: self.normalize_text(str(x)) in normalized_values
+                    if pd.notna(x)
+                    else False
+                )
 
         elif condition.filter_type == TipoFiltro.CAMPO_EXISTE:
             # Verificar que el campo tenga algún valor (no nulo y no vacío)
-            return column.notna() & (column != "") & (column.astype(str).str.strip() != "")
+            return (
+                column.notna() & (column != "") & (column.astype(str).str.strip() != "")
+            )
 
         elif condition.filter_type == TipoFiltro.CAMPO_NO_NULO:
             return column.notna()
 
         elif condition.filter_type == TipoFiltro.REGEX_EXTRACCION:
-            pattern = config.get('pattern', '')
+            pattern = config.get("pattern", "")
             if column.dtype == "object" and pattern:
                 try:
                     return column.str.match(pattern, na=False)

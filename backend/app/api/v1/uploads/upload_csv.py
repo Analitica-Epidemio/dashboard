@@ -23,7 +23,7 @@ async def upload_csv_async(
     file: UploadFile = File(..., description="Archivo CSV epidemiológico"),
     original_filename: str = Form(..., description="Nombre del archivo Excel original"),
     sheet_name: str = Form(..., description="Nombre de la hoja convertida"),
-    current_user: User = Depends(RequireAnyRole())
+    current_user: User = Depends(RequireAnyRole()),
 ):
     """
     Procesamiento asíncrono de CSV con Celery.
@@ -53,6 +53,7 @@ async def upload_csv_async(
 
     # Loguear configuración de Redis/Celery al momento del request
     from app.core.celery_app import celery_app
+
     logger.info(f"🔍 Broker Celery actual: {celery_app.conf.broker_url}")
     logger.info(f"🔍 Backend Celery actual: {celery_app.conf.result_backend}")
 
@@ -61,18 +62,25 @@ async def upload_csv_async(
         import redis
 
         from app.core.config import settings
-        redis_url_parts = settings.REDIS_URL.replace('redis://', '').split(':')
+
+        redis_url_parts = settings.REDIS_URL.replace("redis://", "").split(":")
         redis_host = redis_url_parts[0]
-        redis_port_db = redis_url_parts[1].split('/')
+        redis_port_db = redis_url_parts[1].split("/")
         redis_port = int(redis_port_db[0])
         redis_db = int(redis_port_db[1]) if len(redis_port_db) > 1 else 0
 
-        logger.info(f"🧪 Probando conexión Redis a {redis_host}:{redis_port}, DB: {redis_db}")
-        redis_client = redis.Redis(host=redis_host, port=redis_port, db=redis_db, socket_connect_timeout=2)
+        logger.info(
+            f"🧪 Probando conexión Redis a {redis_host}:{redis_port}, DB: {redis_db}"
+        )
+        redis_client = redis.Redis(
+            host=redis_host, port=redis_port, db=redis_db, socket_connect_timeout=2
+        )
         redis_client.ping()
         logger.info("✅ Redis es accesible desde el endpoint de carga")
     except Exception as redis_error:
-        logger.error(f"❌ Falló prueba de conexión Redis en endpoint: {str(redis_error)}")
+        logger.error(
+            f"❌ Falló prueba de conexión Redis en endpoint: {str(redis_error)}"
+        )
         logger.error(f"❌ Tipo de error Redis: {type(redis_error).__name__}")
 
     try:

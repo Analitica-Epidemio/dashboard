@@ -62,11 +62,15 @@ class FileValidator:
             raise HTTPException(status_code=400, detail="Nombre de archivo inválido")
 
         # Validar extensión
-        ext = "." + archivo.filename.lower().split(".")[-1] if "." in archivo.filename else ""
+        ext = (
+            "." + archivo.filename.lower().split(".")[-1]
+            if "." in archivo.filename
+            else ""
+        )
         if ext not in extensiones_permitidas:
             raise HTTPException(
                 status_code=400,
-                detail=f"Extensión no permitida. Permitidas: {', '.join(extensiones_permitidas)}"
+                detail=f"Extensión no permitida. Permitidas: {', '.join(extensiones_permitidas)}",
             )
 
         # Leer contenido
@@ -86,7 +90,7 @@ class FileValidator:
             logger.warning(f"MIME inválido: {mime_detectado} para {archivo.filename}")
             raise HTTPException(
                 status_code=400,
-                detail=f"Tipo de archivo no válido. MIME detectado: {mime_detectado}"
+                detail=f"Tipo de archivo no válido. MIME detectado: {mime_detectado}",
             )
 
         logger.debug(f"Archivo validado: {archivo.filename}, MIME: {mime_detectado}")

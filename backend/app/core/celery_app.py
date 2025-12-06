@@ -9,6 +9,7 @@ Arquitectura senior-level con:
 """
 
 import logging
+from typing import Any, Dict
 
 from celery import Celery
 
@@ -109,15 +110,20 @@ def create_celery_app() -> Celery:
     try:
         # Import redis client to test connection
         import redis
-        redis_url_parts = settings.REDIS_URL.replace('redis://', '').split(':')
+
+        redis_url_parts = settings.REDIS_URL.replace("redis://", "").split(":")
         redis_host = redis_url_parts[0]
-        redis_port_db = redis_url_parts[1].split('/')
+        redis_port_db = redis_url_parts[1].split("/")
         redis_port = int(redis_port_db[0])
         redis_db = int(redis_port_db[1]) if len(redis_port_db) > 1 else 0
 
-        logger.info(f"🔗 Attempting to connect to Redis at {redis_host}:{redis_port}, DB: {redis_db}")
+        logger.info(
+            f"🔗 Attempting to connect to Redis at {redis_host}:{redis_port}, DB: {redis_db}"
+        )
 
-        redis_client = redis.Redis(host=redis_host, port=redis_port, db=redis_db, socket_connect_timeout=5)
+        redis_client = redis.Redis(
+            host=redis_host, port=redis_port, db=redis_db, socket_connect_timeout=5
+        )
         redis_client.ping()
         logger.info("✅ Redis connection successful!")
 
@@ -142,7 +148,7 @@ celery_app = create_celery_app()
 
 
 # Task decorators para conveniencia
-def file_processing_task(*args, **kwargs):
+def file_processing_task(*args: Any, **kwargs: Any) -> Any:
     """Decorator para tasks de procesamiento de archivos."""
     return celery_app.task(
         bind=True,
@@ -154,7 +160,7 @@ def file_processing_task(*args, **kwargs):
     )
 
 
-def maintenance_task(*args, **kwargs):
+def maintenance_task(*args: Any, **kwargs: Any) -> Any:
     """Decorator para tasks de mantenimiento."""
     return celery_app.task(
         bind=True,
@@ -168,7 +174,7 @@ def maintenance_task(*args, **kwargs):
 
 # Health check para monitoring
 @celery_app.task(name="app.core.celery_app.health_check")
-def health_check():
+def health_check() -> Dict[str, str]:
     """Task simple para verificar que Celery está funcionando."""
     return {"status": "healthy", "message": "Celery is running"}
 

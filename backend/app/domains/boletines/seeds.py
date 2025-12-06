@@ -83,6 +83,7 @@ import logging
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import col
 
 from app.domains.boletines.models import BoletinTemplateConfig
 from app.domains.boletines.seed_event_section_template import (
@@ -105,7 +106,7 @@ async def seed_boletin_template_config(db: AsyncSession) -> None:
     logger.info("=" * 70)
 
     # Verificar si ya existe configuración
-    stmt = select(BoletinTemplateConfig).where(BoletinTemplateConfig.id == 1)
+    stmt = select(BoletinTemplateConfig).where(col(BoletinTemplateConfig.id) == 1)
     result = await db.execute(stmt)
     existing_config = result.scalar_one_or_none()
 

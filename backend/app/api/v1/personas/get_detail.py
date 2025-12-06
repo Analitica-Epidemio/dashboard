@@ -13,19 +13,24 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from sqlmodel import col
 
 from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAnyRole
-from app.domains.vigilancia_nominal.models.salud import MuestraCasoEpidemiologico
 from app.domains.autenticacion.models import User
-from app.domains.vigilancia_nominal.models.caso import (    DetalleCasoSintomas, CasoEpidemiologico, CasoGrupoEnfermedad)
-from app.domains.vigilancia_nominal.models.sujetos import Animal
+from app.domains.territorio.geografia_models import Domicilio
+from app.domains.vigilancia_nominal.models.caso import (
+    CasoEpidemiologico,
+    CasoGrupoEnfermedad,
+    DetalleCasoSintomas,
+)
+from app.domains.vigilancia_nominal.models.salud import MuestraCasoEpidemiologico
 from app.domains.vigilancia_nominal.models.sujetos import (
+    Animal,
     Ciudadano,
     CiudadanoDomicilio,
 )
-from app.domains.territorio.geografia_models import Domicilio
 
 # =============================================================================
 # SCHEMAS PARA DATOS DEL EVENTO (similares a eventos/get_detail.py)
@@ -117,7 +122,10 @@ class CasoEpidemiologicoCompleto(BaseModel):
     id_evento_caso: int
     tipo_eno_id: Optional[int] = None
     tipo_eno_nombre: Optional[str] = None
-    grupos_eno_nombres: List[str] = Field(default_factory=list, description="Nombres de grupos ENO (puede pertenecer a múltiples)")
+    grupos_eno_nombres: List[str] = Field(
+        default_factory=list,
+        description="Nombres de grupos ENO (puede pertenecer a múltiples)",
+    )
 
     # Fechas
     fecha_minima_caso: Optional[date] = None
@@ -246,10 +254,11 @@ async def get_persona_detail(
             # Buscar ciudadano
             query = (
                 select(Ciudadano)
-                .where(Ciudadano.codigo_ciudadano == persona_id)
+                .where(col(Ciudadano.codigo_ciudadano) == persona_id)
                 .options(
-                    selectinload(Ciudadano.domicilios)
-                    .selectinload(CiudadanoDomicilio.domicilio),  # Cambiado de localidad a domicilio
+                    selectinload(Ciudadano.domicilios).selectinload(
+                        CiudadanoDomicilio.domicilio
+                    ),  # Cambiado de localidad a domicilio
                     selectinload(Ciudadano.datos),
                 )
             )
@@ -263,19 +272,30 @@ async def get_persona_detail(
                 )
 
             # Obtener todos los eventos del ciudadano CON EAGER LOADING
-            eventos_query = select(CasoEpidemiologico).where(CasoEpidemiologico.codigo_ciudadano == persona_id)
+            eventos_query = select(CasoEpidemiologico).where(
+                col(CasoEpidemiologico.codigo_ciudadano) == persona_id
+            )
 
             if include_relations:
                 eventos_query = eventos_query.options(
-                    selectinload(CasoEpidemiologico.enfermedad),  # Cambiado de tipo_eno a enfermedad
-                    selectinload(CasoEpidemiologico.caso_grupos).selectinload(CasoGrupoEnfermedad.grupo),  # Cambiado de grupos_enfermedad a caso_grupos
-                    selectinload(CasoEpidemiologico.domicilio)
-                    .selectinload(Domicilio.localidad),
+                    selectinload(
+                        CasoEpidemiologico.enfermedad
+                    ),  # Cambiado de tipo_eno a enfermedad
+                    selectinload(CasoEpidemiologico.caso_grupos).selectinload(
+                        CasoGrupoEnfermedad.grupo
+                    ),  # Cambiado de grupos_enfermedad a caso_grupos
+                    selectinload(CasoEpidemiologico.domicilio).selectinload(
+                        Domicilio.localidad
+                    ),
                     selectinload(CasoEpidemiologico.sintomas).selectinload(
                         DetalleCasoSintomas.sintoma
                     ),
-                    selectinload(CasoEpidemiologico.muestras).selectinload(MuestraCasoEpidemiologico.muestra),
-                    selectinload(CasoEpidemiologico.muestras).selectinload(MuestraCasoEpidemiologico.estudios),
+                    selectinload(CasoEpidemiologico.muestras).selectinload(
+                        MuestraCasoEpidemiologico.muestra
+                    ),
+                    selectinload(CasoEpidemiologico.muestras).selectinload(
+                        MuestraCasoEpidemiologico.estudios
+                    ),
                     selectinload(CasoEpidemiologico.diagnosticos),
                     selectinload(CasoEpidemiologico.tratamientos),
                     selectinload(CasoEpidemiologico.internaciones),
@@ -297,7 +317,7 @@ async def get_persona_detail(
 
                 # Access domicilio fields through the relationship
                 domicilio_obj = primer_domicilio.domicilio
-                
+
                 domicilio_info = DomicilioInfo(
                     calle=domicilio_obj.calle if domicilio_obj else None,
                     numero=domicilio_obj.numero if domicilio_obj else None,
@@ -343,7 +363,7 @@ async def get_persona_detail(
             # Buscar animal
             query = (
                 select(Animal)
-                .where(Animal.id == persona_id)
+                .where(col(Animal.id) == persona_id)
                 .options(
                     selectinload(Animal.localidad),
                 )
@@ -358,19 +378,30 @@ async def get_persona_detail(
                 )
 
             # Obtener todos los eventos del animal
-            eventos_query = select(CasoEpidemiologico).where(CasoEpidemiologico.id_animal == persona_id)
+            eventos_query = select(CasoEpidemiologico).where(
+                col(CasoEpidemiologico.id_animal) == persona_id
+            )
 
             if include_relations:
                 eventos_query = eventos_query.options(
-                    selectinload(CasoEpidemiologico.enfermedad),  # Cambiado de tipo_eno a enfermedad
-                    selectinload(CasoEpidemiologico.caso_grupos).selectinload(CasoGrupoEnfermedad.grupo),  # Cambiado de grupos_enfermedad a caso_grupos
-                    selectinload(CasoEpidemiologico.domicilio)
-                    .selectinload(Domicilio.localidad),
+                    selectinload(
+                        CasoEpidemiologico.enfermedad
+                    ),  # Cambiado de tipo_eno a enfermedad
+                    selectinload(CasoEpidemiologico.caso_grupos).selectinload(
+                        CasoGrupoEnfermedad.grupo
+                    ),  # Cambiado de grupos_enfermedad a caso_grupos
+                    selectinload(CasoEpidemiologico.domicilio).selectinload(
+                        Domicilio.localidad
+                    ),
                     selectinload(CasoEpidemiologico.sintomas).selectinload(
                         DetalleCasoSintomas.sintoma
                     ),
-                    selectinload(CasoEpidemiologico.muestras).selectinload(MuestraCasoEpidemiologico.muestra),
-                    selectinload(CasoEpidemiologico.muestras).selectinload(MuestraCasoEpidemiologico.estudios),
+                    selectinload(CasoEpidemiologico.muestras).selectinload(
+                        MuestraCasoEpidemiologico.muestra
+                    ),
+                    selectinload(CasoEpidemiologico.muestras).selectinload(
+                        MuestraCasoEpidemiologico.estudios
+                    ),
                     selectinload(CasoEpidemiologico.diagnosticos),
                     selectinload(CasoEpidemiologico.tratamientos),
                     selectinload(CasoEpidemiologico.internaciones),
@@ -383,13 +414,14 @@ async def get_persona_detail(
             # Preparar respuesta base
             response = PersonaDetailResponse(
                 tipo_sujeto="animal",
-                persona_id=persona.id,
-                nombre_completo=persona.identificacion or f"{persona.especie} #{persona.id}",
+                persona_id=persona.id if persona.id is not None else 0,
+                nombre_completo=persona.identificacion
+                or f"{persona.especie} #{persona.id}",
                 especie=persona.especie,
                 raza=persona.raza,
                 identificacion_animal=persona.identificacion,
                 provincia=persona.provincia,
-                localidad=persona.localidad,
+                localidad=persona.localidad.nombre if persona.localidad else None,
                 total_eventos=len(eventos),
                 eventos=[],
             )
@@ -432,6 +464,8 @@ async def get_persona_detail(
             sintomas_info = []
             if include_relations and evento.sintomas:
                 for sintoma_rel in evento.sintomas:
+                    if sintoma_rel.id is None:
+                        continue
                     sintomas_info.append(
                         SintomaInfo(
                             id=sintoma_rel.id,
@@ -439,7 +473,8 @@ async def get_persona_detail(
                                 sintoma_rel.sintoma.signo_sintoma
                                 if sintoma_rel.sintoma
                                 else "Desconocido"
-                            ),
+                            )
+                            or "Desconocido",
                             fecha_inicio=sintoma_rel.fecha_inicio_sintoma,
                         )
                     )
@@ -448,10 +483,14 @@ async def get_persona_detail(
             muestras_info = []
             if include_relations and evento.muestras:
                 for muestra in evento.muestras:
+                    if muestra.id is None:
+                        continue
                     muestras_info.append(
                         MuestraInfo(
                             id=muestra.id,
-                            tipo_muestra=muestra.muestra.descripcion if muestra.muestra else None,
+                            tipo_muestra=muestra.muestra.descripcion
+                            if muestra.muestra
+                            else None,
                             fecha_toma=muestra.fecha_toma_muestra,
                             fecha_recepcion=None,  # Este campo no existe en MuestraCasoEpidemiologico
                             resultado=muestra.valor,  # Campo valor contiene el resultado general
@@ -462,8 +501,10 @@ async def get_persona_detail(
             estudios_info = []
             if include_relations and evento.muestras:
                 for muestra in evento.muestras:
-                    if hasattr(muestra, 'estudios') and muestra.estudios:
+                    if hasattr(muestra, "estudios") and muestra.estudios:
                         for estudio in muestra.estudios:
+                            if estudio.id is None:
+                                continue
                             estudios_info.append(
                                 EstudioInfo(
                                     id=estudio.id,
@@ -478,10 +519,13 @@ async def get_persona_detail(
             diagnosticos_info = []
             if include_relations and evento.diagnosticos:
                 for diagnostico in evento.diagnosticos:
+                    if diagnostico.id is None:
+                        continue
                     diagnosticos_info.append(
                         DiagnosticoInfo(
                             id=diagnostico.id,
-                            diagnostico=diagnostico.diagnostico_referido or "Sin diagnóstico",
+                            diagnostico=diagnostico.diagnostico_referido
+                            or "Sin diagnóstico",
                             fecha=diagnostico.fecha_diagnostico_referido,
                         )
                     )
@@ -490,6 +534,8 @@ async def get_persona_detail(
             tratamientos_info = []
             if include_relations and evento.tratamientos:
                 for tratamiento in evento.tratamientos:
+                    if tratamiento.id is None:
+                        continue
                     tratamientos_info.append(
                         TratamientoInfo(
                             id=tratamiento.id,
@@ -504,32 +550,42 @@ async def get_persona_detail(
             internaciones_info = []
             if include_relations and evento.internaciones:
                 for internacion in evento.internaciones:
+                    if internacion.id is None:
+                        continue
                     internaciones_info.append(
                         InternacionInfo(
                             id=internacion.id,
                             establecimiento=internacion.establecimiento_internacion,
                             fecha_internacion=internacion.fecha_internacion,
                             fecha_alta=internacion.fecha_alta_medica,
-                            cuidados_intensivos=internacion.requirio_cuidado_intensivo or False,
+                            cuidados_intensivos=internacion.requirio_cuidado_intensivo
+                            or False,
                         )
                     )
 
             # Preparar vacunas del evento (si las tiene)
             vacunas_info = []
-            if include_relations and hasattr(evento, 'vacunas') and evento.vacunas:
+            if include_relations and hasattr(evento, "vacunas") and evento.vacunas:
                 for vacuna in evento.vacunas:
+                    if vacuna.id is None:
+                        continue
                     vacunas_info.append(
                         VacunaInfo(
                             id=vacuna.id,
-                            vacuna=getattr(vacuna, 'nombre_vacuna', None) or str(vacuna.id),
-                            dosis=getattr(vacuna, 'dosis_total', None),
-                            fecha_aplicacion=getattr(vacuna, 'fecha_ultima_dosis', None),
+                            vacuna=getattr(vacuna, "nombre_vacuna", None)
+                            or str(vacuna.id),
+                            dosis=getattr(vacuna, "dosis_total", None),
+                            fecha_aplicacion=getattr(
+                                vacuna, "fecha_ultima_dosis", None
+                            ),
                         )
                     )
 
             # Obtener nombres de grupos desde la relación many-to-many
             grupos_nombres = []
-            if hasattr(evento, 'caso_grupos') and evento.caso_grupos:  # Cambiado de grupos_enfermedad a caso_grupos
+            if (
+                hasattr(evento, "caso_grupos") and evento.caso_grupos
+            ):  # Cambiado de grupos_enfermedad a caso_grupos
                 grupos_nombres = [
                     eg.grupo.nombre
                     for eg in evento.caso_grupos  # Cambiado de grupos_enfermedad a caso_grupos
@@ -537,12 +593,16 @@ async def get_persona_detail(
                 ]
 
             # Crear evento completo
+            if evento.id is None:
+                continue
             eventos_completos.append(
                 CasoEpidemiologicoCompleto(
                     id=evento.id,
                     id_evento_caso=evento.id_snvs,  # Cambiado de id_evento_caso a id_snvs
                     tipo_eno_id=evento.id_enfermedad,
-                    tipo_eno_nombre=evento.enfermedad.nombre if evento.enfermedad else None,  # Cambiado de tipo_eno a enfermedad
+                    tipo_eno_nombre=evento.enfermedad.nombre
+                    if evento.enfermedad
+                    else None,  # Cambiado de tipo_eno a enfermedad
                     grupos_eno_nombres=grupos_nombres,
                     fecha_minima_caso=evento.fecha_minima_caso,  # Cambiado de fecha_minima_caso a fecha_minima_caso
                     fecha_inicio_sintomas=evento.fecha_inicio_sintomas,
@@ -578,7 +638,9 @@ async def get_persona_detail(
 
         # Actualizar response con eventos y estadísticas
         response.eventos = sorted(
-            eventos_completos, key=lambda x: x.fecha_minima_caso or date.min, reverse=True  # fecha_minima_caso es el campo del schema de respuesta
+            eventos_completos,
+            key=lambda x: x.fecha_minima_caso or date.min,
+            reverse=True,  # fecha_minima_caso es el campo del schema de respuesta
         )
         response.tipos_eventos_unicos = len(tipos_eventos_set)
         response.eventos_confirmados = confirmados

@@ -9,7 +9,7 @@ from typing import Any, Dict, Optional
 
 import polars as pl
 from sqlalchemy import select
-from sqlmodel import Session
+from sqlmodel import Session, col
 
 from app.core.slug import generar_slug
 from app.domains.vigilancia_nominal.clasificacion.models import TipoClasificacion
@@ -29,6 +29,8 @@ class EventClassifier:
     def __init__(self, session: Session):
         self.session = session
         self._cache_tipo_eno: Dict[str, Any] = {}
+        self.servicio_clasificacion: Optional[Any] = None
+        self.detector_tipo_sujeto: Optional[Any] = None
 
         # Importar servicio de clasificación
         try:
@@ -74,22 +76,29 @@ class EventClassifier:
             return self._agregar_columnas_defecto(df)
 
         # Validar que todos los registros tienen GRUPO_EVENTO
-        mascara_faltantes = (
-            pl.col(Columns.GRUPO_EVENTO.name).is_null() |
-            (pl.col(Columns.GRUPO_EVENTO.name) == "")
+        mascara_faltantes = pl.col(Columns.GRUPO_EVENTO.name).is_null() | (
+            pl.col(Columns.GRUPO_EVENTO.name) == ""
         )
 
         if df.select(mascara_faltantes).to_series().any():
             conteo_faltantes = df.select(mascara_faltantes).to_series().sum()
-            logger.error(f"Se encontraron {conteo_faltantes} registros sin GRUPO_EVENTO")
+            logger.error(
+                f"Se encontraron {conteo_faltantes} registros sin GRUPO_EVENTO"
+            )
 
             # Marcar registros sin GRUPO_EVENTO como requieren revisión
-            df = df.with_columns([
-                pl.when(mascara_faltantes)
-                .then(pl.lit(TipoClasificacion.REQUIERE_REVISION))
-                .otherwise(pl.col("clasificacion_estrategia") if "clasificacion_estrategia" in df.columns else None)
-                .alias("clasificacion_estrategia")
-            ])
+            df = df.with_columns(
+                [
+                    pl.when(mascara_faltantes)
+                    .then(pl.lit(TipoClasificacion.REQUIERE_REVISION))
+                    .otherwise(
+                        pl.col("clasificacion_estrategia")
+                        if "clasificacion_estrategia" in df.columns
+                        else None
+                    )
+                    .alias("clasificacion_estrategia")
+                ]
+            )
 
             # Filtrar para continuar solo con registros válidos
             df = df.filter(~mascara_faltantes)
@@ -99,15 +108,19 @@ class EventClassifier:
             return self._agregar_columnas_defecto(df)
 
         # Agregar columnas de clasificación con valores por defecto
-        df = df.with_columns([
-            pl.lit(None).cast(pl.Utf8).alias("clasificacion_estrategia") if "clasificacion_estrategia" not in df.columns else pl.col("clasificacion_estrategia"),
-            pl.lit(False).alias("es_positivo"),
-            pl.lit(None).cast(pl.Utf8).alias("tipo_eno_detectado"),
-            pl.lit(None).alias("metadata_extraida"),
-            pl.lit(0.0).alias("confidence_score"),
-            pl.lit(None).alias("id_estrategia_aplicada"),
-            pl.lit(None).alias("trazabilidad_clasificacion"),
-        ])
+        df = df.with_columns(
+            [
+                pl.lit(None).cast(pl.Utf8).alias("clasificacion_estrategia")
+                if "clasificacion_estrategia" not in df.columns
+                else pl.col("clasificacion_estrategia"),
+                pl.lit(False).alias("es_positivo"),
+                pl.lit(None).cast(pl.Utf8).alias("tipo_eno_detectado"),
+                pl.lit(None).alias("metadata_extraida"),
+                pl.lit(0.0).alias("confidence_score"),
+                pl.lit(None).alias("id_estrategia_aplicada"),
+                pl.lit(None).alias("trazabilidad_clasificacion"),
+            ]
+        )
 
         # Procesar por tipo de evento
         # Obtener eventos únicos
@@ -117,19 +130,29 @@ class EventClassifier:
             try:
                 # Filtrar registros de este evento
                 mascara = pl.col(Columns.EVENTO.name) == nombre_evento
-                indices_evento = df.with_row_count("__idx__").filter(mascara).select("__idx__").to_series().to_list()
+                indices_evento = (
+                    df.with_row_index("__idx__")
+                    .filter(mascara)
+                    .select("__idx__")
+                    .to_series()
+                    .to_list()
+                )
 
                 # Procesar este grupo
-                df = self._clasificar_grupo_evento_polars(df, nombre_evento, indices_evento)
+                df = self._clasificar_grupo_evento_polars(
+                    df, nombre_evento, indices_evento
+                )
             except Exception as e:
                 logger.error(f"Error clasificando {nombre_evento}: {e}")
                 # Marcar como requiere revisión
-                df = df.with_columns([
-                    pl.when(pl.col(Columns.EVENTO.name) == nombre_evento)
-                    .then(pl.lit(TipoClasificacion.REQUIERE_REVISION))
-                    .otherwise(pl.col("clasificacion_estrategia"))
-                    .alias("clasificacion_estrategia")
-                ])
+                df = df.with_columns(
+                    [
+                        pl.when(pl.col(Columns.EVENTO.name) == nombre_evento)
+                        .then(pl.lit(TipoClasificacion.REQUIERE_REVISION))
+                        .otherwise(pl.col("clasificacion_estrategia"))
+                        .alias("clasificacion_estrategia")
+                    ]
+                )
 
         logger.info("Clasificación completada")
 
@@ -144,21 +167,27 @@ class EventClassifier:
 
         if not tipo_eno:
             # El evento no está en nuestro seed - marcarlo como requiere revisión
-            logger.warning(f"CasoEpidemiologico '{nombre_evento}' no está en el seed - marcando como REQUIERE_REVISION")
-            return df.with_columns([
-                pl.when(pl.col(Columns.EVENTO.name) == nombre_evento)
-                .then(pl.lit(TipoClasificacion.REQUIERE_REVISION))
-                .otherwise(pl.col("clasificacion_estrategia"))
-                .alias("clasificacion_estrategia")
-            ])
+            logger.warning(
+                f"CasoEpidemiologico '{nombre_evento}' no está en el seed - marcando como REQUIERE_REVISION"
+            )
+            return df.with_columns(
+                [
+                    pl.when(pl.col(Columns.EVENTO.name) == nombre_evento)
+                    .then(pl.lit(TipoClasificacion.REQUIERE_REVISION))
+                    .otherwise(pl.col("clasificacion_estrategia"))
+                    .alias("clasificacion_estrategia")
+                ]
+            )
 
         # Marcar tipo_eno_detectado
-        df = df.with_columns([
-            pl.when(pl.col(Columns.EVENTO.name) == nombre_evento)
-            .then(pl.lit(tipo_eno["nombre"]))
-            .otherwise(pl.col("tipo_eno_detectado"))
-            .alias("tipo_eno_detectado")
-        ])
+        df = df.with_columns(
+            [
+                pl.when(pl.col(Columns.EVENTO.name) == nombre_evento)
+                .then(pl.lit(tipo_eno["nombre"]))
+                .otherwise(pl.col("tipo_eno_detectado"))
+                .alias("tipo_eno_detectado")
+            ]
+        )
 
         # 2. Aplicar clasificación de BD
         if self.servicio_clasificacion:
@@ -175,78 +204,92 @@ class EventClassifier:
                 polars_clasificado = pl.from_pandas(grupo_clasificado)
 
                 # Verificar que el resultado tenga la columna 'clasificacion'
-                if "clasificacion" in polars_clasificado.columns and Columns.IDEVENTOCASO.name in grupo_df.columns:
+                if (
+                    "clasificacion" in polars_clasificado.columns
+                    and Columns.IDEVENTOCASO.name in grupo_df.columns
+                ):
                     # OPTIMIZACIÓN: Usar JOIN de Polars VECTORIZADO
                     # 1. Agregar índice temporal para correlacionar las filas
-                    grupo_con_idx = grupo_df.with_row_count("__row_idx__")
-                    clasificado_con_idx = polars_clasificado.with_row_count("__row_idx__")
+                    grupo_con_idx = grupo_df.with_row_index("__row_idx__")
+                    clasificado_con_idx = polars_clasificado.with_row_index(
+                        "__row_idx__"
+                    )
 
                     # 2. JOIN para obtener clasificaciones por índice
                     unido = grupo_con_idx.join(
                         clasificado_con_idx.select(["__row_idx__", "clasificacion"]),
                         on="__row_idx__",
-                        how="left"
+                        how="left",
                     )
 
                     # 3. Extraer mapa de IDEVENTOCASO -> clasificacion
-                    mapa_clasificaciones = unido.select([
-                        Columns.IDEVENTOCASO.name,
-                        "clasificacion"
-                    ]).unique(subset=[Columns.IDEVENTOCASO.name], maintain_order=True)
+                    mapa_clasificaciones = unido.select(
+                        [Columns.IDEVENTOCASO.name, "clasificacion"]
+                    ).unique(subset=[Columns.IDEVENTOCASO.name], maintain_order=True)
 
                     # 4. JOIN con df principal (VECTORIZADO)
                     # IMPORTANTE: Renombrar la columna ANTES del JOIN para evitar conflictos de sufijos
-                    mapa_clasificaciones = mapa_clasificaciones.rename({"clasificacion": "clasificacion_nueva"})
+                    mapa_clasificaciones = mapa_clasificaciones.rename(
+                        {"clasificacion": "clasificacion_nueva"}
+                    )
 
                     df = df.join(
-                        mapa_clasificaciones,
-                        on=Columns.IDEVENTOCASO.name,
-                        how="left"
+                        mapa_clasificaciones, on=Columns.IDEVENTOCASO.name, how="left"
                     )
 
                     # 5. Actualizar clasificacion_estrategia solo para este evento
                     # Usar when/then para solo tocar las filas de este evento
                     if "clasificacion_nueva" in df.columns:
-                        df = df.with_columns([
-                            pl.when(
-                                (pl.col(Columns.EVENTO.name) == nombre_evento) &
-                                pl.col("clasificacion_nueva").is_not_null()
-                            )
-                            .then(pl.col("clasificacion_nueva"))
-                            .otherwise(pl.col("clasificacion_estrategia"))
-                            .alias("clasificacion_estrategia")
-                        ]).drop("clasificacion_nueva")
+                        df = df.with_columns(
+                            [
+                                pl.when(
+                                    (pl.col(Columns.EVENTO.name) == nombre_evento)
+                                    & pl.col("clasificacion_nueva").is_not_null()
+                                )
+                                .then(pl.col("clasificacion_nueva"))
+                                .otherwise(pl.col("clasificacion_estrategia"))
+                                .alias("clasificacion_estrategia")
+                            ]
+                        ).drop("clasificacion_nueva")
                     else:
                         # El JOIN no agregó la columna, todos quedaron null
-                        logger.warning(f"No se pudo obtener clasificaciones para {nombre_evento}")
+                        logger.warning(
+                            f"No se pudo obtener clasificaciones para {nombre_evento}"
+                        )
                 else:
                     # Sin columna clasificacion o sin IDEVENTOCASO, marcar como requiere revisión
-                    df = df.with_columns([
+                    df = df.with_columns(
+                        [
+                            pl.when(pl.col(Columns.EVENTO.name) == nombre_evento)
+                            .then(pl.lit(TipoClasificacion.REQUIERE_REVISION))
+                            .otherwise(pl.col("clasificacion_estrategia"))
+                            .alias("clasificacion_estrategia")
+                        ]
+                    )
+
+            except Exception as e:
+                logger.error(f"Error en clasificación de BD: {e}")
+                df = df.with_columns(
+                    [
                         pl.when(pl.col(Columns.EVENTO.name) == nombre_evento)
                         .then(pl.lit(TipoClasificacion.REQUIERE_REVISION))
                         .otherwise(pl.col("clasificacion_estrategia"))
                         .alias("clasificacion_estrategia")
-                    ])
-
-            except Exception as e:
-                logger.error(f"Error en clasificación de BD: {e}")
-                df = df.with_columns([
-                    pl.when(pl.col(Columns.EVENTO.name) == nombre_evento)
-                    .then(pl.lit(TipoClasificacion.REQUIERE_REVISION))
-                    .otherwise(pl.col("clasificacion_estrategia"))
-                    .alias("clasificacion_estrategia")
-                ])
+                    ]
+                )
         else:
             # Sin servicio de clasificación, marcar como requiere revisión
             logger.warning(
                 "SyncEventClassificationService no disponible, marcando como REQUIERE_REVISION"
             )
-            df = df.with_columns([
-                pl.when(pl.col(Columns.EVENTO.name) == nombre_evento)
-                .then(pl.lit(TipoClasificacion.REQUIERE_REVISION))
-                .otherwise(pl.col("clasificacion_estrategia"))
-                .alias("clasificacion_estrategia")
-            ])
+            df = df.with_columns(
+                [
+                    pl.when(pl.col(Columns.EVENTO.name) == nombre_evento)
+                    .then(pl.lit(TipoClasificacion.REQUIERE_REVISION))
+                    .otherwise(pl.col("clasificacion_estrategia"))
+                    .alias("clasificacion_estrategia")
+                ]
+            )
 
         return df
 
@@ -267,7 +310,7 @@ class EventClassifier:
             from app.domains.vigilancia_nominal.models.enfermedad import Enfermedad
 
             resultado = self.session.execute(
-                select(Enfermedad).where(Enfermedad.slug == slug_evento)
+                select(Enfermedad).where(col(Enfermedad.slug) == slug_evento)
             )
             enfermedad = resultado.scalar_one_or_none()
 
@@ -282,44 +325,26 @@ class EventClassifier:
                 return dict_enfermedad
 
         except Exception as e:
-            logger.debug(f"Enfermedad con slug '{slug_evento}' (evento: '{nombre_evento}') no encontrada en BD: {e}")
+            logger.debug(
+                f"Enfermedad con slug '{slug_evento}' (evento: '{nombre_evento}') no encontrada en BD: {e}"
+            )
 
         # No encontrado - evento no está en el seed
         self._cache_tipo_eno[slug_evento] = None
         return None
 
-    def _extraer_metadata(
-        self, df_completo: pl.DataFrame, df_grupo: pl.DataFrame, nombre_tipo_eno: str
-    ):
-        """Extrae metadata para tipos específicos."""
-        if not self.detector_tipo_sujeto:
-            return
-
-        for idx in df_grupo.index:
-            try:
-                fila = df_grupo.loc[idx]
-
-                # Detectar tipo de sujeto
-                tipo_sujeto, confianza, metadata = self.detector_tipo_sujeto.detectar(
-                    fila.to_dict()
-                )
-
-                df_completo.at[idx, "metadata_extraida"] = metadata if metadata else None
-                df_completo.at[idx, "confidence_score"] = confianza
-
-            except Exception as e:
-                logger.warning(f"Error extrayendo metadata para fila {idx}: {e}")
-                df_completo.at[idx, "metadata_extraida"] = {"error": str(e)}
-                df_completo.at[idx, "confidence_score"] = 0.0
-
     def _agregar_columnas_defecto(self, df: pl.DataFrame) -> pl.DataFrame:
         """Agrega columnas por defecto cuando no se puede clasificar."""
-        return df.with_columns([
-            pl.lit(TipoClasificacion.TODOS).alias("clasificacion_estrategia"),
-            pl.lit(False).alias("es_positivo"),
-            pl.lit(None).cast(pl.Utf8).alias("tipo_eno_detectado"),
-            pl.lit(None).alias("metadata_extraida"),
-            pl.lit(0.0).alias("confidence_score"),
-            pl.lit(None).alias("id_estrategia_aplicada"),
-            pl.lit(None).alias("trazabilidad_clasificacion"),
-        ])
+        return df.with_columns(
+            [
+                pl.lit(TipoClasificacion.REQUIERE_REVISION).alias(
+                    "clasificacion_estrategia"
+                ),
+                pl.lit(False).alias("es_positivo"),
+                pl.lit(None).cast(pl.Utf8).alias("tipo_eno_detectado"),
+                pl.lit(None).alias("metadata_extraida"),
+                pl.lit(0.0).alias("confidence_score"),
+                pl.lit(None).alias("id_estrategia_aplicada"),
+                pl.lit(None).alias("trazabilidad_clasificacion"),
+            ]
+        )

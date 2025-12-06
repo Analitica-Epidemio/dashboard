@@ -16,8 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 async def cancel_job_endpoint(
-    job_id: str,
-    current_user: User = Depends(RequireAnyRole())
+    job_id: str, current_user: User = Depends(RequireAnyRole())
 ):
     """Cancel a running processing job."""
     try:
@@ -47,7 +46,7 @@ async def cancel_job_endpoint(
                 error=ErrorDetail(
                     code="INTERNAL_SERVER_ERROR",
                     message="Error cancelando job",
-                    field=None
+                    field=None,
                 )
             ).model_dump(),
         )

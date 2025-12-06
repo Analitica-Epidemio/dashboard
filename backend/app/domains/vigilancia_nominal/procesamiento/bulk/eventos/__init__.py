@@ -69,9 +69,7 @@ class CasoEpidemiologicosManager:
         """Bulk upsert epidemiological backgrounds."""
         return self.antecedentes.upsert_antecedentes_epidemiologicos(df)
 
-    def upsert_ambitos_concurrencia(
-        self, df: pl.DataFrame
-    ) -> BulkOperationResult:
+    def upsert_ambitos_concurrencia(self, df: pl.DataFrame) -> BulkOperationResult:
         """Bulk upsert places of occurrence."""
         return self.ambitos.upsert_ambitos_concurrencia(df)
 

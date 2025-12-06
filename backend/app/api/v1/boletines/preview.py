@@ -11,6 +11,7 @@ from fastapi import Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import col
 
 from app.api.v1.analytics.period_utils import get_epi_week_dates
 from app.core.database import get_async_session
@@ -18,8 +19,14 @@ from app.core.schemas.response import SuccessResponse
 from app.domains.catalogos.agentes.models import (
     AgenteEtiologico,
 )
-from app.domains.vigilancia_nominal.models.enfermedad import GrupoDeEnfermedades, Enfermedad
-from app.domains.vigilancia_nominal.models.caso import (    CasoEpidemiologico, CasoGrupoEnfermedad)
+from app.domains.vigilancia_nominal.models.caso import (
+    CasoEpidemiologico,
+    CasoGrupoEnfermedad,
+)
+from app.domains.vigilancia_nominal.models.enfermedad import (
+    Enfermedad,
+    GrupoDeEnfermedades,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +35,10 @@ logger = logging.getLogger(__name__)
 # SCHEMAS
 # ============================================================================
 
+
 class MetricItem(BaseModel):
     """Item de métrica para preview"""
+
     label: str
     value: str | int | float
     trend: Optional[Literal["up", "down", "stable"]] = None
@@ -39,6 +48,7 @@ class MetricItem(BaseModel):
 
 class CorredorPreview(BaseModel):
     """Preview de corredor endémico"""
+
     casos_acumulados: int
     zona_actual: Literal["exito", "seguridad", "alerta", "brote"]
     tendencia: Literal["up", "down", "stable"]
@@ -47,6 +57,7 @@ class CorredorPreview(BaseModel):
 
 class SectionPreviewResponse(BaseModel):
     """Response de preview de sección"""
+
     evento_codigo: str
     evento_nombre: str
     evento_tipo: Literal["tipo_eno", "grupo_de_enfermedades"]
@@ -58,6 +69,7 @@ class SectionPreviewResponse(BaseModel):
 
 class CasoEpidemiologicoDisponible(BaseModel):
     """CasoEpidemiologico disponible para selección en boletines"""
+
     id: int
     codigo: str
     nombre: str
@@ -66,6 +78,7 @@ class CasoEpidemiologicoDisponible(BaseModel):
 
 class AgenteDisponible(BaseModel):
     """Agente etiológico disponible para selección"""
+
     id: int
     codigo: str
     nombre: str
@@ -78,7 +91,10 @@ class AgenteDisponible(BaseModel):
 # HELPERS
 # ============================================================================
 
-def calculate_trend(current: int, previous: int) -> tuple[Literal["up", "down", "stable"], float]:
+
+def calculate_trend(
+    current: int, previous: int
+) -> tuple[Literal["up", "down", "stable"], float]:
     """Calcula tendencia y porcentaje de cambio"""
     if previous == 0:
         if current > 0:
@@ -95,7 +111,9 @@ def calculate_trend(current: int, previous: int) -> tuple[Literal["up", "down", 
         return "stable", round(change, 1)
 
 
-def calculate_zona(casos: int, media_historica: int) -> Literal["exito", "seguridad", "alerta", "brote"]:
+def calculate_zona(
+    casos: int, media_historica: int
+) -> Literal["exito", "seguridad", "alerta", "brote"]:
     """
     Calcula la zona epidémica basada en desviación de la media histórica.
     Simplificación - en producción se usarían percentiles reales del corredor.
@@ -116,15 +134,16 @@ def calculate_zona(casos: int, media_historica: int) -> Literal["exito", "seguri
 
 
 async def get_evento_info(
-    db: AsyncSession,
-    codigo: str
+    db: AsyncSession, codigo: str
 ) -> tuple[Optional[int], Optional[str], Literal["tipo_eno", "grupo_de_enfermedades"]]:
     """
     Busca un evento por código en Enfermedad o GrupoDeEnfermedades.
     Retorna (id, nombre, tipo).
     """
     # Primero buscar en Enfermedad
-    stmt = select(Enfermedad.id, Enfermedad.nombre).where(Enfermedad.slug == codigo)
+    stmt = select(col(Enfermedad.id), col(Enfermedad.nombre)).where(
+        col(Enfermedad.slug) == codigo
+    )
     result = await db.execute(stmt)
     tipo_eno = result.first()
 
@@ -132,7 +151,9 @@ async def get_evento_info(
         return tipo_eno.id, tipo_eno.nombre, "tipo_eno"
 
     # Si no está en Enfermedad, buscar en GrupoDeEnfermedades
-    stmt = select(GrupoDeEnfermedades.id, GrupoDeEnfermedades.nombre).where(GrupoDeEnfermedades.slug == codigo)
+    stmt = select(col(GrupoDeEnfermedades.id), col(GrupoDeEnfermedades.nombre)).where(
+        col(GrupoDeEnfermedades.slug) == codigo
+    )
     result = await db.execute(stmt)
     grupo_eno = result.first()
 
@@ -152,25 +173,28 @@ async def count_casos_periodo(
 ) -> int:
     """Cuenta casos en un período dado"""
     if evento_tipo == "tipo_eno":
-        stmt = select(func.count(CasoEpidemiologico.id)).where(
-            CasoEpidemiologico.id_enfermedad == evento_id,
-            CasoEpidemiologico.fecha_minima_caso >= fecha_inicio,
-            CasoEpidemiologico.fecha_minima_caso <= fecha_fin,
+        stmt = select(func.count(col(CasoEpidemiologico.id))).where(
+            col(CasoEpidemiologico.id_enfermedad) == evento_id,
+            col(CasoEpidemiologico.fecha_minima_caso) >= fecha_inicio,
+            col(CasoEpidemiologico.fecha_minima_caso) <= fecha_fin,
         )
     else:
         # Para grupo, necesitamos JOIN con la tabla intermedia
         stmt = (
-            select(func.count(CasoEpidemiologico.id))
-            .join(CasoGrupoEnfermedad, CasoEpidemiologico.id == CasoGrupoEnfermedad.id_evento)
+            select(func.count(col(CasoEpidemiologico.id)))
+            .join(
+                CasoGrupoEnfermedad,
+                col(CasoEpidemiologico.id) == col(CasoGrupoEnfermedad.id_caso),
+            )
             .where(
-                CasoGrupoEnfermedad.id_grupo == evento_id,
-                CasoEpidemiologico.fecha_minima_caso >= fecha_inicio,
-                CasoEpidemiologico.fecha_minima_caso <= fecha_fin,
+                col(CasoGrupoEnfermedad.id_grupo) == evento_id,
+                col(CasoEpidemiologico.fecha_minima_caso) >= fecha_inicio,
+                col(CasoEpidemiologico.fecha_minima_caso) <= fecha_fin,
             )
         )
 
     if solo_confirmados:
-        stmt = stmt.where(CasoEpidemiologico.clasificacion_manual == "Confirmado")
+        stmt = stmt.where(col(CasoEpidemiologico.clasificacion_manual) == "Confirmado")
 
     result = await db.execute(stmt)
     return result.scalar() or 0
@@ -187,40 +211,47 @@ async def get_casos_por_clasificacion(
     if evento_tipo == "tipo_eno":
         stmt = (
             select(
-                CasoEpidemiologico.clasificacion_manual,
-                func.count(CasoEpidemiologico.id).label("casos")
+                col(CasoEpidemiologico.clasificacion_manual),
+                func.count(col(CasoEpidemiologico.id)).label("casos"),
             )
             .where(
-                CasoEpidemiologico.id_enfermedad == evento_id,
-                CasoEpidemiologico.fecha_minima_caso >= fecha_inicio,
-                CasoEpidemiologico.fecha_minima_caso <= fecha_fin,
+                col(CasoEpidemiologico.id_enfermedad) == evento_id,
+                col(CasoEpidemiologico.fecha_minima_caso) >= fecha_inicio,
+                col(CasoEpidemiologico.fecha_minima_caso) <= fecha_fin,
             )
-            .group_by(CasoEpidemiologico.clasificacion_manual)
-            .order_by(func.count(CasoEpidemiologico.id).desc())
+            .group_by(col(CasoEpidemiologico.clasificacion_manual))
+            .order_by(func.count(col(CasoEpidemiologico.id)).desc())
         )
     else:
         stmt = (
             select(
-                CasoEpidemiologico.clasificacion_manual,
-                func.count(CasoEpidemiologico.id).label("casos")
+                col(CasoEpidemiologico.clasificacion_manual),
+                func.count(col(CasoEpidemiologico.id)).label("casos"),
             )
-            .join(CasoGrupoEnfermedad, CasoEpidemiologico.id == CasoGrupoEnfermedad.id_evento)
+            .join(
+                CasoGrupoEnfermedad,
+                col(CasoEpidemiologico.id) == col(CasoGrupoEnfermedad.id_caso),
+            )
             .where(
-                CasoGrupoEnfermedad.id_grupo == evento_id,
-                CasoEpidemiologico.fecha_minima_caso >= fecha_inicio,
-                CasoEpidemiologico.fecha_minima_caso <= fecha_fin,
+                col(CasoGrupoEnfermedad.id_grupo) == evento_id,
+                col(CasoEpidemiologico.fecha_minima_caso) >= fecha_inicio,
+                col(CasoEpidemiologico.fecha_minima_caso) <= fecha_fin,
             )
-            .group_by(CasoEpidemiologico.clasificacion_manual)
-            .order_by(func.count(CasoEpidemiologico.id).desc())
+            .group_by(col(CasoEpidemiologico.clasificacion_manual))
+            .order_by(func.count(col(CasoEpidemiologico.id)).desc())
         )
 
     result = await db.execute(stmt)
-    return [(row.clasificacion_manual or "Sin clasificar", row.casos) for row in result.all()]
+    return [
+        (row.clasificacion_manual or "Sin clasificar", row.casos)
+        for row in result.all()
+    ]
 
 
 # ============================================================================
 # GENERIC PREVIEW ENDPOINT
 # ============================================================================
+
 
 async def get_evento_preview(
     codigo: str = Query(..., description="Código del Enfermedad o GrupoDeEnfermedades"),
@@ -242,10 +273,9 @@ async def get_evento_preview(
         # Buscar el evento por código
         evento_id, evento_nombre, evento_tipo = await get_evento_info(db, codigo)
 
-        if evento_id is None:
+        if evento_id is None or evento_nombre is None:
             raise HTTPException(
-                status_code=404,
-                detail=f"No se encontró evento con código: {codigo}"
+                status_code=404, detail=f"No se encontró evento con código: {codigo}"
             )
 
         # Calcular fechas del período actual
@@ -307,7 +337,9 @@ async def get_evento_preview(
                 metrics.append(MetricItem(label=clasif, value=count))
 
         # Calcular zona epidémica (simplificado)
-        zona = calculate_zona(casos_actual, casos_anterior if casos_anterior > 0 else casos_actual)
+        zona = calculate_zona(
+            casos_actual, casos_anterior if casos_anterior > 0 else casos_actual
+        )
 
         # Construir corredor preview
         corredor = CorredorPreview(
@@ -372,32 +404,44 @@ async def list_available_eventos(
         eventos = []
 
         # Obtener Enfermedad con código
-        stmt = select(Enfermedad.id, Enfermedad.slug, Enfermedad.nombre).where(
-            Enfermedad.slug.isnot(None)
-        ).order_by(Enfermedad.nombre)
+        stmt = (
+            select(col(Enfermedad.id), col(Enfermedad.slug), col(Enfermedad.nombre))
+            .where(col(Enfermedad.slug).isnot(None))
+            .order_by(col(Enfermedad.nombre))
+        )
         result = await db.execute(stmt)
 
         for row in result.all():
-            eventos.append(CasoEpidemiologicoDisponible(
-                id=row.id,
-                codigo=row.slug,
-                nombre=row.nombre,
-                tipo="tipo_eno",
-            ))
+            eventos.append(
+                CasoEpidemiologicoDisponible(
+                    id=row.id,
+                    codigo=row.slug,
+                    nombre=row.nombre,
+                    tipo="tipo_eno",
+                )
+            )
 
         # Obtener GrupoDeEnfermedades con código
-        stmt = select(GrupoDeEnfermedades.id, GrupoDeEnfermedades.slug, GrupoDeEnfermedades.nombre).where(
-            GrupoDeEnfermedades.slug.isnot(None)
-        ).order_by(GrupoDeEnfermedades.nombre)
+        stmt = (
+            select(
+                col(GrupoDeEnfermedades.id),
+                col(GrupoDeEnfermedades.slug),
+                col(GrupoDeEnfermedades.nombre),
+            )
+            .where(col(GrupoDeEnfermedades.slug).isnot(None))
+            .order_by(col(GrupoDeEnfermedades.nombre))
+        )
         result = await db.execute(stmt)
 
         for row in result.all():
-            eventos.append(CasoEpidemiologicoDisponible(
-                id=row.id,
-                codigo=row.slug,
-                nombre=row.nombre,
-                tipo="grupo_de_enfermedades",
-            ))
+            eventos.append(
+                CasoEpidemiologicoDisponible(
+                    id=row.id,
+                    codigo=row.slug,
+                    nombre=row.nombre,
+                    tipo="grupo_de_enfermedades",
+                )
+            )
 
         return SuccessResponse(data=eventos)
 
@@ -417,32 +461,35 @@ async def list_available_agentes(
         agentes = []
 
         # Obtener agentes activos
-        stmt = select(
-            AgenteEtiologico.id,
-            AgenteEtiologico.slug,
-            AgenteEtiologico.nombre,
-            AgenteEtiologico.nombre_corto,
-            AgenteEtiologico.categoria,
-            AgenteEtiologico.grupo,
-        ).where(
-            AgenteEtiologico.activo.is_(True)
-        ).order_by(AgenteEtiologico.grupo, AgenteEtiologico.nombre)
+        stmt = (
+            select(
+                col(AgenteEtiologico.id),
+                col(AgenteEtiologico.slug),
+                col(AgenteEtiologico.nombre),
+                col(AgenteEtiologico.nombre_corto),
+                col(AgenteEtiologico.categoria),
+                col(AgenteEtiologico.grupo),
+            )
+            .where(col(AgenteEtiologico.activo).is_(True))
+            .order_by(col(AgenteEtiologico.grupo), col(AgenteEtiologico.nombre))
+        )
 
         result = await db.execute(stmt)
 
         for row in result.all():
-            agentes.append(AgenteDisponible(
-                id=row.id,
-                codigo=row.slug,
-                nombre=row.nombre,
-                nombre_corto=row.nombre_corto,
-                categoria=row.categoria,
-                grupo=row.grupo,
-            ))
+            agentes.append(
+                AgenteDisponible(
+                    id=row.id,
+                    codigo=row.slug,
+                    nombre=row.nombre,
+                    nombre_corto=row.nombre_corto,
+                    categoria=row.categoria,
+                    grupo=row.grupo,
+                )
+            )
 
         return SuccessResponse(data=agentes)
 
     except Exception as e:
         logger.error(f"Error listando agentes: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error al listar agentes")
-

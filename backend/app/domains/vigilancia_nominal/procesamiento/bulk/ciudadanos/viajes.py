@@ -1,11 +1,10 @@
 """Trip operations for citizens - Polars puro optimizado."""
 
 import polars as pl
-from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlmodel import SQLModel, col, select
 
-from app.domains.vigilancia_nominal.models.sujetos import Ciudadano
-from app.domains.vigilancia_nominal.models.sujetos import ViajesCiudadano
+from app.domains.vigilancia_nominal.models.sujetos import Ciudadano, ViajesCiudadano
 
 from ...config.columns import Columns
 from ..shared import BulkOperationResult, BulkProcessorBase, pl_safe_date, pl_safe_int
@@ -35,7 +34,7 @@ class ViajesProcessor(BulkProcessorBase):
         )
 
         stmt = select(Ciudadano.codigo_ciudadano).where(
-            Ciudadano.codigo_ciudadano.in_(codigos_ciudadanos)
+            col(Ciudadano.codigo_ciudadano).in_(codigos_ciudadanos)
         )
         ciudadanos_existentes = set(
             codigo for (codigo,) in self.context.session.execute(stmt).all()
@@ -62,36 +61,41 @@ class ViajesProcessor(BulkProcessorBase):
                         else pl.lit(False)
                     )
                 )
-                & pl.col(Columns.CODIGO_CIUDADANO.name).is_in(list(ciudadanos_existentes))
+                & pl.col(Columns.CODIGO_CIUDADANO.name).is_in(
+                    list(ciudadanos_existentes)
+                )
                 & pl.col(Columns.ID_SNVS_VIAJE_EPIDEMIO.name).is_not_null()
             )
             .unique(subset=[Columns.ID_SNVS_VIAJE_EPIDEMIO.name])
-            .select([
-                pl_safe_int(Columns.ID_SNVS_VIAJE_EPIDEMIO.name).alias("id_snvs_viaje_epidemiologico"),
-                pl_safe_int(Columns.CODIGO_CIUDADANO.name).alias("codigo_ciudadano"),
-
-                # Fechas - conversión en Polars (sin loops Python)
-                (
-                    pl_safe_date(Columns.FECHA_INICIO_VIAJE.name)
-                    if Columns.FECHA_INICIO_VIAJE.name in df.columns
-                    else pl.lit(None)
-                ).alias("fecha_inicio_viaje"),
-                (
-                    pl_safe_date(Columns.FECHA_FIN_VIAJE.name)
-                    if Columns.FECHA_FIN_VIAJE.name in df.columns
-                    else pl.lit(None)
-                ).alias("fecha_finalizacion_viaje"),
-
-                # IDs opcionales
-                (
-                    pl_safe_int(Columns.ID_LOC_INDEC_VIAJE.name)
-                    if Columns.ID_LOC_INDEC_VIAJE.name in df.columns
-                    else pl.lit(None)
-                ).alias("id_localidad_destino_viaje"),
-
-                pl.lit(timestamp).alias("created_at"),
-                pl.lit(timestamp).alias("updated_at"),
-            ])
+            .select(
+                [
+                    pl_safe_int(Columns.ID_SNVS_VIAJE_EPIDEMIO.name).alias(
+                        "id_snvs_viaje_epidemiologico"
+                    ),
+                    pl_safe_int(Columns.CODIGO_CIUDADANO.name).alias(
+                        "codigo_ciudadano"
+                    ),
+                    # Fechas - conversión en Polars (sin loops Python)
+                    (
+                        pl_safe_date(Columns.FECHA_INICIO_VIAJE.name)
+                        if Columns.FECHA_INICIO_VIAJE.name in df.columns
+                        else pl.lit(None)
+                    ).alias("fecha_inicio_viaje"),
+                    (
+                        pl_safe_date(Columns.FECHA_FIN_VIAJE.name)
+                        if Columns.FECHA_FIN_VIAJE.name in df.columns
+                        else pl.lit(None)
+                    ).alias("fecha_finalizacion_viaje"),
+                    # IDs opcionales
+                    (
+                        pl_safe_int(Columns.ID_LOC_INDEC_VIAJE.name)
+                        if Columns.ID_LOC_INDEC_VIAJE.name in df.columns
+                        else pl.lit(None)
+                    ).alias("id_localidad_destino_viaje"),
+                    pl.lit(timestamp).alias("created_at"),
+                    pl.lit(timestamp).alias("updated_at"),
+                ]
+            )
             .collect()
         )
 
@@ -102,7 +106,8 @@ class ViajesProcessor(BulkProcessorBase):
         viajes_data = viajes_prepared.to_dicts()
 
         # PostgreSQL UPSERT
-        stmt = pg_insert(ViajesCiudadano.__table__).values(viajes_data)
+        table = SQLModel.metadata.tables[ViajesCiudadano.__tablename__]
+        stmt = pg_insert(table).values(viajes_data)
         upsert_stmt = stmt.on_conflict_do_update(
             index_elements=["id_snvs_viaje_epidemiologico"],
             set_={

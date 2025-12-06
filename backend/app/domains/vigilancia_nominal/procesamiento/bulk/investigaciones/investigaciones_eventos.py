@@ -5,9 +5,12 @@ POLARS PURO - Optimizado con lazy evaluation y joins.
 """
 
 import polars as pl
+from sqlalchemy import inspect
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-from app.domains.vigilancia_nominal.models.atencion import InvestigacionCasoEpidemiologico
+from app.domains.vigilancia_nominal.models.atencion import (
+    InvestigacionCasoEpidemiologico,
+)
 
 from ...config.columns import Columns
 from ..shared import (
@@ -47,13 +50,28 @@ def pl_has_any_investigacion_field() -> pl.Expr:
 
     # Lista de campos a verificar
     field_checks = [
-        ("investigacion_terreno_bool", lambda: pl.col("investigacion_terreno_bool").is_not_null()),
+        (
+            "investigacion_terreno_bool",
+            lambda: pl.col("investigacion_terreno_bool").is_not_null(),
+        ),
         ("fecha_investigacion", lambda: pl.col("fecha_investigacion").is_not_null()),
-        ("tipo_y_lugar_investigacion", lambda: pl.col("tipo_y_lugar_investigacion").is_not_null()),
-        ("origen_financiamiento", lambda: pl.col("origen_financiamiento").is_not_null()),
+        (
+            "tipo_y_lugar_investigacion",
+            lambda: pl.col("tipo_y_lugar_investigacion").is_not_null(),
+        ),
+        (
+            "origen_financiamiento",
+            lambda: pl.col("origen_financiamiento").is_not_null(),
+        ),
         ("id_snvs_caso", lambda: pl.col("id_snvs_caso").is_not_null()),
-        ("usuario_centinela_bool", lambda: pl.col("usuario_centinela_bool").is_not_null()),
-        ("evento_centinela_bool", lambda: pl.col("evento_centinela_bool").is_not_null()),
+        (
+            "usuario_centinela_bool",
+            lambda: pl.col("usuario_centinela_bool").is_not_null(),
+        ),
+        (
+            "evento_centinela_bool",
+            lambda: pl.col("evento_centinela_bool").is_not_null(),
+        ),
     ]
 
     for _, check_fn in field_checks:
@@ -70,9 +88,7 @@ def pl_has_any_investigacion_field() -> pl.Expr:
 class InvestigacionesCasoEpidemiologicosProcessor(BulkProcessorBase):
     """Procesa investigaciones epidemiológicas de eventos."""
 
-    def upsert_investigaciones_eventos(
-        self, df: pl.DataFrame
-    ) -> BulkOperationResult:
+    def upsert_investigaciones_eventos(self, df: pl.DataFrame) -> BulkOperationResult:
         """
         Bulk upsert de investigaciones de eventos - POLARS PURO.
 
@@ -126,126 +142,153 @@ class InvestigacionesCasoEpidemiologicosProcessor(BulkProcessorBase):
             # id_evento ya está presente gracias al JOIN centralizado en main.py
             .filter(pl.col("id_caso").is_not_null())
             # Transformar todos los campos con expresiones Polars
-            .with_columns([
-                # Booleans - usar pl_map_boolean pattern
-                pl_col_or_null(
-                    investigaciones_df,
-                    Columns.INVESTIGACION_TERRENO.name,
-                    lambda col_name: (
-                        pl.when(pl.col(col_name).str.to_uppercase().str.strip_chars() == "SI")
-                        .then(pl.lit(True))
-                        .when(pl.col(col_name).str.to_uppercase().str.strip_chars() == "NO")
-                        .then(pl.lit(False))
-                        .otherwise(None)
-                    )
-                ).alias("investigacion_terreno_bool"),
-
-                pl_col_or_null(
-                    investigaciones_df,
-                    Columns.USER_CENTINELA.name,
-                    lambda col_name: (
-                        pl.when(pl.col(col_name).str.to_uppercase().str.strip_chars() == "SI")
-                        .then(pl.lit(True))
-                        .when(pl.col(col_name).str.to_uppercase().str.strip_chars() == "NO")
-                        .then(pl.lit(False))
-                        .otherwise(None)
-                    )
-                ).alias("usuario_centinela_bool"),
-
-                pl_col_or_null(
-                    investigaciones_df,
-                    Columns.EVENTO_CENTINELA.name,
-                    lambda col_name: (
-                        pl.when(pl.col(col_name).str.to_uppercase().str.strip_chars() == "SI")
-                        .then(pl.lit(True))
-                        .when(pl.col(col_name).str.to_uppercase().str.strip_chars() == "NO")
-                        .then(pl.lit(False))
-                        .otherwise(None)
-                    )
-                ).alias("evento_centinela_bool"),
-
-                pl_col_or_null(
-                    investigaciones_df,
-                    Columns.USER_CENT_PARTICIPO.name,
-                    lambda col_name: (
-                        pl.when(pl.col(col_name).str.to_uppercase().str.strip_chars() == "SI")
-                        .then(pl.lit(True))
-                        .when(pl.col(col_name).str.to_uppercase().str.strip_chars() == "NO")
-                        .then(pl.lit(False))
-                        .otherwise(None)
-                    )
-                ).alias("usuario_cent_participo_bool"),
-
-                # Fecha
-                pl_col_or_null(
-                    investigaciones_df,
-                    Columns.FECHA_INVESTIGACION.name,
-                    lambda col_name: pl.col(col_name).cast(pl.Date, strict=False)
-                ).alias("fecha_investigacion"),
-
-                # String limpio
-                pl_col_or_null(
-                    investigaciones_df,
-                    Columns.TIPO_Y_LUGAR_INVESTIGACION.name,
-                    lambda col_name: pl.col(col_name).str.strip_chars().replace("", None)
-                ).alias("tipo_y_lugar_investigacion"),
-
-                # Origen financiamiento con mapeo
-                pl_col_or_null(
-                    investigaciones_df,
-                    Columns.ORIGEN_FINANCIAMIENTO.name,
-                    lambda col_name: (
-                        pl.col(col_name).str.to_uppercase()
+            .with_columns(
+                [
+                    # Booleans - usar pl_map_boolean pattern
+                    pl_col_or_null(
+                        investigaciones_df,
+                        Columns.INVESTIGACION_TERRENO.name,
+                        lambda col_name: (
+                            pl.when(
+                                pl.col(col_name).str.to_uppercase().str.strip_chars()
+                                == "SI"
+                            )
+                            .then(pl.lit(True))
+                            .when(
+                                pl.col(col_name).str.to_uppercase().str.strip_chars()
+                                == "NO"
+                            )
+                            .then(pl.lit(False))
+                            .otherwise(None)
+                        ),
+                    ).alias("investigacion_terreno_bool"),
+                    pl_col_or_null(
+                        investigaciones_df,
+                        Columns.USER_CENTINELA.name,
+                        lambda col_name: (
+                            pl.when(
+                                pl.col(col_name).str.to_uppercase().str.strip_chars()
+                                == "SI"
+                            )
+                            .then(pl.lit(True))
+                            .when(
+                                pl.col(col_name).str.to_uppercase().str.strip_chars()
+                                == "NO"
+                            )
+                            .then(pl.lit(False))
+                            .otherwise(None)
+                        ),
+                    ).alias("usuario_centinela_bool"),
+                    pl_col_or_null(
+                        investigaciones_df,
+                        Columns.EVENTO_CENTINELA.name,
+                        lambda col_name: (
+                            pl.when(
+                                pl.col(col_name).str.to_uppercase().str.strip_chars()
+                                == "SI"
+                            )
+                            .then(pl.lit(True))
+                            .when(
+                                pl.col(col_name).str.to_uppercase().str.strip_chars()
+                                == "NO"
+                            )
+                            .then(pl.lit(False))
+                            .otherwise(None)
+                        ),
+                    ).alias("evento_centinela_bool"),
+                    pl_col_or_null(
+                        investigaciones_df,
+                        Columns.USER_CENT_PARTICIPO.name,
+                        lambda col_name: (
+                            pl.when(
+                                pl.col(col_name).str.to_uppercase().str.strip_chars()
+                                == "SI"
+                            )
+                            .then(pl.lit(True))
+                            .when(
+                                pl.col(col_name).str.to_uppercase().str.strip_chars()
+                                == "NO"
+                            )
+                            .then(pl.lit(False))
+                            .otherwise(None)
+                        ),
+                    ).alias("usuario_cent_participo_bool"),
+                    # Fecha
+                    pl_col_or_null(
+                        investigaciones_df,
+                        Columns.FECHA_INVESTIGACION.name,
+                        lambda col_name: pl.col(col_name).cast(pl.Date, strict=False),
+                    ).alias("fecha_investigacion"),
+                    # String limpio
+                    pl_col_or_null(
+                        investigaciones_df,
+                        Columns.TIPO_Y_LUGAR_INVESTIGACION.name,
+                        lambda col_name: pl.col(col_name)
                         .str.strip_chars()
-                        .str.replace_all("Ú", "U")
-                        .str.replace_all("Í", "I")
-                        .str.replace_all("Ó", "O")
-                        .str.replace_all("Á", "A")
-                        .str.replace_all("É", "E")
-                    )
-                ).alias("origen_financiamiento"),
-
-                # IDs
-                pl_col_or_null(
-                    investigaciones_df,
-                    Columns.ID_SNVS_EVENTO.name,
-                    lambda col_name: pl.col(col_name).cast(pl.Int64, strict=False)
-                ).alias("id_snvs_caso"),
-
-                pl_col_or_null(
-                    investigaciones_df,
-                    Columns.ID_USER_REGISTRO.name,
-                    lambda col_name: pl.col(col_name).cast(pl.Int64, strict=False)
-                ).alias("id_usuario_registro"),
-
-                pl_col_or_null(
-                    investigaciones_df,
-                    Columns.ID_USER_CENT_PARTICIPO.name,
-                    lambda col_name: pl.col(col_name).cast(pl.Int64, strict=False)
-                ).alias("id_user_cent_participo"),
-
-                # Timestamps
-                pl.lit(timestamp).alias("created_at"),
-                pl.lit(timestamp).alias("updated_at"),
-            ])
+                        .replace("", None),
+                    ).alias("tipo_y_lugar_investigacion"),
+                    # Origen financiamiento con mapeo
+                    pl_col_or_null(
+                        investigaciones_df,
+                        Columns.ORIGEN_FINANCIAMIENTO.name,
+                        lambda col_name: (
+                            pl.col(col_name)
+                            .str.to_uppercase()
+                            .str.strip_chars()
+                            .str.replace_all("Ú", "U")
+                            .str.replace_all("Í", "I")
+                            .str.replace_all("Ó", "O")
+                            .str.replace_all("Á", "A")
+                            .str.replace_all("É", "E")
+                        ),
+                    ).alias("origen_financiamiento"),
+                    # IDs
+                    pl_col_or_null(
+                        investigaciones_df,
+                        Columns.ID_SNVS_EVENTO.name,
+                        lambda col_name: pl.col(col_name).cast(pl.Int64, strict=False),
+                    ).alias("id_snvs_caso"),
+                    pl_col_or_null(
+                        investigaciones_df,
+                        Columns.ID_USER_REGISTRO.name,
+                        lambda col_name: pl.col(col_name).cast(pl.Int64, strict=False),
+                    ).alias("id_usuario_registro"),
+                    pl_col_or_null(
+                        investigaciones_df,
+                        Columns.ID_USER_CENT_PARTICIPO.name,
+                        lambda col_name: pl.col(col_name).cast(pl.Int64, strict=False),
+                    ).alias("id_user_cent_participo"),
+                    # Timestamps
+                    pl.lit(timestamp).alias("created_at"),
+                    pl.lit(timestamp).alias("updated_at"),
+                ]
+            )
             # Filtrar solo registros con al menos un campo relevante
             .filter(pl_has_any_investigacion_field())
             # Seleccionar solo columnas finales
-            .select([
-                "id_caso",
-                pl.col("investigacion_terreno_bool").alias("es_investigacion_terreno"),
-                "fecha_investigacion",
-                "tipo_y_lugar_investigacion",
-                "origen_financiamiento",
-                "id_snvs_caso",
-                pl.col("usuario_centinela_bool").alias("es_usuario_centinela"),
-                pl.col("evento_centinela_bool").alias("es_evento_centinela"),
-                "id_usuario_registro",
-                pl.col("usuario_cent_participo_bool").alias("participo_usuario_centinela"),
-                pl.col("id_user_cent_participo").alias("id_usuario_centinela_participante"),
-                "created_at",
-                "updated_at",
-            ])
+            .select(
+                [
+                    "id_caso",
+                    pl.col("investigacion_terreno_bool").alias(
+                        "es_investigacion_terreno"
+                    ),
+                    "fecha_investigacion",
+                    "tipo_y_lugar_investigacion",
+                    "origen_financiamiento",
+                    "id_snvs_caso",
+                    pl.col("usuario_centinela_bool").alias("es_usuario_centinela"),
+                    pl.col("evento_centinela_bool").alias("es_evento_centinela"),
+                    "id_usuario_registro",
+                    pl.col("usuario_cent_participo_bool").alias(
+                        "participo_usuario_centinela"
+                    ),
+                    pl.col("id_user_cent_participo").alias(
+                        "id_usuario_centinela_participante"
+                    ),
+                    "created_at",
+                    "updated_at",
+                ]
+            )
         ).collect()
 
         # Una sola conversión to_dicts() al final
@@ -253,7 +296,8 @@ class InvestigacionesCasoEpidemiologicosProcessor(BulkProcessorBase):
 
         # Bulk insert
         if investigaciones_data:
-            stmt = pg_insert(InvestigacionCasoEpidemiologico.__table__).values(investigaciones_data)
+            table = inspect(InvestigacionCasoEpidemiologico).local_table
+            stmt = pg_insert(table).values(investigaciones_data)
             self.context.session.execute(stmt.on_conflict_do_nothing())
 
         duration = (get_current_timestamp() - start_time).total_seconds()

@@ -31,7 +31,7 @@ class OrigenDatosPasivos(str, Enum):
     Cada origen corresponde a un archivo/reporte del SNVS.
     """
 
-    CLINICO = "clinico"          # CLI_P26 - Casos clínicos
+    CLINICO = "clinico"  # CLI_P26 - Casos clínicos
     LABORATORIO = "laboratorio"  # LAB_P26 - Estudios de laboratorio
     INTERNACION = "internacion"  # CLI_P26_INT - Internaciones IRA
 

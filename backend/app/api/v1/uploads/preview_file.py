@@ -7,7 +7,7 @@ import tempfile
 import time
 import uuid
 from pathlib import Path
-from typing import Any, List
+from typing import Any, List, Optional
 
 import magic
 import pandas as pd
@@ -37,6 +37,7 @@ TEMP_UPLOAD_DIR.mkdir(exist_ok=True)
 
 class SheetPreviewData(BaseModel):
     """Preview data for a single sheet."""
+
     name: str
     columns: List[str]
     row_count: int
@@ -47,6 +48,7 @@ class SheetPreviewData(BaseModel):
 
 class FilePreviewResponse(BaseModel):
     """Response with file preview data."""
+
     upload_id: str
     filename: str
     file_size: int
@@ -66,7 +68,9 @@ def get_missing_columns(columns: List[str]) -> List[str]:
     """Get list of missing required columns."""
     columns_upper = {col.upper().strip() for col in columns}
     required_upper = {col.upper(): col for col in REQUIRED_COLUMNS}
-    missing = [required_upper[req] for req in required_upper.keys() if req not in columns_upper]
+    missing = [
+        required_upper[req] for req in required_upper.keys() if req not in columns_upper
+    ]
     return missing
 
 
@@ -98,7 +102,7 @@ def clean_preview_data(df: pd.DataFrame, max_rows: int = 10) -> List[List[Any]]:
     return rows
 
 
-def get_total_row_count(file_path: Path, sheet_name: str = None) -> int:
+def get_total_row_count(file_path: Path, sheet_name: Optional[str] = None) -> int:
     """
     Get total row count efficiently without loading all data.
 
@@ -107,7 +111,7 @@ def get_total_row_count(file_path: Path, sheet_name: str = None) -> int:
     """
     file_ext = file_path.suffix.lower()
 
-    if file_ext == '.csv':
+    if file_ext == ".csv":
         # Count lines efficiently
         logger.debug("🔢 Counting CSV rows using chunks...")
         chunk_start = time.time()
@@ -119,9 +123,12 @@ def get_total_row_count(file_path: Path, sheet_name: str = None) -> int:
         return row_count
     else:
         # Excel - use openpyxl for efficient counting
-        logger.debug(f"🔢 Counting Excel rows using openpyxl for sheet '{sheet_name}'...")
+        logger.debug(
+            f"🔢 Counting Excel rows using openpyxl for sheet '{sheet_name}'..."
+        )
         openpyxl_start = time.time()
         from openpyxl import load_workbook
+
         wb = load_workbook(filename=file_path, read_only=True, data_only=True)
         ws = wb[sheet_name] if sheet_name else wb.active
 
@@ -139,7 +146,7 @@ def get_total_row_count(file_path: Path, sheet_name: str = None) -> int:
 
 async def preview_uploaded_file(
     file: UploadFile = File(..., description="Archivo Excel o CSV epidemiológico"),
-    current_user: User = Depends(RequireAnyRole())
+    current_user: User = Depends(RequireAnyRole()),
 ):
     """
     Preview uploaded file - OPTIMIZED VERSION.
@@ -153,22 +160,25 @@ async def preview_uploaded_file(
     **Returns:** Upload ID + sheet previews
     """
 
-    logger.info(f"📤 Preview request - filename: {file.filename}, user: {current_user.email}")
+    logger.info(
+        f"📤 Preview request - filename: {file.filename}, user: {current_user.email}"
+    )
 
     # Validate file type
     if not file.filename:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Nombre de archivo no válido"
+            detail="Nombre de archivo no válido",
         )
 
     file_ext = Path(file.filename).suffix.lower()
-    if file_ext not in ['.xlsx', '.xls', '.csv']:
+    if file_ext not in [".xlsx", ".xls", ".csv"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Formato no soportado: {file_ext}. Use Excel (.xlsx, .xls) o CSV (.csv)"
+            detail=f"Formato no soportado: {file_ext}. Use Excel (.xlsx, .xls) o CSV (.csv)",
         )
 
+    temp_file_path: Optional[Path] = None
     try:
         start_time = time.time()
 
@@ -184,7 +194,7 @@ async def preview_uploaded_file(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Tipo de archivo no válido. MIME detectado: {detected_mime}. "
-                       f"Solo se permiten archivos CSV y Excel reales."
+                f"Solo se permiten archivos CSV y Excel reales.",
             )
 
         # Generate unique upload ID
@@ -202,12 +212,14 @@ async def preview_uploaded_file(
 
         file_size = len(content)
         save_duration = time.time() - save_start
-        logger.info(f"✅ File saved - size: {file_size / (1024*1024):.2f} MB - took {save_duration:.2f}s")
+        logger.info(
+            f"✅ File saved - size: {file_size / (1024 * 1024):.2f} MB - took {save_duration:.2f}s"
+        )
 
         # Analyze file structure
         sheets_data = []
 
-        if file_ext == '.csv':
+        if file_ext == ".csv":
             # CSV file - single "sheet"
             logger.info("📊 Analyzing CSV file")
             csv_start = time.time()
@@ -234,14 +246,16 @@ async def preview_uploaded_file(
             is_valid = validate_columns(columns)
             missing = get_missing_columns(columns) if not is_valid else []
 
-            sheets_data.append(SheetPreviewData(
-                name=Path(file.filename).stem,
-                columns=columns,
-                row_count=total_rows,
-                preview_rows=preview_rows,
-                is_valid=is_valid,
-                missing_columns=missing
-            ))
+            sheets_data.append(
+                SheetPreviewData(
+                    name=Path(file.filename).stem,
+                    columns=columns,
+                    row_count=total_rows,
+                    preview_rows=preview_rows,
+                    is_valid=is_valid,
+                    missing_columns=missing,
+                )
+            )
 
         else:
             # Excel file - multiple sheets
@@ -255,11 +269,11 @@ async def preview_uploaded_file(
 
             try:
                 # Try calamine first (3-5x faster than openpyxl)
-                excel_file = pd.ExcelFile(temp_file_path, engine='calamine')
+                excel_file = pd.ExcelFile(temp_file_path, engine="calamine")
                 logger.info("⚡ Using calamine engine (fast)")
             except Exception:
                 # Fallback to openpyxl
-                excel_file = pd.ExcelFile(temp_file_path, engine='openpyxl')
+                excel_file = pd.ExcelFile(temp_file_path, engine="openpyxl")
                 logger.info("🐢 Using openpyxl engine (slower)")
 
             open_duration = time.time() - open_start
@@ -277,32 +291,35 @@ async def preview_uploaded_file(
                     # Read ALL data for accurate count (calamine is fast enough)
                     read_start = time.time()
 
-                    df_full = pd.read_excel(
-                        excel_file,
-                        sheet_name=sheet_name
-                    )
+                    df_full = pd.read_excel(excel_file, sheet_name=sheet_name)
 
                     read_duration = time.time() - read_start
                     total_rows = len(df_full)
-                    logger.info(f"📖 Read {total_rows:,} rows - took {read_duration:.2f}s")
+                    logger.info(
+                        f"📖 Read {total_rows:,} rows - took {read_duration:.2f}s"
+                    )
 
                     columns = df_full.columns.tolist()
                     preview_rows = clean_preview_data(df_full, max_rows=10)
 
                     sheet_duration = time.time() - sheet_start
-                    logger.info(f"✅ Sheet '{sheet_name}': {total_rows:,} rows - took {sheet_duration:.2f}s")
+                    logger.info(
+                        f"✅ Sheet '{sheet_name}': {total_rows:,} rows - took {sheet_duration:.2f}s"
+                    )
 
                     is_valid = validate_columns(columns)
                     missing = get_missing_columns(columns) if not is_valid else []
 
-                    sheets_data.append(SheetPreviewData(
-                        name=sheet_name,
-                        columns=columns,
-                        row_count=total_rows,
-                        preview_rows=preview_rows,
-                        is_valid=is_valid,
-                        missing_columns=missing
-                    ))
+                    sheets_data.append(
+                        SheetPreviewData(
+                            name=sheet_name,
+                            columns=columns,
+                            row_count=total_rows,
+                            preview_rows=preview_rows,
+                            is_valid=is_valid,
+                            missing_columns=missing,
+                        )
+                    )
             finally:
                 excel_file.close()
 
@@ -314,7 +331,9 @@ async def preview_uploaded_file(
         total_count = len(sheets_data)
 
         total_duration = time.time() - start_time
-        logger.info(f"✅ Preview complete - {valid_count}/{total_count} valid sheets - TOTAL TIME: {total_duration:.2f}s")
+        logger.info(
+            f"✅ Preview complete - {valid_count}/{total_count} valid sheets - TOTAL TIME: {total_duration:.2f}s"
+        )
 
         if valid_count == 0:
             logger.warning("⚠️ No valid sheets found")
@@ -325,7 +344,7 @@ async def preview_uploaded_file(
             file_size=file_size,
             sheets=sheets_data,
             valid_sheets_count=valid_count,
-            total_sheets_count=total_count
+            total_sheets_count=total_count,
         )
 
         return SuccessResponse(data=response)
@@ -333,18 +352,17 @@ async def preview_uploaded_file(
     except pd.errors.EmptyDataError:
         logger.error("❌ Empty file")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="El archivo está vacío"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="El archivo está vacío"
         )
 
     except Exception as e:
         logger.error(f"❌ Error analyzing file: {str(e)}", exc_info=True)
 
         # Clean up temp file on error
-        if 'temp_file_path' in locals() and temp_file_path.exists():
+        if temp_file_path is not None and temp_file_path.exists():
             temp_file_path.unlink()
 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error analizando archivo: {str(e)}"
+            detail=f"Error analizando archivo: {str(e)}",
         )

@@ -13,7 +13,7 @@ from app.domains.autenticacion.service import AuthService
 async def get_user(
     user_id: int,
     current_user: User = Depends(require_superadmin),
-    auth_service: AuthService = Depends(get_auth_service)
+    auth_service: AuthService = Depends(get_auth_service),
 ) -> UserResponse:
     """
     Get user by ID (Superadmin only)
@@ -21,7 +21,6 @@ async def get_user(
     user = await auth_service._obtener_usuario_por_id(user_id)
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
-    return user
+    return UserResponse.model_validate(user)

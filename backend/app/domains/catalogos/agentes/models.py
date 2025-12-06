@@ -23,6 +23,7 @@ from app.core.models import BaseModel
 
 class CategoriaAgente:
     """Categorías de agentes etiológicos."""
+
     VIRUS = "virus"
     BACTERIA = "bacteria"
     PARASITO = "parasito"
@@ -33,6 +34,7 @@ class CategoriaAgente:
 
 class GrupoAgente:
     """Grupos funcionales de agentes (para filtrado en gráficos)."""
+
     RESPIRATORIO = "respiratorio"
     ENTERICO = "enterico"
     VECTORIAL = "vectorial"
@@ -78,46 +80,46 @@ class AgenteEtiologico(BaseModel, table=True):
         max_length=100,
         unique=True,
         index=True,
-        description="Identificador único kebab-case para URLs y templates (ej: 'vsr', 'rotavirus')"
+        description="Identificador único kebab-case para URLs y templates (ej: 'vsr', 'rotavirus')",
     )
     nombre: str = Field(
         max_length=200,
-        description="Nombre completo del agente (ej: 'Virus Sincicial Respiratorio')"
+        description="Nombre completo del agente (ej: 'Virus Sincicial Respiratorio')",
     )
     nombre_corto: str = Field(
         max_length=50,
-        description="Nombre corto para gráficos y tablas (ej: 'VSR', 'Flu A')"
+        description="Nombre corto para gráficos y tablas (ej: 'VSR', 'Flu A')",
     )
 
     # Integración con SNVS
     id_snvs: Optional[int] = Field(
         None,
         index=True,
-        description="ID del agente en el Sistema Nacional de Vigilancia de la Salud"
+        description="ID del agente en el Sistema Nacional de Vigilancia de la Salud",
     )
 
     # Clasificación
     categoria: str = Field(
         max_length=50,
         index=True,
-        description="Categoría del patógeno: virus, bacteria, parasito, hongo, prion, otro"
+        description="Categoría del patógeno: virus, bacteria, parasito, hongo, prion, otro",
     )
     grupo: str = Field(
         max_length=50,
         index=True,
-        description="Grupo funcional: respiratorio, enterico, vectorial, zoonotico, etc."
+        description="Grupo funcional: respiratorio, enterico, vectorial, zoonotico, etc.",
     )
 
     # Metadata
     descripcion: Optional[str] = Field(
         None,
         sa_column=Column(Text),
-        description="Descripción del agente y su relevancia epidemiológica"
+        description="Descripción del agente y su relevancia epidemiológica",
     )
 
     # Estado
     activo: bool = Field(
         default=True,
         index=True,
-        description="Si el agente está activo para uso en el sistema"
+        description="Si el agente está activo para uso en el sistema",
     )

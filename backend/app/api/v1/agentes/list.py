@@ -9,6 +9,7 @@ from fastapi import Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy import asc, case, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import col
 
 from app.core.database import get_async_session
 from app.core.schemas.response import PaginatedResponse, PaginationMeta
@@ -25,6 +26,7 @@ logger = logging.getLogger(__name__)
 
 class AgenteEtiologicoInfo(BaseModel):
     """Información de un agente etiológico con estadísticas"""
+
     id: int = Field(..., description="ID del agente")
     codigo: str = Field(..., description="Código único del agente")
     nombre: str = Field(..., description="Nombre completo")
@@ -35,13 +37,18 @@ class AgenteEtiologicoInfo(BaseModel):
     activo: bool = Field(..., description="Si está activo")
     # Estadísticas
     total_eventos: int = Field(0, description="Total de eventos donde se buscó/detectó")
-    eventos_positivos: int = Field(0, description="CasoEpidemiologicos con resultado positivo")
-    eventos_negativos: int = Field(0, description="CasoEpidemiologicos con resultado negativo")
+    eventos_positivos: int = Field(
+        0, description="CasoEpidemiologicos con resultado positivo"
+    )
+    eventos_negativos: int = Field(
+        0, description="CasoEpidemiologicos con resultado negativo"
+    )
     tasa_positividad: float = Field(0.0, description="Tasa de positividad (%)")
 
 
 class AgentesCategoriasResponse(BaseModel):
     """Respuesta con categorías y grupos de agentes"""
+
     categorias: List[str] = Field(..., description="Lista de categorías únicas")
     grupos: List[str] = Field(..., description="Lista de grupos únicos")
 
@@ -55,7 +62,7 @@ async def list_agentes(
     busqueda: Optional[str] = Query(None, description="Buscar por nombre o código"),
     ordenar_por: str = Query(
         "eventos_positivos",
-        description="Campo para ordenar: nombre, codigo, total_eventos, eventos_positivos, tasa_positividad"
+        description="Campo para ordenar: nombre, codigo, total_eventos, eventos_positivos, tasa_positividad",
     ),
     orden: str = Query("desc", description="Orden: asc o desc"),
     db: AsyncSession = Depends(get_async_session),
@@ -69,35 +76,36 @@ async def list_agentes(
         # Subquery para estadísticas por agente
         stats_subquery = (
             select(
-                CasoAgente.id_agente,
-                func.count(CasoAgente.id).label("total_eventos"),
+                col(CasoAgente.id_agente),
+                func.count(col(CasoAgente.id)).label("total_eventos"),
                 func.sum(
                     case(
-                        (CasoAgente.resultado == ResultadoDeteccion.POSITIVO, 1),
-                        else_=0
+                        (col(CasoAgente.resultado) == ResultadoDeteccion.POSITIVO, 1),
+                        else_=0,
                     )
                 ).label("eventos_positivos"),
                 func.sum(
                     case(
-                        (CasoAgente.resultado == ResultadoDeteccion.NEGATIVO, 1),
-                        else_=0
+                        (col(CasoAgente.resultado) == ResultadoDeteccion.NEGATIVO, 1),
+                        else_=0,
                     )
                 ).label("eventos_negativos"),
             )
-            .group_by(CasoAgente.id_agente)
+            .group_by(col(CasoAgente.id_agente))
             .subquery()
         )
 
         # Query principal con LEFT JOIN a estadísticas
-        query = (
-            select(
-                AgenteEtiologico,
-                func.coalesce(stats_subquery.c.total_eventos, 0).label("total_eventos"),
-                func.coalesce(stats_subquery.c.eventos_positivos, 0).label("eventos_positivos"),
-                func.coalesce(stats_subquery.c.eventos_negativos, 0).label("eventos_negativos"),
-            )
-            .outerjoin(stats_subquery, AgenteEtiologico.id == stats_subquery.c.id_agente)
-        )
+        query = select(
+            AgenteEtiologico,
+            func.coalesce(stats_subquery.c.total_eventos, 0).label("total_eventos"),
+            func.coalesce(stats_subquery.c.eventos_positivos, 0).label(
+                "eventos_positivos"
+            ),
+            func.coalesce(stats_subquery.c.eventos_negativos, 0).label(
+                "eventos_negativos"
+            ),
+        ).outerjoin(stats_subquery, AgenteEtiologico.id == stats_subquery.c.id_agente)
 
         # Aplicar filtros
         if categoria:
@@ -109,9 +117,9 @@ async def list_agentes(
         if busqueda:
             search_pattern = f"%{busqueda}%"
             query = query.where(
-                (AgenteEtiologico.nombre.ilike(search_pattern)) |
-                (AgenteEtiologico.slug.ilike(search_pattern)) |
-                (AgenteEtiologico.nombre_corto.ilike(search_pattern))
+                (col(AgenteEtiologico.nombre).ilike(search_pattern))
+                | (col(AgenteEtiologico.slug).ilike(search_pattern))
+                | (col(AgenteEtiologico.nombre_corto).ilike(search_pattern))
             )
 
         # Ordenamiento
@@ -121,24 +129,33 @@ async def list_agentes(
         elif ordenar_por == "slug":
             query = query.order_by(order_func(AgenteEtiologico.slug))
         elif ordenar_por == "total_eventos":
-            query = query.order_by(order_func(func.coalesce(stats_subquery.c.total_eventos, 0)))
+            query = query.order_by(
+                order_func(func.coalesce(stats_subquery.c.total_eventos, 0))
+            )
         elif ordenar_por == "eventos_positivos":
-            query = query.order_by(order_func(func.coalesce(stats_subquery.c.eventos_positivos, 0)))
+            query = query.order_by(
+                order_func(func.coalesce(stats_subquery.c.eventos_positivos, 0))
+            )
         elif ordenar_por == "tasa_positividad":
             # Ordenar por tasa calculada
             query = query.order_by(
                 order_func(
                     case(
-                        (func.coalesce(stats_subquery.c.total_eventos, 0) > 0,
-                         func.coalesce(stats_subquery.c.eventos_positivos, 0) * 100.0 /
-                         func.coalesce(stats_subquery.c.total_eventos, 1)),
-                        else_=0
+                        (
+                            func.coalesce(stats_subquery.c.total_eventos, 0) > 0,
+                            func.coalesce(stats_subquery.c.eventos_positivos, 0)
+                            * 100.0
+                            / func.coalesce(stats_subquery.c.total_eventos, 1),
+                        ),
+                        else_=0,
                     )
                 )
             )
         else:
             # Default: por eventos positivos descendente
-            query = query.order_by(desc(func.coalesce(stats_subquery.c.eventos_positivos, 0)))
+            query = query.order_by(
+                desc(func.coalesce(stats_subquery.c.eventos_positivos, 0))
+            )
 
         # Contar total
         count_query = select(func.count(AgenteEtiologico.id))
@@ -151,9 +168,9 @@ async def list_agentes(
         if busqueda:
             search_pattern = f"%{busqueda}%"
             count_query = count_query.where(
-                (AgenteEtiologico.nombre.ilike(search_pattern)) |
-                (AgenteEtiologico.slug.ilike(search_pattern)) |
-                (AgenteEtiologico.nombre_corto.ilike(search_pattern))
+                (col(AgenteEtiologico.nombre).ilike(search_pattern))
+                | (col(AgenteEtiologico.slug).ilike(search_pattern))
+                | (col(AgenteEtiologico.nombre_corto).ilike(search_pattern))
             )
 
         total_result = await db.execute(count_query)
@@ -207,10 +224,18 @@ async def list_agentes(
                 total_pages=total_pages,
             ),
             links={
-                "first": f"/api/v1/agentes?page=1&per_page={per_page}" if total_pages > 0 else None,
-                "prev": f"/api/v1/agentes?page={page-1}&per_page={per_page}" if page > 1 else None,
-                "next": f"/api/v1/agentes?page={page+1}&per_page={per_page}" if page < total_pages else None,
-                "last": f"/api/v1/agentes?page={total_pages}&per_page={per_page}" if total_pages > 0 else None,
+                "first": f"/api/v1/agentes?page=1&per_page={per_page}"
+                if total_pages > 0
+                else None,
+                "prev": f"/api/v1/agentes?page={page - 1}&per_page={per_page}"
+                if page > 1
+                else None,
+                "next": f"/api/v1/agentes?page={page + 1}&per_page={per_page}"
+                if page < total_pages
+                else None,
+                "last": f"/api/v1/agentes?page={total_pages}&per_page={per_page}"
+                if total_pages > 0
+                else None,
             },
         )
     except Exception as e:
@@ -229,13 +254,17 @@ async def get_agentes_categorias(
     try:
         # Categorías únicas
         cat_result = await db.execute(
-            select(AgenteEtiologico.categoria).distinct().order_by(AgenteEtiologico.categoria)
+            select(col(AgenteEtiologico.categoria))
+            .distinct()
+            .order_by(col(AgenteEtiologico.categoria))
         )
         categorias = [row[0] for row in cat_result.all()]
 
         # Grupos únicos
         grupo_result = await db.execute(
-            select(AgenteEtiologico.grupo).distinct().order_by(AgenteEtiologico.grupo)
+            select(col(AgenteEtiologico.grupo))
+            .distinct()
+            .order_by(col(AgenteEtiologico.grupo))
         )
         grupos = [row[0] for row in grupo_result.all()]
 

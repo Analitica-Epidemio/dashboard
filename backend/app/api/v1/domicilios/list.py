@@ -10,11 +10,10 @@ from typing import List, Optional
 from fastapi import Depends, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
-from sqlmodel import Session
+from sqlmodel import Session, col
 
 from app.core.database import get_session
 from app.core.schemas.response import SuccessResponse
-from app.domains.vigilancia_nominal.models.caso import CasoEpidemiologico
 from app.domains.territorio.geografia_models import (
     Departamento,
     Domicilio,
@@ -22,6 +21,7 @@ from app.domains.territorio.geografia_models import (
     Localidad,
     Provincia,
 )
+from app.domains.vigilancia_nominal.models.caso import CasoEpidemiologico
 
 
 class DomicilioListItem(BaseModel):
@@ -38,7 +38,9 @@ class DomicilioListItem(BaseModel):
     id_departamento_indec: Optional[int] = Field(
         None, description="ID INDEC del departamento"
     )
-    departamento_nombre: Optional[str] = Field(None, description="Nombre del departamento")
+    departamento_nombre: Optional[str] = Field(
+        None, description="Nombre del departamento"
+    )
     id_provincia_indec: int = Field(..., description="ID INDEC de provincia")
     provincia_nombre: str = Field(..., description="Nombre de la provincia")
 
@@ -56,7 +58,9 @@ class DomicilioListItem(BaseModel):
     )
 
     # Estadísticas de eventos
-    total_eventos: int = Field(default=0, description="Total de eventos en este domicilio")
+    total_eventos: int = Field(
+        default=0, description="Total de eventos en este domicilio"
+    )
 
 
 class DomiciliosListResponse(BaseModel):
@@ -85,7 +89,8 @@ async def list_domicilios(
         None, description="Filtrar por localidad"
     ),
     con_eventos: Optional[bool] = Query(
-        None, description="Filtrar solo domicilios con eventos (true) o sin eventos (false)"
+        None,
+        description="Filtrar solo domicilios con eventos (true) o sin eventos (false)",
     ),
     order_by: str = Query(
         "eventos_desc",
@@ -102,62 +107,71 @@ async def list_domicilios(
     # Subquery para contar eventos por domicilio
     eventos_count_subquery = (
         select(
-            CasoEpidemiologico.id_domicilio,
-            func.count(CasoEpidemiologico.id).label("total_eventos"),
+            col(CasoEpidemiologico.id_domicilio),
+            func.count(col(CasoEpidemiologico.id)).label("total_eventos"),
         )
-        .where(CasoEpidemiologico.id_domicilio.is_not(None))
-        .group_by(CasoEpidemiologico.id_domicilio)
+        .where(col(CasoEpidemiologico.id_domicilio).is_not(None))
+        .group_by(col(CasoEpidemiologico.id_domicilio))
         .subquery()
     )
 
     # Query principal
     query = (
         select(
-            Domicilio.id,
-            Domicilio.calle,
-            Domicilio.numero,
-            Domicilio.latitud,
-            Domicilio.longitud,
-            Domicilio.estado_geocodificacion,
-            Domicilio.proveedor_geocoding,
-            Domicilio.confidence_geocoding,
-            Domicilio.id_localidad_indec,
-            Localidad.nombre.label("localidad_nombre"),
-            Departamento.id_departamento_indec,
-            Departamento.nombre.label("departamento_nombre"),
-            Provincia.id_provincia_indec,
-            Provincia.nombre.label("provincia_nombre"),
+            col(Domicilio.id),
+            col(Domicilio.calle),
+            col(Domicilio.numero),
+            col(Domicilio.latitud),
+            col(Domicilio.longitud),
+            col(Domicilio.estado_geocodificacion),
+            col(Domicilio.proveedor_geocoding),
+            col(Domicilio.confidence_geocoding),
+            col(Domicilio.id_localidad_indec),
+            col(Localidad.nombre).label("localidad_nombre"),
+            col(Departamento.id_departamento_indec),
+            col(Departamento.nombre).label("departamento_nombre"),
+            col(Provincia.id_provincia_indec),
+            col(Provincia.nombre).label("provincia_nombre"),
             func.coalesce(eventos_count_subquery.c.total_eventos, 0).label(
                 "total_eventos"
             ),
         )
         .select_from(Domicilio)
-        .join(Localidad, Domicilio.id_localidad_indec == Localidad.id_localidad_indec)
         .join(
-            Departamento,
-            Localidad.id_departamento_indec == Departamento.id_departamento_indec,
+            Localidad,
+            col(Domicilio.id_localidad_indec) == col(Localidad.id_localidad_indec),
         )
         .join(
-            Provincia, Departamento.id_provincia_indec == Provincia.id_provincia_indec
+            Departamento,
+            col(Localidad.id_departamento_indec)
+            == col(Departamento.id_departamento_indec),
+        )
+        .join(
+            Provincia,
+            col(Departamento.id_provincia_indec) == col(Provincia.id_provincia_indec),
         )
         .outerjoin(
             eventos_count_subquery,
-            Domicilio.id == eventos_count_subquery.c.id_domicilio,
+            col(Domicilio.id) == eventos_count_subquery.c.id_domicilio,
         )
     )
 
     # Aplicar filtros
     if estado_geocodificacion is not None:
-        query = query.where(Domicilio.estado_geocodificacion == estado_geocodificacion)
+        query = query.where(
+            col(Domicilio.estado_geocodificacion) == estado_geocodificacion
+        )
 
     if id_provincia_indec is not None:
-        query = query.where(Provincia.id_provincia_indec == id_provincia_indec)
+        query = query.where(col(Provincia.id_provincia_indec) == id_provincia_indec)
 
     if id_departamento_indec is not None:
-        query = query.where(Departamento.id_departamento_indec == id_departamento_indec)
+        query = query.where(
+            col(Departamento.id_departamento_indec) == id_departamento_indec
+        )
 
     if id_localidad_indec is not None:
-        query = query.where(Localidad.id_localidad_indec == id_localidad_indec)
+        query = query.where(col(Localidad.id_localidad_indec) == id_localidad_indec)
 
     if con_eventos is not None:
         if con_eventos:
@@ -169,7 +183,7 @@ async def list_domicilios(
 
     # Contar total (usar scalar_one para obtener el valor directamente)
     count_query = select(func.count()).select_from(query.subquery())
-    total = session.execute(count_query).scalar_one()
+    total = session.exec(count_query).one()[0]
 
     # Aplicar ordenamiento
     if order_by == "eventos_desc":
@@ -181,16 +195,16 @@ async def list_domicilios(
             func.coalesce(eventos_count_subquery.c.total_eventos, 0).asc()
         )
     elif order_by == "calle_asc":
-        query = query.order_by(Domicilio.calle.asc())
+        query = query.order_by(col(Domicilio.calle).asc())
     elif order_by == "localidad_asc":
-        query = query.order_by(Localidad.nombre.asc(), Domicilio.calle.asc())
+        query = query.order_by(col(Localidad.nombre).asc(), col(Domicilio.calle).asc())
 
     # Aplicar paginación
     offset = (page - 1) * page_size
     query = query.offset(offset).limit(page_size)
 
     # Ejecutar query
-    results = session.exec(query).all()
+    results = session.execute(query).all()
 
     # Construir items
     items: List[DomicilioListItem] = []

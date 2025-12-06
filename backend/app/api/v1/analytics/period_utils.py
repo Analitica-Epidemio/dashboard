@@ -49,8 +49,7 @@ def get_epi_week_dates(semana: int, anio: int) -> Tuple[date, date]:
 
 
 def get_period_dates(
-    period_type: PeriodType,
-    fecha_referencia: date | None = None
+    period_type: PeriodType, fecha_referencia: date | None = None
 ) -> Tuple[date, date]:
     """
     Calcula las fechas de inicio y fin de un período predefinido.
@@ -98,7 +97,9 @@ def get_period_dates(
     elif period_type == PeriodType.MES_PASADO:
         # Mes anterior completo
         primer_dia_mes_actual = date(fecha_referencia.year, fecha_referencia.month, 1)
-        fecha_hasta = primer_dia_mes_actual - timedelta(days=1)  # Último día mes anterior
+        fecha_hasta = primer_dia_mes_actual - timedelta(
+            days=1
+        )  # Último día mes anterior
         fecha_desde = date(fecha_hasta.year, fecha_hasta.month, 1)
 
     elif period_type == PeriodType.ULTIMOS_3_MESES:
@@ -115,7 +116,9 @@ def get_period_dates(
     elif period_type == PeriodType.TRIMESTRE_PASADO:
         # Trimestre anterior completo
         mes_inicio_trimestre_actual = ((fecha_referencia.month - 1) // 3) * 3 + 1
-        primer_dia_trimestre_actual = date(fecha_referencia.year, mes_inicio_trimestre_actual, 1)
+        primer_dia_trimestre_actual = date(
+            fecha_referencia.year, mes_inicio_trimestre_actual, 1
+        )
         fecha_hasta = primer_dia_trimestre_actual - timedelta(days=1)
         mes_inicio_trimestre_anterior = ((fecha_hasta.month - 1) // 3) * 3 + 1
         fecha_desde = date(fecha_hasta.year, mes_inicio_trimestre_anterior, 1)
@@ -143,9 +146,7 @@ def get_period_dates(
 
 
 def get_comparison_period(
-    fecha_desde: date,
-    fecha_hasta: date,
-    comparison_type: str
+    fecha_desde: date, fecha_hasta: date, comparison_type: str
 ) -> Tuple[date, date]:
     """
     Calcula el período de comparación basado en el período actual.
@@ -167,8 +168,12 @@ def get_comparison_period(
 
     elif comparison_type == "year_over_year":
         # Mismo período del año anterior
-        fecha_desde_comp = date(fecha_desde.year - 1, fecha_desde.month, fecha_desde.day)
-        fecha_hasta_comp = date(fecha_hasta.year - 1, fecha_hasta.month, fecha_hasta.day)
+        fecha_desde_comp = date(
+            fecha_desde.year - 1, fecha_desde.month, fecha_desde.day
+        )
+        fecha_hasta_comp = date(
+            fecha_hasta.year - 1, fecha_hasta.month, fecha_hasta.day
+        )
 
     else:
         raise ValueError(f"Tipo de comparación inválido: {comparison_type}")
@@ -177,9 +182,7 @@ def get_comparison_period(
 
 
 def create_period_info(
-    fecha_desde: date,
-    fecha_hasta: date,
-    descripcion: str
+    fecha_desde: date, fecha_hasta: date, descripcion: str
 ) -> PeriodInfo:
     """
     Crea un objeto PeriodInfo con las semanas epidemiológicas calculadas.
@@ -196,11 +199,13 @@ def create_period_info(
         semana_epi_desde=semana_desde,
         semana_epi_hasta=semana_hasta,
         anio_epi=anio_epi,
-        descripcion=descripcion
+        descripcion=descripcion,
     )
 
 
-def get_period_description(period_type: PeriodType, fecha_desde: date, fecha_hasta: date) -> str:
+def get_period_description(
+    period_type: PeriodType, fecha_desde: date, fecha_hasta: date
+) -> str:
     """
     Genera una descripción legible del período.
     """
@@ -219,4 +224,7 @@ def get_period_description(period_type: PeriodType, fecha_desde: date, fecha_has
         PeriodType.PERSONALIZADO: f"{fecha_desde.strftime('%d/%m/%Y')} - {fecha_hasta.strftime('%d/%m/%Y')}",
     }
 
-    return descriptions.get(period_type, f"{fecha_desde.strftime('%d/%m/%Y')} - {fecha_hasta.strftime('%d/%m/%Y')}")
+    return descriptions.get(
+        period_type,
+        f"{fecha_desde.strftime('%d/%m/%Y')} - {fecha_hasta.strftime('%d/%m/%Y')}",
+    )

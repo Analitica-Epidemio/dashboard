@@ -8,15 +8,17 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
+from sqlmodel import col
 
 from app.domains.vigilancia_nominal.clasificacion.models import TipoClasificacion
-from app.domains.vigilancia_nominal.models.enfermedad import Enfermedad
 from app.domains.vigilancia_nominal.models.caso import CasoEpidemiologico
+from app.domains.vigilancia_nominal.models.enfermedad import Enfermedad
+
 from .schemas import (
+    CasoEpidemiologicoDentroGrupo,
     ConfiguracionVisualizacion,
     DatosVisualizacionRequest,
     DatosVisualizacionResponse,
-    CasoEpidemiologicoDentroGrupo,
     GrupoCasoEpidemiologico,
     GrupoCasoEpidemiologicoResponse,
     ListaGruposResponse,
@@ -140,45 +142,56 @@ class AnalyticsService:
             ConfiguracionVisualizacion(
                 id="casos_por_edad",
                 nombre="Casos por grupo etario",
+                descripcion="Distribución de casos por rango de edad",
                 tipo="bar",
                 disponible_para_todos=True,
             ),
             ConfiguracionVisualizacion(
                 id="casos_por_ugd",
                 nombre="Casos por Zona UGD (tasa)",
+                descripcion="Tasas de casos por Zona UGD",
                 tipo="bar",
                 disponible_para_todos=True,
             ),
             ConfiguracionVisualizacion(
                 id="torta_ugd",
                 nombre="Casos por Zona UGD (torta)",
+                descripcion="Distribución de casos por UGD (gráfico de torta)",
                 tipo="pie",
                 disponible_para_todos=True,
             ),
             ConfiguracionVisualizacion(
                 id="torta_sexo",
                 nombre="Sexo (Torta)",
+                descripcion="Distribución de casos por sexo",
                 tipo="pie",
                 disponible_para_todos=True,
             ),
             ConfiguracionVisualizacion(
                 id="casos_mensual",
                 nombre="Casos por meses",
+                descripcion="Evolución mensual de casos",
                 tipo="line",
                 disponible_para_todos=True,
             ),
             ConfiguracionVisualizacion(
                 id="historicos",
                 nombre="Históricos",
+                descripcion="Comparativa histórica de casos",
                 tipo="line",
                 disponible_para_todos=True,
             ),
             ConfiguracionVisualizacion(
-                id="tabla", nombre="Tabla", tipo="table", disponible_para_todos=True
+                id="tabla",
+                nombre="Tabla",
+                descripcion="Tabla detallada de casos",
+                tipo="table",
+                disponible_para_todos=True,
             ),
             ConfiguracionVisualizacion(
                 id="corredor_endemico",
                 nombre="Corredor endémico",
+                descripcion="Corredor endémico basado en datos históricos",
                 tipo="area",
                 disponible_para_todos=True,
             ),
@@ -186,6 +199,7 @@ class AnalyticsService:
             ConfiguracionVisualizacion(
                 id="curva_epidemiologica",
                 nombre="Curva epidemiológica",
+                descripcion="Curva de casos por semana epidemiológica",
                 tipo="line",
                 disponible_para_grupos=["Infecciones Respiratorias Agudas (IRA)"],
                 disponible_para_todos=False,
@@ -193,6 +207,7 @@ class AnalyticsService:
             ConfiguracionVisualizacion(
                 id="grafico_edad_departamento",
                 nombre="Casos edad y departamento",
+                descripcion="Mapa de calor de casos por edad y departamento",
                 tipo="heatmap",
                 disponible_para_grupos=["Hidatidosis"],
                 disponible_para_todos=False,
@@ -200,6 +215,7 @@ class AnalyticsService:
             ConfiguracionVisualizacion(
                 id="grafico_rabia_animal_comparacion",
                 nombre="Comparación sospechosos - confirmados",
+                descripcion="Comparación de casos sospechosos vs confirmados",
                 tipo="bar",
                 disponible_para_grupos=["Rabia animal"],
                 disponible_para_todos=False,
@@ -213,7 +229,9 @@ class AnalyticsService:
         for nombre, config in self.grupos_config.items():
             # Buscar en Enfermedad si existe este grupo/evento
             tipo_eno = (
-                self.session.query(Enfermedad).filter(Enfermedad.nombre == nombre).first()
+                self.session.query(Enfermedad)
+                .filter(Enfermedad.nombre == nombre)
+                .first()
             )
 
             grupo = GrupoCasoEpidemiologico(
@@ -233,7 +251,9 @@ class AnalyticsService:
 
         return ListaGruposResponse(grupos=grupos, total=len(grupos))
 
-    async def get_grupo_detalle(self, grupo_id: int) -> Optional[GrupoCasoEpidemiologicoResponse]:
+    async def get_grupo_detalle(
+        self, grupo_id: int
+    ) -> Optional[GrupoCasoEpidemiologicoResponse]:
         """Obtiene el detalle de un grupo específico con sus eventos."""
 
         # Buscar el grupo en la configuración
@@ -242,7 +262,9 @@ class AnalyticsService:
 
         for nombre, config in self.grupos_config.items():
             tipo_eno = (
-                self.session.query(Enfermedad).filter(Enfermedad.nombre == nombre).first()
+                self.session.query(Enfermedad)
+                .filter(Enfermedad.nombre == nombre)
+                .first()
             )
             if (tipo_eno and tipo_eno.id == grupo_id) or hash(
                 nombre
@@ -251,7 +273,7 @@ class AnalyticsService:
                 grupo_nombre = nombre
                 break
 
-        if not grupo_config:
+        if not grupo_config or not grupo_nombre:
             return None
 
         grupo = GrupoCasoEpidemiologico(
@@ -277,30 +299,36 @@ class AnalyticsService:
 
                 if tipo_eno_evento:
                     # Obtener estadísticas básicas
-                    total_query = self.session.query(func.count(CasoEpidemiologico.id)).filter(
-                        CasoEpidemiologico.id_enfermedad == tipo_eno_evento.id
+                    total_query = self.session.query(
+                        func.count(col(CasoEpidemiologico.id))
+                    ).filter(
+                        col(CasoEpidemiologico.id_enfermedad) == tipo_eno_evento.id
                     )
                     total_casos = total_query.scalar() or 0
 
                     confirmados_query = self.session.query(
-                        func.count(CasoEpidemiologico.id)
+                        func.count(col(CasoEpidemiologico.id))
                     ).filter(
-                        CasoEpidemiologico.id_enfermedad == tipo_eno_evento.id,
-                        CasoEpidemiologico.clasificacion_estrategia == TipoClasificacion.CONFIRMADOS,
+                        col(CasoEpidemiologico.id_enfermedad) == tipo_eno_evento.id,
+                        col(CasoEpidemiologico.clasificacion_estrategia)
+                        == TipoClasificacion.CONFIRMADOS,
                     )
                     casos_confirmados = confirmados_query.scalar() or 0
 
                     sospechosos_query = self.session.query(
-                        func.count(CasoEpidemiologico.id)
+                        func.count(col(CasoEpidemiologico.id))
                     ).filter(
-                        CasoEpidemiologico.id_enfermedad == tipo_eno_evento.id,
-                        CasoEpidemiologico.clasificacion_estrategia == TipoClasificacion.SOSPECHOSOS,
+                        col(CasoEpidemiologico.id_enfermedad) == tipo_eno_evento.id,
+                        col(CasoEpidemiologico.clasificacion_estrategia)
+                        == TipoClasificacion.SOSPECHOSOS,
                     )
                     casos_sospechosos = sospechosos_query.scalar() or 0
 
                     ultimo_caso_query = self.session.query(
-                        func.max(CasoEpidemiologico.fecha_minima_caso)
-                    ).filter(CasoEpidemiologico.id_enfermedad == tipo_eno_evento.id)
+                        func.max(col(CasoEpidemiologico.fecha_minima_caso))
+                    ).filter(
+                        col(CasoEpidemiologico.id_enfermedad) == tipo_eno_evento.id
+                    )
                     ultimo_caso = ultimo_caso_query.scalar()
 
                     evento = CasoEpidemiologicoDentroGrupo(
@@ -326,26 +354,30 @@ class AnalyticsService:
             )
             if tipo_eno:
                 # Obtener estadísticas básicas del evento simple
-                total_query = self.session.query(func.count(CasoEpidemiologico.id)).filter(
-                    CasoEpidemiologico.id_enfermedad == tipo_eno.id
-                )
+                total_query = self.session.query(
+                    func.count(col(CasoEpidemiologico.id))
+                ).filter(col(CasoEpidemiologico.id_enfermedad) == tipo_eno.id)
                 total_casos = total_query.scalar() or 0
 
-                confirmados_query = self.session.query(func.count(CasoEpidemiologico.id)).filter(
-                    CasoEpidemiologico.id_enfermedad == tipo_eno.id,
-                    CasoEpidemiologico.clasificacion_estrategia == "confirmados",
+                confirmados_query = self.session.query(
+                    func.count(col(CasoEpidemiologico.id))
+                ).filter(
+                    col(CasoEpidemiologico.id_enfermedad) == tipo_eno.id,
+                    col(CasoEpidemiologico.clasificacion_estrategia) == "confirmados",
                 )
                 casos_confirmados = confirmados_query.scalar() or 0
 
-                sospechosos_query = self.session.query(func.count(CasoEpidemiologico.id)).filter(
-                    CasoEpidemiologico.id_enfermedad == tipo_eno.id,
-                    CasoEpidemiologico.clasificacion_estrategia == "sospechosos",
+                sospechosos_query = self.session.query(
+                    func.count(col(CasoEpidemiologico.id))
+                ).filter(
+                    col(CasoEpidemiologico.id_enfermedad) == tipo_eno.id,
+                    col(CasoEpidemiologico.clasificacion_estrategia) == "sospechosos",
                 )
                 casos_sospechosos = sospechosos_query.scalar() or 0
 
                 ultimo_caso_query = self.session.query(
-                    func.max(CasoEpidemiologico.fecha_minima_caso)
-                ).filter(CasoEpidemiologico.id_enfermedad == tipo_eno.id)
+                    func.max(col(CasoEpidemiologico.fecha_minima_caso))
+                ).filter(col(CasoEpidemiologico.id_enfermedad) == tipo_eno.id)
                 ultimo_caso = ultimo_caso_query.scalar()
 
                 evento = CasoEpidemiologicoDentroGrupo(
@@ -393,25 +425,32 @@ class AnalyticsService:
         )
 
         # Query base
-        query = self.session.query(CasoEpidemiologico).filter(CasoEpidemiologico.id_enfermedad.in_(evento_ids))
+        query = self.session.query(CasoEpidemiologico).filter(
+            col(CasoEpidemiologico.id_enfermedad).in_(evento_ids)
+        )
 
         # Aplicar filtros
         filtros_aplicados = {}
 
         if request.clasificacion != "todos":
             query = query.filter(
-                CasoEpidemiologico.clasificacion_estrategia == request.clasificacion
+                col(CasoEpidemiologico.clasificacion_estrategia)
+                == request.clasificacion
             )
             filtros_aplicados["clasificacion"] = request.clasificacion
 
         if request.fecha_desde:
             fecha_desde = datetime.strptime(request.fecha_desde, "%Y-%m-%d").date()
-            query = query.filter(CasoEpidemiologico.fecha_minima_caso >= fecha_desde)
+            query = query.filter(
+                col(CasoEpidemiologico.fecha_minima_caso) >= fecha_desde
+            )
             filtros_aplicados["fecha_desde"] = request.fecha_desde
 
         if request.fecha_hasta:
             fecha_hasta = datetime.strptime(request.fecha_hasta, "%Y-%m-%d").date()
-            query = query.filter(CasoEpidemiologico.fecha_minima_caso <= fecha_hasta)
+            query = query.filter(
+                col(CasoEpidemiologico.fecha_minima_caso) <= fecha_hasta
+            )
             filtros_aplicados["fecha_hasta"] = request.fecha_hasta
 
         # Generar datos según tipo de gráfico
@@ -438,7 +477,7 @@ class AnalyticsService:
         )
 
     async def _generar_datos_grafico(
-        self, query, tipo_grafico: str
+        self, query: Any, tipo_grafico: str
     ) -> List[Dict[str, Any]]:
         """Genera datos específicos según el tipo de gráfico."""
 
@@ -454,7 +493,7 @@ class AnalyticsService:
             # Gráfico genérico de totales
             return await self._generar_totales(query)
 
-    async def _generar_casos_por_edad(self, query) -> List[Dict[str, Any]]:
+    async def _generar_casos_por_edad(self, query: Any) -> List[Dict[str, Any]]:
         """Genera datos para gráfico de casos por edad."""
         # Unir con ciudadano para obtener fecha de nacimiento
         from app.domains.vigilancia_nominal.models.sujetos import Ciudadano
@@ -505,26 +544,36 @@ class AnalyticsService:
             {"rango": rango, "casos": cantidad} for rango, cantidad in rangos.items()
         ]
 
-    async def _generar_torta_sexo(self, query) -> List[Dict[str, Any]]:
+    async def _generar_torta_sexo(self, query: Any) -> List[Dict[str, Any]]:
         """Genera datos para gráfico de torta por sexo."""
         from app.domains.vigilancia_nominal.models.sujetos import Ciudadano
 
         resultados = (
             query.join(Ciudadano)
-            .with_entities(Ciudadano.sexo, func.count(CasoEpidemiologico.id).label("casos"))
-            .group_by(Ciudadano.sexo)
+            .with_entities(
+                col(Ciudadano.sexo_biologico),
+                func.count(col(CasoEpidemiologico.id)).label("casos"),
+            )
+            .group_by(col(Ciudadano.sexo_biologico))
             .all()
         )
 
-        return [{"sexo": r.sexo or "Sin datos", "casos": r.casos} for r in resultados]
+        return [
+            {"sexo": r.sexo_biologico or "Sin datos", "casos": r.casos}
+            for r in resultados
+        ]
 
-    async def _generar_casos_mensual(self, query) -> List[Dict[str, Any]]:
+    async def _generar_casos_mensual(self, query: Any) -> List[Dict[str, Any]]:
         """Genera datos para gráfico mensual."""
         resultados = (
             query.with_entities(
-                func.extract("year", CasoEpidemiologico.fecha_minima_caso).label("anio"),
-                func.extract("month", CasoEpidemiologico.fecha_minima_caso).label("mes"),
-                func.count(CasoEpidemiologico.id).label("casos"),
+                func.extract("year", col(CasoEpidemiologico.fecha_minima_caso)).label(
+                    "anio"
+                ),
+                func.extract("month", col(CasoEpidemiologico.fecha_minima_caso)).label(
+                    "mes"
+                ),
+                func.count(col(CasoEpidemiologico.id)).label("casos"),
             )
             .group_by("anio", "mes")
             .order_by("anio", "mes")
@@ -541,7 +590,7 @@ class AnalyticsService:
             for r in resultados
         ]
 
-    async def _generar_tabla(self, query) -> List[Dict[str, Any]]:
+    async def _generar_tabla(self, query: Any) -> List[Dict[str, Any]]:
         """Genera datos para tabla."""
         from app.domains.vigilancia_nominal.models.sujetos import Ciudadano
 
@@ -564,7 +613,7 @@ class AnalyticsService:
 
         return datos
 
-    async def _generar_totales(self, query) -> List[Dict[str, Any]]:
+    async def _generar_totales(self, query: Any) -> List[Dict[str, Any]]:
         """Genera datos de totales simples."""
         total = query.count()
         return [{"categoria": "Total de casos", "valor": total}]

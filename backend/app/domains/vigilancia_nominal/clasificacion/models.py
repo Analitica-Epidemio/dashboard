@@ -8,11 +8,12 @@ Renombrados:
 - id_caso → id_caso
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy import JSON, Column, Index, Text
+from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship
 
 from app.core.models import BaseModel
@@ -51,6 +52,7 @@ class TipoClasificacion(str, Enum):
     REQUIERE_REVISION = (
         "REQUIERE_REVISION"  # Casos ambiguos que requieren revisión manual
     )
+    TODOS = "TODOS"
 
 
 class EstrategiaClasificacion(BaseModel, table=True):
@@ -65,7 +67,12 @@ class EstrategiaClasificacion(BaseModel, table=True):
     __table_args__ = (
         Index("idx_estrategia_clasificacion_tipo_enfermedad", "id_enfermedad"),
         Index("idx_estrategia_clasificacion_active", "is_active"),
-        Index("idx_estrategia_clasificacion_validity", "id_enfermedad", "valid_from", "valid_until"),
+        Index(
+            "idx_estrategia_clasificacion_validity",
+            "id_enfermedad",
+            "valid_from",
+            "valid_until",
+        ),
         {"extend_existing": True},
     )
 
@@ -120,7 +127,7 @@ class EstrategiaClasificacion(BaseModel, table=True):
 
     # Validez temporal
     valid_from: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=datetime.now(timezone.utc),
         description="Fecha desde cuando la estrategia es válida",
     )
     valid_until: Optional[datetime] = Field(
@@ -129,13 +136,13 @@ class EstrategiaClasificacion(BaseModel, table=True):
     )
 
     # Auditoría
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=datetime.now(timezone.utc))
     created_by: Optional[str] = Field(default=None, max_length=100)
     updated_by: Optional[str] = Field(default=None, max_length=100)
 
     # Relaciones
-    classification_rules: List["ClassificationRule"] = Relationship(
+    classification_rules: Mapped[List["ClassificationRule"]] = Relationship(
         back_populates="strategy", cascade_delete=True
     )
 
@@ -150,7 +157,7 @@ class EstrategiaClasificacion(BaseModel, table=True):
         """Contador de reglas de clasificación."""
         return len(self.classification_rules) if self.classification_rules else 0
 
-    def __init__(self, **data):
+    def __init__(self, **data: Any) -> None:
         super().__init__(**data)
         self._tipo_enfermedad_name: Optional[str] = None
 
@@ -160,7 +167,7 @@ class EstrategiaClasificacion(BaseModel, table=True):
         return getattr(self, "_tipo_enfermedad_name", None)
 
     @tipo_enfermedad_name.setter
-    def tipo_enfermedad_name(self, value: Optional[str]):
+    def tipo_enfermedad_name(self, value: Optional[str]) -> None:
         self._tipo_enfermedad_name = value
 
 
@@ -183,7 +190,8 @@ class ClassificationRule(BaseModel, table=True):
 
     # Relación con estrategia
     strategy_id: int = Field(
-        foreign_key="estrategia_clasificacion.id", description="ID de la estrategia padre"
+        foreign_key="estrategia_clasificacion.id",
+        description="ID de la estrategia padre",
     )
 
     # Clasificación objetivo
@@ -224,8 +232,10 @@ class ClassificationRule(BaseModel, table=True):
     )
 
     # Relaciones
-    strategy: EstrategiaClasificacion = Relationship(back_populates="classification_rules")
-    filters: List["FilterCondition"] = Relationship(
+    strategy: Mapped[EstrategiaClasificacion] = Relationship(
+        back_populates="classification_rules"
+    )
+    filters: Mapped[List["FilterCondition"]] = Relationship(
         back_populates="rule", cascade_delete=True
     )
 
@@ -307,7 +317,7 @@ class FilterCondition(BaseModel, table=True):
     order: int = Field(default=0, description="Orden de evaluación dentro de la regla")
 
     # Relaciones
-    rule: Optional[ClassificationRule] = Relationship(back_populates="filters")
+    rule: Mapped[Optional[ClassificationRule]] = Relationship(back_populates="filters")
 
 
 class StrategyChangeLog(BaseModel, table=True):
@@ -356,7 +366,7 @@ class StrategyChangeLog(BaseModel, table=True):
     # Auditoría
     changed_by: str = Field(max_length=100, description="Usuario que realizó el cambio")
     changed_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=datetime.now(timezone.utc),
         index=True,
         description="Fecha y hora del cambio",
     )
@@ -396,7 +406,9 @@ class EventClassificationAudit(BaseModel, table=True):
 
     # Relación con evento y estrategia
     id_caso: int = Field(
-        foreign_key="caso_epidemiologico.id", index=True, description="ID del evento clasificado"
+        foreign_key="caso_epidemiologico.id",
+        index=True,
+        description="ID del evento clasificado",
     )
     strategy_id: int = Field(
         foreign_key="estrategia_clasificacion.id",
@@ -493,7 +505,7 @@ class EventClassificationAudit(BaseModel, table=True):
 
     # Auditoría temporal
     classified_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=datetime.now(timezone.utc),
         index=True,
         description="Fecha y hora de la clasificación automática",
     )

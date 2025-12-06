@@ -12,20 +12,21 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import case, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from sqlmodel import col
 
 from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User
+from app.domains.territorio.geografia_models import Domicilio
 from app.domains.vigilancia_nominal.clasificacion.models import TipoClasificacion
-from app.domains.vigilancia_nominal.models.enfermedad import Enfermedad
 from app.domains.vigilancia_nominal.models.caso import CasoEpidemiologico
-from app.domains.vigilancia_nominal.queries import CasoEpidemiologicoQueryBuilder
-from app.domains.vigilancia_nominal.models.sujetos import Animal
+from app.domains.vigilancia_nominal.models.enfermedad import Enfermedad
 from app.domains.vigilancia_nominal.models.sujetos import (
+    Animal,
     Ciudadano,
 )
-from app.domains.territorio.geografia_models import Domicilio
+from app.domains.vigilancia_nominal.queries import CasoEpidemiologicoQueryBuilder
 
 
 class CasoEpidemiologicoSortBy(str, Enum):
@@ -116,7 +117,9 @@ class CasoEpidemiologicoStats(BaseModel):
     descartados: int = Field(0, description="CasoEpidemiologicos descartados")
     negativos: int = Field(0, description="CasoEpidemiologicos negativos")
     en_estudio: int = Field(0, description="CasoEpidemiologicos en estudio")
-    requiere_revision: int = Field(0, description="CasoEpidemiologicos que requieren revisión")
+    requiere_revision: int = Field(
+        0, description="CasoEpidemiologicos que requieren revisión"
+    )
     sin_clasificar: int = Field(0, description="CasoEpidemiologicos sin clasificar")
 
 
@@ -141,15 +144,21 @@ async def list_eventos(
         None, description="Búsqueda por ID, nombre o documento"
     ),
     # Filtros
-    tipo_eno_ids: Optional[List[int]] = Query(None, description="Lista de IDs de tipos de eventos"),
-    grupo_eno_ids: Optional[List[int]] = Query(None, description="Lista de IDs de grupos de eventos"),
+    tipo_eno_ids: Optional[List[int]] = Query(
+        None, description="Lista de IDs de tipos de eventos"
+    ),
+    grupo_eno_ids: Optional[List[int]] = Query(
+        None, description="Lista de IDs de grupos de eventos"
+    ),
     fecha_desde: Optional[date] = None,
     fecha_hasta: Optional[date] = None,
-    clasificacion: Optional[List[str]] = Query(None, description="Lista de clasificaciones"),
+    clasificacion: Optional[List[str]] = Query(
+        None, description="Lista de clasificaciones"
+    ),
     provincia_ids_establecimiento: Optional[List[int]] = Query(
         None,
         description="Lista de códigos INDEC de provincias (filtro por ESTABLECIMIENTO DE NOTIFICACIÓN)",
-        alias="provincia_id"  # Mantiene compatibilidad con frontend que usa provincia_id
+        alias="provincia_id",  # Mantiene compatibilidad con frontend que usa provincia_id
     ),
     tipo_sujeto: Optional[str] = None,
     requiere_revision: Optional[bool] = None,
@@ -177,7 +186,9 @@ async def list_eventos(
     """
 
     logger.info(f"📋 Listando eventos - page: {page}, user: {current_user.email}")
-    logger.info(f"🔍 Filtros recibidos: tipo_eno_ids={tipo_eno_ids}, grupo_eno_ids={grupo_eno_ids}, clasificacion={clasificacion}, provincia_ids_establecimiento={provincia_ids_establecimiento}")
+    logger.info(
+        f"🔍 Filtros recibidos: tipo_eno_ids={tipo_eno_ids}, grupo_eno_ids={grupo_eno_ids}, clasificacion={clasificacion}, provincia_ids_establecimiento={provincia_ids_establecimiento}"
+    )
 
     try:
         # Query base con JOINs y filtros usando CasoEpidemiologicoQueryBuilder
@@ -196,97 +207,150 @@ async def list_eventos(
             edad_max=edad_max,
             search=search,
         ).options(
-                selectinload(CasoEpidemiologico.enfermedad),
-                # Relaciones con sujetos (ciudadano/animal)
-                selectinload(CasoEpidemiologico.ciudadano),
-                selectinload(CasoEpidemiologico.ciudadano).selectinload(Ciudadano.datos),
-                selectinload(CasoEpidemiologico.animal).selectinload(Animal.localidad),
-                # Domicilio del evento (no del ciudadano!)
-                selectinload(CasoEpidemiologico.domicilio).selectinload(Domicilio.localidad),
-                # Relaciones con establecimientos
-                selectinload(CasoEpidemiologico.establecimiento_consulta),
-                selectinload(CasoEpidemiologico.establecimiento_notificacion),
-                selectinload(CasoEpidemiologico.establecimiento_carga),
-                # Relaciones de salud y diagnósticos
-                selectinload(CasoEpidemiologico.sintomas),
-                selectinload(CasoEpidemiologico.muestras),
-                selectinload(CasoEpidemiologico.diagnosticos),
-                selectinload(CasoEpidemiologico.internaciones),
-                selectinload(CasoEpidemiologico.tratamientos),
-                # Relaciones epidemiológicas
-                selectinload(CasoEpidemiologico.antecedentes),
-                selectinload(CasoEpidemiologico.investigaciones),
-                selectinload(CasoEpidemiologico.contactos),
-                selectinload(CasoEpidemiologico.ambitos_concurrencia),
-                # Relaciones de prevención
-                selectinload(CasoEpidemiologico.vacunas),
-            )
+            selectinload(CasoEpidemiologico.enfermedad),
+            # Relaciones con sujetos (ciudadano/animal)
+            selectinload(CasoEpidemiologico.ciudadano),
+            selectinload(CasoEpidemiologico.ciudadano).selectinload(Ciudadano.datos),
+            selectinload(CasoEpidemiologico.animal).selectinload(Animal.localidad),
+            # Domicilio del evento (no del ciudadano!)
+            selectinload(CasoEpidemiologico.domicilio).selectinload(
+                Domicilio.localidad
+            ),
+            # Relaciones con establecimientos
+            selectinload(CasoEpidemiologico.establecimiento_consulta),
+            selectinload(CasoEpidemiologico.establecimiento_notificacion),
+            selectinload(CasoEpidemiologico.establecimiento_carga),
+            # Relaciones de salud y diagnósticos
+            selectinload(CasoEpidemiologico.sintomas),
+            selectinload(CasoEpidemiologico.muestras),
+            selectinload(CasoEpidemiologico.diagnosticos),
+            selectinload(CasoEpidemiologico.internaciones),
+            selectinload(CasoEpidemiologico.tratamientos),
+            # Relaciones epidemiológicas
+            selectinload(CasoEpidemiologico.antecedentes),
+            selectinload(CasoEpidemiologico.investigaciones),
+            selectinload(CasoEpidemiologico.contactos),
+            selectinload(CasoEpidemiologico.ambitos_concurrencia),
+            # Relaciones de prevención
+            selectinload(CasoEpidemiologico.vacunas),
+        )
 
         # Aplicar ordenamiento
         if sort_by == CasoEpidemiologicoSortBy.FECHA_DESC:
-            query = query.order_by(desc(CasoEpidemiologico.fecha_minima_caso))
+            query = query.order_by(desc(col(CasoEpidemiologico.fecha_minima_caso)))
         elif sort_by == CasoEpidemiologicoSortBy.FECHA_ASC:
-            query = query.order_by(CasoEpidemiologico.fecha_minima_caso)
+            query = query.order_by(col(CasoEpidemiologico.fecha_minima_caso))
         elif sort_by == CasoEpidemiologicoSortBy.ID_DESC:
-            query = query.order_by(desc(CasoEpidemiologico.id_snvs))
+            query = query.order_by(desc(col(CasoEpidemiologico.id_snvs)))
         elif sort_by == CasoEpidemiologicoSortBy.ID_ASC:
-            query = query.order_by(CasoEpidemiologico.id_snvs)
+            query = query.order_by(col(CasoEpidemiologico.id_snvs))
         elif sort_by == CasoEpidemiologicoSortBy.TIPO_ENO:
-            query = query.order_by(Enfermedad.nombre, desc(CasoEpidemiologico.fecha_minima_caso))
+            query = query.order_by(
+                col(Enfermedad.nombre), desc(col(CasoEpidemiologico.fecha_minima_caso))
+            )
 
         # Calcular estadísticas agregadas (usa COUNT DISTINCT para evitar duplicados de JOINs)
         # IMPORTANTE: Usa CasoEpidemiologicoQueryBuilder para consistencia con query principal
         stats_query = CasoEpidemiologicoQueryBuilder.apply_filters(
             select(
-                func.count(func.distinct(CasoEpidemiologico.id)).label("total"),
-                func.count(func.distinct(
-                    case(
-                        (CasoEpidemiologico.clasificacion_estrategia == TipoClasificacion.CONFIRMADOS, CasoEpidemiologico.id),
-                        else_=None,
+                func.count(func.distinct(col(CasoEpidemiologico.id))).label("total"),
+                func.count(
+                    func.distinct(
+                        case(
+                            (
+                                col(CasoEpidemiologico.clasificacion_estrategia)
+                                == TipoClasificacion.CONFIRMADOS,
+                                col(CasoEpidemiologico.id),
+                            ),
+                            else_=None,
+                        )
                     )
-                )).label("confirmados"),
-                func.count(func.distinct(
-                    case(
-                        (CasoEpidemiologico.clasificacion_estrategia == TipoClasificacion.SOSPECHOSOS, CasoEpidemiologico.id),
-                        else_=None,
+                ).label("confirmados"),
+                func.count(
+                    func.distinct(
+                        case(
+                            (
+                                col(CasoEpidemiologico.clasificacion_estrategia)
+                                == TipoClasificacion.SOSPECHOSOS,
+                                col(CasoEpidemiologico.id),
+                            ),
+                            else_=None,
+                        )
                     )
-                )).label("sospechosos"),
-                func.count(func.distinct(
-                    case(
-                        (CasoEpidemiologico.clasificacion_estrategia == TipoClasificacion.PROBABLES, CasoEpidemiologico.id),
-                        else_=None,
+                ).label("sospechosos"),
+                func.count(
+                    func.distinct(
+                        case(
+                            (
+                                col(CasoEpidemiologico.clasificacion_estrategia)
+                                == TipoClasificacion.PROBABLES,
+                                col(CasoEpidemiologico.id),
+                            ),
+                            else_=None,
+                        )
                     )
-                )).label("probables"),
-                func.count(func.distinct(
-                    case(
-                        (CasoEpidemiologico.clasificacion_estrategia == TipoClasificacion.DESCARTADOS, CasoEpidemiologico.id),
-                        else_=None,
+                ).label("probables"),
+                func.count(
+                    func.distinct(
+                        case(
+                            (
+                                col(CasoEpidemiologico.clasificacion_estrategia)
+                                == TipoClasificacion.DESCARTADOS,
+                                col(CasoEpidemiologico.id),
+                            ),
+                            else_=None,
+                        )
                     )
-                )).label("descartados"),
-                func.count(func.distinct(
-                    case(
-                        (CasoEpidemiologico.clasificacion_estrategia == TipoClasificacion.NEGATIVOS, CasoEpidemiologico.id),
-                        else_=None,
+                ).label("descartados"),
+                func.count(
+                    func.distinct(
+                        case(
+                            (
+                                col(CasoEpidemiologico.clasificacion_estrategia)
+                                == TipoClasificacion.NEGATIVOS,
+                                col(CasoEpidemiologico.id),
+                            ),
+                            else_=None,
+                        )
                     )
-                )).label("negativos"),
-                func.count(func.distinct(
-                    case(
-                        (CasoEpidemiologico.clasificacion_estrategia == TipoClasificacion.EN_ESTUDIO, CasoEpidemiologico.id),
-                        else_=None,
+                ).label("negativos"),
+                func.count(
+                    func.distinct(
+                        case(
+                            (
+                                col(CasoEpidemiologico.clasificacion_estrategia)
+                                == TipoClasificacion.EN_ESTUDIO,
+                                col(CasoEpidemiologico.id),
+                            ),
+                            else_=None,
+                        )
                     )
-                )).label("en_estudio"),
-                func.count(func.distinct(
-                    case(
-                        (CasoEpidemiologico.clasificacion_estrategia == TipoClasificacion.REQUIERE_REVISION, CasoEpidemiologico.id),
-                        else_=None,
+                ).label("en_estudio"),
+                func.count(
+                    func.distinct(
+                        case(
+                            (
+                                col(CasoEpidemiologico.clasificacion_estrategia)
+                                == TipoClasificacion.REQUIERE_REVISION,
+                                col(CasoEpidemiologico.id),
+                            ),
+                            else_=None,
+                        )
                     )
-                )).label("requiere_revision"),
-                func.count(func.distinct(
-                    case(
-                        (CasoEpidemiologico.clasificacion_estrategia.is_(None), CasoEpidemiologico.id),
-                        else_=None,
+                ).label("requiere_revision"),
+                func.count(
+                    func.distinct(
+                        case(
+                            (
+                                col(CasoEpidemiologico.clasificacion_estrategia).is_(
+                                    None
+                                ),
+                                col(CasoEpidemiologico.id),
+                            ),
+                            else_=None,
+                        )
                     )
-                )).label("sin_clasificar"),
+                ).label("sin_clasificar"),
             ).select_from(CasoEpidemiologico),
             tipo_eno_ids=tipo_eno_ids,
             grupo_eno_ids=grupo_eno_ids,
@@ -316,7 +380,9 @@ async def list_eventos(
             sin_clasificar=stats_row.sin_clasificar or 0,
         )
 
-        logger.info(f"📊 Stats calculadas: total={stats.total}, confirmados={stats.confirmados}, sospechosos={stats.sospechosos}, descartados={stats.descartados}")
+        logger.info(
+            f"📊 Stats calculadas: total={stats.total}, confirmados={stats.confirmados}, sospechosos={stats.sospechosos}, descartados={stats.descartados}"
+        )
 
         # Si hay filtro de grupos, necesitamos usar DISTINCT pero no podemos por las columnas JSON
         # Solución: primero obtener IDs únicos, luego cargar los eventos completos
@@ -324,7 +390,7 @@ async def list_eventos(
             # Subquery para obtener solo IDs distintos
             # IMPORTANTE: Usa CasoEpidemiologicoQueryBuilder para consistencia con query principal
             ids_subquery = CasoEpidemiologicoQueryBuilder.apply_filters(
-                select(CasoEpidemiologico.id.distinct()),
+                select(func.distinct(col(CasoEpidemiologico.id))),
                 tipo_eno_ids=tipo_eno_ids,
                 grupo_eno_ids=grupo_eno_ids,
                 fecha_desde=fecha_desde,
@@ -343,21 +409,29 @@ async def list_eventos(
             ids_result = await db.execute(ids_subquery.offset(offset).limit(page_size))
             evento_ids = [row[0] for row in ids_result.all()]
 
-            logger.info(f"📍 IDs únicos obtenidos para página {page}: {len(evento_ids)} (offset={offset}, limit={page_size})")
+            logger.info(
+                f"📍 IDs únicos obtenidos para página {page}: {len(evento_ids)} (offset={offset}, limit={page_size})"
+            )
 
             if evento_ids:
                 # Ahora cargar eventos completos con esos IDs
                 # Recrear query sin los joins que causan duplicados
                 query = (
                     select(CasoEpidemiologico)
-                    .where(CasoEpidemiologico.id.in_(evento_ids))
+                    .where(col(CasoEpidemiologico.id).in_(evento_ids))
                     .options(
                         selectinload(CasoEpidemiologico.enfermedad),
                         selectinload(CasoEpidemiologico.ciudadano),
-                        selectinload(CasoEpidemiologico.ciudadano).selectinload(Ciudadano.datos),
-                        selectinload(CasoEpidemiologico.animal).selectinload(Animal.localidad),
+                        selectinload(CasoEpidemiologico.ciudadano).selectinload(
+                            Ciudadano.datos
+                        ),
+                        selectinload(CasoEpidemiologico.animal).selectinload(
+                            Animal.localidad
+                        ),
                         # Domicilio del evento (no del ciudadano!)
-                        selectinload(CasoEpidemiologico.domicilio).selectinload(Domicilio.localidad),
+                        selectinload(CasoEpidemiologico.domicilio).selectinload(
+                            Domicilio.localidad
+                        ),
                         selectinload(CasoEpidemiologico.establecimiento_consulta),
                         selectinload(CasoEpidemiologico.establecimiento_notificacion),
                         selectinload(CasoEpidemiologico.establecimiento_carga),
@@ -376,16 +450,22 @@ async def list_eventos(
 
                 # Aplicar mismo ordenamiento
                 if sort_by == CasoEpidemiologicoSortBy.FECHA_DESC:
-                    query = query.order_by(desc(CasoEpidemiologico.fecha_minima_caso))
+                    query = query.order_by(
+                        desc(col(CasoEpidemiologico.fecha_minima_caso))
+                    )
                 elif sort_by == CasoEpidemiologicoSortBy.FECHA_ASC:
-                    query = query.order_by(CasoEpidemiologico.fecha_minima_caso)
+                    query = query.order_by(col(CasoEpidemiologico.fecha_minima_caso))
                 elif sort_by == CasoEpidemiologicoSortBy.ID_DESC:
-                    query = query.order_by(desc(CasoEpidemiologico.id_snvs))
+                    query = query.order_by(desc(col(CasoEpidemiologico.id_snvs)))
                 elif sort_by == CasoEpidemiologicoSortBy.ID_ASC:
-                    query = query.order_by(CasoEpidemiologico.id_snvs)
+                    query = query.order_by(col(CasoEpidemiologico.id_snvs))
                 elif sort_by == CasoEpidemiologicoSortBy.TIPO_ENO:
-                    query = query.join(Enfermedad, CasoEpidemiologico.id_enfermedad == Enfermedad.id).order_by(
-                        Enfermedad.nombre, desc(CasoEpidemiologico.fecha_minima_caso)
+                    query = query.join(
+                        Enfermedad,
+                        col(CasoEpidemiologico.id_enfermedad) == col(Enfermedad.id),
+                    ).order_by(
+                        col(Enfermedad.nombre),
+                        desc(col(CasoEpidemiologico.fecha_minima_caso)),
                     )
 
                 result = await db.execute(query)
@@ -403,6 +483,16 @@ async def list_eventos(
         # Preparar respuesta
         eventos_list = []
         for evento in eventos:
+            # Verificar campos requeridos (nunca deberían ser None por constraints DB)
+            if (
+                evento.id is None
+                or evento.id_snvs is None
+                or evento.id_enfermedad is None
+            ):
+                logger.warning(
+                    f"Evento con campos requeridos None: id={evento.id}, id_snvs={evento.id_snvs}, id_enfermedad={evento.id_enfermedad}"
+                )
+                continue
             # Determinar tipo de sujeto y datos
             tipo_sujeto = "desconocido"
             nombre_sujeto = None
@@ -425,7 +515,9 @@ async def list_eventos(
                 # Calcular edad a partir de fecha_nacimiento y fecha_apertura_caso
                 edad = None
                 if evento.fecha_nacimiento and evento.fecha_apertura_caso:
-                    edad = (evento.fecha_apertura_caso - evento.fecha_nacimiento).days // 365
+                    edad = (
+                        evento.fecha_apertura_caso - evento.fecha_nacimiento
+                    ).days // 365
                 sexo = evento.ciudadano.sexo_biologico
 
                 # Get location from evento domicilio (not ciudadano!)
@@ -451,7 +543,9 @@ async def list_eventos(
                     id=evento.id,
                     id_evento_caso=evento.id_snvs,
                     tipo_eno_id=evento.id_enfermedad,
-                    tipo_eno_nombre=evento.enfermedad.nombre if evento.enfermedad else None,
+                    tipo_eno_nombre=evento.enfermedad.nombre
+                    if evento.enfermedad
+                    else None,
                     id_domicilio=evento.id_domicilio,
                     fecha_minima_caso=evento.fecha_minima_caso,
                     fecha_inicio_sintomas=evento.fecha_inicio_sintomas,
@@ -504,7 +598,9 @@ async def list_eventos(
             },
         )
 
-        logger.info(f"✅ Encontrados {len(eventos_list)} eventos de {stats.total} total")
+        logger.info(
+            f"✅ Encontrados {len(eventos_list)} eventos de {stats.total} total"
+        )
         return SuccessResponse(data=response)
 
     except Exception as e:

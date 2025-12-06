@@ -12,9 +12,7 @@ from ..shared import BulkOperationResult, BulkProcessorBase
 class DiagnosticosCasoEpidemiologicosProcessor(BulkProcessorBase):
     """Handles diagnostic event operations."""
 
-    def upsert_diagnosticos_eventos(
-        self, df: pl.DataFrame
-    ) -> BulkOperationResult:
+    def upsert_diagnosticos_eventos(self, df: pl.DataFrame) -> BulkOperationResult:
         """Bulk upsert de diagnósticos de eventos - POLARS PURO."""
         start_time = self._get_current_timestamp()
 
@@ -25,9 +23,14 @@ class DiagnosticosCasoEpidemiologicosProcessor(BulkProcessorBase):
 
         filter_expr = pl.lit(False)
         if has_clasif_manual:
-            filter_expr = filter_expr | pl.col(Columns.CLASIFICACION_MANUAL.name).is_not_null()
+            filter_expr = (
+                filter_expr | pl.col(Columns.CLASIFICACION_MANUAL.name).is_not_null()
+            )
         if has_clasif_auto:
-            filter_expr = filter_expr | pl.col(Columns.CLASIFICACION_AUTOMATICA.name).is_not_null()
+            filter_expr = (
+                filter_expr
+                | pl.col(Columns.CLASIFICACION_AUTOMATICA.name).is_not_null()
+            )
         if has_diag_referido:
             filter_expr = filter_expr | pl.col(Columns.DIAG_REFERIDO.name).is_not_null()
 
@@ -112,10 +115,12 @@ class DiagnosticosCasoEpidemiologicosProcessor(BulkProcessorBase):
             select_exprs.append(pl.lit(None).alias("validacion"))
 
         # Timestamps
-        select_exprs.extend([
-            pl.lit(timestamp).alias("created_at"),
-            pl.lit(timestamp).alias("updated_at"),
-        ])
+        select_exprs.extend(
+            [
+                pl.lit(timestamp).alias("created_at"),
+                pl.lit(timestamp).alias("updated_at"),
+            ]
+        )
 
         # Aplicar selección
         diagnosticos_prepared = diagnosticos_df.select(select_exprs)
@@ -147,7 +152,15 @@ class DiagnosticosCasoEpidemiologicosProcessor(BulkProcessorBase):
         valid_records = diagnosticos_insert.to_dicts()
 
         if valid_records:
-            stmt = pg_insert(DiagnosticoCasoEpidemiologico.__table__).values(valid_records)
+            # Access table metadata using getattr for type safety
+            # __table__ exists at runtime on SQLModel table=True classes
+            table = getattr(DiagnosticoCasoEpidemiologico, "__table__", None)
+            if table is None:
+                raise RuntimeError(
+                    "DiagnosticoCasoEpidemiologico.__table__ not available"
+                )
+
+            stmt = pg_insert(table).values(valid_records)
             upsert_stmt = stmt.on_conflict_do_update(
                 index_elements=["id_caso"],
                 set_={

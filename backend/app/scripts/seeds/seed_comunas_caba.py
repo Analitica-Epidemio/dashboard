@@ -13,6 +13,7 @@ import sys
 from pathlib import Path
 
 from sqlalchemy import create_engine, text
+from sqlalchemy.engine import Connection
 
 # Agregar el directorio raíz al path
 sys.path.append(str(Path(__file__).parent.parent.parent))
@@ -40,7 +41,7 @@ COMUNAS_CABA = {
 }
 
 
-def actualizar_comunas_caba(conn):
+def actualizar_comunas_caba(conn: Connection) -> int:
     """
     Actualiza los nombres de las comunas de CABA con nombres descriptivos.
 
@@ -50,9 +51,9 @@ def actualizar_comunas_caba(conn):
     Returns:
         Número de comunas actualizadas
     """
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("📍 ACTUALIZANDO NOMBRES DE COMUNAS DE CABA")
-    print("="*70)
+    print("=" * 70)
 
     updated = 0
     not_found = 0
@@ -82,10 +83,9 @@ def actualizar_comunas_caba(conn):
             """)
 
             try:
-                conn.execute(update_stmt, {
-                    "id": id_localidad,
-                    "nombre": nombre_descriptivo
-                })
+                conn.execute(
+                    update_stmt, {"id": id_localidad, "nombre": nombre_descriptivo}
+                )
                 updated += 1
             except Exception as e:
                 print(f"     ❌ Error: {e}")
@@ -94,11 +94,11 @@ def actualizar_comunas_caba(conn):
             not_found += 1
 
     # Commit cambios
-    conn.commit()
+    # Commit changes handled by context manager
 
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("RESUMEN")
-    print("="*70)
+    print("=" * 70)
     print(f"  ✅ Comunas actualizadas: {updated}")
     if not_found > 0:
         print(f"  ⚠️  Comunas no encontradas: {not_found}")
@@ -107,14 +107,16 @@ def actualizar_comunas_caba(conn):
     return updated
 
 
-def main():
+def main() -> None:
     """Función principal"""
-    print("="*70)
+    print("=" * 70)
     print("SEED: ACTUALIZAR NOMBRES DE COMUNAS DE CABA")
-    print("="*70)
+    print("=" * 70)
 
     # Crear engine desde settings
-    database_url = settings.DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://")
+    database_url = settings.DATABASE_URL.replace(
+        "postgresql+asyncpg://", "postgresql://"
+    )
     engine = create_engine(database_url, echo=False)
 
     with engine.begin() as conn:

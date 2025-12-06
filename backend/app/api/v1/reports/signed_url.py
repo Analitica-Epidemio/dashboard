@@ -9,7 +9,7 @@ import json
 import logging
 import time
 from datetime import date
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, TypedDict
 
 from fastapi import Depends
 from pydantic import BaseModel, Field
@@ -20,6 +20,13 @@ from app.core.security.rbac import RequireAnyRole
 from app.domains.autenticacion.models import User
 
 logger = logging.getLogger(__name__)
+
+
+class SignedUrlResult(TypedDict):
+    """Resultado de generar una URL firmada"""
+
+    signed_url: str
+    expires_at: int
 
 
 class ReportFiltersRequest(BaseModel):
@@ -57,7 +64,7 @@ class VerifySignedUrlResponse(BaseModel):
     generated_at: int = Field(..., description="Timestamp de generación")
 
 
-def generate_signed_url(filters_data: Dict, expires_in: int = 3600) -> Dict[str, str]:
+def generate_signed_url(filters_data: Dict, expires_in: int = 3600) -> SignedUrlResult:
     """
     Genera una URL firmada para los filtros del reporte
 

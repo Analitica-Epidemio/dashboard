@@ -1,6 +1,7 @@
 """
 User and Authentication Models
 """
+
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
@@ -11,12 +12,14 @@ from sqlmodel import Field, SQLModel
 
 class UserRole(str, Enum):
     """User roles for authorization"""
+
     SUPERADMIN = "SUPERADMIN"
     EPIDEMIOLOGO = "EPIDEMIOLOGO"
 
 
 class UserStatus(str, Enum):
     """User account status"""
+
     ACTIVE = "ACTIVE"
     INACTIVE = "INACTIVE"
     SUSPENDED = "SUSPENDED"
@@ -24,6 +27,7 @@ class UserStatus(str, Enum):
 
 class User(SQLModel, table=True):
     """User model with modern security practices"""
+
     __tablename__ = "users"
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -41,32 +45,29 @@ class User(SQLModel, table=True):
     token_verificacion_email: Optional[str] = Field(default=None, max_length=255)
     token_reset_contrasena: Optional[str] = Field(default=None, max_length=255)
     expiracion_reset_contrasena: Optional[datetime] = Field(
-        default=None,
-        sa_column=Column(DateTime(timezone=True))
+        default=None, sa_column=Column(DateTime(timezone=True))
     )
 
     # Audit fields
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(DateTime(timezone=True))
+        sa_column=Column(DateTime(timezone=True)),
     )
     updated_at: Optional[datetime] = Field(
-        default=None,
-        sa_column=Column(DateTime(timezone=True))
+        default=None, sa_column=Column(DateTime(timezone=True))
     )
     ultimo_login: Optional[datetime] = Field(
-        default=None,
-        sa_column=Column(DateTime(timezone=True))
+        default=None, sa_column=Column(DateTime(timezone=True))
     )
     intentos_login: int = Field(default=0)
     bloqueado_hasta: Optional[datetime] = Field(
-        default=None,
-        sa_column=Column(DateTime(timezone=True))
+        default=None, sa_column=Column(DateTime(timezone=True))
     )
 
 
 class UserSession(SQLModel, table=True):
     """Track user sessions for security"""
+
     __tablename__ = "user_sessions"
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -81,12 +82,12 @@ class UserSession(SQLModel, table=True):
     # Session lifecycle
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(DateTime(timezone=True))
+        sa_column=Column(DateTime(timezone=True)),
     )
     expira_en: datetime = Field(sa_column=Column(DateTime(timezone=True)))
     ultima_actividad: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(DateTime(timezone=True))
+        sa_column=Column(DateTime(timezone=True)),
     )
     es_activa: bool = Field(default=True)
 
@@ -96,6 +97,7 @@ class UserSession(SQLModel, table=True):
 
 class UserLogin(SQLModel, table=True):
     """Audit log for login attempts"""
+
     __tablename__ = "user_logins"
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -111,7 +113,7 @@ class UserLogin(SQLModel, table=True):
     # Timing
     intentado_en: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(DateTime(timezone=True))
+        sa_column=Column(DateTime(timezone=True)),
     )
 
     # Relationships (disabled to avoid sync/async conflicts)

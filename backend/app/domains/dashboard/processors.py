@@ -2,6 +2,7 @@
 Procesadores Python para charts dinámicos
 Consulta datos reales de eventos desde la base de datos
 """
+
 import logging
 from datetime import date, datetime
 from typing import Any, Dict, List, Optional
@@ -10,16 +11,16 @@ import pandas as pd
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domains.vigilancia_nominal.models.agentes import ResultadoDeteccion
-from app.domains.dashboard.age_groups_config import (
-    generar_sql_case_when,
-    obtener_etiquetas_grupos_edad,
-    obtener_configuracion_grupos_edad,
-)
 from app.core.epidemiology import (
     calcular_semana_epidemiologica,
     obtener_fechas_semana_epidemiologica,
 )
+from app.domains.dashboard.age_groups_config import (
+    generar_sql_case_when,
+    obtener_configuracion_grupos_edad,
+    obtener_etiquetas_grupos_edad,
+)
+from app.domains.vigilancia_nominal.models.agentes import ResultadoDeteccion
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +40,9 @@ class ChartDataProcessor:
         except (ValueError, TypeError):
             return None
 
-    def _aplicar_filtros_comunes(self, query: str, filtros: Dict[str, Any], params: Dict[str, Any]) -> tuple[str, Dict[str, Any]]:
+    def _aplicar_filtros_comunes(
+        self, query: str, filtros: Dict[str, Any], params: Dict[str, Any]
+    ) -> tuple[str, Dict[str, Any]]:
         """
         Aplica filtros comunes a las queries incluyendo clasificación
 
@@ -73,7 +76,6 @@ class ChartDataProcessor:
             query += " AND clasificacion_estrategia = ANY(:clasificaciones)"
             params["clasificaciones"] = clasificaciones
 
-
         if filtros.get("fecha_desde"):
             query += " AND fecha_minima_caso >= :fecha_desde"
             params["fecha_desde"] = self._parsear_fecha(filtros["fecha_desde"])
@@ -84,7 +86,13 @@ class ChartDataProcessor:
 
         return query, params
 
-    def _agregar_filtro_clasificacion(self, query: str, filtros: Dict[str, Any], params: Dict[str, Any], table_alias: str = "") -> str:
+    def _agregar_filtro_clasificacion(
+        self,
+        query: str,
+        filtros: Dict[str, Any],
+        params: Dict[str, Any],
+        table_alias: str = "",
+    ) -> str:
         """Helper para agregar filtro de clasificación a cualquier query"""
         if filtros.get("clasificaciones"):
             clasificaciones = filtros["clasificaciones"]
@@ -92,13 +100,23 @@ class ChartDataProcessor:
                 clasificaciones = [clasificaciones]
 
             # Agregar alias de tabla si se proporciona
-            field = f"{table_alias}.clasificacion_estrategia" if table_alias else "clasificacion_estrategia"
+            field = (
+                f"{table_alias}.clasificacion_estrategia"
+                if table_alias
+                else "clasificacion_estrategia"
+            )
             query += f" AND {field} = ANY(:clasificaciones)"
             params["clasificaciones"] = clasificaciones
 
         return query
 
-    def _agregar_filtro_provincia(self, query: str, filtros: Dict[str, Any], params: Dict[str, Any], table_alias: str = "d") -> tuple[str, Dict[str, Any]]:
+    def _agregar_filtro_provincia(
+        self,
+        query: str,
+        filtros: Dict[str, Any],
+        params: Dict[str, Any],
+        table_alias: str = "d",
+    ) -> tuple[str, Dict[str, Any]]:
         """Helper para agregar filtro de provincia por código INDEC"""
         provincia_id = filtros.get("provincia_id")
 
@@ -127,26 +145,32 @@ class ChartDataProcessor:
         metadata = []
         for row in rows:
             semana = int(row[0])
-            año = int(row[1]) if len(row) > 1 and row[1] is not None else datetime.now().year
+            año = (
+                int(row[1])
+                if len(row) > 1 and row[1] is not None
+                else datetime.now().year
+            )
 
             try:
                 start_date, end_date = obtener_fechas_semana_epidemiologica(año, semana)
-                metadata.append({
-                    "year": año,
-                    "week": semana,
-                    "start_date": start_date.strftime("%Y-%m-%d"),
-                    "end_date": end_date.strftime("%Y-%m-%d")
-                })
+                metadata.append(
+                    {
+                        "year": año,
+                        "week": semana,
+                        "start_date": start_date.strftime("%Y-%m-%d"),
+                        "end_date": end_date.strftime("%Y-%m-%d"),
+                    }
+                )
             except Exception as e:
-                logger.warning(f"Error generando metadata para semana {semana}/{año}: {e}")
+                logger.warning(
+                    f"Error generando metadata para semana {semana}/{año}: {e}"
+                )
                 continue
 
         return metadata
 
     async def procesar_grafico(
-        self,
-        chart_config: Any,
-        filtros: Dict[str, Any]
+        self, chart_config: Any, filtros: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
         Procesa un chart según su función de procesamiento
@@ -158,8 +182,12 @@ class ChartDataProcessor:
         Returns:
             Dict con los datos procesados para el chart
         """
+        from typing import Awaitable, Callable
+
         # Mapear función de procesamiento
-        processor_map = {
+        processor_map: Dict[
+            str, Callable[[Dict[str, Any]], Awaitable[Dict[str, Any]]]
+        ] = {
             "curva_epidemiologica": self.procesar_curva_epidemiologica,
             "corredor_endemico": self.procesar_corredor_endemico,
             "piramide_poblacional": self.procesar_piramide_poblacional,
@@ -174,34 +202,37 @@ class ChartDataProcessor:
 
         processor_func = processor_map.get(chart_config.funcion_procesamiento)
         if not processor_func:
-            logger.error(f"Función de procesamiento no encontrada: {chart_config.funcion_procesamiento}")
+            logger.error(
+                f"Función de procesamiento no encontrada: {chart_config.funcion_procesamiento}"
+            )
             return {
                 "error": f"Función de procesamiento no encontrada: {chart_config.funcion_procesamiento}"
             }
 
         # Ejecutar procesador
         try:
-            logger.debug(f"Ejecutando procesador {chart_config.funcion_procesamiento} con filtros: {filtros}")
+            logger.debug(
+                f"Ejecutando procesador {chart_config.funcion_procesamiento} con filtros: {filtros}"
+            )
             result = await processor_func(filtros)
             logger.debug(f"Procesador {chart_config.funcion_procesamiento} completado")
             return result
         except Exception as e:
-            logger.error(f"Error en procesador {chart_config.funcion_procesamiento}: {str(e)}")
+            logger.error(
+                f"Error en procesador {chart_config.funcion_procesamiento}: {str(e)}"
+            )
             # Retornar estructura vacía en caso de error
             return {
                 "type": chart_config.tipo_visualizacion,
-                "data": {
-                    "labels": [],
-                    "datasets": []
-                },
-                "error": str(e)
+                "data": {"labels": [], "datasets": []},
+                "error": str(e),
             }
 
     async def procesar_curva_epidemiologica(
         self,
         filtros: Dict[str, Any],
         series_config: Optional[List[Dict[str, Any]]] = None,
-        agrupar_por: Optional[str] = None
+        agrupar_por: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Procesa curva epidemiológica con una o múltiples series.
@@ -228,7 +259,11 @@ class ChartDataProcessor:
             tipo_eno_ids = filtros.get("tipo_eno_ids", [])
             if tipo_eno_ids:
                 series_config = [
-                    {"tipo_eno_ids": tipo_eno_ids, "label": "Casos", "color": "rgb(75, 192, 192)"}
+                    {
+                        "tipo_eno_ids": tipo_eno_ids,
+                        "label": "Casos",
+                        "color": "rgb(75, 192, 192)",
+                    }
                 ]
             else:
                 series_config = []
@@ -237,7 +272,7 @@ class ChartDataProcessor:
             return {
                 "type": "line",
                 "data": {"labels": [], "datasets": [], "metadata": []},
-                "error": "No se configuraron series para el gráfico"
+                "error": "No se configuraron series para el gráfico",
             }
 
         # Determinar agrupación temporal
@@ -249,7 +284,9 @@ class ChartDataProcessor:
                 EXTRACT(MONTH FROM e.fecha_minima_caso)::int as periodo,
                 EXTRACT(YEAR FROM e.fecha_minima_caso)::int as año
             """
-            group_order = "periodo, año, e.id_enfermedad ORDER BY año, periodo, e.id_enfermedad"
+            group_order = (
+                "periodo, año, e.id_enfermedad ORDER BY año, periodo, e.id_enfermedad"
+            )
         elif agrupacion == "anio":
             select_periodo = """
                 EXTRACT(YEAR FROM e.fecha_minima_caso)::int as periodo,
@@ -261,7 +298,9 @@ class ChartDataProcessor:
                 e.fecha_minima_caso_semana_epi as periodo,
                 e.fecha_minima_caso_anio_epi as año
             """
-            group_order = "periodo, año, e.id_enfermedad ORDER BY año, periodo, e.id_enfermedad"
+            group_order = (
+                "periodo, año, e.id_enfermedad ORDER BY año, periodo, e.id_enfermedad"
+            )
 
         # Extraer TODOS los IDs de todas las series (aplanar arrays)
         all_tipo_eno_ids = []
@@ -275,7 +314,7 @@ class ChartDataProcessor:
             return {
                 "type": "line",
                 "data": {"labels": [], "datasets": [], "metadata": []},
-                "error": "No se encontraron IDs de eventos válidos"
+                "error": "No se encontraron IDs de eventos válidos",
             }
 
         # Query que agrupa por tipo_eno y período
@@ -314,16 +353,18 @@ class ChartDataProcessor:
         result = await self.db.execute(text(query), params)
         rows = result.fetchall()
 
-        logger.info(f"Curva epidemiológica ({agrupacion}) - {len(rows)} filas, {len(series_config)} series")
+        logger.info(
+            f"Curva epidemiológica ({agrupacion}) - {len(rows)} filas, {len(series_config)} series"
+        )
 
         if not rows:
             return {
                 "type": "line",
-                "data": {"labels": [], "datasets": [], "metadata": []}
+                "data": {"labels": [], "datasets": [], "metadata": []},
             }
 
         # Construir estructura de datos
-        periodos_set = set()
+        periodos_set: set[tuple[int, ...]] = set()
         datos_por_tipo = {}  # {tipo_eno_id: {(periodo, año): casos}}
 
         for row in rows:
@@ -331,43 +372,66 @@ class ChartDataProcessor:
             if agrupacion == "anio":
                 # Para año, el período y año son lo mismo
                 periodos_set.add((int(periodo),))
-            else:
-                periodos_set.add((int(periodo), int(año)))
-
-            if tipo_eno_id not in datos_por_tipo:
-                datos_por_tipo[tipo_eno_id] = {}
-
-            if agrupacion == "anio":
+                if tipo_eno_id not in datos_por_tipo:
+                    datos_por_tipo[tipo_eno_id] = {}
                 datos_por_tipo[tipo_eno_id][(int(periodo),)] = casos
             else:
+                periodos_set.add((int(periodo), int(año)))
+                if tipo_eno_id not in datos_por_tipo:
+                    datos_por_tipo[tipo_eno_id] = {}
                 datos_por_tipo[tipo_eno_id][(int(periodo), int(año))] = casos
 
         # Ordenar períodos cronológicamente y generar labels
+        metadata: List[Dict[str, Any]] = []
+
         if agrupacion == "anio":
             periodos_ordenados = sorted(periodos_set, key=lambda x: x[0])
             labels = [str(p[0]) for p in periodos_ordenados]
             metadata = [{"year": p[0]} for p in periodos_ordenados]
         elif agrupacion == "mes":
-            meses_nombres = ["Ene", "Feb", "Mar", "Abr", "May", "Jun",
-                          "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+            meses_nombres = [
+                "Ene",
+                "Feb",
+                "Mar",
+                "Abr",
+                "May",
+                "Jun",
+                "Jul",
+                "Ago",
+                "Sep",
+                "Oct",
+                "Nov",
+                "Dic",
+            ]
             periodos_ordenados = sorted(periodos_set, key=lambda x: (x[1], x[0]))
-            labels = [f"{meses_nombres[p[0]-1]} {p[1]}" for p in periodos_ordenados]
+            labels = [f"{meses_nombres[p[0] - 1]} {p[1]}" for p in periodos_ordenados]
             metadata = [{"month": p[0], "year": p[1]} for p in periodos_ordenados]
         else:  # semana
             periodos_ordenados = sorted(periodos_set, key=lambda x: (x[1], x[0]))
             labels = [f"SE {p[0]}/{p[1]}" for p in periodos_ordenados]
-            metadata = []
-            for periodo, año in periodos_ordenados:
-                try:
-                    start_date, end_date = obtener_fechas_semana_epidemiologica(año, periodo)
-                    metadata.append({
-                        "year": año,
-                        "week": periodo,
-                        "start_date": start_date.strftime("%Y-%m-%d"),
-                        "end_date": end_date.strftime("%Y-%m-%d")
-                    })
-                except Exception:
-                    continue
+            # metadata init var already done
+            for periodo_tuple in periodos_ordenados:
+                # Type guard implícito o ignore
+                if len(periodo_tuple) >= 2:
+                    p_semana, p_año = periodo_tuple[0], periodo_tuple[1]
+                    try:
+                        start_date, end_date = obtener_fechas_semana_epidemiologica(
+                            p_año, p_semana
+                        )
+                        metadata.append(
+                            {
+                                "year": p_año,
+                                "week": p_semana,
+                                "start_date": start_date.strftime("%Y-%m-%d")
+                                if start_date
+                                else "",
+                                "end_date": end_date.strftime("%Y-%m-%d")
+                                if end_date
+                                else "",
+                            }
+                        )
+                    except Exception:
+                        continue
 
         # Construir datasets para cada serie
         # NOTA: Ahora cada serie puede tener múltiples tipo_eno_ids que se SUMAN
@@ -386,28 +450,24 @@ class ChartDataProcessor:
                     total_periodo += datos_tipo.get(periodo, 0)
                 data.append(total_periodo)
 
-            datasets.append({
-                "label": label,
-                "data": data,
-                "borderColor": color,
-                "backgroundColor": color,
-                "tension": 0.1,
-                "fill": False
-            })
+            datasets.append(
+                {
+                    "label": label,
+                    "data": data,
+                    "borderColor": color,
+                    "backgroundColor": color,
+                    "tension": 0.1,
+                    "fill": False,
+                }
+            )
 
         return {
             "type": "line",
-            "data": {
-                "labels": labels,
-                "datasets": datasets,
-                "metadata": metadata
-            }
+            "data": {"labels": labels, "datasets": datasets, "metadata": metadata},
         }
 
     async def _procesar_curva_por_agente(
-        self,
-        filtros: Dict[str, Any],
-        series_config: List[Dict[str, Any]]
+        self, filtros: Dict[str, Any], series_config: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
         """
         Procesa curva epidemiológica agrupada por agentes etiológicos.
@@ -434,7 +494,7 @@ class ChartDataProcessor:
             return {
                 "type": "line",
                 "data": {"labels": [], "datasets": [], "metadata": []},
-                "error": "No se configuraron agentes para el gráfico"
+                "error": "No se configuraron agentes para el gráfico",
             }
 
         # Query que agrupa por agente y semana epidemiológica
@@ -451,7 +511,7 @@ class ChartDataProcessor:
           AND ea.resultado = :resultado_positivo
         """
 
-        params = {
+        params: Dict[str, Any] = {
             "agente_codigos": all_agente_codigos,
             "resultado_positivo": ResultadoDeteccion.POSITIVO.value,
         }
@@ -465,18 +525,24 @@ class ChartDataProcessor:
             query += " AND e.fecha_minima_caso <= :fecha_hasta"
             params["fecha_hasta"] = self._parsear_fecha(filtros["fecha_hasta"])
 
-        query += " GROUP BY semana, anio, agente_codigo ORDER BY anio, semana, agente_codigo"
+        query += (
+            " GROUP BY semana, anio, agente_codigo ORDER BY anio, semana, agente_codigo"
+        )
 
         result = await self.db.execute(text(query), params)
         rows = result.fetchall()
 
-        logger.info(f"Curva por agente - query params: codigos={all_agente_codigos}, fecha_desde={params.get('fecha_desde')}, fecha_hasta={params.get('fecha_hasta')}")
-        logger.info(f"Curva por agente - {len(rows)} filas, {len(all_agente_codigos)} agentes")
+        logger.info(
+            f"Curva por agente - query params: codigos={all_agente_codigos}, fecha_desde={params.get('fecha_desde')}, fecha_hasta={params.get('fecha_hasta')}"
+        )
+        logger.info(
+            f"Curva por agente - {len(rows)} filas, {len(all_agente_codigos)} agentes"
+        )
 
         if not rows:
             return {
                 "type": "line",
-                "data": {"labels": [], "datasets": [], "metadata": []}
+                "data": {"labels": [], "datasets": [], "metadata": []},
             }
 
         # Construir estructura de datos
@@ -499,13 +565,17 @@ class ChartDataProcessor:
         metadata = []
         for semana, anio in periodos_ordenados:
             try:
-                start_date, end_date = obtener_fechas_semana_epidemiologica(anio, semana)
-                metadata.append({
-                    "year": anio,
-                    "week": semana,
-                    "start_date": start_date.strftime("%Y-%m-%d"),
-                    "end_date": end_date.strftime("%Y-%m-%d")
-                })
+                start_date, end_date = obtener_fechas_semana_epidemiologica(
+                    anio, semana
+                )
+                metadata.append(
+                    {
+                        "year": anio,
+                        "week": semana,
+                        "start_date": start_date.strftime("%Y-%m-%d"),
+                        "end_date": end_date.strftime("%Y-%m-%d"),
+                    }
+                )
             except Exception:
                 continue
 
@@ -526,57 +596,62 @@ class ChartDataProcessor:
                     total_periodo += datos_agente.get(periodo, 0)
                 data.append(total_periodo)
 
-            datasets.append({
-                "label": label,
-                "data": data,
-                "borderColor": color,
-                "backgroundColor": color,
-                "tension": 0.1,
-                "fill": False
-            })
+            datasets.append(
+                {
+                    "label": label,
+                    "data": data,
+                    "borderColor": color,
+                    "backgroundColor": color,
+                    "tension": 0.1,
+                    "fill": False,
+                }
+            )
 
         return {
             "type": "line",
-            "data": {
-                "labels": labels,
-                "datasets": datasets,
-                "metadata": metadata
-            }
+            "data": {"labels": labels, "datasets": datasets, "metadata": metadata},
         }
 
-    async def procesar_corredor_endemico(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
+    async def procesar_corredor_endemico(
+        self, filtros: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Procesa datos para corredor endémico
         Calcula percentiles basados en datos históricos (últimos 5 años)
         Muestra solo las semanas del rango de fechas seleccionado
         """
 
-
         # Determinar rango de semanas a mostrar basado en filtros de fecha
-        fecha_desde = self._parsear_fecha(filtros.get("fecha_desde")) if filtros.get("fecha_desde") else None
-        fecha_hasta = self._parsear_fecha(filtros.get("fecha_hasta")) if filtros.get("fecha_hasta") else None
+        fecha_desde = (
+            self._parsear_fecha(filtros.get("fecha_desde"))
+            if filtros.get("fecha_desde")
+            else None
+        )
+        fecha_hasta = (
+            self._parsear_fecha(filtros.get("fecha_hasta"))
+            if filtros.get("fecha_hasta")
+            else None
+        )
 
         if not fecha_desde or not fecha_hasta:
             return {
                 "type": "area",
-                "data": {
-                    "labels": [],
-                    "datasets": [],
-                    "metadata": []
-                },
+                "data": {"labels": [], "datasets": [], "metadata": []},
                 "error": {
                     "code": "NO_DATE_RANGE",
                     "title": "Rango de fechas requerido",
                     "message": "Seleccione un período de tiempo para visualizar el corredor endémico.",
-                    "suggestion": "Configure las fechas desde y hasta en los filtros."
-                }
+                    "suggestion": "Configure las fechas desde y hasta en los filtros.",
+                },
             }
 
         # Calcular semanas epidemiológicas del rango
         semana_inicio, año_inicio = calcular_semana_epidemiologica(fecha_desde)
         semana_fin, año_fin = calcular_semana_epidemiologica(fecha_hasta)
 
-        logger.info(f"Corredor endémico - Rango: SE {semana_inicio}/{año_inicio} - SE {semana_fin}/{año_fin}")
+        logger.info(
+            f"Corredor endémico - Rango: SE {semana_inicio}/{año_inicio} - SE {semana_fin}/{año_fin}"
+        )
 
         # Query para obtener datos históricos (últimos 5 años antes del rango)
         query = """
@@ -591,10 +666,12 @@ class ChartDataProcessor:
 
         params = {
             "fecha_desde": fecha_desde,
-            "fecha_historica_inicio": date(fecha_desde.year - 5, 1, 1)  # 5 años atrás
+            "fecha_historica_inicio": date(fecha_desde.year - 5, 1, 1),  # 5 años atrás
         }
 
-        logger.info(f"Corredor endémico - DEBUG: fecha_desde={fecha_desde}, fecha_historica_inicio={params['fecha_historica_inicio']}")
+        logger.info(
+            f"Corredor endémico - DEBUG: fecha_desde={fecha_desde}, fecha_historica_inicio={params['fecha_historica_inicio']}"
+        )
 
         if filtros.get("grupo_id"):
             query += """
@@ -618,7 +695,9 @@ class ChartDataProcessor:
         result = await self.db.execute(text(query), params)
         rows = result.fetchall()
 
-        logger.info(f"Corredor endémico - DEBUG: Registros históricos encontrados: {len(rows)}")
+        logger.info(
+            f"Corredor endémico - DEBUG: Registros históricos encontrados: {len(rows)}"
+        )
         if rows:
             logger.info(f"Corredor endémico - DEBUG: Primeros 5 registros: {rows[:5]}")
 
@@ -628,11 +707,7 @@ class ChartDataProcessor:
             años_disponibles = sorted(list(set(row[1] for row in rows))) if rows else []
             return {
                 "type": "area",
-                "data": {
-                    "labels": [],
-                    "datasets": [],
-                    "metadata": []
-                },
+                "data": {"labels": [], "datasets": [], "metadata": []},
                 "error": {
                     "code": "INSUFFICIENT_HISTORICAL_DATA",
                     "title": "Sin datos históricos",
@@ -642,21 +717,21 @@ class ChartDataProcessor:
                         "historical_search_range": f"{params['fecha_historica_inicio'].strftime('%Y')} - {fecha_desde.year - 1}",
                         "records_found": len(rows) if rows else 0,
                         "records_required": 10,
-                        "years_found": años_disponibles
+                        "years_found": años_disponibles,
                     },
-                    "suggestion": f"Importe datos de al menos 3 años anteriores a {año_inicio} para habilitar este gráfico."
-                }
+                    "suggestion": f"Importe datos de al menos 3 años anteriores a {año_inicio} para habilitar este gráfico.",
+                },
             }
 
         # Procesar datos para calcular percentiles
-        df = pd.DataFrame(rows, columns=['semana', 'año', 'casos'])
+        df = pd.DataFrame(rows, columns=pd.Index(["semana", "año", "casos"]))
 
         logger.info(f"Corredor endémico - DEBUG: DataFrame shape: {df.shape}")
         logger.info(f"Corredor endémico - DEBUG: DataFrame head:\n{df.head(10)}")
 
         # Validar que tenemos al menos 3 años diferentes de datos
-        años_unicos = df['año'].nunique()
-        años_lista = sorted(df['año'].unique().tolist())
+        años_unicos = df["año"].nunique()
+        años_lista = sorted(df["año"].unique().tolist())
         logger.info(f"Corredor endémico - Años únicos en histórico: {años_unicos}")
         logger.info(f"Corredor endémico - DEBUG: Lista de años: {años_lista}")
 
@@ -664,11 +739,7 @@ class ChartDataProcessor:
             año_texto = "año" if años_unicos == 1 else "años"
             return {
                 "type": "area",
-                "data": {
-                    "labels": [],
-                    "datasets": [],
-                    "metadata": []
-                },
+                "data": {"labels": [], "datasets": [], "metadata": []},
                 "error": {
                     "code": "INSUFFICIENT_HISTORICAL_YEARS",
                     "title": "Datos históricos insuficientes",
@@ -678,15 +749,17 @@ class ChartDataProcessor:
                         "historical_search_range": f"{params['fecha_historica_inicio'].strftime('%Y')} - {fecha_desde.year - 1}",
                         "years_found": años_lista,
                         "years_count": años_unicos,
-                        "years_required": 3
+                        "years_required": 3,
                     },
-                    "suggestion": f"Importe datos de al menos {3 - años_unicos} año{'s' if (3 - años_unicos) > 1 else ''} adicional{'es' if (3 - años_unicos) > 1 else ''} anterior{'es' if (3 - años_unicos) > 1 else ''} a {años_lista[0]}."
-                }
+                    "suggestion": f"Importe datos de al menos {3 - años_unicos} año{'s' if (3 - años_unicos) > 1 else ''} adicional{'es' if (3 - años_unicos) > 1 else ''} anterior{'es' if (3 - años_unicos) > 1 else ''} a {años_lista[0]}.",
+                },
             }
 
         # Generar lista de semanas del rango seleccionado
         weeks_in_range = []
-        if año_inicio == año_fin:
+        if semana_inicio is None or semana_fin is None:
+            weeks_in_range = []
+        elif año_inicio == año_fin:
             # Mismo año
             weeks_in_range = list(range(semana_inicio, semana_fin + 1))
         else:
@@ -694,18 +767,26 @@ class ChartDataProcessor:
             # TODO: Manejar rangos multi-año correctamente
             weeks_in_range = list(range(1, 53))
 
-        logger.info(f"Corredor endémico - Semanas a mostrar: {len(weeks_in_range)} semanas")
+        logger.info(
+            f"Corredor endémico - Semanas a mostrar: {len(weeks_in_range)} semanas"
+        )
 
         # Calcular percentiles solo para las semanas en el rango
-        percentiles = df.groupby('semana')['casos'].agg([
-            ('minimo', lambda x: x.quantile(0.25)),
-            ('mediana', lambda x: x.quantile(0.5)),
-            ('maximo', lambda x: x.quantile(0.75))
-        ]).reset_index()
+        percentiles = (
+            df.groupby("semana")["casos"]
+            .agg(
+                [
+                    ("minimo", lambda x: x.quantile(0.25)),
+                    ("mediana", lambda x: x.quantile(0.5)),
+                    ("maximo", lambda x: x.quantile(0.75)),
+                ]
+            )
+            .reset_index()
+        )
 
         # Filtrar percentiles para solo las semanas del rango
-        weeks_df = pd.DataFrame({'semana': weeks_in_range})
-        percentiles = weeks_df.merge(percentiles, on='semana', how='left').fillna(0)
+        weeks_df = pd.DataFrame({"semana": weeks_in_range})
+        percentiles = weeks_df.merge(percentiles, on="semana", how="left").fillna(0)
 
         # Obtener casos actuales para el período seleccionado
         current_query = """
@@ -717,10 +798,7 @@ class ChartDataProcessor:
             AND fecha_minima_caso <= :fecha_hasta
         """
 
-        current_params = {
-            "fecha_desde": fecha_desde,
-            "fecha_hasta": fecha_hasta
-        }
+        current_params = {"fecha_desde": fecha_desde, "fecha_hasta": fecha_hasta}
 
         if filtros.get("grupo_id"):
             current_query += """
@@ -737,37 +815,54 @@ class ChartDataProcessor:
                 current_params["tipo_eno_ids"] = tipo_eno_ids
 
         # Filtro por clasificación estrategia
-        current_query = self._agregar_filtro_clasificacion(current_query, filtros, current_params)
+        current_query = self._agregar_filtro_clasificacion(
+            current_query, filtros, current_params
+        )
 
         current_query += " GROUP BY semana ORDER BY semana"
 
         current_result = await self.db.execute(text(current_query), current_params)
         current_rows = current_result.fetchall()
 
-        current_df = pd.DataFrame(current_rows, columns=['semana', 'casos']) if current_rows else pd.DataFrame()
+        current_df = (
+            pd.DataFrame(current_rows, columns=pd.Index(["semana", "casos"]))
+            if current_rows
+            else pd.DataFrame()
+        )
 
         # Merge casos actuales con las semanas del rango
         if not current_df.empty:
-            current_data = weeks_df.merge(current_df, on='semana', how='left').fillna(0)
-            casos_actuales = current_data['casos'].tolist()
+            current_data = weeks_df.merge(current_df, on="semana", how="left").fillna(0)
+            casos_actuales = current_data["casos"].tolist()
         else:
             casos_actuales = [0] * len(weeks_in_range)
 
         # Generar metadata para las semanas del rango
         metadata = []
         for week in weeks_in_range:
+            # Initialize year_for_week before try block
+            year_for_week = (
+                int(año_inicio if año_inicio == año_fin else año_fin)
+                if año_inicio is not None and año_fin is not None
+                else datetime.now().year
+            )
             try:
                 # Usar año correspondiente (año_inicio para simplificar, o año_fin si es multi-año)
-                year_for_week = año_inicio if año_inicio == año_fin else año_fin
-                start_date, end_date = obtener_fechas_semana_epidemiologica(year_for_week, week)
-                metadata.append({
-                    "year": year_for_week,
-                    "week": week,
-                    "start_date": start_date.strftime("%Y-%m-%d"),
-                    "end_date": end_date.strftime("%Y-%m-%d")
-                })
+                start_date, end_date = obtener_fechas_semana_epidemiologica(
+                    year_for_week, int(week)
+                )
+                metadata.append(
+                    {
+                        "year": year_for_week,
+                        "week": week,
+                        "start_date": start_date.strftime("%Y-%m-%d"),
+                        "end_date": end_date.strftime("%Y-%m-%d"),
+                    }
+                )
             except Exception as e:
-                logger.warning(f"Error generando metadata para semana {week}/{year_for_week}: {e}")
+                logger.warning(
+                    f"Error generando metadata para semana {week}/{year_for_week}: {e}"
+                )
                 continue
 
         # Generar labels
@@ -781,17 +876,17 @@ class ChartDataProcessor:
                 "datasets": [
                     {
                         "label": "Máximo (P75)",
-                        "data": percentiles['maximo'].tolist(),
+                        "data": percentiles["maximo"].tolist(),
                         "color": "rgba(255, 0, 0, 0.8)",
                     },
                     {
                         "label": "Mediana (P50)",
-                        "data": percentiles['mediana'].tolist(),
+                        "data": percentiles["mediana"].tolist(),
                         "color": "rgba(255, 165, 0, 0.8)",
                     },
                     {
                         "label": "Mínimo (P25)",
-                        "data": percentiles['minimo'].tolist(),
+                        "data": percentiles["minimo"].tolist(),
                         "color": "rgba(0, 255, 0, 0.8)",
                     },
                     {
@@ -799,13 +894,15 @@ class ChartDataProcessor:
                         "data": casos_actuales,
                         "color": "rgba(59, 130, 246, 1)",  # Blue-500 sólido
                         "type": "line",
-                    }
+                    },
                 ],
-                "metadata": metadata
-            }
+                "metadata": metadata,
+            },
         }
 
-    async def procesar_piramide_poblacional(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
+    async def procesar_piramide_poblacional(
+        self, filtros: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Procesa datos para pirámide poblacional - Solo Chubut
         Usa configuración flexible de grupos etarios desde age_groups_config.py
@@ -873,10 +970,14 @@ class ChartDataProcessor:
         result = await self.db.execute(text(query), params)
         rows = result.fetchall()
 
-        logger.info(f"🔍 Pirámide poblacional ({age_group_config_name}) - Filas encontradas: {len(rows)}")
+        logger.info(
+            f"🔍 Pirámide poblacional ({age_group_config_name}) - Filas encontradas: {len(rows)}"
+        )
         if rows and len(rows) > 0:
             logger.info(f"📊 Pirámide poblacional - Primeras 5 filas: {rows[:5]}")
-            logger.info(f"👥 Pirámide poblacional - Valores de sexo encontrados: {set([row[1] for row in rows])}")
+            logger.info(
+                f"👥 Pirámide poblacional - Valores de sexo encontrados: {set([row[1] for row in rows])}"
+            )
 
         # Procesar para formato de pirámide usando los labels de la configuración
         male_data = {g: 0 for g in age_group_labels}
@@ -890,10 +991,10 @@ class ChartDataProcessor:
                 continue
 
             # Solo procesar datos con sexo especificado
-            if sexo == 'MASCULINO':
+            if sexo == "MASCULINO":
                 if grupo_edad in male_data:
                     male_data[grupo_edad] = casos
-            elif sexo == 'FEMENINO':
+            elif sexo == "FEMENINO":
                 if grupo_edad in female_data:
                     female_data[grupo_edad] = casos
             # Ignorar casos con sexo NO_ESPECIFICADO - no crear datos falsos
@@ -906,16 +1007,20 @@ class ChartDataProcessor:
             female_count = female_data[age_group]
 
             # Agregar entrada para masculino y femenino
-            pyramid_data.append({
-                "age_group": age_group,
-                "male": male_count,
-                "female": female_count,
-            })
+            pyramid_data.append(
+                {
+                    "age_group": age_group,
+                    "male": male_count,
+                    "female": female_count,
+                }
+            )
 
         total_male = sum(male_data.values())
         total_female = sum(female_data.values())
 
-        logger.info(f"✅ Pirámide poblacional - Total M: {total_male}, F: {total_female}")
+        logger.info(
+            f"✅ Pirámide poblacional - Total M: {total_male}, F: {total_female}"
+        )
 
         return {
             "type": "d3_pyramid",
@@ -926,7 +1031,7 @@ class ChartDataProcessor:
                 "total_male": total_male,
                 "total_female": total_female,
                 "total_casos": total_male + total_female,
-            }
+            },
         }
 
     async def procesar_mapa_geografico(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
@@ -997,34 +1102,39 @@ class ChartDataProcessor:
         rows = result.fetchall()
 
         # Crear mapa de casos por departamento
-        casos_por_departamento = {row.codigo_indec: row.casos for row in rows if row.codigo_indec}
+        casos_por_departamento = {
+            row.codigo_indec: row.casos for row in rows if row.codigo_indec
+        }
 
         # Construir datos para todos los departamentos
         departamentos_data = []
         for codigo_indec in DEPARTAMENTOS_CHUBUT.keys():
             casos = casos_por_departamento.get(codigo_indec, 0)
             poblacion = POBLACION_DEPARTAMENTOS.get(codigo_indec, 0)
-            tasa_incidencia = round((casos / poblacion) * 100000, 2) if poblacion > 0 else 0.0
+            tasa_incidencia = (
+                round((casos / poblacion) * 100000, 2) if poblacion > 0 else 0.0
+            )
 
-            departamentos_data.append({
-                "codigo_indec": codigo_indec,
-                "nombre": DEPARTAMENTOS_CHUBUT[codigo_indec],
-                "zona_ugd": get_zona_ugd(codigo_indec),
-                "poblacion": poblacion,
-                "casos": casos,
-                "tasa_incidencia": tasa_incidencia
-            })
+            departamentos_data.append(
+                {
+                    "codigo_indec": codigo_indec,
+                    "nombre": DEPARTAMENTOS_CHUBUT[codigo_indec],
+                    "zona_ugd": get_zona_ugd(codigo_indec),
+                    "poblacion": poblacion,
+                    "casos": casos,
+                    "tasa_incidencia": tasa_incidencia,
+                }
+            )
 
         total_casos = sum(casos_por_departamento.values())
-        logger.info(f"Mapa geográfico - Departamentos con casos: {len(casos_por_departamento)}")
+        logger.info(
+            f"Mapa geográfico - Departamentos con casos: {len(casos_por_departamento)}"
+        )
         logger.info(f"📊 Mapa geográfico - TOTAL CASOS: {total_casos}")
 
         return {
             "type": "mapa",
-            "data": {
-                "departamentos": departamentos_data,
-                "total_casos": total_casos
-            }
+            "data": {"departamentos": departamentos_data, "total_casos": total_casos},
         }
 
     async def procesar_estacionalidad(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
@@ -1083,8 +1193,18 @@ class ChartDataProcessor:
 
         # Nombres de meses en español
         meses_nombres = [
-            "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+            "Enero",
+            "Febrero",
+            "Marzo",
+            "Abril",
+            "Mayo",
+            "Junio",
+            "Julio",
+            "Agosto",
+            "Septiembre",
+            "Octubre",
+            "Noviembre",
+            "Diciembre",
         ]
 
         # Crear diccionario con todos los meses (inicializar en 0)
@@ -1100,11 +1220,13 @@ class ChartDataProcessor:
         return {
             "data": {
                 "labels": meses_nombres,
-                "datasets": [{
-                    "label": "Casos",
-                    "data": [int(casos_por_mes[i]) for i in range(1, 13)],
-                    "backgroundColor": "rgba(54, 162, 235, 0.5)"
-                }]
+                "datasets": [
+                    {
+                        "label": "Casos",
+                        "data": [int(casos_por_mes[i]) for i in range(1, 13)],
+                        "backgroundColor": "rgba(54, 162, 235, 0.5)",
+                    }
+                ],
             }
         }
 
@@ -1112,7 +1234,7 @@ class ChartDataProcessor:
         self,
         filtros: Dict[str, Any],
         series_config: Optional[List[Dict[str, Any]]] = None,
-        agrupar_por: Optional[str] = None
+        agrupar_por: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Procesa datos para casos por grupos de edad con soporte para múltiples series.
@@ -1207,18 +1329,18 @@ class ChartDataProcessor:
         return {
             "data": {
                 "labels": labels,
-                "datasets": [{
-                    "label": "Casos",
-                    "data": data_values,
-                    "backgroundColor": "rgba(153, 102, 255, 0.5)"
-                }]
+                "datasets": [
+                    {
+                        "label": "Casos",
+                        "data": data_values,
+                        "backgroundColor": "rgba(153, 102, 255, 0.5)",
+                    }
+                ],
             }
         }
 
     async def _procesar_casos_edad_por_evento(
-        self,
-        filtros: Dict[str, Any],
-        series_config: List[Dict[str, Any]]
+        self, filtros: Dict[str, Any], series_config: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
         """
         Procesa distribución por edad agrupada por múltiples eventos (tipo_eno).
@@ -1242,7 +1364,7 @@ class ChartDataProcessor:
         if not all_tipo_eno_ids:
             return {
                 "data": {"labels": [], "datasets": []},
-                "error": "No se configuraron eventos para el gráfico"
+                "error": "No se configuraron eventos para el gráfico",
             }
 
         # Query agrupada por tipo_eno y grupo etario
@@ -1269,7 +1391,7 @@ class ChartDataProcessor:
           AND e.id_enfermedad = ANY(:tipo_eno_ids)
         """
 
-        params = {"tipo_eno_ids": all_tipo_eno_ids}
+        params: Dict[str, Any] = {"tipo_eno_ids": all_tipo_eno_ids}
 
         if filtros.get("fecha_desde"):
             query += " AND e.fecha_minima_caso >= :fecha_desde"
@@ -1284,10 +1406,24 @@ class ChartDataProcessor:
         result = await self.db.execute(text(query), params)
         rows = result.fetchall()
 
-        logger.info(f"Casos por edad por evento - {len(rows)} filas, {len(all_tipo_eno_ids)} eventos")
+        logger.info(
+            f"Casos por edad por evento - {len(rows)} filas, {len(all_tipo_eno_ids)} eventos"
+        )
 
         # Grupos etarios ordenados
-        grupos_etarios = ['< 1 año', '1-4', '5-9', '10-14', '15-19', '20-29', '30-39', '40-49', '50-59', '60-69', '70+']
+        grupos_etarios = [
+            "< 1 año",
+            "1-4",
+            "5-9",
+            "10-14",
+            "15-19",
+            "20-29",
+            "30-39",
+            "40-49",
+            "50-59",
+            "60-69",
+            "70+",
+        ]
 
         # Organizar datos por tipo_eno y grupo etario
         datos_por_tipo = {}
@@ -1314,26 +1450,23 @@ class ChartDataProcessor:
                     total_grupo += datos_tipo.get(grupo, 0)
                 data.append(total_grupo)
 
-            datasets.append({
-                "label": label,
-                "data": data,
-                "backgroundColor": color,
-                "color": color,  # También agregamos color para compatibilidad
-            })
+            datasets.append(
+                {
+                    "label": label,
+                    "data": data,
+                    "backgroundColor": color,
+                    "color": color,  # También agregamos color para compatibilidad
+                }
+            )
 
-        logger.info(f"_procesar_casos_edad_por_evento: {len(datasets)} series - {[(d['label'], d['color']) for d in datasets]}")
+        logger.info(
+            f"_procesar_casos_edad_por_evento: {len(datasets)} series - {[(d['label'], d['color']) for d in datasets]}"
+        )
 
-        return {
-            "data": {
-                "labels": grupos_etarios,
-                "datasets": datasets
-            }
-        }
+        return {"data": {"labels": grupos_etarios, "datasets": datasets}}
 
     async def _procesar_casos_edad_por_agente(
-        self,
-        filtros: Dict[str, Any],
-        series_config: List[Dict[str, Any]]
+        self, filtros: Dict[str, Any], series_config: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
         """
         Procesa distribución por edad agrupada por agentes etiológicos.
@@ -1357,7 +1490,7 @@ class ChartDataProcessor:
         if not all_agente_codigos:
             return {
                 "data": {"labels": [], "datasets": []},
-                "error": "No se configuraron agentes para el gráfico"
+                "error": "No se configuraron agentes para el gráfico",
             }
 
         # Query agrupada por agente y grupo etario
@@ -1382,12 +1515,11 @@ class ChartDataProcessor:
         JOIN caso_agente ea ON e.id = ea.id_caso
         JOIN agente_etiologico ae ON ea.id_agente = ae.id
         WHERE e.fecha_nacimiento IS NOT NULL
-          AND e.fecha_minima_caso IS NOT NULL
           AND ae.slug = ANY(:agente_codigos)
           AND ea.resultado = :resultado_positivo
         """
 
-        params = {
+        params: Dict[str, Any] = {
             "agente_codigos": all_agente_codigos,
             "resultado_positivo": ResultadoDeteccion.POSITIVO.value,
         }
@@ -1405,10 +1537,24 @@ class ChartDataProcessor:
         result = await self.db.execute(text(query), params)
         rows = result.fetchall()
 
-        logger.info(f"Casos por edad por agente - {len(rows)} filas, {len(all_agente_codigos)} agentes")
+        logger.info(
+            f"Casos por edad por agente - {len(rows)} filas, {len(all_agente_codigos)} agentes"
+        )
 
         # Grupos etarios ordenados
-        grupos_etarios = ['< 1 año', '1-4', '5-9', '10-14', '15-19', '20-29', '30-39', '40-49', '50-59', '60-69', '70+']
+        grupos_etarios = [
+            "< 1 año",
+            "1-4",
+            "5-9",
+            "10-14",
+            "15-19",
+            "20-29",
+            "30-39",
+            "40-49",
+            "50-59",
+            "60-69",
+            "70+",
+        ]
 
         # Organizar datos por agente y grupo etario
         datos_por_agente = {}
@@ -1435,20 +1581,19 @@ class ChartDataProcessor:
                     total_grupo += datos_agente.get(grupo, 0)
                 data.append(total_grupo)
 
-            datasets.append({
-                "label": label,
-                "data": data,
-                "backgroundColor": color,
-            })
+            datasets.append(
+                {
+                    "label": label,
+                    "data": data,
+                    "backgroundColor": color,
+                }
+            )
 
-        return {
-            "data": {
-                "labels": grupos_etarios,
-                "datasets": datasets
-            }
-        }
+        return {"data": {"labels": grupos_etarios, "datasets": datasets}}
 
-    async def procesar_intento_suicidio(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
+    async def procesar_intento_suicidio(
+        self, filtros: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Procesa datos específicos para intentos de suicidio
         Similar al sistema Chubut pero con datos reales
@@ -1492,12 +1637,8 @@ class ChartDataProcessor:
                 "type": "bar",
                 "data": {
                     "labels": [],
-                    "datasets": [{
-                        "label": "Casos",
-                        "data": [],
-                        "backgroundColor": []
-                    }]
-                }
+                    "datasets": [{"label": "Casos", "data": [], "backgroundColor": []}],
+                },
             }
 
         # TODO: Implementar categorización específica cuando tengamos campos de método
@@ -1505,12 +1646,14 @@ class ChartDataProcessor:
             "type": "bar",
             "data": {
                 "labels": ["Total registrado"],
-                "datasets": [{
-                    "label": "Casos",
-                    "data": [rows[0][1] if rows else 0],
-                    "backgroundColor": ["rgba(255, 99, 132, 0.5)"]
-                }]
-            }
+                "datasets": [
+                    {
+                        "label": "Casos",
+                        "data": [rows[0][1] if rows else 0],
+                        "backgroundColor": ["rgba(255, 99, 132, 0.5)"],
+                    }
+                ],
+            },
         }
 
     async def procesar_rabia_animal(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
@@ -1556,29 +1699,33 @@ class ChartDataProcessor:
                 "type": "bar",
                 "data": {
                     "labels": [],
-                    "datasets": [{
-                        "label": "Casos por especie",
-                        "data": [],
-                        "backgroundColor": []
-                    }]
-                }
+                    "datasets": [
+                        {
+                            "label": "Casos por especie",
+                            "data": [],
+                            "backgroundColor": [],
+                        }
+                    ],
+                },
             }
 
         return {
             "type": "bar",
             "data": {
                 "labels": [row[0] for row in rows],
-                "datasets": [{
-                    "label": "Casos por especie",
-                    "data": [row[1] for row in rows],
-                    "backgroundColor": [
-                        "rgba(255, 159, 64, 0.5)",
-                        "rgba(153, 102, 255, 0.5)",
-                        "rgba(75, 192, 192, 0.5)",
-                        "rgba(255, 99, 132, 0.5)"
-                    ][:len(rows)]
-                }]
-            }
+                "datasets": [
+                    {
+                        "label": "Casos por especie",
+                        "data": [row[1] for row in rows],
+                        "backgroundColor": [
+                            "rgba(255, 159, 64, 0.5)",
+                            "rgba(153, 102, 255, 0.5)",
+                            "rgba(75, 192, 192, 0.5)",
+                            "rgba(255, 99, 132, 0.5)",
+                        ][: len(rows)],
+                    }
+                ],
+            },
         }
 
     async def procesar_proporcion_ira(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
@@ -1639,11 +1786,10 @@ class ChartDataProcessor:
                 "type": "pie",
                 "data": {
                     "labels": ["Sin datos"],
-                    "datasets": [{
-                        "data": [1],
-                        "backgroundColor": ["rgba(200, 200, 200, 0.5)"]
-                    }]
-                }
+                    "datasets": [
+                        {"data": [1], "backgroundColor": ["rgba(200, 200, 200, 0.5)"]}
+                    ],
+                },
             }
 
         # Calcular total para proporciones
@@ -1653,16 +1799,18 @@ class ChartDataProcessor:
             "type": "pie",
             "data": {
                 "labels": [row[0] for row in rows],
-                "datasets": [{
-                    "data": [row[1] for row in rows],
-                    "backgroundColor": [
-                        "rgba(54, 162, 235, 0.7)",   # IRA - Azul
-                        "rgba(255, 99, 132, 0.7)",   # IRAG - Rojo
-                        "rgba(255, 206, 86, 0.7)",   # Neumonía - Amarillo
-                        "rgba(75, 192, 192, 0.7)",   # Bronquiolitis - Verde
-                        "rgba(153, 102, 255, 0.7)",  # Otras - Púrpura
-                    ][:len(rows)]
-                }]
+                "datasets": [
+                    {
+                        "data": [row[1] for row in rows],
+                        "backgroundColor": [
+                            "rgba(54, 162, 235, 0.7)",  # IRA - Azul
+                            "rgba(255, 99, 132, 0.7)",  # IRAG - Rojo
+                            "rgba(255, 206, 86, 0.7)",  # Neumonía - Amarillo
+                            "rgba(75, 192, 192, 0.7)",  # Bronquiolitis - Verde
+                            "rgba(153, 102, 255, 0.7)",  # Otras - Púrpura
+                        ][: len(rows)],
+                    }
+                ],
             },
             "metadata": {
                 "total_casos": total_casos,
@@ -1670,14 +1818,18 @@ class ChartDataProcessor:
                     {
                         "tipo": row[0],
                         "casos": row[1],
-                        "porcentaje": round((row[1] / total_casos) * 100, 2) if total_casos > 0 else 0
+                        "porcentaje": round((row[1] / total_casos) * 100, 2)
+                        if total_casos > 0
+                        else 0,
                     }
                     for row in rows
-                ]
-            }
+                ],
+            },
         }
 
-    async def procesar_distribucion_clasificacion(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
+    async def procesar_distribucion_clasificacion(
+        self, filtros: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Procesa datos para distribución por clasificación estratégica - Solo Chubut
         Muestra casos por tipo de clasificación (CONFIRMADOS, PROBABLES, SOSPECHOSOS, etc.)
@@ -1713,7 +1865,9 @@ class ChartDataProcessor:
                 params["tipo_eno_ids"] = tipo_eno_ids
 
         # Filtro por clasificaciones (usar helper consistente)
-        query = self._agregar_filtro_clasificacion(query, filtros, params, table_alias="e")
+        query = self._agregar_filtro_clasificacion(
+            query, filtros, params, table_alias="e"
+        )
 
         # Filtros de fecha
         if filtros.get("fecha_desde"):
@@ -1735,17 +1889,17 @@ class ChartDataProcessor:
 
         # Mapeo de colores por clasificación
         color_map = {
-            "CONFIRMADOS": "rgba(76, 175, 80, 0.7)",      # Verde
-            "PROBABLES": "rgba(255, 193, 7, 0.7)",        # Amarillo
-            "SOSPECHOSOS": "rgba(255, 152, 0, 0.7)",      # Naranja
-            "EN_ESTUDIO": "rgba(33, 150, 243, 0.7)",      # Azul
-            "NEGATIVOS": "rgba(158, 158, 158, 0.7)",      # Gris
-            "DESCARTADOS": "rgba(189, 189, 189, 0.7)",    # Gris claro
-            "NOTIFICADOS": "rgba(3, 169, 244, 0.7)",      # Celeste
-            "CON_RESULTADO_MORTAL": "rgba(244, 67, 54, 0.7)",   # Rojo oscuro
+            "CONFIRMADOS": "rgba(76, 175, 80, 0.7)",  # Verde
+            "PROBABLES": "rgba(255, 193, 7, 0.7)",  # Amarillo
+            "SOSPECHOSOS": "rgba(255, 152, 0, 0.7)",  # Naranja
+            "EN_ESTUDIO": "rgba(33, 150, 243, 0.7)",  # Azul
+            "NEGATIVOS": "rgba(158, 158, 158, 0.7)",  # Gris
+            "DESCARTADOS": "rgba(189, 189, 189, 0.7)",  # Gris claro
+            "NOTIFICADOS": "rgba(3, 169, 244, 0.7)",  # Celeste
+            "CON_RESULTADO_MORTAL": "rgba(244, 67, 54, 0.7)",  # Rojo oscuro
             "SIN_RESULTADO_MORTAL": "rgba(139, 195, 74, 0.7)",  # Verde claro
-            "REQUIERE_REVISION": "rgba(156, 39, 176, 0.7)",     # Púrpura
-            "SIN_CLASIFICAR": "rgba(224, 224, 224, 0.7)",       # Gris muy claro
+            "REQUIERE_REVISION": "rgba(156, 39, 176, 0.7)",  # Púrpura
+            "SIN_CLASIFICAR": "rgba(224, 224, 224, 0.7)",  # Gris muy claro
         }
 
         # Preparar datos con colores apropiados
@@ -1767,10 +1921,12 @@ class ChartDataProcessor:
         return {
             "data": {
                 "labels": labels,
-                "datasets": [{
-                    "label": "Casos",
-                    "data": [int(v) for v in data_values],
-                    "backgroundColor": colors
-                }]
+                "datasets": [
+                    {
+                        "label": "Casos",
+                        "data": [int(v) for v in data_values],
+                        "backgroundColor": colors,
+                    }
+                ],
             }
         }

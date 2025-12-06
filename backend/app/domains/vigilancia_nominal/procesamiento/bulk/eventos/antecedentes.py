@@ -2,6 +2,7 @@
 
 import polars as pl
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlmodel import SQLModel
 
 from app.domains.vigilancia_nominal.models.caso import (
     AntecedenteEpidemiologico,
@@ -47,23 +48,28 @@ class AntecedentesProcessor(BulkProcessorBase):
         # 3. Procesar antecedentes con POLARS PURO - id_evento ya existe en df
         # Normalizar delimitadores a "|" y hacer split
         processed_df = (
-            antecedentes_df
-            .select([
-                pl.col("id_caso"),  # Ya existe del JOIN en main.py
-                pl.col(Columns.ANTECEDENTE_EPIDEMIOLOGICO.name)
-                .str.replace_all(",", "|")  # Normalizar comas
-                .str.replace_all(";", "|")  # Normalizar punto y coma
-                .alias("antecedentes_raw"),
-            ])
+            antecedentes_df.select(
+                [
+                    pl.col("id_caso"),  # Ya existe del JOIN en main.py
+                    pl.col(Columns.ANTECEDENTE_EPIDEMIOLOGICO.name)
+                    .str.replace_all(",", "|")  # Normalizar comas
+                    .str.replace_all(";", "|")  # Normalizar punto y coma
+                    .alias("antecedentes_raw"),
+                ]
+            )
             # Explotar antecedentes separados por "|" en filas individuales
-            .with_columns([
-                pl.col("antecedentes_raw").str.split("|").alias("antecedentes_list")
-            ])
+            .with_columns(
+                [pl.col("antecedentes_raw").str.split("|").alias("antecedentes_list")]
+            )
             .explode("antecedentes_list")
             # Limpiar cada antecedente individual
-            .with_columns([
-                pl.col("antecedentes_list").str.strip_chars().alias("antecedente_clean")
-            ])
+            .with_columns(
+                [
+                    pl.col("antecedentes_list")
+                    .str.strip_chars()
+                    .alias("antecedente_clean")
+                ]
+            )
             # Filtrar antecedentes vacíos
             .filter(
                 pl.col("antecedente_clean").is_not_null()
@@ -75,27 +81,34 @@ class AntecedentesProcessor(BulkProcessorBase):
             return BulkOperationResult(0, 0, 0, [], 0.0)
 
         # 4. Convertir antecedentes_mapping a DataFrame y hacer join
-        antecedentes_mapping_df = pl.DataFrame({
-            "antecedente_clean": list(antecedentes_mapping.keys()),
-            "id_antecedente_epidemiologico": list(antecedentes_mapping.values()),
-        })
+        antecedentes_mapping_df = pl.DataFrame(
+            {
+                "antecedente_clean": list(antecedentes_mapping.keys()),
+                "id_antecedente_epidemiologico": list(antecedentes_mapping.values()),
+            }
+        )
 
         # 5. Join con antecedentes_mapping y preparar datos finales
         timestamp = self._get_current_timestamp()
         final_df = (
-            processed_df
-            .join(antecedentes_mapping_df, on="antecedente_clean", how="inner")
-            .select([
-                "id_caso",
-                "id_antecedente_epidemiologico",
-            ])
+            processed_df.join(
+                antecedentes_mapping_df, on="antecedente_clean", how="inner"
+            )
+            .select(
+                [
+                    "id_caso",
+                    "id_antecedente_epidemiologico",
+                ]
+            )
             # Eliminar duplicados (mismo evento + mismo antecedente)
             .unique()
             # Agregar timestamps
-            .with_columns([
-                pl.lit(timestamp).alias("created_at"),
-                pl.lit(timestamp).alias("updated_at"),
-            ])
+            .with_columns(
+                [
+                    pl.lit(timestamp).alias("created_at"),
+                    pl.lit(timestamp).alias("updated_at"),
+                ]
+            )
         )
 
         if final_df.height == 0:
@@ -104,9 +117,8 @@ class AntecedentesProcessor(BulkProcessorBase):
         # 7. Insertar en base de datos
         antecedentes_eventos_data = final_df.to_dicts()
 
-        stmt = pg_insert(AntecedentesCasoEpidemiologico.__table__).values(
-            antecedentes_eventos_data
-        )
+        table = SQLModel.metadata.tables[AntecedentesCasoEpidemiologico.__tablename__]
+        stmt = pg_insert(table).values(antecedentes_eventos_data)
         upsert_stmt = stmt.on_conflict_do_nothing(
             index_elements=["id_caso", "id_antecedente_epidemiologico"]
         )
@@ -132,23 +144,28 @@ class AntecedentesProcessor(BulkProcessorBase):
         """
         # 1. Extraer y normalizar antecedentes con POLARS PURO
         antecedentes_expanded = (
-            df
-            .filter(pl.col(Columns.ANTECEDENTE_EPIDEMIOLOGICO.name).is_not_null())
-            .select([
-                pl.col(Columns.ANTECEDENTE_EPIDEMIOLOGICO.name)
-                .str.replace_all(",", "|")  # Normalizar comas
-                .str.replace_all(";", "|")  # Normalizar punto y coma
-                .alias("antecedentes_raw")
-            ])
+            df.filter(pl.col(Columns.ANTECEDENTE_EPIDEMIOLOGICO.name).is_not_null())
+            .select(
+                [
+                    pl.col(Columns.ANTECEDENTE_EPIDEMIOLOGICO.name)
+                    .str.replace_all(",", "|")  # Normalizar comas
+                    .str.replace_all(";", "|")  # Normalizar punto y coma
+                    .alias("antecedentes_raw")
+                ]
+            )
             # Split por "|" y explotar en filas individuales
-            .with_columns([
-                pl.col("antecedentes_raw").str.split("|").alias("antecedentes_list")
-            ])
+            .with_columns(
+                [pl.col("antecedentes_raw").str.split("|").alias("antecedentes_list")]
+            )
             .explode("antecedentes_list")
             # Limpiar cada antecedente
-            .with_columns([
-                pl.col("antecedentes_list").str.strip_chars().alias("antecedente_clean")
-            ])
+            .with_columns(
+                [
+                    pl.col("antecedentes_list")
+                    .str.strip_chars()
+                    .alias("antecedente_clean")
+                ]
+            )
             # Filtrar vacíos
             .filter(
                 pl.col("antecedente_clean").is_not_null()

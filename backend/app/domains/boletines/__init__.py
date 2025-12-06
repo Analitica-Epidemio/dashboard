@@ -15,5 +15,5 @@ __all__ = [
     "BoletinInstance",
     "BoletinTemplateConfig",
     "CapacidadHospitalaria",
-    "VirusRespiratorio"
+    "VirusRespiratorio",
 ]

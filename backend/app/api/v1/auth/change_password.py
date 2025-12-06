@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 async def change_password(
     password_data: UserChangePassword,
     current_user: User = Depends(get_current_user),
-    auth_service: AuthService = Depends(get_auth_service)
+    auth_service: AuthService = Depends(get_auth_service),
 ):
     """
     Change current user's password
@@ -27,10 +27,9 @@ async def change_password(
 
     This will logout all other sessions for security.
     """
+    assert current_user.id is not None
     await auth_service.cambiar_contrasena(
-        current_user.id,
-        password_data.contrasena_actual,
-        password_data.nueva_contrasena
+        current_user.id, password_data.contrasena_actual, password_data.nueva_contrasena
     )
     logger.info(f"User {current_user.email} changed their password")
     return {"message": "Password changed successfully"}

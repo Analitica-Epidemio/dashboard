@@ -70,7 +70,10 @@ router.add_api_route(
     methods=["GET"],
     response_model=SuccessResponse[CasoEpidemiologicoDetailResponse],
     responses={
-        404: {"model": ErrorResponse, "description": "CasoEpidemiologico no encontrado"},
+        404: {
+            "model": ErrorResponse,
+            "description": "CasoEpidemiologico no encontrado",
+        },
         500: {"model": ErrorResponse, "description": "Error interno del servidor"},
     },
 )
@@ -81,7 +84,10 @@ router.add_api_route(
     methods=["GET"],
     response_model=SuccessResponse[CasoEpidemiologicoTimelineResponse],
     responses={
-        404: {"model": ErrorResponse, "description": "CasoEpidemiologico no encontrado"},
+        404: {
+            "model": ErrorResponse,
+            "description": "CasoEpidemiologico no encontrado",
+        },
         500: {"model": ErrorResponse, "description": "Error interno del servidor"},
     },
 )

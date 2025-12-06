@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 async def get_strategy(
     strategy_id: int,
     db: AsyncSession = Depends(get_async_session),
-    current_user: User = Depends(RequireAnyRole())
+    current_user: User = Depends(RequireAnyRole()),
 ) -> SuccessResponse[EstrategiaClasificacionResponse]:
     """
     Obtener una estrategia específica por ID.
@@ -45,7 +45,7 @@ async def get_strategy(
                 detail=f"Estrategia {strategy_id} no encontrada",
             )
 
-        strategy_response = EstrategiaClasificacionResponse.from_orm(strategy)
+        strategy_response = EstrategiaClasificacionResponse.model_validate(strategy)
 
         logger.info(f"✅ Found strategy: {strategy.name}")
         return SuccessResponse(data=strategy_response)

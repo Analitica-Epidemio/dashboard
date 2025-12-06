@@ -26,6 +26,7 @@ from typing import Optional
 
 import pandas as pd
 from sqlalchemy import create_engine
+from sqlalchemy.engine import Connection
 
 # Agregar el directorio raíz al path
 sys.path.append(str(Path(__file__).parent.parent.parent))
@@ -46,14 +47,14 @@ def normalizar_texto(texto: str) -> str:
     texto = texto.upper()
 
     # Remover acentos/tildes usando NFD decomposition
-    texto = unicodedata.normalize('NFD', texto)
-    texto = ''.join(char for char in texto if unicodedata.category(char) != 'Mn')
+    texto = unicodedata.normalize("NFD", texto)
+    texto = "".join(char for char in texto if unicodedata.category(char) != "Mn")
 
     # Remover puntuación común (pero mantener guiones y números)
-    texto = texto.replace('.', ' ').replace(',', ' ').replace('-', ' ')
+    texto = texto.replace(".", " ").replace(",", " ").replace("-", " ")
 
     # Remover espacios múltiples
-    texto = ' '.join(texto.split())
+    texto = " ".join(texto.split())
 
     return texto.strip()
 
@@ -61,6 +62,7 @@ def normalizar_texto(texto: str) -> str:
 @dataclass
 class EstablecimientoSNVS:
     """Establecimiento extraído del CSV SNVS."""
+
     codigo: str  # ID del CSV (ID_ESTAB_CLINICA, etc.)
     nombre: str
     localidad_id: Optional[int]
@@ -72,6 +74,7 @@ class EstablecimientoSNVS:
 @dataclass
 class EstablecimientoIGN:
     """Establecimiento del IGN."""
+
     id: int
     codigo_refes: str
     nombre: str
@@ -99,11 +102,41 @@ def extraer_establecimientos_de_csvs(csv_dir: Path) -> dict:
 
     # Columnas a buscar: (col_id, col_nombre, col_localidad, col_depto, col_prov)
     columnas_grupos = [
-        ("ID_ESTAB_CLINICA", "ESTAB_CLINICA", "ID_LOC_INDEC_CLINICA", "DEPTO_CLINICA", "PROV_CLINICA"),
-        ("ID_ESTABLECIMIENTO_DIAG", "ESTABLECIMIENTO_DIAG", "ID_LOC_INDEC_DIAG", "DEPARTAMENTO_DIAG", "PROVINCIA_DIAG"),
-        ("ID_ESTABLECIMIENTO_MUESTRA", "ESTABLECIMIENTO_MUESTRA", "ID_LOC_INDEC_MUESTRA", "DEPARTAMENTO_MUESTRA", "PROVINCIA_MUESTRA"),
-        ("ID_ORIGEN", "ESTABLECIMIENTO_EPI", "ID_LOC_INDEC_EPI", "DEPARTAMENTO_EPI", "PROVINCIA_EPI"),
-        ("ID_ESTABLECIMIENTO_CARGA", "ESTABLECIMIENTO_CARGA", "ID_LOC_INDEC_CARGA", "DEPARTAMENTO_CARGA", "PROVINCIA_CARGA"),
+        (
+            "ID_ESTAB_CLINICA",
+            "ESTAB_CLINICA",
+            "ID_LOC_INDEC_CLINICA",
+            "DEPTO_CLINICA",
+            "PROV_CLINICA",
+        ),
+        (
+            "ID_ESTABLECIMIENTO_DIAG",
+            "ESTABLECIMIENTO_DIAG",
+            "ID_LOC_INDEC_DIAG",
+            "DEPARTAMENTO_DIAG",
+            "PROVINCIA_DIAG",
+        ),
+        (
+            "ID_ESTABLECIMIENTO_MUESTRA",
+            "ESTABLECIMIENTO_MUESTRA",
+            "ID_LOC_INDEC_MUESTRA",
+            "DEPARTAMENTO_MUESTRA",
+            "PROVINCIA_MUESTRA",
+        ),
+        (
+            "ID_ORIGEN",
+            "ESTABLECIMIENTO_EPI",
+            "ID_LOC_INDEC_EPI",
+            "DEPARTAMENTO_EPI",
+            "PROVINCIA_EPI",
+        ),
+        (
+            "ID_ESTABLECIMIENTO_CARGA",
+            "ESTABLECIMIENTO_CARGA",
+            "ID_LOC_INDEC_CARGA",
+            "DEPARTAMENTO_CARGA",
+            "PROVINCIA_CARGA",
+        ),
     ]
 
     for csv_file in csv_files:
@@ -119,7 +152,7 @@ def extraer_establecimientos_de_csvs(csv_dir: Path) -> dict:
 
                 # Extraer establecimientos únicos
                 subset = df[[col_id, col_nombre, col_loc, col_depto, col_prov]].copy()
-                subset = subset.dropna(subset=[col_id, col_nombre], how='all')
+                subset = subset.dropna(subset=[col_id, col_nombre], how="all")
 
                 for _, row in subset.iterrows():
                     codigo = row[col_id]
@@ -153,8 +186,14 @@ def extraer_establecimientos_de_csvs(csv_dir: Path) -> dict:
                             pass
 
                     # Info geográfica
-                    depto = str(row[col_depto]).strip() if pd.notna(row[col_depto]) else None
-                    prov = str(row[col_prov]).strip() if pd.notna(row[col_prov]) else None
+                    depto = (
+                        str(row[col_depto]).strip()
+                        if pd.notna(row[col_depto])
+                        else None
+                    )
+                    prov = (
+                        str(row[col_prov]).strip() if pd.notna(row[col_prov]) else None
+                    )
 
                     establecimientos[codigo] = EstablecimientoSNVS(
                         codigo=codigo,
@@ -162,7 +201,7 @@ def extraer_establecimientos_de_csvs(csv_dir: Path) -> dict:
                         localidad_id=loc_id,
                         localidad_nombre=None,  # Se obtiene de la BD
                         departamento_nombre=depto,
-                        provincia_nombre=prov
+                        provincia_nombre=prov,
                     )
 
         except Exception as e:
@@ -173,7 +212,7 @@ def extraer_establecimientos_de_csvs(csv_dir: Path) -> dict:
     return establecimientos
 
 
-def cargar_establecimientos_ign(conn) -> dict:
+def cargar_establecimientos_ign(conn: Connection) -> dict:
     """
     Carga establecimientos IGN directamente desde el WFS del IGN.
 
@@ -184,7 +223,8 @@ def cargar_establecimientos_ign(conn) -> dict:
 
     import geopandas as gpd
     from urllib3.exceptions import InsecureRequestWarning
-    warnings.simplefilter('ignore', InsecureRequestWarning)
+
+    warnings.simplefilter("ignore", InsecureRequestWarning)
 
     print("\n" + "=" * 80)
     print("CARGANDO ESTABLECIMIENTOS IGN DESDE WFS")
@@ -213,8 +253,12 @@ def cargar_establecimientos_ign(conn) -> dict:
         establecimientos = {}
 
         for idx, row in gdf.iterrows():
-            codigo_refes = str(row.get('gid', '')).strip() if pd.notna(row.get('gid')) else None
-            nombre = str(row.get('fna', '')).strip() if pd.notna(row.get('fna')) else None
+            codigo_refes = (
+                str(row.get("gid", "")).strip() if pd.notna(row.get("gid")) else None
+            )
+            nombre = (
+                str(row.get("fna", "")).strip() if pd.notna(row.get("fna")) else None
+            )
 
             if not codigo_refes or not nombre:
                 continue
@@ -227,7 +271,7 @@ def cargar_establecimientos_ign(conn) -> dict:
                 localidad_id=None,
                 localidad_nombre=None,
                 departamento_nombre=None,
-                provincia_nombre=None
+                provincia_nombre=None,
             )
 
         print(f"✅ Establecimientos IGN procesados: {len(establecimientos):,}")
@@ -255,7 +299,9 @@ def calcular_similitud_nombre(nombre1: str, nombre2: str) -> float:
     return SequenceMatcher(None, nombre1_norm, nombre2_norm).ratio() * 100
 
 
-def encontrar_matches(snvs: EstablecimientoSNVS, establecimientos_ign: dict, top_n: int = 3) -> list:
+def encontrar_matches(
+    snvs: EstablecimientoSNVS, establecimientos_ign: dict, top_n: int = 3
+) -> list:
     """
     Encuentra los mejores N matches de IGN para un establecimiento SNVS.
 
@@ -270,8 +316,12 @@ def encontrar_matches(snvs: EstablecimientoSNVS, establecimientos_ign: dict, top
 
     for codigo_refes, ign in establecimientos_ign.items():
         # FILTRO CRÍTICO: Rechazar si provincias diferentes
-        if (snvs.provincia_nombre and ign.provincia_nombre and
-            snvs.provincia_nombre.lower().strip() != ign.provincia_nombre.lower().strip()):
+        if (
+            snvs.provincia_nombre
+            and ign.provincia_nombre
+            and snvs.provincia_nombre.lower().strip()
+            != ign.provincia_nombre.lower().strip()
+        ):
             continue
 
         # Calcular similitud de nombre
@@ -284,13 +334,19 @@ def encontrar_matches(snvs: EstablecimientoSNVS, establecimientos_ign: dict, top
 
         # Bonus provincia (+10%)
         if snvs.provincia_nombre and ign.provincia_nombre:
-            if snvs.provincia_nombre.lower().strip() == ign.provincia_nombre.lower().strip():
+            if (
+                snvs.provincia_nombre.lower().strip()
+                == ign.provincia_nombre.lower().strip()
+            ):
                 score += 10
                 razon_parts.append(f"provincia: {ign.provincia_nombre}")
 
         # Bonus departamento (+15%)
         if snvs.departamento_nombre and ign.departamento_nombre:
-            if snvs.departamento_nombre.lower().strip() == ign.departamento_nombre.lower().strip():
+            if (
+                snvs.departamento_nombre.lower().strip()
+                == ign.departamento_nombre.lower().strip()
+            ):
                 score += 15
                 razon_parts.append(f"mismo depto: {ign.departamento_nombre}")
 
@@ -306,16 +362,18 @@ def encontrar_matches(snvs: EstablecimientoSNVS, establecimientos_ign: dict, top
 
         razon = " + ".join(razon_parts)
 
-        matches.append({
-            "ign_codigo_refes": codigo_refes,
-            "ign_nombre": ign.nombre,
-            "ign_localidad": ign.localidad_nombre,
-            "ign_departamento": ign.departamento_nombre,
-            "ign_provincia": ign.provincia_nombre,
-            "score": round(score, 1),
-            "similitud_nombre": round(similitud_nombre, 1),
-            "razon": razon
-        })
+        matches.append(
+            {
+                "ign_codigo_refes": codigo_refes,
+                "ign_nombre": ign.nombre,
+                "ign_localidad": ign.localidad_nombre,
+                "ign_departamento": ign.departamento_nombre,
+                "ign_provincia": ign.provincia_nombre,
+                "score": round(score, 1),
+                "similitud_nombre": round(similitud_nombre, 1),
+                "razon": razon,
+            }
+        )
 
     # Ordenar por score y retornar top N
     matches.sort(key=lambda x: x["score"], reverse=True)
@@ -394,14 +452,18 @@ def generar_mapping(establecimientos_snvs: dict, establecimientos_ign: dict) -> 
             "similitud_nombre": best["similitud_nombre"],
             "razon": best["razon"],
             "confidence": confidence,
-            "localidad_snvs": snvs.localidad_nombre or f"INDEC {snvs.localidad_id}" if snvs.localidad_id else None,
+            "localidad_snvs": snvs.localidad_nombre or f"INDEC {snvs.localidad_id}"
+            if snvs.localidad_id
+            else None,
             "departamento_snvs": snvs.departamento_nombre,
             "provincia_snvs": snvs.provincia_nombre,
             "localidad_ign": best["ign_localidad"],
             "departamento_ign": best["ign_departamento"],
             "provincia_ign": best["ign_provincia"],
             # Incluir alternativas si el score no es perfecto
-            "alternativas": matches[1:] if best["score"] < 100 and len(matches) > 1 else []
+            "alternativas": matches[1:]
+            if best["score"] < 100 and len(matches) > 1
+            else [],
         }
 
     print("\n✅ Mapping generado:")
@@ -422,24 +484,24 @@ def generar_mapping(establecimientos_snvs: dict, establecimientos_ign: dict) -> 
                 "similitud_nombre": "Porcentaje de similitud de nombres",
                 "razon": "Explicación del match",
                 "confidence": "HIGH (≥85) o MEDIUM (70-84)",
-                "localidades": "Info geográfica para validación manual"
-            }
-        }
+                "localidades": "Info geográfica para validación manual",
+            },
+        },
     }
 
 
-def guardar_mapping(mapping_data: dict, output_file: Path):
+def guardar_mapping(mapping_data: dict, output_file: Path) -> None:
     """Guarda el mapping en formato JSON."""
     # Ordenar por código SNVS
     mapping_data["mapping"] = dict(sorted(mapping_data["mapping"].items()))
 
-    with open(output_file, 'w', encoding='utf-8') as f:
+    with open(output_file, "w", encoding="utf-8") as f:
         json.dump(mapping_data, f, ensure_ascii=False, indent=2)
 
     print(f"\n✅ Mapping guardado en: {output_file}")
 
 
-def main():
+def main() -> None:
     import os
 
     print("=" * 80)
@@ -450,13 +512,18 @@ def main():
     # Paths
     backend_dir = Path(__file__).parent.parent.parent.parent
     csv_dir = backend_dir / "uploads"
-    output_file = backend_dir / "app/scripts/seeds/data/establecimientos_mapping_v2.json"
+    output_file = (
+        backend_dir / "app/scripts/seeds/data/establecimientos_mapping_v2.json"
+    )
 
     # 1. Extraer establecimientos de CSVs
     establecimientos_snvs = extraer_establecimientos_de_csvs(csv_dir)
 
     # 2. Conectar a BD y cargar establecimientos IGN
-    DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://epidemiologia_user:epidemiologia_password@localhost:5432/epidemiologia_db")
+    DATABASE_URL = os.getenv(
+        "DATABASE_URL",
+        "postgresql://epidemiologia_user:epidemiologia_password@localhost:5432/epidemiologia_db",
+    )
     if "postgresql+asyncpg" in DATABASE_URL:
         DATABASE_URL = DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://")
 

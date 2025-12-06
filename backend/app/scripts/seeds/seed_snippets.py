@@ -2,17 +2,18 @@
 Seed de snippets para boletines epidemiológicos
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
+from typing import Any
 
 from app.core.database import get_session
 from app.domains.boletines.models import BoletinSnippet
 
 
-def seed_snippets():
+def seed_snippets() -> None:
     """Crea snippets iniciales para boletines"""
     db = next(get_session())
 
-    snippets_data = [
+    snippets_data: list[dict[str, Any]] = [
         # Portada
         {
             "codigo": "portada",
@@ -32,12 +33,11 @@ def seed_snippets():
                 "semana": "number",
                 "anio": "number",
                 "fecha_inicio": "string",
-                "fecha_fin": "string"
+                "fecha_fin": "string",
             },
             "condiciones": None,
-            "orden": 1
+            "orden": 1,
         },
-
         # Introducción
         {
             "codigo": "introduccion",
@@ -62,12 +62,11 @@ def seed_snippets():
                 "anio": "number",
                 "fecha_inicio": "string",
                 "fecha_fin": "string",
-                "num_eventos": "number"
+                "num_eventos": "number",
             },
             "condiciones": None,
-            "orden": 2
+            "orden": 2,
         },
-
         # CasoEpidemiologico en crecimiento
         {
             "codigo": "evento_crecimiento",
@@ -99,12 +98,11 @@ def seed_snippets():
                 "casos_actuales": "number",
                 "casos_anteriores": "number",
                 "diferencia_absoluta": "number",
-                "diferencia_porcentual": "number"
+                "diferencia_porcentual": "number",
             },
             "condiciones": {"tipo_cambio": "crecimiento"},
-            "orden": 10
+            "orden": 10,
         },
-
         # CasoEpidemiologico en decrecimiento
         {
             "codigo": "evento_decrecimiento",
@@ -136,12 +134,11 @@ def seed_snippets():
                 "casos_actuales": "number",
                 "casos_anteriores": "number",
                 "diferencia_absoluta": "number",
-                "diferencia_porcentual": "number"
+                "diferencia_porcentual": "number",
             },
             "condiciones": {"tipo_cambio": "decrecimiento"},
-            "orden": 11
+            "orden": 11,
         },
-
         # Conclusión
         {
             "codigo": "conclusion",
@@ -163,14 +160,10 @@ def seed_snippets():
     </p>
 </div>
             """,
-            "variables_schema": {
-                "semana": "number",
-                "anio": "number"
-            },
+            "variables_schema": {"semana": "number", "anio": "number"},
             "condiciones": None,
-            "orden": 100
+            "orden": 100,
         },
-
         # Footer
         {
             "codigo": "footer",
@@ -188,11 +181,9 @@ def seed_snippets():
     </p>
 </div>
             """,
-            "variables_schema": {
-                "fecha_generacion": "string"
-            },
+            "variables_schema": {"fecha_generacion": "string"},
             "condiciones": None,
-            "orden": 999
+            "orden": 999,
         },
     ]
 
@@ -204,10 +195,10 @@ def seed_snippets():
         return
 
     # Crear snippets
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     for snippet_data in snippets_data:
-        snippet_data['created_at'] = now
-        snippet_data['updated_at'] = now
+        snippet_data["created_at"] = now
+        snippet_data["updated_at"] = now
         snippet = BoletinSnippet(**snippet_data)
         db.add(snippet)
 
@@ -215,7 +206,7 @@ def seed_snippets():
     print(f"✓ Creados {len(snippets_data)} snippets de boletines")
 
 
-def run_seed():
+def run_seed() -> None:
     """Ejecuta el seed"""
     seed_snippets()
 

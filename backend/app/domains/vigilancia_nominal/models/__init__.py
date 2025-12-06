@@ -12,6 +12,26 @@ Estructura:
 """
 
 # Caso (modelo central)
+# Agentes (detecciones)
+from app.domains.vigilancia_nominal.models.agentes import (
+    AgenteExtraccionConfig,
+    CasoAgente,
+    ResultadoDeteccion,
+)
+
+# Ámbitos
+from app.domains.vigilancia_nominal.models.ambitos import (
+    AmbitosConcurrenciaCaso,
+)
+
+# Atención médica
+from app.domains.vigilancia_nominal.models.atencion import (
+    ContactosNotificacion,
+    DiagnosticoCasoEpidemiologico,
+    InternacionCasoEpidemiologico,
+    InvestigacionCasoEpidemiologico,
+    TratamientoCasoEpidemiologico,
+)
 from app.domains.vigilancia_nominal.models.caso import (
     AntecedenteEpidemiologico,
     AntecedentesCasoEpidemiologico,
@@ -25,33 +45,6 @@ from app.domains.vigilancia_nominal.models.enfermedad import (
     Enfermedad,
     EnfermedadGrupo,
     GrupoDeEnfermedades,
-)
-
-# Sujetos
-from app.domains.vigilancia_nominal.models.sujetos import (
-    Animal,
-    Ciudadano,
-    CiudadanoComorbilidades,
-    CiudadanoDatos,
-    CiudadanoDomicilio,
-    PersonaDomicilio,
-    ViajesCiudadano,
-)
-
-# Agentes (detecciones)
-from app.domains.vigilancia_nominal.models.agentes import (
-    AgenteExtraccionConfig,
-    CasoAgente,
-    ResultadoDeteccion,
-)
-
-# Atención médica
-from app.domains.vigilancia_nominal.models.atencion import (
-    ContactosNotificacion,
-    DiagnosticoCasoEpidemiologico,
-    InternacionCasoEpidemiologico,
-    InvestigacionCasoEpidemiologico,
-    TratamientoCasoEpidemiologico,
 )
 
 # Salud (catálogos y registros)
@@ -68,9 +61,15 @@ from app.domains.vigilancia_nominal.models.salud import (
     VacunasCiudadano,
 )
 
-# Ámbitos
-from app.domains.vigilancia_nominal.models.ambitos import (
-    AmbitosConcurrenciaCaso,
+# Sujetos
+from app.domains.vigilancia_nominal.models.sujetos import (
+    Animal,
+    Ciudadano,
+    CiudadanoComorbilidades,
+    CiudadanoDatos,
+    CiudadanoDomicilio,
+    PersonaDomicilio,
+    ViajesCiudadano,
 )
 
 __all__ = [

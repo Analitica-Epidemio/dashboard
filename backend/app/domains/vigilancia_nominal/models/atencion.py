@@ -15,14 +15,15 @@ from datetime import date
 from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import Text, UniqueConstraint
+from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship
 
-from app.core.models import BaseModel
 from app.core.constants import OrigenFinanciamiento
+from app.core.models import BaseModel
 
 if TYPE_CHECKING:
-    from app.domains.vigilancia_nominal.models.caso import CasoEpidemiologico
     from app.domains.territorio.establecimientos_models import Establecimiento
+    from app.domains.vigilancia_nominal.models.caso import CasoEpidemiologico
 
 
 # =============================================================================
@@ -40,8 +41,8 @@ class DiagnosticoCasoEpidemiologico(BaseModel, table=True):
 
     __tablename__ = "diagnostico_caso_epidemiologico"
     __table_args__ = (
-        UniqueConstraint('id_caso', name='uq_diagnostico_caso'),
-        {"extend_existing": True}
+        UniqueConstraint("id_caso", name="uq_diagnostico_caso"),
+        {"extend_existing": True},
     )
 
     # Campos propios
@@ -75,7 +76,9 @@ class DiagnosticoCasoEpidemiologico(BaseModel, table=True):
     )
 
     # Foreign Keys
-    id_caso: int = Field(foreign_key="caso_epidemiologico.id", description="ID del caso")
+    id_caso: int = Field(
+        foreign_key="caso_epidemiologico.id", description="ID del caso"
+    )
     id_establecimiento_diagnostico: Optional[int] = Field(
         None,
         foreign_key="establecimiento.id",
@@ -83,8 +86,8 @@ class DiagnosticoCasoEpidemiologico(BaseModel, table=True):
     )
 
     # Relaciones
-    caso: "CasoEpidemiologico" = Relationship(back_populates="diagnosticos")
-    establecimiento: Optional["Establecimiento"] = Relationship(
+    caso: Mapped["CasoEpidemiologico"] = Relationship(back_populates="diagnosticos")
+    establecimiento: Mapped[Optional["Establecimiento"]] = Relationship(
         back_populates="diagnosticos"
     )
 
@@ -104,8 +107,8 @@ class InternacionCasoEpidemiologico(BaseModel, table=True):
 
     __tablename__ = "internacion_caso_epidemiologico"
     __table_args__ = (
-        UniqueConstraint('id_caso', name='uq_internacion_caso'),
-        {"extend_existing": True}
+        UniqueConstraint("id_caso", name="uq_internacion_caso"),
+        {"extend_existing": True},
     )
 
     fue_internado: Optional[bool] = Field(None, description="Fue internado")
@@ -129,10 +132,12 @@ class InternacionCasoEpidemiologico(BaseModel, table=True):
     )
 
     # Foreign Keys
-    id_caso: int = Field(foreign_key="caso_epidemiologico.id", description="ID del caso")
+    id_caso: int = Field(
+        foreign_key="caso_epidemiologico.id", description="ID del caso"
+    )
 
     # Relaciones
-    caso: "CasoEpidemiologico" = Relationship(back_populates="internaciones")
+    caso: Mapped["CasoEpidemiologico"] = Relationship(back_populates="internaciones")
 
 
 # =============================================================================
@@ -149,9 +154,13 @@ class TratamientoCasoEpidemiologico(BaseModel, table=True):
 
     __tablename__ = "tratamiento_caso_epidemiologico"
     __table_args__ = (
-        UniqueConstraint('id_caso', 'descripcion_tratamiento', 'fecha_inicio_tratamiento',
-                        name='uq_tratamiento_caso'),
-        {"extend_existing": True}
+        UniqueConstraint(
+            "id_caso",
+            "descripcion_tratamiento",
+            "fecha_inicio_tratamiento",
+            name="uq_tratamiento_caso",
+        ),
+        {"extend_existing": True},
     )
 
     establecimiento_tratamiento: Optional[str] = Field(
@@ -171,7 +180,9 @@ class TratamientoCasoEpidemiologico(BaseModel, table=True):
     )
 
     # Foreign Keys
-    id_caso: int = Field(foreign_key="caso_epidemiologico.id", description="ID del caso")
+    id_caso: int = Field(
+        foreign_key="caso_epidemiologico.id", description="ID del caso"
+    )
     id_establecimiento_tratamiento: Optional[int] = Field(
         None,
         foreign_key="establecimiento.id",
@@ -179,8 +190,8 @@ class TratamientoCasoEpidemiologico(BaseModel, table=True):
     )
 
     # Relaciones
-    caso: "CasoEpidemiologico" = Relationship(back_populates="tratamientos")
-    establecimiento: Optional["Establecimiento"] = Relationship()
+    caso: Mapped["CasoEpidemiologico"] = Relationship(back_populates="tratamientos")
+    establecimiento: Mapped[Optional["Establecimiento"]] = Relationship()
 
 
 # =============================================================================
@@ -197,9 +208,7 @@ class InvestigacionCasoEpidemiologico(BaseModel, table=True):
     """
 
     __tablename__ = "investigacion_caso_epidemiologico"
-    __table_args__ = (
-        UniqueConstraint('id_caso', name='uq_investigacion_caso'),
-    )
+    __table_args__ = (UniqueConstraint("id_caso", name="uq_investigacion_caso"),)
 
     es_usuario_centinela: Optional[bool] = Field(None, description="Usuario centinela")
     es_evento_centinela: Optional[bool] = Field(None, description="Caso centinela")
@@ -212,9 +221,7 @@ class InvestigacionCasoEpidemiologico(BaseModel, table=True):
     id_usuario_centinela_participante: Optional[int] = Field(
         None, description="ID del usuario centinela que participó"
     )
-    id_snvs_caso: Optional[int] = Field(
-        None, description="ID SNVS del caso"
-    )
+    id_snvs_caso: Optional[int] = Field(None, description="ID SNVS del caso")
     es_investigacion_terreno: Optional[bool] = Field(
         None, description="Investigación en terreno"
     )
@@ -222,17 +229,19 @@ class InvestigacionCasoEpidemiologico(BaseModel, table=True):
         None, description="Fecha de la investigación"
     )
     tipo_y_lugar_investigacion: Optional[str] = Field(
-        None, sa_column=Text, description="Tipo y lugar de investigación"
+        None, sa_type=Text, description="Tipo y lugar de investigación"
     )
     origen_financiamiento: Optional[OrigenFinanciamiento] = Field(
         None, description="Origen del financiamiento"
     )
 
     # Foreign Keys
-    id_caso: int = Field(foreign_key="caso_epidemiologico.id", description="ID del caso")
+    id_caso: int = Field(
+        foreign_key="caso_epidemiologico.id", description="ID del caso"
+    )
 
     # Relaciones
-    caso: "CasoEpidemiologico" = Relationship(back_populates="investigaciones")
+    caso: Mapped["CasoEpidemiologico"] = Relationship(back_populates="investigaciones")
 
 
 # =============================================================================
@@ -249,9 +258,7 @@ class ContactosNotificacion(BaseModel, table=True):
     """
 
     __tablename__ = "contactos_notificacion"
-    __table_args__ = (
-        UniqueConstraint('id_caso', name='uq_contactos_caso'),
-    )
+    __table_args__ = (UniqueConstraint("id_caso", name="uq_contactos_caso"),)
 
     hubo_contacto_con_caso_confirmado: Optional[bool] = Field(
         None, description="Contacto con caso confirmado"
@@ -273,7 +280,9 @@ class ContactosNotificacion(BaseModel, table=True):
     )
 
     # Foreign Keys
-    id_caso: int = Field(foreign_key="caso_epidemiologico.id", description="ID del caso")
+    id_caso: int = Field(
+        foreign_key="caso_epidemiologico.id", description="ID del caso"
+    )
 
     # Relaciones
-    caso: "CasoEpidemiologico" = Relationship(back_populates="contactos")
+    caso: Mapped["CasoEpidemiologico"] = Relationship(back_populates="contactos")

@@ -43,20 +43,24 @@ async def get_provincias_geojson(
 
     features = []
     for row in rows:
-        features.append({
-            "type": "Feature",
-            "properties": {
-                "id": row.id_provincia_indec,
-                "id_provincia_indec": row.id_provincia_indec,
-                "nombre": row.nombre,
-                "poblacion": row.poblacion,
-                "centroide": {
-                    "lat": row.latitud,
-                    "lon": row.longitud,
-                } if row.latitud and row.longitud else None,
-            },
-            "geometry": row.geometry,
-        })
+        features.append(
+            {
+                "type": "Feature",
+                "properties": {
+                    "id": row.id_provincia_indec,
+                    "id_provincia_indec": row.id_provincia_indec,
+                    "nombre": row.nombre,
+                    "poblacion": row.poblacion,
+                    "centroide": {
+                        "lat": row.latitud,
+                        "lon": row.longitud,
+                    }
+                    if row.latitud and row.longitud
+                    else None,
+                },
+                "geometry": row.geometry,
+            }
+        )
 
     return {
         "type": "FeatureCollection",
@@ -118,23 +122,31 @@ async def get_provincias_con_eventos(
         if row.total_eventos > max_eventos:
             max_eventos = row.total_eventos
 
-        features.append({
-            "type": "Feature",
-            "properties": {
-                "id": row.id_provincia_indec,
-                "id_provincia_indec": row.id_provincia_indec,
-                "nombre": row.nombre,
-                "poblacion": row.poblacion,
-                "total_eventos": row.total_eventos,
-                "total_casos": row.total_casos,
-                "tasa_incidencia": round(row.total_casos / row.poblacion * 100000, 2) if row.poblacion else None,
-                "centroide": {
-                    "lat": row.latitud,
-                    "lon": row.longitud,
-                } if row.latitud and row.longitud else None,
-            },
-            "geometry": row.geometry,
-        })
+        features.append(
+            {
+                "type": "Feature",
+                "properties": {
+                    "id": row.id_provincia_indec,
+                    "id_provincia_indec": row.id_provincia_indec,
+                    "nombre": row.nombre,
+                    "poblacion": row.poblacion,
+                    "total_eventos": row.total_eventos,
+                    "total_casos": row.total_casos,
+                    "tasa_incidencia": round(
+                        row.total_casos / row.poblacion * 100000, 2
+                    )
+                    if row.poblacion
+                    else None,
+                    "centroide": {
+                        "lat": row.latitud,
+                        "lon": row.longitud,
+                    }
+                    if row.latitud and row.longitud
+                    else None,
+                },
+                "geometry": row.geometry,
+            }
+        )
 
     return {
         "type": "FeatureCollection",
@@ -142,7 +154,7 @@ async def get_provincias_con_eventos(
         "metadata": {
             "max_eventos": max_eventos,
             "total_provincias": len(features),
-        }
+        },
     }
 
 
@@ -197,22 +209,26 @@ async def get_departamentos_geojson(
 
     features = []
     for row in rows:
-        features.append({
-            "type": "Feature",
-            "properties": {
-                "id": row.id_departamento_indec,
-                "id_departamento_indec": row.id_departamento_indec,
-                "id_provincia_indec": row.id_provincia_indec,
-                "nombre": row.nombre,
-                "provincia": row.provincia_nombre,
-                "poblacion": row.poblacion,
-                "centroide": {
-                    "lat": row.latitud,
-                    "lon": row.longitud,
-                } if row.latitud and row.longitud else None,
-            },
-            "geometry": row.geometry,
-        })
+        features.append(
+            {
+                "type": "Feature",
+                "properties": {
+                    "id": row.id_departamento_indec,
+                    "id_departamento_indec": row.id_departamento_indec,
+                    "id_provincia_indec": row.id_provincia_indec,
+                    "nombre": row.nombre,
+                    "provincia": row.provincia_nombre,
+                    "poblacion": row.poblacion,
+                    "centroide": {
+                        "lat": row.latitud,
+                        "lon": row.longitud,
+                    }
+                    if row.latitud and row.longitud
+                    else None,
+                },
+                "geometry": row.geometry,
+            }
+        )
 
     return {
         "type": "FeatureCollection",
@@ -286,25 +302,33 @@ async def get_departamentos_con_eventos(
         if row.total_eventos > max_eventos:
             max_eventos = row.total_eventos
 
-        features.append({
-            "type": "Feature",
-            "properties": {
-                "id": row.id_departamento_indec,
-                "id_departamento_indec": row.id_departamento_indec,
-                "id_provincia_indec": row.id_provincia_indec,
-                "nombre": row.nombre,
-                "provincia": row.provincia_nombre,
-                "poblacion": row.poblacion,
-                "total_eventos": row.total_eventos,
-                "total_casos": row.total_casos,
-                "tasa_incidencia": round(row.total_casos / row.poblacion * 100000, 2) if row.poblacion else None,
-                "centroide": {
-                    "lat": row.latitud,
-                    "lon": row.longitud,
-                } if row.latitud and row.longitud else None,
-            },
-            "geometry": row.geometry,
-        })
+        features.append(
+            {
+                "type": "Feature",
+                "properties": {
+                    "id": row.id_departamento_indec,
+                    "id_departamento_indec": row.id_departamento_indec,
+                    "id_provincia_indec": row.id_provincia_indec,
+                    "nombre": row.nombre,
+                    "provincia": row.provincia_nombre,
+                    "poblacion": row.poblacion,
+                    "total_eventos": row.total_eventos,
+                    "total_casos": row.total_casos,
+                    "tasa_incidencia": round(
+                        row.total_casos / row.poblacion * 100000, 2
+                    )
+                    if row.poblacion
+                    else None,
+                    "centroide": {
+                        "lat": row.latitud,
+                        "lon": row.longitud,
+                    }
+                    if row.latitud and row.longitud
+                    else None,
+                },
+                "geometry": row.geometry,
+            }
+        )
 
     return {
         "type": "FeatureCollection",
@@ -312,5 +336,5 @@ async def get_departamentos_con_eventos(
         "metadata": {
             "max_eventos": max_eventos,
             "total_departamentos": len(features),
-        }
+        },
     }

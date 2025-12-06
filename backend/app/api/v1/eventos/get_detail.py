@@ -12,19 +12,23 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from sqlmodel import col
 
 from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAnyRole
-from app.domains.vigilancia_nominal.models.salud import MuestraCasoEpidemiologico
 from app.domains.autenticacion.models import User
+from app.domains.territorio.geografia_models import Domicilio
 from app.domains.vigilancia_nominal.clasificacion.models import TipoClasificacion
-from app.domains.vigilancia_nominal.models.caso import (    DetalleCasoSintomas, CasoEpidemiologico)
-from app.domains.vigilancia_nominal.models.sujetos import Animal
+from app.domains.vigilancia_nominal.models.caso import (
+    CasoEpidemiologico,
+    DetalleCasoSintomas,
+)
+from app.domains.vigilancia_nominal.models.salud import MuestraCasoEpidemiologico
 from app.domains.vigilancia_nominal.models.sujetos import (
+    Animal,
     Ciudadano,
 )
-from app.domains.territorio.geografia_models import Domicilio
 
 
 class CiudadanoInfo(BaseModel):
@@ -43,7 +47,9 @@ class CiudadanoInfo(BaseModel):
     barrio: Optional[str] = Field(None, description="Barrio popular")
     telefono: Optional[str] = Field(None, description="Teléfono de contacto")
     es_embarazada: Optional[bool] = Field(None, description="Si está embarazada")
-    cobertura_social: Optional[str] = Field(None, description="Cobertura social u obra social")
+    cobertura_social: Optional[str] = Field(
+        None, description="Cobertura social u obra social"
+    )
     ocupacion_laboral: Optional[str] = Field(None, description="Ocupación laboral")
 
 
@@ -63,8 +69,12 @@ class SintomaInfo(BaseModel):
 
     id: int = Field(..., description="ID del síntoma")
     nombre: Optional[str] = Field(None, description="Nombre del síntoma")
-    fecha_inicio: Optional[date] = Field(None, description="Fecha de inicio del síntoma")
-    semana_epidemiologica: Optional[int] = Field(None, description="Semana epidemiológica de aparición")
+    fecha_inicio: Optional[date] = Field(
+        None, description="Fecha de inicio del síntoma"
+    )
+    semana_epidemiologica: Optional[int] = Field(
+        None, description="Semana epidemiológica de aparición"
+    )
     anio_epidemiologico: Optional[int] = Field(None, description="Año epidemiológico")
 
 
@@ -85,11 +95,17 @@ class MuestraInfo(BaseModel):
     id: int = Field(..., description="ID de la muestra")
     tipo: Optional[str] = Field(None, description="Tipo de muestra")
     fecha_toma_muestra: Optional[date] = Field(None, description="Fecha de toma")
-    establecimiento: Optional[str] = Field(None, description="Establecimiento donde se tomó")
-    semana_epidemiologica: Optional[int] = Field(None, description="Semana epidemiológica")
+    establecimiento: Optional[str] = Field(
+        None, description="Establecimiento donde se tomó"
+    )
+    semana_epidemiologica: Optional[int] = Field(
+        None, description="Semana epidemiológica"
+    )
     anio_epidemiologico: Optional[int] = Field(None, description="Año epidemiológico")
     valor: Optional[str] = Field(None, description="Valor del resultado general")
-    estudios: List[EstudioInfo] = Field(default_factory=list, description="Estudios realizados sobre esta muestra")
+    estudios: List[EstudioInfo] = Field(
+        default_factory=list, description="Estudios realizados sobre esta muestra"
+    )
 
 
 class DiagnosticoInfo(BaseModel):
@@ -118,7 +134,9 @@ class TratamientoInfo(BaseModel):
 
     id: int = Field(..., description="ID del tratamiento")
     descripcion: Optional[str] = Field(None, description="Descripción del tratamiento")
-    establecimiento: Optional[str] = Field(None, description="Establecimiento de tratamiento")
+    establecimiento: Optional[str] = Field(
+        None, description="Establecimiento de tratamiento"
+    )
     fecha_inicio: Optional[date] = Field(None, description="Fecha de inicio")
     fecha_fin: Optional[date] = Field(None, description="Fecha de fin")
     resultado: Optional[str] = Field(None, description="Resultado del tratamiento")
@@ -155,9 +173,7 @@ class InvestigacionInfo(BaseModel):
     id_usuario_registro: Optional[int] = Field(
         None, description="ID del usuario que registró"
     )
-    id_snvs_evento: Optional[int] = Field(
-        None, description="ID SNVS del evento"
-    )
+    id_snvs_evento: Optional[int] = Field(None, description="ID SNVS del evento")
     es_investigacion_terreno: Optional[bool] = Field(
         None, description="Si fue investigación de terreno"
     )
@@ -298,7 +314,8 @@ class CasoEpidemiologicoDetailResponse(BaseModel):
         None, description="Nombre de la estrategia aplicada"
     )
     trazabilidad_clasificacion: Optional[Dict[str, Any]] = Field(
-        None, description="Trazabilidad completa: reglas evaluadas, condiciones cumplidas, razón de clasificación"
+        None,
+        description="Trazabilidad completa: reglas evaluadas, condiciones cumplidas, razón de clasificación",
     )
 
     # Sujeto del evento
@@ -410,17 +427,25 @@ async def get_evento_detail(
 
     try:
         # Query con TODAS las relaciones necesarias (EVENT-CENTERED)
-        query = select(CasoEpidemiologico).where(CasoEpidemiologico.id == evento_id)
+        query = select(CasoEpidemiologico).where(
+            col(CasoEpidemiologico.id) == evento_id
+        )
 
         if include_relations:
             query = query.options(
-                selectinload(CasoEpidemiologico.enfermedad),  # Cambiado de tipo_eno a enfermedad
+                selectinload(
+                    CasoEpidemiologico.enfermedad
+                ),  # Cambiado de tipo_eno a enfermedad
                 selectinload(CasoEpidemiologico.estrategia_aplicada),
                 # Sujetos del evento
-                selectinload(CasoEpidemiologico.ciudadano).selectinload(Ciudadano.datos),
+                selectinload(CasoEpidemiologico.ciudadano).selectinload(
+                    Ciudadano.datos
+                ),
                 selectinload(CasoEpidemiologico.animal).selectinload(Animal.localidad),
                 # Datos geográficos del evento (normalized domicilio)
-                selectinload(CasoEpidemiologico.domicilio).selectinload(Domicilio.localidad),
+                selectinload(CasoEpidemiologico.domicilio).selectinload(
+                    Domicilio.localidad
+                ),
                 # Establecimientos del evento
                 selectinload(CasoEpidemiologico.establecimiento_consulta),
                 selectinload(CasoEpidemiologico.establecimiento_notificacion),
@@ -429,9 +454,15 @@ async def get_evento_detail(
                 selectinload(CasoEpidemiologico.sintomas).selectinload(
                     DetalleCasoSintomas.sintoma
                 ),
-                selectinload(CasoEpidemiologico.muestras).selectinload(MuestraCasoEpidemiologico.muestra),
-                selectinload(CasoEpidemiologico.muestras).selectinload(MuestraCasoEpidemiologico.establecimiento),
-                selectinload(CasoEpidemiologico.muestras).selectinload(MuestraCasoEpidemiologico.estudios),
+                selectinload(CasoEpidemiologico.muestras).selectinload(
+                    MuestraCasoEpidemiologico.muestra
+                ),
+                selectinload(CasoEpidemiologico.muestras).selectinload(
+                    MuestraCasoEpidemiologico.establecimiento
+                ),
+                selectinload(CasoEpidemiologico.muestras).selectinload(
+                    MuestraCasoEpidemiologico.estudios
+                ),
                 selectinload(CasoEpidemiologico.diagnosticos),
                 selectinload(CasoEpidemiologico.tratamientos),
                 selectinload(CasoEpidemiologico.internaciones),
@@ -454,19 +485,35 @@ async def get_evento_detail(
                 detail=f"CasoEpidemiologico {evento_id} no encontrado",
             )
 
+        # Verificar que el evento tenga ID (siempre debe tenerlo si viene de la DB)
+        if evento.id is None:
+            logger.error(f"💥 CasoEpidemiologico {evento_id} sin ID")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Error: evento sin ID",
+            )
+
         # Preparar respuesta detallada (EVENT-CENTERED)
         response = CasoEpidemiologicoDetailResponse(
             # Datos básicos del evento
             id=evento.id,
             id_evento_caso=evento.id_snvs,  # Cambiado de id_evento_caso a id_snvs
             tipo_eno_id=evento.id_enfermedad,
-            tipo_eno_nombre=evento.enfermedad.nombre if evento.enfermedad else None,  # Cambiado de tipo_eno a enfermedad
+            tipo_eno_nombre=evento.enfermedad.nombre
+            if evento.enfermedad
+            else None,  # Cambiado de tipo_eno a enfermedad
             tipo_eno_descripcion=(
-                evento.enfermedad.descripcion if evento.enfermedad else None  # Cambiado de tipo_eno a enfermedad
+                evento.enfermedad.descripcion
+                if evento.enfermedad
+                else None  # Cambiado de tipo_eno a enfermedad
             ),
-            enfermedad=evento.enfermedad.nombre if evento.enfermedad else None,  # Extraer nombre del objeto
+            enfermedad=evento.enfermedad.nombre
+            if evento.enfermedad
+            else None,  # Extraer nombre del objeto
             # Fechas importantes del evento
-            fecha_minima_caso=evento.fecha_minima_caso,  # Cambiado de fecha_minima_caso a fecha_minima_caso
+            fecha_minima_caso=evento.fecha_minima_caso
+            if evento.fecha_minima_caso
+            else date.today(),  # Cambiado de fecha_minima_caso a fecha_minima_caso
             fecha_inicio_sintomas=evento.fecha_inicio_sintomas,
             fecha_apertura_caso=evento.fecha_apertura_caso,
             fecha_primera_consulta=evento.fecha_primera_consulta,
@@ -484,13 +531,17 @@ async def get_evento_detail(
             metadata_extraida=evento.metadata_extraida,
             # Trazabilidad de clasificación
             id_estrategia_aplicada=evento.id_estrategia_aplicada,
-            estrategia_nombre=evento.estrategia_aplicada.name if evento.estrategia_aplicada else None,
+            estrategia_nombre=evento.estrategia_aplicada.name
+            if evento.estrategia_aplicada
+            else None,
             trazabilidad_clasificacion=evento.trazabilidad_clasificacion,
             # Tipo de sujeto
             tipo_sujeto=(
                 "humano"
                 if evento.ciudadano
-                else "animal" if evento.animal else "desconocido"
+                else "animal"
+                if evento.animal
+                else "desconocido"
             ),
             # Estados del evento
             es_caso_sintomatico=evento.es_caso_sintomatico,
@@ -523,7 +574,7 @@ async def get_evento_detail(
                 calle_domicilio = evento.domicilio.calle
                 numero_domicilio = evento.domicilio.numero
                 # Note: barrio_popular might not exist in Domicilio model
-                barrio_popular = getattr(evento.domicilio, 'barrio_popular', None)
+                barrio_popular = getattr(evento.domicilio, "barrio_popular", None)
                 if evento.domicilio.localidad:
                     localidad_nombre = evento.domicilio.localidad.nombre
 
@@ -536,13 +587,15 @@ async def get_evento_detail(
                 primer_datos = evento.ciudadano.datos[0]
                 telefono = primer_datos.informacion_contacto
                 es_embarazada = getattr(primer_datos, "es_embarazada", None)
-                cobertura_social = getattr(primer_datos, "cobertura_social_obra_social", None)
+                cobertura_social = getattr(
+                    primer_datos, "cobertura_social_obra_social", None
+                )
                 ocupacion_laboral = getattr(primer_datos, "ocupacion_laboral", None)
 
             response.ciudadano = CiudadanoInfo(
                 codigo=evento.ciudadano.codigo_ciudadano,
-                nombre=evento.ciudadano.nombre,
-                apellido=evento.ciudadano.apellido,
+                nombre=evento.ciudadano.nombre or "",
+                apellido=evento.ciudadano.apellido or "",
                 documento=(
                     str(evento.ciudadano.numero_documento)
                     if evento.ciudadano.numero_documento
@@ -561,18 +614,23 @@ async def get_evento_detail(
                 ocupacion_laboral=ocupacion_laboral,
             )
 
-        if evento.animal:
+        if evento.animal and evento.animal.id is not None:
             response.animal = AnimalInfo(
                 id=evento.animal.id,
                 identificacion=evento.animal.identificacion,
                 especie=evento.animal.especie,
                 raza=evento.animal.raza,
                 provincia=evento.animal.provincia,
-                localidad=evento.animal.localidad,
+                localidad=evento.animal.localidad.nombre
+                if evento.animal.localidad
+                else None,
             )
 
         # Agregar establecimientos del evento
-        if evento.establecimiento_consulta:
+        if (
+            evento.establecimiento_consulta
+            and evento.establecimiento_consulta.id is not None
+        ):
             response.establecimiento_consulta = EstablecimientoInfo(
                 id=evento.establecimiento_consulta.id,
                 nombre=evento.establecimiento_consulta.nombre,
@@ -581,7 +639,10 @@ async def get_evento_detail(
                 localidad=getattr(evento.establecimiento_consulta, "localidad", None),
             )
 
-        if evento.establecimiento_notificacion:
+        if (
+            evento.establecimiento_notificacion
+            and evento.establecimiento_notificacion.id is not None
+        ):
             response.establecimiento_notificacion = EstablecimientoInfo(
                 id=evento.establecimiento_notificacion.id,
                 nombre=evento.establecimiento_notificacion.nombre,
@@ -594,7 +655,7 @@ async def get_evento_detail(
                 ),
             )
 
-        if evento.establecimiento_carga:
+        if evento.establecimiento_carga and evento.establecimiento_carga.id is not None:
             response.establecimiento_carga = EstablecimientoInfo(
                 id=evento.establecimiento_carga.id,
                 nombre=evento.establecimiento_carga.nombre,
@@ -638,6 +699,7 @@ async def get_evento_detail(
                     anio_epidemiologico=s.anio_epidemiologico_sintoma,
                 )
                 for s in (evento.sintomas or [])
+                if s.id is not None
             ]
 
             # Muestras del evento con sus estudios anidados
@@ -646,7 +708,9 @@ async def get_evento_detail(
                     id=m.id,
                     tipo=m.muestra.descripcion if m.muestra else None,
                     fecha_toma_muestra=m.fecha_toma_muestra,
-                    establecimiento=m.establecimiento.nombre if m.establecimiento else None,
+                    establecimiento=m.establecimiento.nombre
+                    if m.establecimiento
+                    else None,
                     semana_epidemiologica=m.semana_epidemiologica_muestra,
                     anio_epidemiologico=m.anio_epidemiologico_muestra,
                     valor=m.valor,
@@ -660,20 +724,24 @@ async def get_evento_detail(
                             fecha_recepcion=est.fecha_recepcion,
                         )
                         for est in (m.estudios or [])
+                        if est.id is not None
                     ],
                 )
                 for m in (evento.muestras or [])
+                if m.id is not None
             ]
 
             # Diagnósticos del evento
             response.diagnosticos = [
                 DiagnosticoInfo(
                     id=d.id,
-                    diagnostico=getattr(d, "metodo_diagnostico", None) or getattr(d, "resultado", None),
+                    diagnostico=getattr(d, "metodo_diagnostico", None)
+                    or getattr(d, "resultado", None),
                     fecha=getattr(d, "fecha_diagnostico", None),
                     es_principal=None,
                 )
                 for d in (evento.diagnosticos or [])
+                if d.id is not None
             ]
 
             # Tratamientos del evento
@@ -688,6 +756,7 @@ async def get_evento_detail(
                     recibio_tratamiento=None,  # Este campo no existe en el modelo
                 )
                 for t in (evento.tratamientos or [])
+                if t.id is not None
             ]
 
             # Internaciones del evento
@@ -699,6 +768,7 @@ async def get_evento_detail(
                     requirio_uci=getattr(i, "requirio_uci", None),
                 )
                 for i in (evento.internaciones or [])
+                if i.id is not None
             ]
 
             # Investigaciones del evento
@@ -707,16 +777,25 @@ async def get_evento_detail(
                     id=inv.id,
                     es_usuario_centinela=getattr(inv, "es_usuario_centinela", None),
                     es_evento_centinela=getattr(inv, "es_evento_centinela", None),
-                    participo_usuario_centinela=getattr(inv, "participo_usuario_centinela", None),
-                    id_usuario_centinela_participante=getattr(inv, "id_usuario_centinela_participante", None),
+                    participo_usuario_centinela=getattr(
+                        inv, "participo_usuario_centinela", None
+                    ),
+                    id_usuario_centinela_participante=getattr(
+                        inv, "id_usuario_centinela_participante", None
+                    ),
                     id_usuario_registro=getattr(inv, "id_usuario_registro", None),
                     id_snvs_evento=getattr(inv, "id_snvs_evento", None),
-                    es_investigacion_terreno=getattr(inv, "es_investigacion_terreno", None),
+                    es_investigacion_terreno=getattr(
+                        inv, "es_investigacion_terreno", None
+                    ),
                     fecha_investigacion=getattr(inv, "fecha_investigacion", None),
-                    tipo_lugar_investigacion=getattr(inv, "tipo_y_lugar_investigacion", None),
+                    tipo_lugar_investigacion=getattr(
+                        inv, "tipo_y_lugar_investigacion", None
+                    ),
                     origen_financiamiento=getattr(inv, "origen_financiamiento", None),
                 )
                 for inv in (evento.investigaciones or [])
+                if inv.id is not None
             ]
 
             # Contactos del evento
@@ -740,6 +819,7 @@ async def get_evento_detail(
                     ),
                 )
                 for c in (evento.contactos or [])
+                if c.id is not None
             ]
 
             # Ámbitos de concurrencia del evento
@@ -757,6 +837,7 @@ async def get_evento_detail(
                     ),
                 )
                 for amb in (evento.ambitos_concurrencia or [])
+                if amb.id is not None
             ]
 
             # Antecedentes epidemiológicos del evento
@@ -773,6 +854,7 @@ async def get_evento_detail(
                     ),
                 )
                 for ant in (evento.antecedentes or [])
+                if ant.id is not None
             ]
 
             # Vacunas relacionadas al evento
@@ -784,6 +866,7 @@ async def get_evento_detail(
                     dosis_total=getattr(v, "dosis_total", None),
                 )
                 for v in (evento.vacunas or [])
+                if v.id is not None
             ]
 
         logger.info(f"✅ Detalle de evento {evento_id} obtenido")

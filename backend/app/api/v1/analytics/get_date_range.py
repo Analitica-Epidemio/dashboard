@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 class DateRangeResponse(BaseModel):
     """Response con el rango de fechas disponibles"""
+
     fecha_minima: date
     fecha_maxima: date
     total_eventos: int
@@ -29,7 +30,7 @@ class DateRangeResponse(BaseModel):
 
 async def get_date_range(
     db: AsyncSession = Depends(get_async_session),
-    current_user: Optional[User] = RequireAuthOrSignedUrl
+    current_user: Optional[User] = RequireAuthOrSignedUrl,
 ) -> SuccessResponse[DateRangeResponse]:
     """
     Endpoint para obtener el rango de fechas con datos disponibles.
@@ -42,7 +43,7 @@ async def get_date_range(
     stmt = select(
         func.min(CasoEpidemiologico.fecha_minima_caso).label("fecha_min"),
         func.max(CasoEpidemiologico.fecha_minima_caso).label("fecha_max"),
-        func.count(CasoEpidemiologico.id).label("total")
+        func.count(CasoEpidemiologico.id).label("total"),
     )
 
     result = await db.execute(stmt)
@@ -51,19 +52,20 @@ async def get_date_range(
     if not row.fecha_min or not row.fecha_max:
         # Si no hay datos, retornar fecha actual
         from datetime import date as dt
+
         today = dt.today()
-        return SuccessResponse(data=DateRangeResponse(
-            fecha_minima=today,
-            fecha_maxima=today,
-            total_eventos=0
-        ))
+        return SuccessResponse(
+            data=DateRangeResponse(
+                fecha_minima=today, fecha_maxima=today, total_eventos=0
+            )
+        )
 
     response = DateRangeResponse(
-        fecha_minima=row.fecha_min,
-        fecha_maxima=row.fecha_max,
-        total_eventos=row.total
+        fecha_minima=row.fecha_min, fecha_maxima=row.fecha_max, total_eventos=row.total
     )
 
-    logger.info(f"Rango de fechas: {response.fecha_minima} - {response.fecha_maxima} ({response.total_eventos} eventos)")
+    logger.info(
+        f"Rango de fechas: {response.fecha_minima} - {response.fecha_maxima} ({response.total_eventos} eventos)"
+    )
 
     return SuccessResponse(data=response)

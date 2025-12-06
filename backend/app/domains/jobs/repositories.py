@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy.exc import SQLAlchemyError
-from sqlmodel import Session, and_, desc, select
+from sqlmodel import Session, and_, col, desc, select
 
 from app.core.database import engine
 from app.domains.jobs.models import Job, JobStatus
@@ -31,7 +31,7 @@ class PostgreSQLJobRepository:
     - Optimizaciones de performance
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.session_factory = Session
 
     async def create(self, job: Job) -> Job:
@@ -59,7 +59,9 @@ class PostgreSQLJobRepository:
             logger.error(f"SQLAlchemy error creating job: {str(e)}", exc_info=True)
             raise RepositoryError(f"Error creating job: {str(e)}") from e
         except Exception as e:
-            logger.error(f"Unexpected error in repository.create: {str(e)}", exc_info=True)
+            logger.error(
+                f"Unexpected error in repository.create: {str(e)}", exc_info=True
+            )
             raise RepositoryError(f"Unexpected error creating job: {str(e)}") from e
 
     async def get_by_id(self, job_id: str) -> Optional[Job]:
@@ -169,15 +171,13 @@ class PostgreSQLJobRepository:
             limit=100,
         )
 
-    async def get_jobs_by_status(
-        self, statuses: List[JobStatus]
-    ) -> List[Job]:
+    async def get_jobs_by_status(self, statuses: List[JobStatus]) -> List[Job]:
         """Obtener trabajos por múltiples estados."""
         try:
             with self.session_factory(engine) as session:
                 statement = (
                     select(Job)
-                    .where(Job.status.in_(statuses))
+                    .where(col(Job.status).in_(statuses))
                     .order_by(desc(Job.created_at))
                 )
 
@@ -204,9 +204,7 @@ class PostgreSQLJobRepository:
             with self.session_factory(engine) as session:
                 statement = select(Job).where(
                     and_(
-                        Job.status.in_(
-                            [JobStatus.COMPLETED, JobStatus.FAILED]
-                        ),
+                        col(Job.status).in_([JobStatus.COMPLETED, JobStatus.FAILED]),
                         Job.completed_at < cutoff_date,
                     )
                 )
@@ -234,27 +232,19 @@ class PostgreSQLJobRepository:
             with self.session_factory(engine) as session:
                 # Total por estado
                 total_pending = session.exec(
-                    select(Job).where(
-                        Job.status == JobStatus.PENDING
-                    )
+                    select(Job).where(Job.status == JobStatus.PENDING)
                 ).all()
 
                 total_in_progress = session.exec(
-                    select(Job).where(
-                        Job.status == JobStatus.IN_PROGRESS
-                    )
+                    select(Job).where(Job.status == JobStatus.IN_PROGRESS)
                 ).all()
 
                 total_completed = session.exec(
-                    select(Job).where(
-                        Job.status == JobStatus.COMPLETED
-                    )
+                    select(Job).where(Job.status == JobStatus.COMPLETED)
                 ).all()
 
                 total_failed = session.exec(
-                    select(Job).where(
-                        Job.status == JobStatus.FAILED
-                    )
+                    select(Job).where(Job.status == JobStatus.FAILED)
                 ).all()
 
                 return {
