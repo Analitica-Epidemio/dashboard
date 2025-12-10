@@ -82,10 +82,6 @@ def execute_job(self, job_id: str) -> Dict[str, Any]:
 
             ruta_archivo_obj = Path(ruta_archivo)
 
-            job.total_steps = 23
-            session.add(job)
-            session.commit()
-
             def update_progress(percentage: int, message: str):
                 try:
                     if job is not None:

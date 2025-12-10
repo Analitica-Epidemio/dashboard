@@ -199,9 +199,7 @@ export function UploadProgress({
             className="h-2"
           />
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>
-              Paso {jobStatus.completed_steps} de {jobStatus.total_steps}
-            </span>
+            <span>{jobStatus.current_step || "Procesando..."}</span>
             <span>{jobStatus.progress_percentage}%</span>
           </div>
         </div>
