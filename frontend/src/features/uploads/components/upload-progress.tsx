@@ -141,15 +141,15 @@ export function UploadProgress({
   const getStatusText = () => {
     switch (jobStatus.status) {
       case "COMPLETED":
-        return "bg-green-500";
+        return "Procesamiento completado";
       case "FAILED":
-        return "bg-red-500";
+        return "Error en el procesamiento";
       case "CANCELLED":
-        return "bg-gray-500";
+        return "Procesamiento cancelado";
       case "IN_PROGRESS":
-        return "bg-blue-500 animate-pulse";
+        return "Procesando archivo...";
       case "PENDING":
-        return "bg-gray-300";
+        return "En cola de procesamiento";
       default:
         return "Estado desconocido";
     }
