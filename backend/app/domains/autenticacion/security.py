@@ -7,10 +7,10 @@ import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
+import bcrypt
 from fastapi import HTTPException, status
 from fastapi.security import HTTPBearer
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from pydantic import ValidationError
 
 from app.core.config import settings
@@ -43,9 +43,6 @@ class SecurityConfig:
     RESET_TOKEN_LENGTH = 32
 
 
-# Password hashing context
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 # JWT Bearer security
 security = HTTPBearer()
 
@@ -56,12 +53,16 @@ class PasswordSecurity:
     @staticmethod
     def verificar_contrasena(contrasena_plana: str, contrasena_hasheada: str) -> bool:
         """Verify a password against its hash"""
-        return bool(pwd_context.verify(contrasena_plana, contrasena_hasheada))
+        return bcrypt.checkpw(
+            contrasena_plana.encode("utf-8"), contrasena_hasheada.encode("utf-8")
+        )
 
     @staticmethod
     def obtener_hash_contrasena(contrasena: str) -> str:
         """Hash a password"""
-        return str(pwd_context.hash(contrasena))
+        return bcrypt.hashpw(
+            contrasena.encode("utf-8"), bcrypt.gensalt()
+        ).decode("utf-8")
 
     @staticmethod
     def validar_fortaleza_contrasena(contrasena: str) -> tuple[bool, str]:
