@@ -20,10 +20,15 @@ export function KPIWidget({ widget, data, isLoading, onEdit, onDelete }: WidgetP
     const kpiConfig = widget.data_config;
 
     if (kpiConfig.source === "manual" && kpiConfig.manual_data) {
-      value = kpiConfig.manual_data.value;
-      label = kpiConfig.manual_data.label ?? label;
-      if (kpiConfig.manual_data.comparison) {
-        comparison = kpiConfig.manual_data.comparison;
+      const manualData = kpiConfig.manual_data as {
+        value?: number;
+        label?: string;
+        comparison?: { value: number; trend: "up" | "down" | "neutral" }
+      };
+      value = manualData.value ?? 0;
+      label = manualData.label ?? label;
+      if (manualData.comparison) {
+        comparison = manualData.comparison;
       }
     }
   }

@@ -39,11 +39,46 @@ export interface TopWinnersLosersFilters extends AnalyticsFilters {
 export type TopChangesByGroupResponse = components['schemas']['SuccessResponse_TopChangesByGroupResponse_'];
 export type CalculateChangesRequest = components['schemas']['CalculateChangesRequest'];
 export type CalculateChangesResponse = components['schemas']['SuccessResponse_CalculateChangesResponse_'];
-export type EventoDetailsResponse = components['schemas']['SuccessResponse_EventoDetailsResponse_'];
+export type EventoDetailsResponse = components["schemas"]["SuccessResponse_CasoEpidemiologicoDetailsResponse_"];
 export type GenerateDraftRequest = components['schemas']['GenerateDraftRequest'];
 export type GenerateDraftResponse = components['schemas']['SuccessResponse_GenerateDraftResponse_'];
 
-export type EventoCambio = components['schemas']['EventoCambio'];
+export type EventoCambio = components["schemas"]["CasoEpidemiologicoCambio"];
+
+// ============================================================================
+// Local types for analytics cards (not in OpenAPI)
+// These match the actual data structure used by the components
+// ============================================================================
+
+export interface AgenteSemanaData {
+  agente_nombre: string;
+  semana_epidemiologica: number;
+  positivas: number;
+  estudiadas: number;
+}
+
+export interface AgenteEdadData {
+  agente_nombre: string;
+  grupo_etario: string;
+  positivas: number;
+}
+
+export interface CorredorEndemicoData {
+  semana_epidemiologica: number;
+  valor_actual: number;
+  zona_exito: number;
+  zona_seguridad: number;
+  zona_alerta: number;
+  zona_brote: number;
+  corredor_valido: boolean;
+}
+
+export interface OcupacionCamasData {
+  establecimiento_nombre: string;
+  semana_epidemiologica: number;
+  camas_ira: number;
+  camas_uti: number;
+}
 
 // ============================================================================
 // QUERY HOOKS - Analytics data
@@ -138,3 +173,47 @@ export function useGenerateDraft() {
     },
   });
 }
+
+// ============================================================================
+// SECCIONES CONFIG - Para mostrar qué datos se van a generar
+// ============================================================================
+
+// Types from OpenAPI
+export type RangoTemporalInfo = components["schemas"]["RangoTemporalInfo"];
+export type BloqueConfigResponse = components["schemas"]["BloqueConfigResponse"];
+export type SeccionConfigResponse = components["schemas"]["SeccionConfigResponse"];
+export type SeccionesConfigResponse = components["schemas"]["SeccionesConfigResponse"];
+
+// Aliases for backwards compatibility
+export type BloqueConfig = BloqueConfigResponse;
+export type SeccionConfig = SeccionConfigResponse;
+
+/**
+ * Fetch secciones configuration with temporal ranges info
+ */
+export function useSeccionesConfig(params: {
+  semana: number;
+  anio: number;
+}) {
+  return $api.useQuery(
+    'get',
+    '/api/v1/boletines/secciones-config',
+    {
+      params: {
+        query: {
+          semana: params.semana,
+          anio: params.anio,
+        },
+      },
+    },
+    {
+      enabled: !!params.semana && !!params.anio,
+    }
+  );
+}
+
+// ============================================================================
+// NOTA: Los datos de vigilancia agregada (CLI_P26, LAB_P26, CLI_P26_INT) se
+// consultan directamente via POST /api/v1/metricas/query usando MetricService.
+// Ver /app/dashboard/analytics/page.tsx para ejemplos de uso.
+// ============================================================================

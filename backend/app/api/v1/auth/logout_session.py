@@ -16,19 +16,21 @@ logger = logging.getLogger(__name__)
 async def logout_session(
     session_id: int,
     current_user: User = Depends(get_current_user),
-    auth_service: AuthService = Depends(get_auth_service)
+    auth_service: AuthService = Depends(get_auth_service),
 ):
     """
     Logout specific session
     """
-    success = await auth_service.logout_specific_session(
-        current_user.id,
-        session_id
-    )
+    if current_user.id is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="User ID is required"
+        )
+
+    success = await auth_service.cerrar_sesion_especifica(current_user.id, session_id)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Session not found or not owned by user"
+            detail="Session not found or not owned by user",
         )
 
     logger.info(f"User {current_user.email} logged out session {session_id}")

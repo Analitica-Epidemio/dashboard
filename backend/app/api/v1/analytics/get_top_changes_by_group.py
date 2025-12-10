@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.analytics.period_utils import get_epi_week_dates
 from app.api.v1.analytics.schemas import (
-    EventoCambio,
+    CasoEpidemiologicoCambio,
     PeriodoAnalisis,
     TopChangesByGroupResponse,
 )
@@ -25,12 +25,16 @@ logger = logging.getLogger(__name__)
 
 
 async def get_top_changes_by_group(
-    semana_actual: int = Query(..., description="Semana epidemiológica actual", ge=1, le=53),
+    semana_actual: int = Query(
+        ..., description="Semana epidemiológica actual", ge=1, le=53
+    ),
     anio_actual: int = Query(..., description="Año epidemiológico actual"),
-    num_semanas: int = Query(4, description="Número de semanas hacia atrás", ge=1, le=52),
+    num_semanas: int = Query(
+        4, description="Número de semanas hacia atrás", ge=1, le=52
+    ),
     limit: int = Query(10, description="Top N eventos por grupo", ge=1, le=50),
     db: AsyncSession = Depends(get_async_session),
-    current_user: Optional[User] = RequireAuthOrSignedUrl
+    current_user: Optional[User] = RequireAuthOrSignedUrl,
 ) -> SuccessResponse[TopChangesByGroupResponse]:
     """
     Endpoint optimizado para obtener top cambios por grupo epidemiológico.
@@ -85,12 +89,12 @@ async def get_top_changes_by_group(
                 te.nombre as tipo_eno_nombre,
                 STRING_AGG(DISTINCT ge.nombre, ', ' ORDER BY ge.nombre) as grupos_nombres,
                 COUNT(DISTINCT e.id) as casos
-            FROM evento e
-            INNER JOIN tipo_eno te ON e.id_tipo_eno = te.id
-            LEFT JOIN tipo_eno_grupo_eno tege ON te.id = tege.id_tipo_eno
-            LEFT JOIN grupo_eno ge ON tege.id_grupo_eno = ge.id
-            WHERE e.fecha_minima_evento >= :fecha_inicio_actual
-                AND e.fecha_minima_evento <= :fecha_fin_actual
+            FROM caso_epidemiologico e
+            INNER JOIN enfermedad te ON e.id_enfermedad = te.id
+            LEFT JOIN enfermedad_grupo tege ON te.id = tege.id_enfermedad
+            LEFT JOIN grupo_de_enfermedades ge ON tege.id_grupo = ge.id
+            WHERE e.fecha_minima_caso >= :fecha_inicio_actual
+                AND e.fecha_minima_caso <= :fecha_fin_actual
             GROUP BY te.id, te.nombre
         ),
         casos_anterior AS (
@@ -98,10 +102,10 @@ async def get_top_changes_by_group(
             SELECT
                 te.id as tipo_eno_id,
                 COUNT(DISTINCT e.id) as casos
-            FROM evento e
-            INNER JOIN tipo_eno te ON e.id_tipo_eno = te.id
-            WHERE e.fecha_minima_evento >= :fecha_inicio_anterior
-                AND e.fecha_minima_evento <= :fecha_fin_anterior
+            FROM caso_epidemiologico e
+            INNER JOIN enfermedad te ON e.id_enfermedad = te.id
+            WHERE e.fecha_minima_caso >= :fecha_inicio_anterior
+                AND e.fecha_minima_caso <= :fecha_fin_anterior
             GROUP BY te.id
         ),
         cambios AS (
@@ -176,13 +180,16 @@ async def get_top_changes_by_group(
     """)
 
     # Ejecutar query
-    result = await db.execute(query, {
-        "fecha_inicio_actual": fecha_inicio_actual,
-        "fecha_fin_actual": fecha_fin_actual,
-        "fecha_inicio_anterior": fecha_inicio_anterior,
-        "fecha_fin_anterior": fecha_fin_anterior,
-        "limit": limit
-    })
+    result = await db.execute(
+        query,
+        {
+            "fecha_inicio_actual": fecha_inicio_actual,
+            "fecha_fin_actual": fecha_fin_actual,
+            "fecha_inicio_anterior": fecha_inicio_anterior,
+            "fecha_fin_anterior": fecha_fin_anterior,
+            "limit": limit,
+        },
+    )
     rows = result.fetchall()
 
     # Procesar resultados SIN agrupar - solo dos listas globales
@@ -190,15 +197,16 @@ async def get_top_changes_by_group(
     top_decrecimiento = []
 
     for row in rows:
-        evento = EventoCambio(
+        evento = CasoEpidemiologicoCambio(
             tipo_eno_id=row.tipo_eno_id,
             tipo_eno_nombre=row.tipo_eno_nombre,
             grupo_eno_id=0,  # No longer meaningful when evento can be in multiple groups
-            grupo_eno_nombre=row.grupos_nombres or "Sin grupo",  # Concatenated group names
+            grupo_eno_nombre=row.grupos_nombres
+            or "Sin grupo",  # Concatenated group names
             casos_actuales=int(row.casos_actuales),
             casos_anteriores=int(row.casos_anteriores),
             diferencia_absoluta=int(row.diferencia_absoluta),
-            diferencia_porcentual=round(float(row.diferencia_porcentual), 2)
+            diferencia_porcentual=round(float(row.diferencia_porcentual), 2),
         )
 
         if row.tipo_cambio == "crecimiento":
@@ -212,7 +220,7 @@ async def get_top_changes_by_group(
         semana_fin=semana_actual,
         anio=anio_actual,
         fecha_inicio=fecha_inicio_actual,
-        fecha_fin=fecha_fin_actual
+        fecha_fin=fecha_fin_actual,
     )
 
     periodo_anterior = PeriodoAnalisis(
@@ -220,16 +228,18 @@ async def get_top_changes_by_group(
         semana_fin=semana_fin_anterior,
         anio=anio_anterior,
         fecha_inicio=fecha_inicio_anterior,
-        fecha_fin=fecha_fin_anterior
+        fecha_fin=fecha_fin_anterior,
     )
 
     response = TopChangesByGroupResponse(
         periodo_actual=periodo_actual,
         periodo_anterior=periodo_anterior,
         top_crecimiento=top_crecimiento,
-        top_decrecimiento=top_decrecimiento
+        top_decrecimiento=top_decrecimiento,
     )
 
-    logger.info(f"Retornando {len(top_crecimiento)} eventos en crecimiento y {len(top_decrecimiento)} en decrecimiento")
+    logger.info(
+        f"Retornando {len(top_crecimiento)} eventos en crecimiento y {len(top_decrecimiento)} en decrecimiento"
+    )
 
     return SuccessResponse(data=response)

@@ -6,7 +6,7 @@ import logging
 
 from fastapi import Depends
 from sqlalchemy import select
-from sqlmodel import Session, func
+from sqlmodel import Session, col, func
 
 from app.api.v1.geocoding.schemas import GeocodingStatsResponse
 from app.core.database import get_session
@@ -32,20 +32,15 @@ async def get_geocoding_stats(
         Estadísticas detalladas por estado
     """
     # Contar domicilios por estado
-    stats_query = (
-        select(
-            Domicilio.estado_geocodificacion,
-            func.count(Domicilio.id).label("count"),
-        )
-        .group_by(Domicilio.estado_geocodificacion)
-    )
+    stats_query = select(
+        col(Domicilio.estado_geocodificacion),
+        func.count(Domicilio.id).label("count"),
+    ).group_by(col(Domicilio.estado_geocodificacion))
 
     results = session.exec(stats_query).all()
 
     # Organizar resultados
-    stats_by_estado = {
-        estado.value: 0 for estado in EstadoGeocodificacion
-    }
+    stats_by_estado = {estado.value: 0 for estado in EstadoGeocodificacion}
 
     total = 0
     for estado, count in results:
@@ -61,7 +56,9 @@ async def get_geocoding_stats(
         + stats_by_estado.get(EstadoGeocodificacion.FALLO_TEMPORAL.value, 0)
     )
     failed = stats_by_estado.get(EstadoGeocodificacion.FALLO_PERMANENTE.value, 0)
-    not_geocodable = stats_by_estado.get(EstadoGeocodificacion.NO_GEOCODIFICABLE.value, 0)
+    not_geocodable = stats_by_estado.get(
+        EstadoGeocodificacion.NO_GEOCODIFICABLE.value, 0
+    )
     processing = stats_by_estado.get(EstadoGeocodificacion.PROCESANDO.value, 0)
 
     # Calcular porcentaje completado

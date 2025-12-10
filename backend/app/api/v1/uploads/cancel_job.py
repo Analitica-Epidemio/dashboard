@@ -1,6 +1,8 @@
 """
-Cancel job endpoint
+Cancel job endpoint.
 """
+
+import logging
 
 from fastapi import Depends, status
 from fastapi.responses import JSONResponse
@@ -8,28 +10,17 @@ from fastapi.responses import JSONResponse
 from app.core.schemas.response import ErrorDetail, ErrorResponse
 from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User
-from app.features.procesamiento_archivos.services import async_service
+from app.domains.jobs.services import job_service
+
+logger = logging.getLogger(__name__)
 
 
-async def cancel_job(
-    job_id: str,
-    current_user: User = Depends(RequireAnyRole())
+async def cancel_job_endpoint(
+    job_id: str, current_user: User = Depends(RequireAnyRole())
 ):
-    """
-    Cancelar un job en progreso.
-
-    **Funcionalidad:**
-    - Revoca la task de Celery
-    - Marca el job como cancelado
-    - Limpia archivos temporales
-
-    **Limitaciones:**
-    - Solo jobs en estado `pending` o `in_progress`
-    - Jobs completados no se pueden cancelar
-    """
-
+    """Cancel a running processing job."""
     try:
-        cancelled = await async_service.cancel_job(job_id)
+        cancelled = await job_service.cancelar_job(job_id)
 
         if not cancelled:
             return JSONResponse(
@@ -49,13 +40,13 @@ async def cancel_job(
         )
 
     except Exception:
-        error_response = ErrorResponse(
-            error=ErrorDetail(
-                code="INTERNAL_SERVER_ERROR", message="Error cancelando job", field=None
-            )
-        )
-
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content=error_response.model_dump(),
+            content=ErrorResponse(
+                error=ErrorDetail(
+                    code="INTERNAL_SERVER_ERROR",
+                    message="Error cancelando job",
+                    field=None,
+                )
+            ).model_dump(),
         )

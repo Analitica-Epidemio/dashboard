@@ -1,13 +1,13 @@
 """Endpoint para buscar establecimientos IGN."""
 
-from typing import Optional
+from typing import Optional, cast
 
 from fastapi import Depends, Query
 from sqlmodel import Session
 
 from app.core.database import get_session
 
-from .mapeo_schemas import BuscarIGNResponse
+from .mapeo_schemas import BuscarIGNResponse, EstablecimientoIGNResult
 from .suggestions_service import buscar_establecimientos_ign
 
 
@@ -28,12 +28,12 @@ async def buscar_establecimientos_ign_endpoint(
         provincia_nombre=provincia,
         departamento_nombre=departamento,
         limit=page_size,
-        offset=offset
+        offset=offset,
     )
 
     return BuscarIGNResponse(
-        items=items,
+        items=cast(list[EstablecimientoIGNResult], items),
         total=total,
         page=page,
-        page_size=page_size
+        page_size=page_size,
     )

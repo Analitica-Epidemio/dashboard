@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 async def login(
     credentials: UserLogin,
     request: Request,
-    auth_service: AuthService = Depends(get_auth_service)
+    auth_service: AuthService = Depends(get_auth_service),
 ) -> Token:
     """
     Authenticate user and return JWT tokens
@@ -27,20 +27,19 @@ async def login(
 
     Returns access token (30 min) and refresh token (7 days)
     """
-    user, token = await auth_service.authenticate_user(credentials, request)
-    # Logging is done inside authenticate_user to avoid SQLAlchemy lazy loading issues
+    user, token = await auth_service.autenticar_usuario(credentials, request)
+    # Logging is done inside autenticar_usuario to avoid SQLAlchemy lazy loading issues
     return token
 
 
 async def refresh_access_token(
-    refresh_data: RefreshToken,
-    auth_service: AuthService = Depends(get_auth_service)
+    refresh_data: RefreshToken, auth_service: AuthService = Depends(get_auth_service)
 ) -> Token:
     """
     Refresh access token using refresh token
 
     Returns new access token and optionally new refresh token
     """
-    token = await auth_service.refresh_token(refresh_data.refresh_token)
+    token = await auth_service.refrescar_token(refresh_data.token_refresco)
     logger.info("Access token refreshed successfully")
     return token

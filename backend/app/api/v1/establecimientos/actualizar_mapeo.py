@@ -26,14 +26,14 @@ async def actualizar_mapeo_snvs_ign(
     if not estab_snvs or estab_snvs.source != "SNVS":
         raise HTTPException(
             status_code=404,
-            detail=f"Establecimiento SNVS con ID {id_establecimiento_snvs} no encontrado"
+            detail=f"Establecimiento SNVS con ID {id_establecimiento_snvs} no encontrado",
         )
 
     # Verificar que tenga mapeo
     if not estab_snvs.codigo_refes:
         raise HTTPException(
             status_code=400,
-            detail="El establecimiento SNVS no tiene un mapeo existente. Use POST para crear uno."
+            detail="El establecimiento SNVS no tiene un mapeo existente. Use POST para crear uno.",
         )
 
     # Obtener nuevo establecimiento IGN
@@ -41,15 +41,14 @@ async def actualizar_mapeo_snvs_ign(
     if not estab_ign_nuevo or estab_ign_nuevo.source != "IGN":
         raise HTTPException(
             status_code=404,
-            detail=f"Establecimiento IGN con ID {request.id_establecimiento_ign_nuevo} no encontrado"
+            detail=f"Establecimiento IGN con ID {request.id_establecimiento_ign_nuevo} no encontrado",
         )
 
     codigo_refes_anterior = estab_snvs.codigo_refes
 
     # Calcular nueva metadata
     similitud_nombre = calcular_similitud_nombre(
-        estab_snvs.nombre or "",
-        estab_ign_nuevo.nombre or ""
+        estab_snvs.nombre or "", estab_ign_nuevo.nombre or ""
     )
 
     provincia_match = False
@@ -57,22 +56,18 @@ async def actualizar_mapeo_snvs_ign(
     localidad_match = False
 
     if estab_snvs.id_localidad_indec and estab_ign_nuevo.id_localidad_indec:
-        localidad_match = (estab_snvs.id_localidad_indec == estab_ign_nuevo.id_localidad_indec)
+        localidad_match = (
+            estab_snvs.id_localidad_indec == estab_ign_nuevo.id_localidad_indec
+        )
 
     score = calcular_score_match(
-        similitud_nombre,
-        provincia_match,
-        departamento_match,
-        localidad_match
+        similitud_nombre, provincia_match, departamento_match, localidad_match
     )
 
     confianza = determinar_confianza(score, similitud_nombre)
 
     razon = request.razon or generar_razon_match(
-        similitud_nombre,
-        provincia_match,
-        departamento_match,
-        localidad_match
+        similitud_nombre, provincia_match, departamento_match, localidad_match
     )
 
     # Actualizar datos del SNVS

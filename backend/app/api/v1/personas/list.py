@@ -12,22 +12,23 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import Depends, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import String, case, desc, func, or_, select
+from sqlalchemy import String, case, cast, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import col
 
 from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User
-from app.domains.eventos_epidemiologicos.clasificacion.models import TipoClasificacion
-from app.domains.eventos_epidemiologicos.eventos.models import (
-    Evento,
-    TipoEno,
-    TipoEnoGrupoEno,
-)
-from app.domains.sujetos_epidemiologicos.ciudadanos_models import Ciudadano
 from app.domains.territorio.establecimientos_models import Establecimiento
 from app.domains.territorio.geografia_models import Departamento, Localidad, Provincia
+from app.domains.vigilancia_nominal.clasificacion.models import TipoClasificacion
+from app.domains.vigilancia_nominal.models.caso import CasoEpidemiologico
+from app.domains.vigilancia_nominal.models.enfermedad import (
+    Enfermedad,
+    EnfermedadGrupo,
+)
+from app.domains.vigilancia_nominal.models.sujetos import Ciudadano
 
 
 class PersonaSortBy(str, Enum):
@@ -60,10 +61,10 @@ class PersonaListItem(BaseModel):
 
     # Estadísticas de eventos de esta persona
     total_eventos: int = Field(..., description="Total de eventos registrados")
-    eventos_confirmados: int = Field(0, description="Eventos confirmados")
-    eventos_sospechosos: int = Field(0, description="Eventos sospechosos")
-    eventos_probables: int = Field(0, description="Eventos probables")
-    eventos_descartados: int = Field(0, description="Eventos descartados")
+    eventos_confirmados: int = Field(0, description="CasoEpidemiologicos confirmados")
+    eventos_sospechosos: int = Field(0, description="CasoEpidemiologicos sospechosos")
+    eventos_probables: int = Field(0, description="CasoEpidemiologicos probables")
+    eventos_descartados: int = Field(0, description="CasoEpidemiologicos descartados")
 
     # Fechas relevantes
     primer_evento_fecha: Optional[date] = Field(
@@ -101,10 +102,18 @@ class PaginationInfo(BaseModel):
 class AggregatedStats(BaseModel):
     """Estadísticas agregadas sobre TODAS las personas que coinciden con los filtros"""
 
-    total_personas: int = Field(..., description="Total de personas (mismo que pagination.total)")
-    personas_con_multiples_eventos: int = Field(0, description="Personas con más de un evento")
-    personas_con_confirmados: int = Field(0, description="Personas con al menos un evento confirmado")
-    personas_activas: int = Field(0, description="Personas con eventos en últimos 30 días")
+    total_personas: int = Field(
+        ..., description="Total de personas (mismo que pagination.total)"
+    )
+    personas_con_multiples_eventos: int = Field(
+        0, description="Personas con más de un evento"
+    )
+    personas_con_confirmados: int = Field(
+        0, description="Personas con al menos un evento confirmado"
+    )
+    personas_activas: int = Field(
+        0, description="Personas con eventos en últimos 30 días"
+    )
 
 
 class PersonaListResponse(BaseModel):
@@ -112,7 +121,9 @@ class PersonaListResponse(BaseModel):
 
     data: List[PersonaListItem] = Field(..., description="Lista de personas")
     pagination: PaginationInfo = Field(..., description="Información de paginación")
-    stats: AggregatedStats = Field(..., description="Estadísticas agregadas sobre todos los resultados")
+    stats: AggregatedStats = Field(
+        ..., description="Estadísticas agregadas sobre todos los resultados"
+    )
     filters_applied: Dict[str, Any] = Field(..., description="Filtros aplicados")
 
 
@@ -134,10 +145,14 @@ async def list_personas(
     provincia_ids_establecimiento: Optional[List[int]] = Query(
         None,
         description="Lista de códigos INDEC de provincias (filtro por ESTABLECIMIENTO DE NOTIFICACIÓN de eventos)",
-        alias="provincia_id"  # Mantiene compatibilidad con frontend
+        alias="provincia_id",  # Mantiene compatibilidad con frontend
     ),
-    tipo_eno_ids: Optional[List[int]] = Query(None, description="Lista de IDs de tipos de eventos"),
-    grupo_eno_ids: Optional[List[int]] = Query(None, description="Lista de IDs de grupos de eventos"),
+    tipo_eno_ids: Optional[List[int]] = Query(
+        None, description="Lista de IDs de tipos de eventos"
+    ),
+    grupo_eno_ids: Optional[List[int]] = Query(
+        None, description="Lista de IDs de grupos de eventos"
+    ),
     tiene_multiples_eventos: Optional[bool] = Query(
         None, description="Solo personas con múltiples eventos"
     ),
@@ -172,44 +187,69 @@ async def list_personas(
             # Subquery con TODAS las agregaciones en SQL (una sola query)
             # IMPORTANTE: Incluye JOINs para filtrar por provincia de ESTABLECIMIENTO DE NOTIFICACIÓN
             eventos_base_query = (
-                select(Evento)
-                .outerjoin(TipoEno, Evento.id_tipo_eno == TipoEno.id)
-                .outerjoin(TipoEnoGrupoEno, TipoEno.id == TipoEnoGrupoEno.id_tipo_eno)
+                select(CasoEpidemiologico)
+                .outerjoin(
+                    Enfermedad,
+                    col(CasoEpidemiologico.id_enfermedad) == col(Enfermedad.id),
+                )
+                .outerjoin(
+                    EnfermedadGrupo,
+                    col(Enfermedad.id) == col(EnfermedadGrupo.id_enfermedad),
+                )
                 # JOINs para filtro de provincia por ESTABLECIMIENTO DE NOTIFICACIÓN
-                .outerjoin(Establecimiento, Evento.id_establecimiento_notificacion == Establecimiento.id)
-                .outerjoin(Localidad, Establecimiento.id_localidad_indec == Localidad.id_localidad_indec)
-                .outerjoin(Departamento, Localidad.id_departamento_indec == Departamento.id_departamento_indec)
-                .outerjoin(Provincia, Departamento.id_provincia_indec == Provincia.id_provincia_indec)
-                .where(Evento.codigo_ciudadano.isnot(None))
+                .outerjoin(
+                    Establecimiento,
+                    col(CasoEpidemiologico.id_establecimiento_notificacion)
+                    == col(Establecimiento.id),
+                )
+                .outerjoin(
+                    Localidad,
+                    col(Establecimiento.id_localidad_indec)
+                    == col(Localidad.id_localidad_indec),
+                )
+                .outerjoin(
+                    Departamento,
+                    col(Localidad.id_departamento_indec)
+                    == col(Departamento.id_departamento_indec),
+                )
+                .outerjoin(
+                    Provincia,
+                    col(Departamento.id_provincia_indec)
+                    == col(Provincia.id_provincia_indec),
+                )
+                .where(col(CasoEpidemiologico.codigo_ciudadano).isnot(None))
             )
 
             # Aplicar filtros de eventos
             if provincia_ids_establecimiento:
                 eventos_base_query = eventos_base_query.where(
-                    Provincia.id_provincia_indec.in_(provincia_ids_establecimiento)
+                    col(Provincia.id_provincia_indec).in_(provincia_ids_establecimiento)
                 )
 
             if tipo_eno_ids:
                 eventos_base_query = eventos_base_query.where(
-                    Evento.id_tipo_eno.in_(tipo_eno_ids)
+                    col(CasoEpidemiologico.id_enfermedad).in_(tipo_eno_ids)
                 )
 
             if grupo_eno_ids:
                 eventos_base_query = eventos_base_query.where(
-                    TipoEnoGrupoEno.id_grupo_eno.in_(grupo_eno_ids)
+                    col(EnfermedadGrupo.id_grupo).in_(grupo_eno_ids)
                 )
 
             # Filtros de edad (calcular edad a partir de fecha_nacimiento y fecha_apertura_caso)
             if edad_min is not None or edad_max is not None:
                 # Calcular edad usando AGE(fecha_apertura_caso, fecha_nacimiento)
                 edad_calculada = func.extract(
-                    'year',
-                    func.age(Evento.fecha_apertura_caso, Evento.fecha_nacimiento)
+                    "year",
+                    func.age(
+                        CasoEpidemiologico.fecha_apertura_caso,
+                        CasoEpidemiologico.fecha_nacimiento,
+                    ),
                 )
                 # Asegurarse de que ambas fechas existan
                 eventos_base_query = eventos_base_query.where(
-                    Evento.fecha_nacimiento.isnot(None),
-                    Evento.fecha_apertura_caso.isnot(None)
+                    col(CasoEpidemiologico.fecha_nacimiento).isnot(None),
+                    col(CasoEpidemiologico.fecha_apertura_caso).isnot(None),
                 )
 
                 if edad_min is not None:
@@ -229,41 +269,63 @@ async def list_personas(
             eventos_stats_subq = (
                 select(
                     eventos_filtrados.c.codigo_ciudadano,
-                    func.count(func.distinct(eventos_filtrados.c.id)).label("total_eventos"),
+                    func.count(func.distinct(eventos_filtrados.c.id)).label(
+                        "total_eventos"
+                    ),
                     func.sum(
                         case(
-                            (eventos_filtrados.c.clasificacion_estrategia == TipoClasificacion.CONFIRMADOS, 1),
+                            (
+                                eventos_filtrados.c.clasificacion_estrategia
+                                == TipoClasificacion.CONFIRMADOS,
+                                1,
+                            ),
                             else_=0,
                         )
                     ).label("confirmados"),
                     func.sum(
                         case(
-                            (eventos_filtrados.c.clasificacion_estrategia == TipoClasificacion.SOSPECHOSOS, 1),
+                            (
+                                eventos_filtrados.c.clasificacion_estrategia
+                                == TipoClasificacion.SOSPECHOSOS,
+                                1,
+                            ),
                             else_=0,
                         )
                     ).label("sospechosos"),
                     func.sum(
                         case(
-                            (eventos_filtrados.c.clasificacion_estrategia == TipoClasificacion.PROBABLES, 1),
+                            (
+                                eventos_filtrados.c.clasificacion_estrategia
+                                == TipoClasificacion.PROBABLES,
+                                1,
+                            ),
                             else_=0,
                         )
                     ).label("probables"),
                     func.sum(
                         case(
-                            (eventos_filtrados.c.clasificacion_estrategia == TipoClasificacion.DESCARTADOS, 1),
+                            (
+                                eventos_filtrados.c.clasificacion_estrategia
+                                == TipoClasificacion.DESCARTADOS,
+                                1,
+                            ),
                             else_=0,
                         )
                     ).label("descartados"),
-                    func.min(eventos_filtrados.c.fecha_minima_evento).label("primer_evento"),
-                    func.max(eventos_filtrados.c.fecha_minima_evento).label("ultimo_evento"),
+                    func.min(eventos_filtrados.c.fecha_minima_caso).label(
+                        "primer_evento"
+                    ),
+                    func.max(eventos_filtrados.c.fecha_minima_caso).label(
+                        "ultimo_evento"
+                    ),
                     func.sum(
                         case(
-                            (eventos_filtrados.c.fecha_minima_evento >= hace_30_dias, 1),
+                            (eventos_filtrados.c.fecha_minima_caso >= hace_30_dias, 1),
                             else_=0,
                         )
                     ).label("eventos_recientes"),
                 )
-                .where(eventos_filtrados.c.codigo_ciudadano.isnot(None))
+                .where(col(eventos_filtrados.c.codigo_ciudadano).isnot(None))
                 .group_by(eventos_filtrados.c.codigo_ciudadano)
                 .subquery()
             )
@@ -272,23 +334,23 @@ async def list_personas(
             ultimo_evento_subq = (
                 select(
                     eventos_filtrados.c.codigo_ciudadano,
-                    eventos_filtrados.c.id_tipo_eno,
+                    eventos_filtrados.c.id_enfermedad,
                     eventos_filtrados.c.clasificacion_estrategia,
                     func.row_number()
                     .over(
                         partition_by=eventos_filtrados.c.codigo_ciudadano,
-                        order_by=desc(eventos_filtrados.c.fecha_minima_evento),
+                        order_by=desc(eventos_filtrados.c.fecha_minima_caso),
                     )
                     .label("rn"),
                 )
-                .where(eventos_filtrados.c.codigo_ciudadano.isnot(None))
+                .where(col(eventos_filtrados.c.codigo_ciudadano).isnot(None))
                 .subquery()
             )
 
             ultimo_evento_filtrado = (
                 select(
                     ultimo_evento_subq.c.codigo_ciudadano,
-                    ultimo_evento_subq.c.id_tipo_eno,
+                    ultimo_evento_subq.c.id_enfermedad,
                     ultimo_evento_subq.c.clasificacion_estrategia,
                 )
                 .where(ultimo_evento_subq.c.rn == 1)
@@ -310,21 +372,23 @@ async def list_personas(
                     ultimo_evento_filtrado.c.clasificacion_estrategia.label(
                         "ultimo_evento_clasificacion"
                     ),
-                    TipoEno.nombre.label("ultimo_evento_tipo"),
+                    col(Enfermedad.nombre).label("ultimo_evento_tipo"),
                 )
                 .outerjoin(
                     eventos_stats_subq,
-                    Ciudadano.codigo_ciudadano == eventos_stats_subq.c.codigo_ciudadano,
+                    col(Ciudadano.codigo_ciudadano)
+                    == eventos_stats_subq.c.codigo_ciudadano,
                 )
                 .outerjoin(
                     ultimo_evento_filtrado,
-                    Ciudadano.codigo_ciudadano
+                    col(Ciudadano.codigo_ciudadano)
                     == ultimo_evento_filtrado.c.codigo_ciudadano,
                 )
                 .outerjoin(
-                    TipoEno, ultimo_evento_filtrado.c.id_tipo_eno == TipoEno.id
+                    Enfermedad,
+                    ultimo_evento_filtrado.c.id_enfermedad == col(Enfermedad.id),
                 )
-                .where(eventos_stats_subq.c.total_eventos.isnot(None))
+                .where(col(eventos_stats_subq.c.total_eventos).isnot(None))
             )
 
             # Aplicar filtros de búsqueda
@@ -332,9 +396,11 @@ async def list_personas(
                 search_term = f"%{search}%"
                 ciudadanos_query = ciudadanos_query.where(
                     or_(
-                        Ciudadano.nombre.ilike(search_term),
-                        Ciudadano.apellido.ilike(search_term),
-                        Ciudadano.numero_documento.cast(String).ilike(search_term),
+                        col(Ciudadano.nombre).ilike(search_term),
+                        col(Ciudadano.apellido).ilike(search_term),
+                        cast(col(Ciudadano.numero_documento), String).ilike(
+                            search_term
+                        ),
                     )
                 )
 
@@ -346,9 +412,11 @@ async def list_personas(
 
             # Aplicar ordenamiento
             if sort_by == PersonaSortBy.NOMBRE_ASC:
-                ciudadanos_query = ciudadanos_query.order_by(Ciudadano.nombre)
+                ciudadanos_query = ciudadanos_query.order_by(col(Ciudadano.nombre))
             elif sort_by == PersonaSortBy.NOMBRE_DESC:
-                ciudadanos_query = ciudadanos_query.order_by(desc(Ciudadano.nombre))
+                ciudadanos_query = ciudadanos_query.order_by(
+                    desc(col(Ciudadano.nombre))
+                )
             elif sort_by == PersonaSortBy.EVENTOS_DESC:
                 ciudadanos_query = ciudadanos_query.order_by(
                     desc(eventos_stats_subq.c.total_eventos)
@@ -382,16 +450,18 @@ async def list_personas(
                     eventos_stats_subq,
                     Ciudadano.codigo_ciudadano == eventos_stats_subq.c.codigo_ciudadano,
                 )
-                .where(eventos_stats_subq.c.total_eventos.isnot(None))
+                .where(col(eventos_stats_subq.c.total_eventos).isnot(None))
             )
 
             if search:
                 search_term = f"%{search}%"
                 count_query = count_query.where(
                     or_(
-                        Ciudadano.nombre.ilike(search_term),
-                        Ciudadano.apellido.ilike(search_term),
-                        Ciudadano.numero_documento.cast(String).ilike(search_term),
+                        col(Ciudadano.nombre).ilike(search_term),
+                        col(Ciudadano.apellido).ilike(search_term),
+                        cast(col(Ciudadano.numero_documento), String).ilike(
+                            search_term
+                        ),
                     )
                 )
 
@@ -414,7 +484,7 @@ async def list_personas(
                     eventos_stats_subq,
                     Ciudadano.codigo_ciudadano == eventos_stats_subq.c.codigo_ciudadano,
                 )
-                .where(eventos_stats_subq.c.total_eventos.isnot(None))
+                .where(col(eventos_stats_subq.c.total_eventos).isnot(None))
             )
 
             # Aplicar los mismos filtros de búsqueda
@@ -422,9 +492,11 @@ async def list_personas(
                 search_term = f"%{search}%"
                 stats_base_query = stats_base_query.where(
                     or_(
-                        Ciudadano.nombre.ilike(search_term),
-                        Ciudadano.apellido.ilike(search_term),
-                        Ciudadano.numero_documento.cast(String).ilike(search_term),
+                        col(Ciudadano.nombre).ilike(search_term),
+                        col(Ciudadano.apellido).ilike(search_term),
+                        cast(col(Ciudadano.numero_documento), String).ilike(
+                            search_term
+                        ),
                     )
                 )
 
@@ -513,9 +585,7 @@ async def list_personas(
                 },
             )
 
-            logger.info(
-                f"✅ Retornando {len(personas_list)} personas de {total} total"
-            )
+            logger.info(f"✅ Retornando {len(personas_list)} personas de {total} total")
             return SuccessResponse(data=response)
 
         # TODO: Implementar animales con la misma lógica optimizada
@@ -551,6 +621,30 @@ async def list_personas(
                 )
             )
 
+        # Fallback: retornar lista vacía si no se especificó un tipo válido
+        return SuccessResponse(
+            data=PersonaListResponse(
+                data=[],
+                pagination=PaginationInfo(
+                    page=page,
+                    page_size=page_size,
+                    total=0,
+                    total_pages=0,
+                    has_next=False,
+                    has_prev=False,
+                ),
+                stats=AggregatedStats(
+                    total_personas=0,
+                    personas_con_multiples_eventos=0,
+                    personas_con_confirmados=0,
+                    personas_activas=0,
+                ),
+                filters_applied={
+                    "search": search,
+                    "tipo_sujeto": tipo_sujeto,
+                },
+            )
+        )
     except Exception as e:
         logger.error(f"💥 Error listando personas: {str(e)}", exc_info=True)
         raise HTTPException(

@@ -23,8 +23,12 @@ async def verify_signed_url_headers(request: Request) -> Optional[dict]:
     signed_signature = request.headers.get("X-Signed-Signature")
 
     logger.debug("Checking signed URL headers:")
-    logger.debug(f"  X-Signed-Data: {'Present' if signed_data else 'Missing'} - {signed_data[:50] if signed_data else 'N/A'}...")
-    logger.debug(f"  X-Signed-Signature: {'Present' if signed_signature else 'Missing'} - {signed_signature[:20] if signed_signature else 'N/A'}...")
+    logger.debug(
+        f"  X-Signed-Data: {'Present' if signed_data else 'Missing'} - {signed_data[:50] if signed_data else 'N/A'}..."
+    )
+    logger.debug(
+        f"  X-Signed-Signature: {'Present' if signed_signature else 'Missing'} - {signed_signature[:20] if signed_signature else 'N/A'}..."
+    )
 
     if not signed_data or not signed_signature:
         logger.debug("No signed URL headers found")
@@ -32,9 +36,13 @@ async def verify_signed_url_headers(request: Request) -> Optional[dict]:
 
     try:
         # Verificar la URL firmada
-        logger.debug(f"Verifying signed URL with data: {signed_data[:50]}... and signature: {signed_signature[:20]}...")
+        logger.debug(
+            f"Verifying signed URL with data: {signed_data[:50]}... and signature: {signed_signature[:20]}..."
+        )
         verified_data = verify_signed_url(signed_data, signed_signature)
-        logger.info(f"✅ Signed URL verified successfully. User ID: {verified_data.get('generated_by')}")
+        logger.info(
+            f"✅ Signed URL verified successfully. User ID: {verified_data.get('generated_by')}"
+        )
         return verified_data
     except ValueError as e:
         logger.error(f"❌ Signed URL verification failed: {str(e)}")

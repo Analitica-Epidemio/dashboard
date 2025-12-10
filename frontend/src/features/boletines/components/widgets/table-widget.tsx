@@ -21,7 +21,7 @@ export function TableWidget({ widget, data, isLoading, onEdit, onDelete }: Widge
   let tableData: Record<string, unknown>[] = [];
   let columns: string[] = [];
 
-  if (widget.data_config.source === "manual" && widget.data_config.manual_data) {
+  if (widget.data_config?.source === "manual" && widget.data_config?.manual_data) {
     const manualData = widget.data_config.manual_data as { rows?: Record<string, unknown>[]; columns?: string[] };
     tableData = manualData.rows || [];
     columns = manualData.columns || [];

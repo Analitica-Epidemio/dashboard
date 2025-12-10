@@ -21,11 +21,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { $api } from "@/lib/api/client";
-import type { components } from "@/lib/api/types";
-
-type GeocodingStats = components["schemas"]["GeocodingStatsResponse"];
-type TriggerGeocodingResponse =
-  components["schemas"]["TriggerGeocodingResponse"];
 
 export function GeocodingConfigPanel() {
   const queryClient = useQueryClient();

@@ -4,9 +4,8 @@ import { BarChart3, Loader2, AlertCircle } from "lucide-react";
 import { UniversalChart } from "@/components/charts/universal-chart";
 import { $api } from "@/lib/api/client";
 import type { DynamicChartAttrs } from '../tiptap';
-import type { components } from "@/lib/api/types";
 
-type UniversalChartSpec = components["schemas"]["UniversalChartSpec"];
+import type { UniversalChartSpec } from "@/lib/types/chart-spec";
 
 // Mapeo de códigos de chart (slug → código backend)
 // Los códigos deben coincidir exactamente con los del backend
@@ -225,12 +224,12 @@ export const DynamicChartExtension = Node.create({
     return {
       insertDynamicChart:
         (attrs: DynamicChartAttrs) =>
-        ({ commands }) => {
-          return commands.insertContent({
-            type: this.name,
-            attrs,
-          });
-        },
+          ({ commands }) => {
+            return commands.insertContent({
+              type: this.name,
+              attrs,
+            });
+          },
     };
   },
 });

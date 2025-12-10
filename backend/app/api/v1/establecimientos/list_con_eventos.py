@@ -8,18 +8,18 @@ from typing import List, Optional
 from fastapi import Depends, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
-from sqlmodel import Session
+from sqlmodel import Session, col
 
 from app.core.database import get_session
 from app.core.schemas.response import SuccessResponse
-from app.domains.atencion_medica.diagnosticos_models import (
-    DiagnosticoEvento,
-    TratamientoEvento,
-)
-from app.domains.atencion_medica.salud_models import MuestraEvento
-from app.domains.eventos_epidemiologicos.eventos.models import Evento
 from app.domains.territorio.establecimientos_models import Establecimiento
 from app.domains.territorio.geografia_models import Departamento, Localidad, Provincia
+from app.domains.vigilancia_nominal.models.atencion import (
+    DiagnosticoCasoEpidemiologico,
+    TratamientoCasoEpidemiologico,
+)
+from app.domains.vigilancia_nominal.models.caso import CasoEpidemiologico
+from app.domains.vigilancia_nominal.models.salud import MuestraCasoEpidemiologico
 
 
 class EstablecimientoListItem(BaseModel):
@@ -33,7 +33,9 @@ class EstablecimientoListItem(BaseModel):
 
     # Ubicación
     localidad_nombre: Optional[str] = Field(None, description="Nombre de la localidad")
-    departamento_nombre: Optional[str] = Field(None, description="Nombre del departamento")
+    departamento_nombre: Optional[str] = Field(
+        None, description="Nombre del departamento"
+    )
     provincia_nombre: Optional[str] = Field(None, description="Nombre de la provincia")
 
     # Coordenadas
@@ -42,12 +44,20 @@ class EstablecimientoListItem(BaseModel):
 
     # Conteo de eventos
     total_eventos: int = Field(0, description="Total de eventos relacionados")
-    eventos_consulta: int = Field(0, description="Eventos donde fue consulta")
-    eventos_notificacion: int = Field(0, description="Eventos donde fue notificación")
-    eventos_carga: int = Field(0, description="Eventos donde fue carga")
-    eventos_muestra: int = Field(0, description="Eventos con muestras")
-    eventos_diagnostico: int = Field(0, description="Eventos con diagnósticos")
-    eventos_tratamiento: int = Field(0, description="Eventos con tratamientos")
+    eventos_consulta: int = Field(
+        0, description="CasoEpidemiologicos donde fue consulta"
+    )
+    eventos_notificacion: int = Field(
+        0, description="CasoEpidemiologicos donde fue notificación"
+    )
+    eventos_carga: int = Field(0, description="CasoEpidemiologicos donde fue carga")
+    eventos_muestra: int = Field(0, description="CasoEpidemiologicos con muestras")
+    eventos_diagnostico: int = Field(
+        0, description="CasoEpidemiologicos con diagnósticos"
+    )
+    eventos_tratamiento: int = Field(
+        0, description="CasoEpidemiologicos con tratamientos"
+    )
 
 
 class EstablecimientosListResponse(BaseModel):
@@ -77,70 +87,82 @@ async def list_establecimientos_con_eventos(
     Lista establecimientos con conteo de eventos relacionados.
 
     Cuenta eventos de todas las tablas relacionadas:
-    - Evento (consulta, notificación, carga)
-    - MuestraEvento
-    - DiagnosticoEvento
-    - TratamientoEvento
+    - CasoEpidemiologico (consulta, notificación, carga)
+    - MuestraCasoEpidemiologico
+    - DiagnosticoCasoEpidemiologico
+    - TratamientoCasoEpidemiologico
     """
 
     # Subquery para contar eventos de cada tipo
     eventos_consulta_sq = (
         select(
-            Evento.id_establecimiento_consulta.label("id_estab"),
-            func.count(Evento.id).label("count"),
+            col(CasoEpidemiologico.id_establecimiento_consulta).label("id_estab"),
+            func.count(CasoEpidemiologico.id).label("count"),
         )
-        .where(Evento.id_establecimiento_consulta.isnot(None))
-        .group_by(Evento.id_establecimiento_consulta)
+        .where(col(CasoEpidemiologico.id_establecimiento_consulta).isnot(None))
+        .group_by(col(CasoEpidemiologico.id_establecimiento_consulta))
         .subquery()
     )
 
     eventos_notif_sq = (
         select(
-            Evento.id_establecimiento_notificacion.label("id_estab"),
-            func.count(Evento.id).label("count"),
+            col(CasoEpidemiologico.id_establecimiento_notificacion).label("id_estab"),
+            func.count(CasoEpidemiologico.id).label("count"),
         )
-        .where(Evento.id_establecimiento_notificacion.isnot(None))
-        .group_by(Evento.id_establecimiento_notificacion)
+        .where(col(CasoEpidemiologico.id_establecimiento_notificacion).isnot(None))
+        .group_by(col(CasoEpidemiologico.id_establecimiento_notificacion))
         .subquery()
     )
 
     eventos_carga_sq = (
         select(
-            Evento.id_establecimiento_carga.label("id_estab"),
-            func.count(Evento.id).label("count"),
+            col(CasoEpidemiologico.id_establecimiento_carga).label("id_estab"),
+            func.count(CasoEpidemiologico.id).label("count"),
         )
-        .where(Evento.id_establecimiento_carga.isnot(None))
-        .group_by(Evento.id_establecimiento_carga)
+        .where(col(CasoEpidemiologico.id_establecimiento_carga).isnot(None))
+        .group_by(col(CasoEpidemiologico.id_establecimiento_carga))
         .subquery()
     )
 
     muestras_sq = (
         select(
-            MuestraEvento.id_establecimiento.label("id_estab"),
-            func.count(MuestraEvento.id).label("count"),
+            col(MuestraCasoEpidemiologico.id_establecimiento).label("id_estab"),
+            func.count(MuestraCasoEpidemiologico.id).label("count"),
         )
-        .where(MuestraEvento.id_establecimiento.isnot(None))
-        .group_by(MuestraEvento.id_establecimiento)
+        .where(col(MuestraCasoEpidemiologico.id_establecimiento).isnot(None))
+        .group_by(col(MuestraCasoEpidemiologico.id_establecimiento))
         .subquery()
     )
 
     diagnosticos_sq = (
         select(
-            DiagnosticoEvento.id_establecimiento_diagnostico.label("id_estab"),
-            func.count(DiagnosticoEvento.id).label("count"),
+            col(DiagnosticoCasoEpidemiologico.id_establecimiento_diagnostico).label(
+                "id_estab"
+            ),
+            func.count(DiagnosticoCasoEpidemiologico.id).label("count"),
         )
-        .where(DiagnosticoEvento.id_establecimiento_diagnostico.isnot(None))
-        .group_by(DiagnosticoEvento.id_establecimiento_diagnostico)
+        .where(
+            col(DiagnosticoCasoEpidemiologico.id_establecimiento_diagnostico).isnot(
+                None
+            )
+        )
+        .group_by(col(DiagnosticoCasoEpidemiologico.id_establecimiento_diagnostico))
         .subquery()
     )
 
     tratamientos_sq = (
         select(
-            TratamientoEvento.id_establecimiento_tratamiento.label("id_estab"),
-            func.count(TratamientoEvento.id).label("count"),
+            col(TratamientoCasoEpidemiologico.id_establecimiento_tratamiento).label(
+                "id_estab"
+            ),
+            func.count(TratamientoCasoEpidemiologico.id).label("count"),
         )
-        .where(TratamientoEvento.id_establecimiento_tratamiento.isnot(None))
-        .group_by(TratamientoEvento.id_establecimiento_tratamiento)
+        .where(
+            col(TratamientoCasoEpidemiologico.id_establecimiento_tratamiento).isnot(
+                None
+            )
+        )
+        .group_by(col(TratamientoCasoEpidemiologico.id_establecimiento_tratamiento))
         .subquery()
     )
 
@@ -148,9 +170,9 @@ async def list_establecimientos_con_eventos(
     query = (
         select(
             Establecimiento,
-            Localidad.nombre.label("localidad_nombre"),
-            Departamento.nombre.label("departamento_nombre"),
-            Provincia.nombre.label("provincia_nombre"),
+            col(Localidad.nombre).label("localidad_nombre"),
+            col(Departamento.nombre).label("departamento_nombre"),
+            col(Provincia.nombre).label("provincia_nombre"),
             func.coalesce(eventos_consulta_sq.c.count, 0).label("eventos_consulta"),
             func.coalesce(eventos_notif_sq.c.count, 0).label("eventos_notificacion"),
             func.coalesce(eventos_carga_sq.c.count, 0).label("eventos_carga"),
@@ -167,26 +189,41 @@ async def list_establecimientos_con_eventos(
             ).label("total_eventos"),
         )
         .outerjoin(
-            Localidad, Establecimiento.id_localidad_indec == Localidad.id_localidad_indec
+            Localidad,
+            col(Establecimiento.id_localidad_indec)
+            == col(Localidad.id_localidad_indec),
         )
         .outerjoin(
             Departamento,
-            Localidad.id_departamento_indec == Departamento.id_departamento_indec,
+            col(Localidad.id_departamento_indec)
+            == col(Departamento.id_departamento_indec),
         )
         .outerjoin(
-            Provincia, Departamento.id_provincia_indec == Provincia.id_provincia_indec
+            Provincia,
+            col(Departamento.id_provincia_indec) == col(Provincia.id_provincia_indec),
         )
-        .outerjoin(eventos_consulta_sq, Establecimiento.id == eventos_consulta_sq.c.id_estab)
-        .outerjoin(eventos_notif_sq, Establecimiento.id == eventos_notif_sq.c.id_estab)
-        .outerjoin(eventos_carga_sq, Establecimiento.id == eventos_carga_sq.c.id_estab)
-        .outerjoin(muestras_sq, Establecimiento.id == muestras_sq.c.id_estab)
-        .outerjoin(diagnosticos_sq, Establecimiento.id == diagnosticos_sq.c.id_estab)
-        .outerjoin(tratamientos_sq, Establecimiento.id == tratamientos_sq.c.id_estab)
+        .outerjoin(
+            eventos_consulta_sq,
+            col(Establecimiento.id) == eventos_consulta_sq.c.id_estab,
+        )
+        .outerjoin(
+            eventos_notif_sq, col(Establecimiento.id) == eventos_notif_sq.c.id_estab
+        )
+        .outerjoin(
+            eventos_carga_sq, col(Establecimiento.id) == eventos_carga_sq.c.id_estab
+        )
+        .outerjoin(muestras_sq, col(Establecimiento.id) == muestras_sq.c.id_estab)
+        .outerjoin(
+            diagnosticos_sq, col(Establecimiento.id) == diagnosticos_sq.c.id_estab
+        )
+        .outerjoin(
+            tratamientos_sq, col(Establecimiento.id) == tratamientos_sq.c.id_estab
+        )
     )
 
     # Aplicar filtros
     if source:
-        query = query.where(Establecimiento.source == source)
+        query = query.where(col(Establecimiento.source) == source)
 
     if tiene_eventos is not None:
         total_eventos_expr = (
@@ -231,16 +268,16 @@ async def list_establecimientos_con_eventos(
             ).asc()
         )
     elif order_by == "nombre_asc":
-        query = query.order_by(Establecimiento.nombre.asc())
+        query = query.order_by(col(Establecimiento.nombre).asc())
     elif order_by == "source_asc":
-        query = query.order_by(Establecimiento.source.asc())
+        query = query.order_by(col(Establecimiento.source).asc())
 
     # Paginar
     offset = (page - 1) * page_size
     query = query.offset(offset).limit(page_size)
 
     # Ejecutar query
-    results = session.exec(query).all()
+    results = session.execute(query).all()
 
     # Construir items
     items = []

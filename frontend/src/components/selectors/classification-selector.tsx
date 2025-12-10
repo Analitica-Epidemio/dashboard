@@ -50,6 +50,7 @@ const CLASSIFICATION_COLORS: Record<TipoClasificacion, string> = {
   "CON_RESULTADO_MORTAL": "bg-black text-white border-black",
   "SIN_RESULTADO_MORTAL": "bg-gray-200 text-gray-700 border-gray-400",
   "REQUIERE_REVISION": "bg-pink-100 text-pink-800 border-pink-300",
+  "TODOS": "bg-slate-100 text-slate-800 border-slate-300",
 };
 
 // Labels amigables
@@ -64,6 +65,7 @@ const CLASSIFICATION_LABELS: Record<TipoClasificacion, string> = {
   "CON_RESULTADO_MORTAL": "Con resultado mortal",
   "SIN_RESULTADO_MORTAL": "Sin resultado mortal",
   "REQUIERE_REVISION": "Requiere revisión",
+  "TODOS": "Todos",
 };
 
 interface ClassificationSelectorProps {

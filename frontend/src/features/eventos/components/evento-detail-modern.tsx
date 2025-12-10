@@ -20,12 +20,10 @@ import {
   Building,
   ChevronDown,
   ChevronRight,
-  ExternalLink,
   Users,
   UserCheck,
   Pill,
   Bed,
-  FlaskConical,
   MapPinned,
   BadgeCheck,
   Baby,
@@ -42,7 +40,6 @@ import {
   getClasificacionColorClasses,
 } from "@/features/eventos/api";
 import { cn } from "@/lib/utils";
-import type { components } from "@/lib/api/types";
 
 // Trazabilidad types - using generic object since specific schemas are not in OpenAPI
 type TrazabilidadClasificacion = {
@@ -349,14 +346,14 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
   const subjectName = evento.ciudadano
     ? `${evento.ciudadano.nombre} ${evento.ciudadano.apellido}`
     : evento.animal
-    ? evento.animal.identificacion || `Animal #${evento.animal.id}`
-    : "Sujeto no identificado";
+      ? evento.animal.identificacion || `Animal #${evento.animal.id}`
+      : "Sujeto no identificado";
 
   const subjectType = evento.ciudadano
     ? "Humano"
     : evento.animal
-    ? "Animal"
-    : "Desconocido";
+      ? "Animal"
+      : "Desconocido";
 
   return (
     <div className="px-6 py-6 space-y-6">
@@ -399,7 +396,7 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
         <div className="flex flex-wrap items-center gap-4 text-sm">
           <div className="flex items-center gap-1.5 text-muted-foreground">
             <Calendar className="h-4 w-4" />
-            <span>{formatDateLong(evento.fecha_minima_evento)}</span>
+            <span>{formatDateLong(evento.fecha_minima_caso)}</span>
           </div>
           {evento.confidence_score && (
             <div className="flex items-center gap-1.5 text-muted-foreground">
@@ -452,7 +449,7 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                       {formatDate(evento.ciudadano.fecha_nacimiento)}
                       {evento.ciudadano.fecha_nacimiento &&
                         calcularEdad(evento.ciudadano.fecha_nacimiento) !==
-                          null && (
+                        null && (
                           <span className="text-muted-foreground ml-2">
                             ({calcularEdad(evento.ciudadano.fecha_nacimiento)}{" "}
                             años)
@@ -476,102 +473,102 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                 evento.ciudadano.barrio ||
                 evento.ciudadano.localidad ||
                 evento.ciudadano.provincia) && (
-                <div className="pt-4 border-t">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
-                    <MapPin className="h-3 w-3" />
-                    Domicilio
-                  </p>
-                  <div className="space-y-2">
-                    {evento.ciudadano.calle && (
-                      <div className="flex items-baseline justify-between text-sm">
-                        <span className="text-muted-foreground">Calle:</span>
-                        <span className="font-medium text-right">
-                          {evento.ciudadano.calle}
-                        </span>
-                      </div>
-                    )}
-                    {evento.ciudadano.numero && (
-                      <div className="flex items-baseline justify-between text-sm">
-                        <span className="text-muted-foreground">Número:</span>
-                        <span className="font-medium text-right">
-                          {evento.ciudadano.numero}
-                        </span>
-                      </div>
-                    )}
-                    {evento.ciudadano.barrio && (
-                      <div className="flex items-baseline justify-between text-sm">
-                        <span className="text-muted-foreground">Barrio:</span>
-                        <span className="font-medium text-right">
-                          {evento.ciudadano.barrio}
-                        </span>
-                      </div>
-                    )}
-                    {evento.ciudadano.localidad && (
-                      <div className="flex items-baseline justify-between text-sm">
-                        <span className="text-muted-foreground">
-                          Localidad:
-                        </span>
-                        <span className="font-medium text-right">
-                          {evento.ciudadano.localidad}
-                        </span>
-                      </div>
-                    )}
-                    {evento.ciudadano.provincia && (
-                      <div className="flex items-baseline justify-between text-sm">
-                        <span className="text-muted-foreground">
-                          Provincia:
-                        </span>
-                        <span className="font-medium text-right">
-                          {evento.ciudadano.provincia}
-                        </span>
-                      </div>
-                    )}
+                  <div className="pt-4 border-t">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
+                      <MapPin className="h-3 w-3" />
+                      Domicilio
+                    </p>
+                    <div className="space-y-2">
+                      {evento.ciudadano.calle && (
+                        <div className="flex items-baseline justify-between text-sm">
+                          <span className="text-muted-foreground">Calle:</span>
+                          <span className="font-medium text-right">
+                            {evento.ciudadano.calle}
+                          </span>
+                        </div>
+                      )}
+                      {evento.ciudadano.numero && (
+                        <div className="flex items-baseline justify-between text-sm">
+                          <span className="text-muted-foreground">Número:</span>
+                          <span className="font-medium text-right">
+                            {evento.ciudadano.numero}
+                          </span>
+                        </div>
+                      )}
+                      {evento.ciudadano.barrio && (
+                        <div className="flex items-baseline justify-between text-sm">
+                          <span className="text-muted-foreground">Barrio:</span>
+                          <span className="font-medium text-right">
+                            {evento.ciudadano.barrio}
+                          </span>
+                        </div>
+                      )}
+                      {evento.ciudadano.localidad && (
+                        <div className="flex items-baseline justify-between text-sm">
+                          <span className="text-muted-foreground">
+                            Localidad:
+                          </span>
+                          <span className="font-medium text-right">
+                            {evento.ciudadano.localidad}
+                          </span>
+                        </div>
+                      )}
+                      {evento.ciudadano.provincia && (
+                        <div className="flex items-baseline justify-between text-sm">
+                          <span className="text-muted-foreground">
+                            Provincia:
+                          </span>
+                          <span className="font-medium text-right">
+                            {evento.ciudadano.provincia}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
               {/* Datos adicionales si existen */}
               {(evento.ciudadano.es_embarazada !== null ||
                 evento.ciudadano.cobertura_social ||
                 evento.ciudadano.ocupacion_laboral) && (
-                <div className="pt-4 border-t">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-                    Información Adicional
-                  </p>
-                  <div className="grid gap-x-8 gap-y-3 md:grid-cols-2">
-                    {evento.ciudadano.es_embarazada !== null && (
-                      <DataRow
-                        label="Embarazo"
-                        icon={Baby}
-                        value={
-                          <Badge
-                            variant={
-                              evento.ciudadano.es_embarazada
-                                ? "default"
-                                : "outline"
-                            }
-                            className="text-xs"
-                          >
-                            {evento.ciudadano.es_embarazada ? "Sí" : "No"}
-                          </Badge>
-                        }
-                      />
-                    )}
-                    {evento.ciudadano.cobertura_social && (
-                      <DataRow
-                        label="Cobertura social"
-                        value={evento.ciudadano.cobertura_social}
-                      />
-                    )}
-                    {evento.ciudadano.ocupacion_laboral && (
-                      <DataRow
-                        label="Ocupación"
-                        value={evento.ciudadano.ocupacion_laboral}
-                      />
-                    )}
+                  <div className="pt-4 border-t">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+                      Información Adicional
+                    </p>
+                    <div className="grid gap-x-8 gap-y-3 md:grid-cols-2">
+                      {evento.ciudadano.es_embarazada !== null && (
+                        <DataRow
+                          label="Embarazo"
+                          icon={Baby}
+                          value={
+                            <Badge
+                              variant={
+                                evento.ciudadano.es_embarazada
+                                  ? "default"
+                                  : "outline"
+                              }
+                              className="text-xs"
+                            >
+                              {evento.ciudadano.es_embarazada ? "Sí" : "No"}
+                            </Badge>
+                          }
+                        />
+                      )}
+                      {evento.ciudadano.cobertura_social && (
+                        <DataRow
+                          label="Cobertura social"
+                          value={evento.ciudadano.cobertura_social}
+                        />
+                      )}
+                      {evento.ciudadano.ocupacion_laboral && (
+                        <DataRow
+                          label="Ocupación"
+                          value={evento.ciudadano.ocupacion_laboral}
+                        />
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
             </div>
           ) : evento.animal ? (
             <div className="grid gap-x-8 gap-y-3 md:grid-cols-2">
@@ -626,7 +623,7 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
           <div className="grid gap-x-8 gap-y-3 md:grid-cols-2">
             <DataRow
               label="Fecha del evento"
-              value={formatDate(evento.fecha_minima_evento)}
+              value={formatDate(evento.fecha_minima_caso)}
             />
             {evento.fecha_inicio_sintomas && (
               <DataRow
@@ -698,8 +695,8 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                       ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900"
                       : trazabilidad.razon ===
                         "requiere_revision"
-                      ? "bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-900"
-                      : "bg-gray-50 dark:bg-gray-950/20 border-gray-200 dark:border-gray-900"
+                        ? "bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-900"
+                        : "bg-gray-50 dark:bg-gray-950/20 border-gray-200 dark:border-gray-900"
                   )}
                 >
                   <p className="text-sm font-medium mb-1">
@@ -712,10 +709,10 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                   {(isSinEstrategia(trazabilidad) ||
                     isError(trazabilidad) ||
                     isRequiereRevision(trazabilidad)) && (
-                    <p className="text-xs text-muted-foreground">
-                      {trazabilidad.mensaje}
-                    </p>
-                  )}
+                      <p className="text-xs text-muted-foreground">
+                        {trazabilidad.mensaje}
+                      </p>
+                    )}
 
                   {/* Regla aplicada con éxito */}
                   {isReglaAplicada(trazabilidad) && (
@@ -757,77 +754,77 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                             <div className="space-y-2">
                               {trazabilidad.condiciones_evaluadas.map(
                                 (cond, idx) => (
-                                <div
-                                  key={idx}
-                                  className={cn(
-                                    "p-3 rounded-lg border",
-                                    cond.resultado
-                                      ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900"
-                                      : "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900"
-                                  )}
-                                >
-                                  <div className="flex items-start gap-3">
-                                    <div
-                                      className={cn(
-                                        "flex h-5 w-5 items-center justify-center rounded-full flex-shrink-0",
-                                        cond.resultado
-                                          ? "bg-green-500 text-white"
-                                          : "bg-red-500 text-white"
-                                      )}
-                                    >
-                                      <span className="text-xs font-bold">
-                                        {cond.resultado ? "✓" : "✗"}
-                                      </span>
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-baseline gap-2 mb-1">
-                                        <span className="font-medium text-sm">
-                                          {cond.campo}
+                                  <div
+                                    key={idx}
+                                    className={cn(
+                                      "p-3 rounded-lg border",
+                                      cond.resultado
+                                        ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900"
+                                        : "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900"
+                                    )}
+                                  >
+                                    <div className="flex items-start gap-3">
+                                      <div
+                                        className={cn(
+                                          "flex h-5 w-5 items-center justify-center rounded-full flex-shrink-0",
+                                          cond.resultado
+                                            ? "bg-green-500 text-white"
+                                            : "bg-red-500 text-white"
+                                        )}
+                                      >
+                                        <span className="text-xs font-bold">
+                                          {cond.resultado ? "✓" : "✗"}
                                         </span>
-                                        <Badge
-                                          variant="outline"
-                                          className="text-xs"
-                                        >
-                                          {cond.tipo_filtro
-                                            ?.replace("CAMPO_", "")
-                                            ?.toLowerCase()}
-                                        </Badge>
                                       </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-baseline gap-2 mb-1">
+                                          <span className="font-medium text-sm">
+                                            {cond.campo}
+                                          </span>
+                                          <Badge
+                                            variant="outline"
+                                            className="text-xs"
+                                          >
+                                            {cond.tipo_filtro
+                                              ?.replace("CAMPO_", "")
+                                              ?.toLowerCase()}
+                                          </Badge>
+                                        </div>
 
-                                      {/* Valor esperado */}
-                                      {(() => {
-                                        if (!cond.config) return null;
-                                        const val = cond.config.value;
-                                        const vals = cond.config.values;
-                                        if (!val && !vals) return null;
+                                        {/* Valor esperado */}
+                                        {(() => {
+                                          if (!cond.config) return null;
+                                          const val = cond.config.value;
+                                          const vals = cond.config.values;
+                                          if (!val && !vals) return null;
 
-                                        return (
-                                          <p className="text-xs text-muted-foreground mb-1">
-                                            Esperado:{" "}
+                                          return (
+                                            <p className="text-xs text-muted-foreground mb-1">
+                                              Esperado:{" "}
+                                              <span className="font-medium text-foreground">
+                                                {String(val) ||
+                                                  (Array.isArray(vals)
+                                                    ? vals.map(String).join(", ")
+                                                    : String(vals))}
+                                              </span>
+                                            </p>
+                                          );
+                                        })()}
+
+                                        {/* Valor encontrado */}
+                                        {cond.valor_campo && (
+                                          <p className="text-xs text-muted-foreground">
+                                            Encontrado:{" "}
                                             <span className="font-medium text-foreground">
-                                              {String(val) ||
-                                                (Array.isArray(vals)
-                                                  ? vals.map(String).join(", ")
-                                                  : String(vals))}
+                                              {cond.valor_campo}
                                             </span>
                                           </p>
-                                        );
-                                      })()}
-
-                                      {/* Valor encontrado */}
-                                      {cond.valor_campo && (
-                                        <p className="text-xs text-muted-foreground">
-                                          Encontrado:{" "}
-                                          <span className="font-medium text-foreground">
-                                            {cond.valor_campo}
-                                          </span>
-                                        </p>
-                                      )}
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
-                              )
-                            )}
+                                )
+                              )}
                             </div>
                           </div>
                         )}
@@ -836,113 +833,113 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
 
                   {/* Reglas evaluadas que no cumplieron */}
                   {isEvaluando(trazabilidad) &&
-                  trazabilidad.reglas_evaluadas &&
-                  trazabilidad.reglas_evaluadas.length >
+                    trazabilidad.reglas_evaluadas &&
+                    trazabilidad.reglas_evaluadas.length >
                     0 && (
-                    <div className="mt-3 pt-3 border-t">
-                      <p className="text-xs font-medium mb-3">
-                        Reglas evaluadas sin coincidencias (
-                        {trazabilidad.reglas_evaluadas.length}
-                        ):
-                      </p>
-                      <div className="space-y-3">
-                        {trazabilidad.reglas_evaluadas.map(
-                          (regla, idx) => (
-                          <div
-                            key={idx}
-                            className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800"
-                          >
-                            <div className="flex items-start justify-between mb-3">
-                              <span className="text-sm font-medium">
-                                {regla.regla_nombre}
-                              </span>
-                              <Badge variant="outline" className="text-xs">
-                                Prioridad {regla.regla_prioridad}
-                              </Badge>
-                            </div>
-
-                            {regla.condiciones &&
-                              regla.condiciones.length > 0 && (
-                                <div className="space-y-2">
-                                  {regla.condiciones.map(
-                                    (cond, condIdx) => (
-                                      <div
-                                        key={condIdx}
-                                        className={cn(
-                                          "p-2 rounded border flex items-start gap-2",
-                                          cond.resultado
-                                            ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
-                                            : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
-                                        )}
-                                      >
-                                        <div
-                                          className={cn(
-                                            "flex h-4 w-4 items-center justify-center rounded-full flex-shrink-0 mt-0.5",
-                                            cond.resultado
-                                              ? "bg-green-500 text-white"
-                                              : "bg-red-500 text-white"
-                                          )}
-                                        >
-                                          <span className="text-[10px] font-bold">
-                                            {cond.resultado ? "✓" : "✗"}
-                                          </span>
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                          <div className="flex items-baseline gap-2 mb-1">
-                                            <p className="text-xs font-medium">
-                                              {cond.campo}
-                                            </p>
-                                            <Badge
-                                              variant="outline"
-                                              className="text-[10px] px-1 py-0"
-                                            >
-                                              {cond.tipo_filtro
-                                                ?.replace("CAMPO_", "")
-                                                ?.toLowerCase()}
-                                            </Badge>
-                                          </div>
-
-                                          {/* Valor esperado */}
-                                          {(() => {
-                                            if (!cond.config) return null;
-                                            const val = cond.config.value;
-                                            const vals = cond.config.values;
-                                            if (!val && !vals) return null;
-
-                                            return (
-                                              <p className="text-xs text-muted-foreground">
-                                                Esperado:{" "}
-                                                <span className="font-medium">
-                                                  {String(val) ||
-                                                    (Array.isArray(vals)
-                                                      ? vals.map(String).join(", ")
-                                                      : String(vals))}
-                                                </span>
-                                              </p>
-                                            );
-                                          })()}
-
-                                          {/* Valor encontrado */}
-                                          {cond.valor_campo && (
-                                            <p className="text-xs text-muted-foreground mt-0.5">
-                                              Encontrado:{" "}
-                                              <span className="font-medium">
-                                                {cond.valor_campo}
-                                              </span>
-                                            </p>
-                                          )}
-                                        </div>
-                                      </div>
-                                    )
-                                  )}
+                      <div className="mt-3 pt-3 border-t">
+                        <p className="text-xs font-medium mb-3">
+                          Reglas evaluadas sin coincidencias (
+                          {trazabilidad.reglas_evaluadas.length}
+                          ):
+                        </p>
+                        <div className="space-y-3">
+                          {trazabilidad.reglas_evaluadas.map(
+                            (regla, idx) => (
+                              <div
+                                key={idx}
+                                className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800"
+                              >
+                                <div className="flex items-start justify-between mb-3">
+                                  <span className="text-sm font-medium">
+                                    {regla.regla_nombre}
+                                  </span>
+                                  <Badge variant="outline" className="text-xs">
+                                    Prioridad {regla.regla_prioridad}
+                                  </Badge>
                                 </div>
-                              )}
-                          </div>
-                        )
-                        )}
+
+                                {regla.condiciones &&
+                                  regla.condiciones.length > 0 && (
+                                    <div className="space-y-2">
+                                      {regla.condiciones.map(
+                                        (cond, condIdx) => (
+                                          <div
+                                            key={condIdx}
+                                            className={cn(
+                                              "p-2 rounded border flex items-start gap-2",
+                                              cond.resultado
+                                                ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+                                                : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
+                                            )}
+                                          >
+                                            <div
+                                              className={cn(
+                                                "flex h-4 w-4 items-center justify-center rounded-full flex-shrink-0 mt-0.5",
+                                                cond.resultado
+                                                  ? "bg-green-500 text-white"
+                                                  : "bg-red-500 text-white"
+                                              )}
+                                            >
+                                              <span className="text-[10px] font-bold">
+                                                {cond.resultado ? "✓" : "✗"}
+                                              </span>
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                              <div className="flex items-baseline gap-2 mb-1">
+                                                <p className="text-xs font-medium">
+                                                  {cond.campo}
+                                                </p>
+                                                <Badge
+                                                  variant="outline"
+                                                  className="text-[10px] px-1 py-0"
+                                                >
+                                                  {cond.tipo_filtro
+                                                    ?.replace("CAMPO_", "")
+                                                    ?.toLowerCase()}
+                                                </Badge>
+                                              </div>
+
+                                              {/* Valor esperado */}
+                                              {(() => {
+                                                if (!cond.config) return null;
+                                                const val = cond.config.value;
+                                                const vals = cond.config.values;
+                                                if (!val && !vals) return null;
+
+                                                return (
+                                                  <p className="text-xs text-muted-foreground">
+                                                    Esperado:{" "}
+                                                    <span className="font-medium">
+                                                      {String(val) ||
+                                                        (Array.isArray(vals)
+                                                          ? vals.map(String).join(", ")
+                                                          : String(vals))}
+                                                    </span>
+                                                  </p>
+                                                );
+                                              })()}
+
+                                              {/* Valor encontrado */}
+                                              {cond.valor_campo && (
+                                                <p className="text-xs text-muted-foreground mt-0.5">
+                                                  Encontrado:{" "}
+                                                  <span className="font-medium">
+                                                    {cond.valor_campo}
+                                                  </span>
+                                                </p>
+                                              )}
+                                            </div>
+                                          </div>
+                                        )
+                                      )}
+                                    </div>
+                                  )}
+                              </div>
+                            )
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
                 </div>
               )}
             </div>
@@ -975,11 +972,11 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                   </div>
                   {(sintoma.semana_epidemiologica ||
                     sintoma.anio_epidemiologico) && (
-                    <div className="text-xs text-muted-foreground">
-                      Semana epi: {sintoma.semana_epidemiologica || "?"}/
-                      {sintoma.anio_epidemiologico || "?"}
-                    </div>
-                  )}
+                      <div className="text-xs text-muted-foreground">
+                        Semana epi: {sintoma.semana_epidemiologica || "?"}/
+                        {sintoma.anio_epidemiologico || "?"}
+                      </div>
+                    )}
                 </div>
               ))}
             </div>
@@ -1149,8 +1146,8 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
           }
         >
           {evento.establecimiento_consulta ||
-          evento.establecimiento_notificacion ||
-          evento.establecimiento_carga ? (
+            evento.establecimiento_notificacion ||
+            evento.establecimiento_carga ? (
             <div className="space-y-4">
               {evento.establecimiento_consulta && (
                 <div className="space-y-2">
@@ -1168,15 +1165,15 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                     )}
                     {(evento.establecimiento_consulta.provincia ||
                       evento.establecimiento_consulta.localidad) && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                        <MapPin className="h-3 w-3" />
-                        <span>
-                          {evento.establecimiento_consulta.localidad}
-                          {evento.establecimiento_consulta.provincia &&
-                            `, ${evento.establecimiento_consulta.provincia}`}
-                        </span>
-                      </div>
-                    )}
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                          <MapPin className="h-3 w-3" />
+                          <span>
+                            {evento.establecimiento_consulta.localidad}
+                            {evento.establecimiento_consulta.provincia &&
+                              `, ${evento.establecimiento_consulta.provincia}`}
+                          </span>
+                        </div>
+                      )}
                   </div>
                 </div>
               )}
@@ -1197,15 +1194,15 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                     )}
                     {(evento.establecimiento_notificacion.provincia ||
                       evento.establecimiento_notificacion.localidad) && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                        <MapPin className="h-3 w-3" />
-                        <span>
-                          {evento.establecimiento_notificacion.localidad}
-                          {evento.establecimiento_notificacion.provincia &&
-                            `, ${evento.establecimiento_notificacion.provincia}`}
-                        </span>
-                      </div>
-                    )}
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                          <MapPin className="h-3 w-3" />
+                          <span>
+                            {evento.establecimiento_notificacion.localidad}
+                            {evento.establecimiento_notificacion.provincia &&
+                              `, ${evento.establecimiento_notificacion.provincia}`}
+                          </span>
+                        </div>
+                      )}
                   </div>
                 </div>
               )}
@@ -1226,15 +1223,15 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                     )}
                     {(evento.establecimiento_carga.provincia ||
                       evento.establecimiento_carga.localidad) && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                        <MapPin className="h-3 w-3" />
-                        <span>
-                          {evento.establecimiento_carga.localidad}
-                          {evento.establecimiento_carga.provincia &&
-                            `, ${evento.establecimiento_carga.provincia}`}
-                        </span>
-                      </div>
-                    )}
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                          <MapPin className="h-3 w-3" />
+                          <span>
+                            {evento.establecimiento_carga.localidad}
+                            {evento.establecimiento_carga.provincia &&
+                              `, ${evento.establecimiento_carga.provincia}`}
+                          </span>
+                        </div>
+                      )}
                   </div>
                 </div>
               )}
@@ -1367,39 +1364,39 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                   {(contacto.contactos_menores_un_ano !== null ||
                     contacto.contactos_vacunados !== null ||
                     contacto.contactos_embarazadas !== null) && (
-                    <div className="grid gap-4 md:grid-cols-3 text-center">
-                      {contacto.contactos_menores_un_ano !== null && (
-                        <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20">
-                          <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                            {contacto.contactos_menores_un_ano}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Menores de 1 año
-                          </p>
-                        </div>
-                      )}
-                      {contacto.contactos_vacunados !== null && (
-                        <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/20">
-                          <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                            {contacto.contactos_vacunados}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Vacunados
-                          </p>
-                        </div>
-                      )}
-                      {contacto.contactos_embarazadas !== null && (
-                        <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-950/20">
-                          <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                            {contacto.contactos_embarazadas}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Embarazadas
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                      <div className="grid gap-4 md:grid-cols-3 text-center">
+                        {contacto.contactos_menores_un_ano !== null && (
+                          <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20">
+                            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                              {contacto.contactos_menores_un_ano}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Menores de 1 año
+                            </p>
+                          </div>
+                        )}
+                        {contacto.contactos_vacunados !== null && (
+                          <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/20">
+                            <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                              {contacto.contactos_vacunados}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Vacunados
+                            </p>
+                          </div>
+                        )}
+                        {contacto.contactos_embarazadas !== null && (
+                          <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-950/20">
+                            <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                              {contacto.contactos_embarazadas}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Embarazadas
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                 </div>
               ))}
             </div>

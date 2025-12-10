@@ -11,12 +11,12 @@ from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireSuperadmin
 from app.domains.autenticacion.models import User
-from app.domains.eventos_epidemiologicos.clasificacion.repositories import (
-    EventStrategyRepository,
+from app.domains.vigilancia_nominal.clasificacion.repositories import (
+    EstrategiaClasificacionRepository,
 )
-from app.domains.eventos_epidemiologicos.clasificacion.schemas import (
-    EventStrategyResponse,
-    EventStrategyUpdate,
+from app.domains.vigilancia_nominal.clasificacion.schemas import (
+    EstrategiaClasificacionResponse,
+    EstrategiaClasificacionUpdate,
 )
 
 logger = logging.getLogger(__name__)
@@ -24,10 +24,10 @@ logger = logging.getLogger(__name__)
 
 async def update_strategy(
     strategy_id: int,
-    strategy_data: EventStrategyUpdate,
+    strategy_data: EstrategiaClasificacionUpdate,
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(RequireSuperadmin()),
-) -> SuccessResponse[EventStrategyResponse]:
+) -> SuccessResponse[EstrategiaClasificacionResponse]:
     """
     Actualizar estrategia existente.
 
@@ -42,7 +42,7 @@ async def update_strategy(
     logger.info(f"📝 Updating strategy: {strategy_id}")
 
     try:
-        repo = EventStrategyRepository(db)
+        repo = EstrategiaClasificacionRepository(db)
 
         # Verificar que existe
         existing = await repo.get_by_id(strategy_id)
@@ -55,7 +55,7 @@ async def update_strategy(
 
         # Actualizar
         strategy = await repo.update(strategy_id, strategy_data)
-        strategy_response = EventStrategyResponse.from_orm(strategy)
+        strategy_response = EstrategiaClasificacionResponse.model_validate(strategy)
 
         logger.info(f"✅ Strategy updated: {strategy.name}")
         return SuccessResponse(data=strategy_response)

@@ -13,12 +13,12 @@ from app.core.database import get_async_session
 from app.core.schemas.response import PaginatedResponse, PaginationMeta
 from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User
-from app.domains.eventos_epidemiologicos.clasificacion.models import EventStrategy
-from app.domains.eventos_epidemiologicos.clasificacion.repositories import (
-    EventStrategyRepository,
+from app.domains.vigilancia_nominal.clasificacion.models import EstrategiaClasificacion
+from app.domains.vigilancia_nominal.clasificacion.repositories import (
+    EstrategiaClasificacionRepository,
 )
-from app.domains.eventos_epidemiologicos.clasificacion.schemas import (
-    EventStrategyResponse,
+from app.domains.vigilancia_nominal.clasificacion.schemas import (
+    EstrategiaClasificacionResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -31,7 +31,7 @@ async def list_strategies(
     page_size: int = Query(50, ge=1, le=100),
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(RequireAnyRole()),
-) -> PaginatedResponse[EventStrategyResponse]:
+) -> PaginatedResponse[EstrategiaClasificacionResponse]:
     """
     Listar todas las estrategias de clasificación con paginación.
 
@@ -50,15 +50,19 @@ async def list_strategies(
     )
 
     try:
-        repo = EventStrategyRepository(db)
+        repo = EstrategiaClasificacionRepository(db)
         skip = (page - 1) * page_size
 
         # Obtener total count
-        count_query = select(func.count(EventStrategy.id))
+        count_query = select(func.count(EstrategiaClasificacion.id))
         if active_only is not None:
-            count_query = count_query.where(EventStrategy.is_active == active_only)
+            count_query = count_query.where(
+                EstrategiaClasificacion.is_active == active_only
+            )
         if tipo_eno_id is not None:
-            count_query = count_query.where(EventStrategy.tipo_eno_id == tipo_eno_id)
+            count_query = count_query.where(
+                EstrategiaClasificacion.id_enfermedad == tipo_eno_id
+            )
 
         result = await db.execute(count_query)
         total = result.scalar() or 0
@@ -66,13 +70,14 @@ async def list_strategies(
         # Obtener estrategias
         strategies = await repo.get_all(
             active_only=active_only,
-            tipo_eno_id=tipo_eno_id,
+            id_enfermedad=tipo_eno_id,
             skip=skip,
             limit=page_size,
         )
 
         strategy_responses = [
-            EventStrategyResponse.from_orm(strategy) for strategy in strategies
+            EstrategiaClasificacionResponse.model_validate(strategy)
+            for strategy in strategies
         ]
 
         # Calcular metadata de paginación

@@ -17,7 +17,7 @@ import type { components, operations } from '@/lib/api/types';
 /**
  * Event classification strategy
  */
-export type EventStrategy = components['schemas']['EventStrategyResponse'];
+export type EventStrategy = components['schemas']['EstrategiaClasificacionResponse'];
 
 /**
  * Strategy test response

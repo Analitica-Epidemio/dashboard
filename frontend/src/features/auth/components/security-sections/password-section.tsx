@@ -49,8 +49,8 @@ export function PasswordSection() {
     try {
       await changePasswordMutation.mutateAsync({
         body: {
-          current_password: currentPassword,
-          new_password: newPassword,
+          contrasena_actual: currentPassword,
+          nueva_contrasena: newPassword,
         },
       });
 

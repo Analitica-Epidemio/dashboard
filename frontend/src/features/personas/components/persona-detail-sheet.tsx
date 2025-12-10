@@ -18,7 +18,6 @@ import {
   TestTube,
   Syringe,
   AlertCircle,
-  ChevronRight,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { getClasificacionColorClasses, getClasificacionLabel } from "@/features/eventos/api";
@@ -32,7 +31,6 @@ interface PersonaDetailSheetProps {
 export function PersonaDetailSheet({
   tipoSujeto,
   personaId,
-  onClose,
 }: PersonaDetailSheetProps) {
   const [activeTab, setActiveTab] = useState("resumen");
 
@@ -168,7 +166,7 @@ export function PersonaDetailSheet({
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {persona.eventos.slice(0, 5).map((evento, idx: number) => (
+                    {persona.eventos.slice(0, 5).map((evento) => (
                       <div key={evento.id} className="flex items-start gap-3 pb-3 border-b last:border-0">
                         <div className="flex-shrink-0 w-2 h-2 mt-1.5 rounded-full bg-primary" />
                         <div className="flex-1 min-w-0">
@@ -186,12 +184,12 @@ export function PersonaDetailSheet({
                           </div>
                           <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
                             <span>
-                              {evento.fecha_minima_evento
-                                ? new Date(evento.fecha_minima_evento).toLocaleDateString("es-ES", {
-                                    day: "2-digit",
-                                    month: "short",
-                                    year: "numeric",
-                                  })
+                              {evento.fecha_minima_caso
+                                ? new Date(evento.fecha_minima_caso).toLocaleDateString("es-ES", {
+                                  day: "2-digit",
+                                  month: "short",
+                                  year: "numeric",
+                                })
                                 : "Sin fecha"}
                             </span>
                             {evento.domicilio?.localidad && (
@@ -260,12 +258,12 @@ export function PersonaDetailSheet({
 
                       {/* Fechas */}
                       <div className="grid grid-cols-2 gap-4 text-sm">
-                        {evento.fecha_minima_evento && (
+                        {evento.fecha_minima_caso && (
                           <div>
                             <div className="text-xs text-muted-foreground mb-1">Fecha del Evento</div>
                             <div className="flex items-center gap-1.5">
                               <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                              {new Date(evento.fecha_minima_evento).toLocaleDateString("es-ES", {
+                              {new Date(evento.fecha_minima_caso).toLocaleDateString("es-ES", {
                                 day: "2-digit",
                                 month: "long",
                                 year: "numeric",

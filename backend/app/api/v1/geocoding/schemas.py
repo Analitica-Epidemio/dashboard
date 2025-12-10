@@ -10,9 +10,7 @@ from pydantic import BaseModel, Field
 class GeocodingStatsResponse(BaseModel):
     """Respuesta con estadísticas de geocodificación."""
 
-    total_domicilios: int = Field(
-        ..., description="Total de domicilios en el sistema"
-    )
+    total_domicilios: int = Field(..., description="Total de domicilios en el sistema")
     geocoded: int = Field(..., description="Domicilios geocodificados exitosamente")
     pending: int = Field(..., description="Domicilios pendientes de geocodificar")
     processing: int = Field(..., description="Domicilios siendo procesados actualmente")

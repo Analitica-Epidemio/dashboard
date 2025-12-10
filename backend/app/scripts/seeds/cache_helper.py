@@ -4,10 +4,11 @@ Helper para cachear descargas de WFS/API externas.
 Guarda las respuestas en archivos locales para acelerar re-ejecuciones
 y proveer fallback cuando los servicios están caídos.
 """
+
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
+from typing import Optional, cast
 
 # Directorio de caché (en .cache/seeds/ en la raíz del proyecto)
 # Esto mantiene el cache fuera de app/ para builds de Docker más rápidos
@@ -16,10 +17,7 @@ CACHE_DIR = _PROJECT_ROOT / ".cache" / "seeds"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def get_cached_response(
-    cache_key: str,
-    max_age_days: int = 7
-) -> Optional[str]:
+def get_cached_response(cache_key: str, max_age_days: int = 7) -> Optional[str]:
     """
     Obtiene respuesta cacheada si existe y no está muy vieja.
 
@@ -42,7 +40,7 @@ def get_cached_response(
         return None
 
     print(f"   ✅ Usando caché local (antigüedad: {file_age.days} días)")
-    return cache_file.read_text(encoding='utf-8')
+    return cache_file.read_text(encoding="utf-8")
 
 
 def save_to_cache(cache_key: str, content: str) -> None:
@@ -54,7 +52,7 @@ def save_to_cache(cache_key: str, content: str) -> None:
         content: Contenido a guardar
     """
     cache_file = CACHE_DIR / f"{cache_key}.cache"
-    cache_file.write_text(content, encoding='utf-8')
+    cache_file.write_text(content, encoding="utf-8")
 
     # Guardar metadata
     metadata_file = CACHE_DIR / f"{cache_key}.meta.json"
@@ -62,7 +60,7 @@ def save_to_cache(cache_key: str, content: str) -> None:
         "cached_at": datetime.now().isoformat(),
         "size_bytes": len(content),
     }
-    metadata_file.write_text(json.dumps(metadata, indent=2), encoding='utf-8')
+    metadata_file.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
 
     print(f"   💾 Guardado en caché: {len(content):,} bytes")
 
@@ -72,7 +70,7 @@ def download_with_cache(
     cache_key: str,
     max_age_days: int = 7,
     timeout: int = 300,
-    verify_ssl: bool = True
+    verify_ssl: bool = True,
 ) -> str:
     """
     Descarga desde URL con caché automático.
@@ -100,7 +98,7 @@ def download_with_cache(
         response = requests.get(url, timeout=timeout, verify=verify_ssl)
         response.raise_for_status()
 
-        content = response.text
+        content = cast(str, response.text)
         print(f"   ✅ Descargado {len(content):,} bytes")
 
         # Guardar en caché
@@ -114,5 +112,5 @@ def download_with_cache(
         cache_file = CACHE_DIR / f"{cache_key}.cache"
         if cache_file.exists():
             print("   ⚠️  Usando caché VIEJO como fallback")
-            return cache_file.read_text(encoding='utf-8')
+            return cache_file.read_text(encoding="utf-8")
         raise

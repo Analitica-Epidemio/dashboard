@@ -107,23 +107,48 @@ def include_object(object, name, type_, reflected, compare_to):
         # Tablas de PostGIS/Tiger Geocoder a ignorar
         postgis_tables = {
             # PostGIS core
-            'spatial_ref_sys', 'topology', 'layer',
+            "spatial_ref_sys",
+            "topology",
+            "layer",
             # Tiger Geocoder
-            'faces', 'edges', 'addr', 'addrfeat', 'featnames',
-            'place', 'county', 'state', 'tract', 'bg', 'cousub',
-            'tabblock', 'tabblock20', 'zcta5',
+            "faces",
+            "edges",
+            "addr",
+            "addrfeat",
+            "featnames",
+            "place",
+            "county",
+            "state",
+            "tract",
+            "bg",
+            "cousub",
+            "tabblock",
+            "tabblock20",
+            "zcta5",
             # Lookups
-            'county_lookup', 'place_lookup', 'direction_lookup',
-            'street_type_lookup', 'secondary_unit_lookup',
-            'state_lookup', 'countysub_lookup',
-            'zip_lookup', 'zip_lookup_base', 'zip_lookup_all',
-            'zip_state', 'zip_state_loc',
+            "county_lookup",
+            "place_lookup",
+            "direction_lookup",
+            "street_type_lookup",
+            "secondary_unit_lookup",
+            "state_lookup",
+            "countysub_lookup",
+            "zip_lookup",
+            "zip_lookup_base",
+            "zip_lookup_all",
+            "zip_state",
+            "zip_state_loc",
             # PAGC (address standardization)
-            'pagc_gaz', 'pagc_lex', 'pagc_rules',
+            "pagc_gaz",
+            "pagc_lex",
+            "pagc_rules",
             # Loader
-            'loader_platform', 'loader_variables', 'loader_lookuptables',
+            "loader_platform",
+            "loader_variables",
+            "loader_lookuptables",
             # Geocoding
-            'geocode_settings', 'geocode_settings_default',
+            "geocode_settings",
+            "geocode_settings_default",
         }
         if name.lower() in postgis_tables:
             return False

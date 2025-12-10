@@ -30,18 +30,37 @@ logger = logging.getLogger(__name__)
 
 
 async def get_top_winners_losers(
-    metric_type: str = Query("departamentos", description="Tipo de métrica: departamentos, tipo_eno, provincias"),
-    period_type: PeriodType = Query(PeriodType.ULTIMAS_4_SEMANAS_EPI, description="Tipo de período predefinido"),
-    fecha_desde: Optional[date] = Query(None, description="Fecha desde (solo si period_type=personalizado)"),
-    fecha_hasta: Optional[date] = Query(None, description="Fecha hasta (solo si period_type=personalizado)"),
-    fecha_referencia: Optional[date] = Query(None, description="Fecha de referencia para 'viajar en el tiempo' (ej: 2023-03-15)"),
+    metric_type: str = Query(
+        "departamentos",
+        description="Tipo de métrica: departamentos, tipo_eno, provincias",
+    ),
+    period_type: PeriodType = Query(
+        PeriodType.ULTIMAS_4_SEMANAS_EPI, description="Tipo de período predefinido"
+    ),
+    fecha_desde: Optional[date] = Query(
+        None, description="Fecha desde (solo si period_type=personalizado)"
+    ),
+    fecha_hasta: Optional[date] = Query(
+        None, description="Fecha hasta (solo si period_type=personalizado)"
+    ),
+    fecha_referencia: Optional[date] = Query(
+        None,
+        description="Fecha de referencia para 'viajar en el tiempo' (ej: 2023-03-15)",
+    ),
     grupo_id: Optional[int] = Query(None, description="ID del grupo seleccionado"),
-    tipo_eno_ids: Optional[List[int]] = Query(None, description="IDs de los eventos a filtrar"),
-    clasificaciones: Optional[List[str]] = Query(None, description="Filtrar por clasificaciones estratégicas"),
-    provincia_id: Optional[int] = Query(None, description="Código INDEC de provincia (solo para metric_type=departamentos)"),
+    tipo_eno_ids: Optional[List[int]] = Query(
+        None, description="IDs de los eventos a filtrar"
+    ),
+    clasificaciones: Optional[List[str]] = Query(
+        None, description="Filtrar por clasificaciones estratégicas"
+    ),
+    provincia_id: Optional[int] = Query(
+        None,
+        description="Código INDEC de provincia (solo para metric_type=departamentos)",
+    ),
     limit: int = Query(10, description="Número de winners/losers a retornar"),
     db: AsyncSession = Depends(get_async_session),
-    current_user: Optional[User] = RequireAuthOrSignedUrl
+    current_user: Optional[User] = RequireAuthOrSignedUrl,
 ) -> SuccessResponse[TopWinnersLosersResponse]:
     """
     Endpoint para obtener top winners y losers.
@@ -53,21 +72,28 @@ async def get_top_winners_losers(
     # Determinar fechas del período actual
     if period_type == PeriodType.PERSONALIZADO:
         if not fecha_desde or not fecha_hasta:
-            raise ValueError("Para período personalizado debe especificar fecha_desde y fecha_hasta")
+            raise ValueError(
+                "Para período personalizado debe especificar fecha_desde y fecha_hasta"
+            )
         periodo_desde = fecha_desde
         periodo_hasta = fecha_hasta
     else:
         periodo_desde, periodo_hasta = get_period_dates(
-            period_type,
-            fecha_referencia=fecha_referencia
+            period_type, fecha_referencia=fecha_referencia
         )
 
     # Período de comparación (siempre rolling para winners/losers)
-    comp_desde, comp_hasta = get_comparison_period(periodo_desde, periodo_hasta, "rolling")
+    comp_desde, comp_hasta = get_comparison_period(
+        periodo_desde, periodo_hasta, "rolling"
+    )
 
     # Crear PeriodInfo
-    descripcion_actual = get_period_description(period_type, periodo_desde, periodo_hasta)
-    periodo_actual = create_period_info(periodo_desde, periodo_hasta, descripcion_actual)
+    descripcion_actual = get_period_description(
+        period_type, periodo_desde, periodo_hasta
+    )
+    periodo_actual = create_period_info(
+        periodo_desde, periodo_hasta, descripcion_actual
+    )
     descripcion_comp = f"Período anterior ({comp_desde.strftime('%d/%m')} - {comp_hasta.strftime('%d/%m')})"
     periodo_comparacion = create_period_info(comp_desde, comp_hasta, descripcion_comp)
 
@@ -81,14 +107,14 @@ async def get_top_winners_losers(
 
     if grupo_id:
         where_clauses_base.append("""
-            e.id_tipo_eno IN (
-                SELECT id_tipo_eno FROM tipo_eno_grupo_eno WHERE id_grupo_eno = :grupo_id
+            e.id_enfermedad IN (
+                SELECT id_enfermedad FROM tipo_eno_grupo_eno WHERE id_grupo = :grupo_id
             )
         """)
         params["grupo_id"] = grupo_id
 
     if tipo_eno_ids and len(tipo_eno_ids) > 0:
-        where_clauses_base.append("e.id_tipo_eno = ANY(:tipo_eno_ids)")
+        where_clauses_base.append("e.id_enfermedad = ANY(:tipo_eno_ids)")
         params["tipo_eno_ids"] = tipo_eno_ids
 
     if clasificaciones:
@@ -109,8 +135,8 @@ async def get_top_winners_losers(
             LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
             LEFT JOIN localidad l ON est.id_localidad_indec = l.id_localidad_indec
             LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
-            WHERE e.fecha_minima_evento >= :fecha_desde_actual
-                AND e.fecha_minima_evento <= :fecha_hasta_actual
+            WHERE e.fecha_minima_caso >= :fecha_desde_actual
+                AND e.fecha_minima_caso <= :fecha_hasta_actual
                 AND d.id_departamento_indec IS NOT NULL
                 AND {where_sql_base}
             GROUP BY d.id_departamento_indec, d.nombre
@@ -123,8 +149,8 @@ async def get_top_winners_losers(
             LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
             LEFT JOIN localidad l ON est.id_localidad_indec = l.id_localidad_indec
             LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
-            WHERE e.fecha_minima_evento >= :fecha_desde_comp
-                AND e.fecha_minima_evento <= :fecha_hasta_comp
+            WHERE e.fecha_minima_caso >= :fecha_desde_comp
+                AND e.fecha_minima_caso <= :fecha_hasta_comp
                 AND d.id_departamento_indec IS NOT NULL
                 AND {where_sql_base}
             GROUP BY d.id_departamento_indec
@@ -154,12 +180,12 @@ async def get_top_winners_losers(
                 te.nombre as entidad_nombre,
                 COUNT(DISTINCT e.id) as casos
             FROM evento e
-            INNER JOIN tipo_eno te ON e.id_tipo_eno = te.id
+            INNER JOIN tipo_eno te ON e.id_enfermedad = te.id
             LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
             LEFT JOIN localidad l ON est.id_localidad_indec = l.id_localidad_indec
             LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
-            WHERE e.fecha_minima_evento >= :fecha_desde_actual
-                AND e.fecha_minima_evento <= :fecha_hasta_actual
+            WHERE e.fecha_minima_caso >= :fecha_desde_actual
+                AND e.fecha_minima_caso <= :fecha_hasta_actual
                 AND {where_sql_base}
             GROUP BY te.id, te.nombre
         ),
@@ -168,12 +194,12 @@ async def get_top_winners_losers(
                 te.id as entidad_id,
                 COUNT(DISTINCT e.id) as casos
             FROM evento e
-            INNER JOIN tipo_eno te ON e.id_tipo_eno = te.id
+            INNER JOIN tipo_eno te ON e.id_enfermedad = te.id
             LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
             LEFT JOIN localidad l ON est.id_localidad_indec = l.id_localidad_indec
             LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
-            WHERE e.fecha_minima_evento >= :fecha_desde_comp
-                AND e.fecha_minima_evento <= :fecha_hasta_comp
+            WHERE e.fecha_minima_caso >= :fecha_desde_comp
+                AND e.fecha_minima_caso <= :fecha_hasta_comp
                 AND {where_sql_base}
             GROUP BY te.id
         ),
@@ -206,8 +232,8 @@ async def get_top_winners_losers(
             LEFT JOIN localidad l ON est.id_localidad_indec = l.id_localidad_indec
             LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
             LEFT JOIN provincia p ON d.id_provincia_indec = p.id_provincia_indec
-            WHERE e.fecha_minima_evento >= :fecha_desde_actual
-                AND e.fecha_minima_evento <= :fecha_hasta_actual
+            WHERE e.fecha_minima_caso >= :fecha_desde_actual
+                AND e.fecha_minima_caso <= :fecha_hasta_actual
                 AND p.id_provincia_indec IS NOT NULL
                 AND {where_sql_base}
             GROUP BY p.id_provincia_indec, p.nombre
@@ -221,8 +247,8 @@ async def get_top_winners_losers(
             LEFT JOIN localidad l ON est.id_localidad_indec = l.id_localidad_indec
             LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
             LEFT JOIN provincia p ON d.id_provincia_indec = p.id_provincia_indec
-            WHERE e.fecha_minima_evento >= :fecha_desde_comp
-                AND e.fecha_minima_evento <= :fecha_hasta_comp
+            WHERE e.fecha_minima_caso >= :fecha_desde_comp
+                AND e.fecha_minima_caso <= :fecha_hasta_comp
                 AND p.id_provincia_indec IS NOT NULL
                 AND {where_sql_base}
             GROUP BY p.id_provincia_indec
@@ -247,7 +273,9 @@ async def get_top_winners_losers(
         raise ValueError(f"metric_type inválido: {metric_type}")
 
     # Query para winners (aumentos > 0)
-    query_winners = base_cte + """
+    query_winners = (
+        base_cte
+        + """
         SELECT
             entidad_id,
             entidad_nombre,
@@ -260,9 +288,12 @@ async def get_top_winners_losers(
         ORDER BY diferencia_porcentual DESC
         LIMIT :limit
     """
+    )
 
     # Query para losers (disminuciones < 0)
-    query_losers = base_cte + """
+    query_losers = (
+        base_cte
+        + """
         SELECT
             entidad_id,
             entidad_nombre,
@@ -275,15 +306,18 @@ async def get_top_winners_losers(
         ORDER BY diferencia_porcentual ASC
         LIMIT :limit
     """
+    )
 
     # Preparar parámetros
-    params.update({
-        "fecha_desde_actual": periodo_desde,
-        "fecha_hasta_actual": periodo_hasta,
-        "fecha_desde_comp": comp_desde,
-        "fecha_hasta_comp": comp_hasta,
-        "limit": limit
-    })
+    params.update(
+        {
+            "fecha_desde_actual": periodo_desde,
+            "fecha_hasta_actual": periodo_hasta,
+            "fecha_desde_comp": comp_desde,
+            "fecha_hasta_comp": comp_hasta,
+            "limit": limit,
+        }
+    )
 
     # Ejecutar query para winners
     result_winners = await db.execute(text(query_winners), params)
@@ -297,34 +331,38 @@ async def get_top_winners_losers(
     winners = []
     for row in rows_winners:
         if row.diferencia_porcentual is not None:
-            winners.append(TopWinnerLoser(
-                entidad_id=row.entidad_id,
-                entidad_nombre=row.entidad_nombre,
-                valor_actual=float(row.valor_actual),
-                valor_anterior=float(row.valor_anterior),
-                diferencia_porcentual=round(float(row.diferencia_porcentual), 2),
-                diferencia_absoluta=float(row.diferencia_absoluta)
-            ))
+            winners.append(
+                TopWinnerLoser(
+                    entidad_id=row.entidad_id,
+                    entidad_nombre=row.entidad_nombre,
+                    valor_actual=float(row.valor_actual),
+                    valor_anterior=float(row.valor_anterior),
+                    diferencia_porcentual=round(float(row.diferencia_porcentual), 2),
+                    diferencia_absoluta=float(row.diferencia_absoluta),
+                )
+            )
 
     # Procesar losers
     losers = []
     for row in rows_losers:
         if row.diferencia_porcentual is not None:
-            losers.append(TopWinnerLoser(
-                entidad_id=row.entidad_id,
-                entidad_nombre=row.entidad_nombre,
-                valor_actual=float(row.valor_actual),
-                valor_anterior=float(row.valor_anterior),
-                diferencia_porcentual=round(float(row.diferencia_porcentual), 2),
-                diferencia_absoluta=float(row.diferencia_absoluta)
-            ))
+            losers.append(
+                TopWinnerLoser(
+                    entidad_id=row.entidad_id,
+                    entidad_nombre=row.entidad_nombre,
+                    valor_actual=float(row.valor_actual),
+                    valor_anterior=float(row.valor_anterior),
+                    diferencia_porcentual=round(float(row.diferencia_porcentual), 2),
+                    diferencia_absoluta=float(row.diferencia_absoluta),
+                )
+            )
 
     response = TopWinnersLosersResponse(
         top_winners=winners,
         top_losers=losers,
         metric_type=metric_type,
         periodo_actual=periodo_actual,
-        periodo_comparacion=periodo_comparacion
+        periodo_comparacion=periodo_comparacion,
     )
 
     return SuccessResponse(data=response)

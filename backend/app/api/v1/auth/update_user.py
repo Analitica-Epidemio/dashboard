@@ -18,13 +18,13 @@ async def update_user(
     user_id: int,
     user_data: UserUpdate,
     current_user: User = Depends(require_superadmin),
-    auth_service: AuthService = Depends(get_auth_service)
+    auth_service: AuthService = Depends(get_auth_service),
 ) -> UserResponse:
     """
     Update user by ID (Superadmin only)
 
     Superadmins can update any user's information including role and status.
     """
-    updated_user = await auth_service.update_user(user_id, user_data)
+    updated_user = await auth_service.actualizar_usuario(user_id, user_data)
     logger.info(f"Superadmin {current_user.email} updated user {updated_user.email}")
-    return updated_user
+    return UserResponse.model_validate(updated_user)

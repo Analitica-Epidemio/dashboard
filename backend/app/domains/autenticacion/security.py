@@ -2,14 +2,15 @@
 Security utilities for authentication
 Modern practices including password hashing, JWT tokens, rate limiting
 """
+
 import secrets
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Any, Optional
 
+import bcrypt
 from fastapi import HTTPException, status
 from fastapi.security import HTTPBearer
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from pydantic import ValidationError
 
 from app.core.config import settings
@@ -19,6 +20,7 @@ from .schemas import TokenData
 
 class SecurityConfig:
     """Security configuration constants"""
+
     # Password requirements
     MIN_PASSWORD_LENGTH = 8
     MAX_PASSWORD_LENGTH = 128
@@ -41,9 +43,6 @@ class SecurityConfig:
     RESET_TOKEN_LENGTH = 32
 
 
-# Password hashing context
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 # JWT Bearer security
 security = HTTPBearer()
 
@@ -52,42 +51,52 @@ class PasswordSecurity:
     """Password hashing and verification utilities"""
 
     @staticmethod
-    def verify_password(plain_password: str, hashed_password: str) -> bool:
+    def verificar_contrasena(contrasena_plana: str, contrasena_hasheada: str) -> bool:
         """Verify a password against its hash"""
-        return pwd_context.verify(plain_password, hashed_password)
+        return bcrypt.checkpw(
+            contrasena_plana.encode("utf-8"), contrasena_hasheada.encode("utf-8")
+        )
 
     @staticmethod
-    def get_password_hash(password: str) -> str:
+    def obtener_hash_contrasena(contrasena: str) -> str:
         """Hash a password"""
-        return pwd_context.hash(password)
+        return bcrypt.hashpw(
+            contrasena.encode("utf-8"), bcrypt.gensalt()
+        ).decode("utf-8")
 
     @staticmethod
-    def validate_password_strength(password: str) -> tuple[bool, str]:
+    def validar_fortaleza_contrasena(contrasena: str) -> tuple[bool, str]:
         """
         Validate password strength according to modern security standards
         Returns (is_valid, error_message)
         """
-        if len(password) < SecurityConfig.MIN_PASSWORD_LENGTH:
-            return False, f"Password must be at least {SecurityConfig.MIN_PASSWORD_LENGTH} characters"
+        if len(contrasena) < SecurityConfig.MIN_PASSWORD_LENGTH:
+            return (
+                False,
+                f"Password must be at least {SecurityConfig.MIN_PASSWORD_LENGTH} characters",
+            )
 
-        if len(password) > SecurityConfig.MAX_PASSWORD_LENGTH:
-            return False, f"Password must be at most {SecurityConfig.MAX_PASSWORD_LENGTH} characters"
+        if len(contrasena) > SecurityConfig.MAX_PASSWORD_LENGTH:
+            return (
+                False,
+                f"Password must be at most {SecurityConfig.MAX_PASSWORD_LENGTH} characters",
+            )
 
         # Check for at least one digit
-        if not any(char.isdigit() for char in password):
+        if not any(char.isdigit() for char in contrasena):
             return False, "Password must contain at least one digit"
 
         # Check for at least one uppercase letter
-        if not any(char.isupper() for char in password):
+        if not any(char.isupper() for char in contrasena):
             return False, "Password must contain at least one uppercase letter"
 
         # Check for at least one lowercase letter
-        if not any(char.islower() for char in password):
+        if not any(char.islower() for char in contrasena):
             return False, "Password must contain at least one lowercase letter"
 
         # Check for at least one special character
         special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?"
-        if not any(char in special_chars for char in password):
+        if not any(char in special_chars for char in contrasena):
             return False, "Password must contain at least one special character"
 
         return True, ""
@@ -97,62 +106,58 @@ class TokenSecurity:
     """JWT token utilities"""
 
     @staticmethod
-    def create_access_token(
-        data: dict,
-        expires_delta: Optional[timedelta] = None
+    def crear_token_acceso(
+        datos: dict, delta_expiracion: Optional[timedelta] = None
     ) -> str:
         """Create JWT access token"""
-        to_encode = data.copy()
+        a_codificar = datos.copy()
 
-        if expires_delta:
-            expire = datetime.now(timezone.utc) + expires_delta
+        if delta_expiracion:
+            expira = datetime.now(timezone.utc) + delta_expiracion
         else:
-            expire = datetime.now(timezone.utc) + timedelta(
+            expira = datetime.now(timezone.utc) + timedelta(
                 minutes=SecurityConfig.ACCESS_TOKEN_EXPIRE_MINUTES
             )
 
-        to_encode.update({"exp": expire, "type": "access"})
-        encoded_jwt = jwt.encode(
-            to_encode,
-            settings.SECRET_KEY,
-            algorithm=SecurityConfig.ALGORITHM
+        a_codificar.update({"exp": expira, "type": "access"})
+        jwt_codificado = jwt.encode(
+            a_codificar, settings.SECRET_KEY, algorithm=SecurityConfig.ALGORITHM
         )
-        return encoded_jwt
+        return str(jwt_codificado)
 
     @staticmethod
-    def create_refresh_token(data: dict) -> str:
+    def crear_token_refresco(datos: dict) -> str:
         """Create JWT refresh token"""
-        to_encode = data.copy()
-        expire = datetime.now(timezone.utc) + timedelta(
+        a_codificar = datos.copy()
+        expira = datetime.now(timezone.utc) + timedelta(
             days=SecurityConfig.REFRESH_TOKEN_EXPIRE_DAYS
         )
-        to_encode.update({"exp": expire, "type": "refresh"})
-        encoded_jwt = jwt.encode(
-            to_encode,
-            settings.SECRET_KEY,
-            algorithm=SecurityConfig.ALGORITHM
+        a_codificar.update({"exp": expira, "type": "refresh"})
+        jwt_codificado = jwt.encode(
+            a_codificar, settings.SECRET_KEY, algorithm=SecurityConfig.ALGORITHM
         )
-        return encoded_jwt
+        return str(jwt_codificado)
 
     @staticmethod
-    def verify_token(token: str, token_type: str = "access") -> Optional[TokenData]:
+    def verificar_token(token: str, tipo_token: str = "access") -> Optional[TokenData]:
         """
         Verify and decode JWT token
         Returns TokenData if valid, None if invalid
         """
         import logging
+
         logger = logging.getLogger(__name__)
 
         try:
             payload = jwt.decode(
-                token,
-                settings.SECRET_KEY,
-                algorithms=[SecurityConfig.ALGORITHM]
+                token, settings.SECRET_KEY, algorithms=[SecurityConfig.ALGORITHM]
             )
 
             # Check token type
-            if payload.get("type") != token_type:
-                logger.warning(f"Token type mismatch. Expected: {token_type}, Got: {payload.get('type')}")
+            if payload.get("type") != tipo_token:
+                logger.warning(
+                    f"Token type mismatch. Expected: {tipo_token}, Got: {payload.get('type')}"
+                )
                 return None
 
             # Extract token data (sub is a string per JWT standard)
@@ -166,15 +171,15 @@ class TokenSecurity:
                 logger.warning(f"Invalid user_id in token: {user_id_str}")
                 return None
 
-            email: str = payload.get("email")
-            role: str = payload.get("role")
-            session_id: int = payload.get("session_id")
+            email: Optional[str] = payload.get("email")
+            rol: Optional[str] = payload.get("role")
+            id_sesion_raw = payload.get("session_id")
+            id_sesion: Optional[int] = (
+                int(id_sesion_raw) if id_sesion_raw is not None else None
+            )
 
             token_data = TokenData(
-                user_id=user_id,
-                email=email,
-                role=role,
-                session_id=session_id
+                user_id=user_id, email=email, rol=rol, id_sesion=id_sesion
             )
             return token_data
 
@@ -190,38 +195,38 @@ class SessionSecurity:
     """Session management utilities"""
 
     @staticmethod
-    def generate_session_token() -> str:
+    def generar_token_sesion() -> str:
         """Generate a secure session token"""
         return secrets.token_urlsafe(32)
 
     @staticmethod
-    def is_session_expired(session_expires_at: datetime) -> bool:
+    def es_sesion_expirada(expiracion_sesion: datetime) -> bool:
         """Check if session is expired"""
-        return datetime.now(timezone.utc) > session_expires_at
+        return datetime.now(timezone.utc) > expiracion_sesion
 
     @staticmethod
-    def get_session_expiry(hours: int = None) -> datetime:
+    def obtener_expiracion_sesion(horas: Optional[int] = None) -> datetime:
         """Get session expiry time"""
-        if hours is None:
-            hours = SecurityConfig.SESSION_EXPIRE_HOURS
-        return datetime.now(timezone.utc) + timedelta(hours=hours)
+        if horas is None:
+            horas = SecurityConfig.SESSION_EXPIRE_HOURS
+        return datetime.now(timezone.utc) + timedelta(hours=horas)
 
 
 class SecurityTokens:
     """Utilities for generating secure tokens"""
 
     @staticmethod
-    def generate_verification_token() -> str:
+    def generar_token_verificacion() -> str:
         """Generate email verification token"""
         return secrets.token_urlsafe(SecurityConfig.VERIFICATION_TOKEN_LENGTH)
 
     @staticmethod
-    def generate_reset_token() -> str:
+    def generar_token_reset() -> str:
         """Generate password reset token"""
         return secrets.token_urlsafe(SecurityConfig.RESET_TOKEN_LENGTH)
 
     @staticmethod
-    def generate_api_key() -> str:
+    def generar_api_key() -> str:
         """Generate API key for service accounts"""
         return f"epid_{''.join(secrets.choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') for _ in range(32))}"
 
@@ -233,62 +238,66 @@ class RateLimiter:
     Funciona consistentemente entre múltiples workers/procesos.
     REQUIERE Redis - sin fallback (Docker siempre disponible).
     """
+
     _redis_client = None
     _PREFIX = "rate_limit:"
 
     @classmethod
-    def _get_redis(cls):
+    def _get_redis(cls) -> Any:
         """Get Redis connection lazily."""
         if cls._redis_client is None:
             import redis
+
             cls._redis_client = redis.from_url(
-                settings.REDIS_URL,
-                decode_responses=True,
-                socket_connect_timeout=3
+                settings.REDIS_URL, decode_responses=True, socket_connect_timeout=3
             )
         return cls._redis_client
 
     @classmethod
-    def is_rate_limited(cls, identifier: str, max_attempts: int = None) -> bool:
+    def esta_limitado(
+        cls, identificador: str, max_intentos: Optional[int] = None
+    ) -> bool:
         """Check if identifier is rate limited"""
-        if max_attempts is None:
-            max_attempts = SecurityConfig.MAX_LOGIN_ATTEMPTS
+        if max_intentos is None:
+            max_intentos = SecurityConfig.MAX_LOGIN_ATTEMPTS
 
         redis_client = cls._get_redis()
-        key = f"{cls._PREFIX}{identifier}"
-        count = redis_client.get(key)
+        clave = f"{cls._PREFIX}{identificador}"
+        conteo = redis_client.get(clave)
 
-        if count is None:
+        if conteo is None:
             return False
-        return int(count) >= max_attempts
+        return int(conteo) >= max_intentos
 
     @classmethod
-    def record_attempt(cls, identifier: str, success: bool = False) -> None:
+    def registrar_intento(cls, identificador: str, exito: bool = False) -> None:
         """Record a login attempt"""
         redis_client = cls._get_redis()
-        key = f"{cls._PREFIX}{identifier}"
+        clave = f"{cls._PREFIX}{identificador}"
 
-        if success:
+        if exito:
             # Reset on successful login
-            redis_client.delete(key)
+            redis_client.delete(clave)
         else:
             # Increment failed attempts with expiry
             pipe = redis_client.pipeline()
-            pipe.incr(key)
-            pipe.expire(key, SecurityConfig.LOCKOUT_DURATION_MINUTES * 60)
+            pipe.incr(clave)
+            pipe.expire(clave, SecurityConfig.LOCKOUT_DURATION_MINUTES * 60)
             pipe.execute()
 
     @classmethod
-    def clear_attempts(cls, identifier: str) -> None:
+    def limpiar_intentos(cls, identificador: str) -> None:
         """Clear rate limit for identifier"""
         redis_client = cls._get_redis()
-        redis_client.delete(f"{cls._PREFIX}{identifier}")
+        redis_client.delete(f"{cls._PREFIX}{identificador}")
 
 
-def create_credentials_exception(detail: str = "Could not validate credentials") -> HTTPException:
+def crear_excepcion_credenciales(
+    detalle: str = "Could not validate credentials",
+) -> HTTPException:
     """Create standardized credentials exception"""
     return HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail=detail,
+        detail=detalle,
         headers={"WWW-Authenticate": "Bearer"},
     )

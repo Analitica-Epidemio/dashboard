@@ -11,16 +11,17 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from sqlmodel import col
 
 from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAnyRole
-from app.domains.atencion_medica.salud_models import MuestraEvento
 from app.domains.autenticacion.models import User
-from app.domains.eventos_epidemiologicos.eventos.models import Evento
+from app.domains.vigilancia_nominal.models.caso import CasoEpidemiologico
+from app.domains.vigilancia_nominal.models.salud import MuestraCasoEpidemiologico
 
 
-class EventoTimelineItem(BaseModel):
+class CasoEpidemiologicoTimelineItem(BaseModel):
     """Item del timeline de un evento"""
 
     fecha: date = Field(..., description="Fecha del evento")
@@ -29,11 +30,14 @@ class EventoTimelineItem(BaseModel):
     detalles: Optional[Dict[str, Any]] = Field(None, description="Detalles adicionales")
 
 
-class EventoTimelineResponse(BaseModel):
+class CasoEpidemiologicoTimelineResponse(BaseModel):
     """Respuesta del timeline de un evento"""
 
-    items: List[EventoTimelineItem] = Field(..., description="Items del timeline")
+    items: List[CasoEpidemiologicoTimelineItem] = Field(
+        ..., description="Items del timeline"
+    )
     total: int = Field(..., description="Total de items")
+
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +45,8 @@ logger = logging.getLogger(__name__)
 async def get_evento_timeline(
     evento_id: int,
     db: AsyncSession = Depends(get_async_session),
-    current_user: User = Depends(RequireAnyRole())
-) -> SuccessResponse[EventoTimelineResponse]:
+    current_user: User = Depends(RequireAnyRole()),
+) -> SuccessResponse[CasoEpidemiologicoTimelineResponse]:
     """
     Obtiene el timeline cronológico de un evento.
 
@@ -58,19 +62,23 @@ async def get_evento_timeline(
     Ordenado cronológicamente.
     """
 
-    logger.info(f"📅 Generando timeline para evento {evento_id} - usuario: {current_user.email}")
+    logger.info(
+        f"📅 Generando timeline para evento {evento_id} - usuario: {current_user.email}"
+    )
 
     try:
         # Obtener evento con todas las relaciones temporales
         query = (
-            select(Evento)
-            .where(Evento.id == evento_id)
+            select(CasoEpidemiologico)
+            .where(col(CasoEpidemiologico.id) == evento_id)
             .options(
-                selectinload(Evento.sintomas),
-                selectinload(Evento.muestras).selectinload(MuestraEvento.muestra),
-                selectinload(Evento.diagnosticos),
-                selectinload(Evento.internaciones),
-                selectinload(Evento.vacunas),
+                selectinload(CasoEpidemiologico.sintomas),
+                selectinload(CasoEpidemiologico.muestras).selectinload(
+                    MuestraCasoEpidemiologico.muestra
+                ),
+                selectinload(CasoEpidemiologico.diagnosticos),
+                selectinload(CasoEpidemiologico.internaciones),
+                selectinload(CasoEpidemiologico.vacunas),
             )
         )
 
@@ -80,7 +88,7 @@ async def get_evento_timeline(
         if not evento:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Evento {evento_id} no encontrado",
+                detail=f"CasoEpidemiologico {evento_id} no encontrado",
             )
 
         timeline_items = []
@@ -88,7 +96,7 @@ async def get_evento_timeline(
         # Agregar eventos principales
         if evento.fecha_inicio_sintomas:
             timeline_items.append(
-                EventoTimelineItem(
+                CasoEpidemiologicoTimelineItem(
                     fecha=evento.fecha_inicio_sintomas,
                     tipo="inicio_sintomas",
                     descripcion="Inicio de síntomas",
@@ -98,7 +106,7 @@ async def get_evento_timeline(
 
         if evento.fecha_primera_consulta:
             timeline_items.append(
-                EventoTimelineItem(
+                CasoEpidemiologicoTimelineItem(
                     fecha=evento.fecha_primera_consulta,
                     tipo="consulta",
                     descripcion="Primera consulta médica",
@@ -108,7 +116,7 @@ async def get_evento_timeline(
 
         if evento.fecha_apertura_caso:
             timeline_items.append(
-                EventoTimelineItem(
+                CasoEpidemiologicoTimelineItem(
                     fecha=evento.fecha_apertura_caso,
                     tipo="apertura_caso",
                     descripcion="Apertura del caso en el sistema",
@@ -121,9 +129,13 @@ async def get_evento_timeline(
 
         # Agregar síntomas detallados
         for sintoma in evento.sintomas or []:
-            if sintoma.fecha_inicio_sintoma and sintoma.sintoma and sintoma.sintoma.signo_sintoma:
+            if (
+                sintoma.fecha_inicio_sintoma
+                and sintoma.sintoma
+                and sintoma.sintoma.signo_sintoma
+            ):
                 timeline_items.append(
-                    EventoTimelineItem(
+                    CasoEpidemiologicoTimelineItem(
                         fecha=sintoma.fecha_inicio_sintoma,
                         tipo="sintoma",
                         descripcion=f"Síntoma: {sintoma.sintoma.signo_sintoma}",
@@ -133,9 +145,13 @@ async def get_evento_timeline(
 
         # Agregar muestras
         for muestra in evento.muestras or []:
-            if muestra.fecha_toma_muestra and muestra.muestra and muestra.muestra.descripcion:
+            if (
+                muestra.fecha_toma_muestra
+                and muestra.muestra
+                and muestra.muestra.descripcion
+            ):
                 timeline_items.append(
-                    EventoTimelineItem(
+                    CasoEpidemiologicoTimelineItem(
                         fecha=muestra.fecha_toma_muestra,
                         tipo="muestra",
                         descripcion=f"Muestra: {muestra.muestra.descripcion}",
@@ -153,18 +169,20 @@ async def get_evento_timeline(
                 )
                 if diagnostico_text:
                     timeline_items.append(
-                        EventoTimelineItem(
+                        CasoEpidemiologicoTimelineItem(
                             fecha=diagnostico.fecha_diagnostico_referido,
                             tipo="diagnostico",
                             descripcion=f"Diagnóstico: {diagnostico_text}",
-                            detalles={"clasificacion": diagnostico.clasificacion_manual},
+                            detalles={
+                                "clasificacion": diagnostico.clasificacion_manual
+                            },
                         )
                     )
 
         # Ordenar cronológicamente
         timeline_items.sort(key=lambda x: x.fecha)
 
-        response = EventoTimelineResponse(
+        response = CasoEpidemiologicoTimelineResponse(
             items=timeline_items, total=len(timeline_items)
         )
 

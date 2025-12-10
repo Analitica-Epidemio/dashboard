@@ -32,12 +32,12 @@ export type TipoClasificacion = components["schemas"]["TipoClasificacion"];
 /**
  * Event detail with full information
  */
-export type EventoDetail = components["schemas"]["EventoDetailResponse"];
+export type EventoDetail = components["schemas"]["CasoEpidemiologicoDetailResponse"];
 
 /**
  * Event list item (summary)
  */
-export type EventoListItem = components["schemas"]["EventoListItem"];
+export type EventoListItem = components["schemas"]["CasoEpidemiologicoListItem"];
 
 // ============================================================================
 // QUERY HOOKS - Semantic wrappers over $api

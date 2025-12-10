@@ -20,6 +20,10 @@ export type ChartDisponibleItem = components['schemas']['ChartDisponibleItem'];
 export type ChartsDisponiblesResponse = components['schemas']['ChartsDisponiblesResponse'];
 export type DashboardChartsResponse = components['schemas']['DashboardChartsResponse'];
 
+// Report types
+export type ReportRequest = components['schemas']['ReportRequest'];
+export type FilterCombination = components['schemas']['FilterCombination'];
+
 // Chart filters interface
 export interface ChartFilters {
   grupo_id?: number;
@@ -51,7 +55,7 @@ export interface ChartFilters {
 export function useChartsDisponibles() {
   return $api.useQuery(
     'get',
-    '/api/v1/charts/disponibles',
+    '/api/v1/boletines/charts-disponibles',
     {},
     {
       staleTime: 5 * 60 * 1000, // Cache for 5 minutes
@@ -193,13 +197,9 @@ export function useReportPreview(
  */
 export function useGenerateReport() {
   return useMutation({
-    mutationFn: async (request: {
-      date_range: Record<string, string>;
-      combinations: Array<Record<string, unknown>>;
-      format?: string;
-    }) => {
+    mutationFn: async (request: ReportRequest) => {
       const response = await apiClient.POST('/api/v1/reports/generate', {
-        body: request as any,
+        body: request,
         parseAs: 'blob', // Importante: parsear como blob, no JSON
       });
 
@@ -244,13 +244,9 @@ export function useGenerateReport() {
  */
 export function useGenerateZipReport() {
   return useMutation({
-    mutationFn: async (request: {
-      date_range: Record<string, string>;
-      combinations: Array<Record<string, unknown>>;
-      format?: string;
-    }) => {
+    mutationFn: async (request: ReportRequest) => {
       const response = await apiClient.POST('/api/v1/reports/generate-zip', {
-        body: request as any,
+        body: request,
         parseAs: 'blob', // Importante: parsear como blob, no JSON
       });
 

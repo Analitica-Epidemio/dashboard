@@ -3,8 +3,8 @@ Preview report endpoint
 """
 
 import logging
-from datetime import datetime
-from typing import Any, Dict
+from datetime import date, datetime
+from typing import Any, Dict, Optional
 
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 async def preview_report(
     request: ReportRequest,
     db: AsyncSession = Depends(get_async_session),
-    current_user: User = Depends(RequireAnyRole())
+    current_user: User = Depends(RequireAnyRole()),
 ) -> Dict[str, Any]:
     """
     Obtiene los datos que se incluirían en el reporte sin generar el PDF
@@ -34,45 +34,58 @@ async def preview_report(
 
         for combination in request.combinations:
             # Preparar filtros
-            fecha_desde = request.date_range.get('from')
-            fecha_hasta = request.date_range.get('to')
+            fecha_desde_str = request.date_range.get("from")
+            fecha_hasta_str = request.date_range.get("to")
+
+            # Convertir strings a objetos date
+            fecha_desde: Optional[date] = None
+            if fecha_desde_str:
+                fecha_desde = date.fromisoformat(fecha_desde_str)
+
+            fecha_hasta: Optional[date] = None
+            if fecha_hasta_str:
+                fecha_hasta = date.fromisoformat(fecha_hasta_str)
 
             # Obtener indicadores
             indicadores_data = await get_indicadores(
                 grupo_id=combination.group_id,
-                evento_id=combination.event_ids[0] if combination.event_ids else None,
-                fecha_desde=fecha_desde,
-                fecha_hasta=fecha_hasta,
-                clasificaciones=getattr(combination, 'clasificaciones', None),
+                tipo_eno_ids=combination.event_ids if combination.event_ids else None,
+                fecha_desde=fecha_desde_str,
+                fecha_hasta=fecha_hasta_str,
+                clasificaciones=getattr(combination, "clasificaciones", None),
                 db=db,
-                current_user=current_user
+                current_user=current_user,
             )
 
             # Obtener charts
-            charts_data = await get_dashboard_charts(
+            charts_response = await get_dashboard_charts(
                 grupo_id=combination.group_id,
-                evento_id=combination.event_ids[0] if combination.event_ids else None,
+                tipo_eno_ids=combination.event_ids if combination.event_ids else None,
                 fecha_desde=fecha_desde,
                 fecha_hasta=fecha_hasta,
-                clasificaciones=getattr(combination, 'clasificaciones', None),
+                clasificaciones=getattr(combination, "clasificaciones", None),
                 db=db,
-                current_user=current_user
+                current_user=current_user,
             )
+            # Extraer datos de la respuesta
+            charts_list = charts_response.data.charts if charts_response.data else []
 
-            processed_combinations.append({
-                "id": combination.id,
-                "group_name": combination.group_name,
-                "event_names": combination.event_names,
-                "indicadores": indicadores_data,
-                "charts": charts_data.get('charts', []),
-                "total_charts": len(charts_data.get('charts', []))
-            })
+            processed_combinations.append(
+                {
+                    "id": combination.id,
+                    "group_name": combination.group_name,
+                    "event_names": combination.event_names,
+                    "indicadores": indicadores_data,
+                    "charts": charts_list,
+                    "total_charts": len(charts_list),
+                }
+            )
 
         return {
             "date_range": request.date_range,
             "combinations": processed_combinations,
             "total_combinations": len(processed_combinations),
-            "generated_at": datetime.now().isoformat()
+            "generated_at": datetime.now().isoformat(),
         }
 
     except Exception as e:

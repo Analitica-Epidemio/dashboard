@@ -198,7 +198,7 @@ export default function EventosPage() {
                       </h3>
                       <p className="text-sm text-muted-foreground">
                         {debouncedSearch ||
-                        Object.values(filters ?? {}).some((v) => v)
+                          Object.values(filters ?? {}).some((v) => v)
                           ? "Prueba con otros filtros o términos de búsqueda"
                           : "No hay eventos registrados aún"}
                       </p>
@@ -254,8 +254,8 @@ export default function EventosPage() {
                             <td className="px-4 py-3 whitespace-nowrap">
                               <div className="flex flex-col gap-0.5">
                                 <span className="text-sm text-foreground">
-                                  {evento.fecha_minima_evento ? (
-                                    new Date(evento.fecha_minima_evento).toLocaleDateString("es-ES", {
+                                  {evento.fecha_minima_caso ? (
+                                    new Date(evento.fecha_minima_caso).toLocaleDateString("es-ES", {
                                       day: "2-digit",
                                       month: "short",
                                       year: "numeric"

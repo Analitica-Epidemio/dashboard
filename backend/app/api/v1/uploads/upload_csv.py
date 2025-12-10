@@ -1,5 +1,5 @@
 """
-Upload CSV endpoint for async processing
+Endpoint de carga de CSV para procesamiento asíncrono.
 """
 
 import logging
@@ -11,8 +11,10 @@ from fastapi.responses import JSONResponse
 from app.core.schemas.response import ErrorDetail, ErrorResponse, SuccessResponse
 from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User
-from app.features.procesamiento_archivos.schemas import AsyncJobResponse
-from app.features.procesamiento_archivos.services import async_service
+from app.domains.jobs.schemas import AsyncJobResponse
+from app.domains.vigilancia_nominal.procesamiento.upload_handler import (
+    nominal_upload_handler,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +23,7 @@ async def upload_csv_async(
     file: UploadFile = File(..., description="Archivo CSV epidemiológico"),
     original_filename: str = Form(..., description="Nombre del archivo Excel original"),
     sheet_name: str = Form(..., description="Nombre de la hoja convertida"),
-    current_user: User = Depends(RequireAnyRole())
+    current_user: User = Depends(RequireAnyRole()),
 ):
     """
     Procesamiento asíncrono de CSV con Celery.
@@ -35,73 +37,87 @@ async def upload_csv_async(
     **Ventajas:**
     - No bloquea la UI
     - Procesa archivos grandes sin timeout
-    - Progress tracking en tiempo real
-    - Error handling robusto
+    - Seguimiento de progreso en tiempo real
+    - Manejo de errores robusto
 
-    **Returns:** Job ID para seguimiento del progreso
+    **Retorna:** Job ID para seguimiento del progreso
     """
 
+    # Renombrar variables de negocio al español
+    nombre_archivo = original_filename
+    nombre_hoja = sheet_name
+
     logger.info(
-        f"📤 Starting CSV upload - filename: {original_filename}, sheet: {sheet_name}, file type: {file.content_type}"
+        f"📤 Iniciando carga CSV - archivo: {nombre_archivo}, hoja: {nombre_hoja}, tipo: {file.content_type}"
     )
 
-    # Log Redis/Celery configuration at request time
+    # Loguear configuración de Redis/Celery al momento del request
     from app.core.celery_app import celery_app
-    logger.info(f"🔍 Current Celery broker: {celery_app.conf.broker_url}")
-    logger.info(f"🔍 Current Celery backend: {celery_app.conf.result_backend}")
 
-    # Test Redis availability
+    logger.info(f"🔍 Broker Celery actual: {celery_app.conf.broker_url}")
+    logger.info(f"🔍 Backend Celery actual: {celery_app.conf.result_backend}")
+
+    # Probar disponibilidad de Redis
     try:
         import redis
 
         from app.core.config import settings
-        redis_url_parts = settings.REDIS_URL.replace('redis://', '').split(':')
+
+        redis_url_parts = settings.REDIS_URL.replace("redis://", "").split(":")
         redis_host = redis_url_parts[0]
-        redis_port_db = redis_url_parts[1].split('/')
+        redis_port_db = redis_url_parts[1].split("/")
         redis_port = int(redis_port_db[0])
         redis_db = int(redis_port_db[1]) if len(redis_port_db) > 1 else 0
 
-        logger.info(f"🧪 Testing Redis connection to {redis_host}:{redis_port}, DB: {redis_db}")
-        redis_client = redis.Redis(host=redis_host, port=redis_port, db=redis_db, socket_connect_timeout=2)
+        logger.info(
+            f"🧪 Probando conexión Redis a {redis_host}:{redis_port}, DB: {redis_db}"
+        )
+        redis_client = redis.Redis(
+            host=redis_host, port=redis_port, db=redis_db, socket_connect_timeout=2
+        )
         redis_client.ping()
-        logger.info("✅ Redis is accessible from upload endpoint")
+        logger.info("✅ Redis es accesible desde el endpoint de carga")
     except Exception as redis_error:
-        logger.error(f"❌ Redis connection test failed in upload endpoint: {str(redis_error)}")
-        logger.error(f"❌ Redis error type: {type(redis_error).__name__}")
+        logger.error(
+            f"❌ Falló prueba de conexión Redis en endpoint: {str(redis_error)}"
+        )
+        logger.error(f"❌ Tipo de error Redis: {type(redis_error).__name__}")
 
     try:
-        # Log archivo details
+        # Loguear detalles del archivo
         logger.info(
-            f"📄 File details - size: {file.size if hasattr(file, 'size') else 'unknown'} bytes, content_type: {file.content_type}"
+            f"📄 Detalles del archivo - tamaño: {file.size if hasattr(file, 'size') else 'desconocido'} bytes, tipo_contenido: {file.content_type}"
         )
 
         # Iniciar procesamiento asíncrono
-        logger.info("🚀 Calling async_service.start_csv_processing")
-        job = await async_service.start_csv_processing(
-            file=file, original_filename=original_filename, sheet_name=sheet_name
+        logger.info("🚀 Llamando a nominal_upload_handler.iniciar_procesamiento")
+        job = await nominal_upload_handler.iniciar_procesamiento(
+            archivo=file,
+            nombre_archivo=nombre_archivo,
+            nombre_hoja=nombre_hoja,
         )
 
         logger.info(
-            f"✅ Job created successfully - job_id: {job.id}, status: {job.status}"
+            f"✅ Job creado exitosamente - job_id: {job.id}, estado: {job.status}"
         )
 
         # Respuesta con job ID
-        response_data = AsyncJobResponse(
+        datos_respuesta = AsyncJobResponse(
             job_id=job.id,
             status=job.status,
-            message=f"Procesamiento iniciado para {original_filename}",
+            message=f"Procesamiento iniciado para {nombre_archivo}",
             polling_url=f"/api/v1/uploads/jobs/{job.id}/status",
         )
 
-        logger.info(f"📤 Returning successful response - job_id: {job.id}")
+        logger.info(f"📤 Retornando respuesta exitosa - job_id: {job.id}")
         return JSONResponse(
             status_code=status.HTTP_202_ACCEPTED,
-            content=SuccessResponse(data=response_data).model_dump(),
+            content=SuccessResponse(data=datos_respuesta).model_dump(),
         )
 
     except HTTPException as e:
         logger.warning(
-            f"❌ HTTPException in upload_csv_async - status: {e.status_code}, detail: {e.detail}"
+            f"❌ HTTPException en upload_csv_async - status: {e.status_code}, detalle: {e.detail}"
         )
         error_response = ErrorResponse(
             error=ErrorDetail(
@@ -118,8 +134,8 @@ async def upload_csv_async(
         )
 
     except Exception as e:
-        logger.error(f"💥 Unexpected error in upload_csv_async: {str(e)}")
-        logger.error(f"💥 Full traceback:\n{traceback.format_exc()}")
+        logger.error(f"💥 Error inesperado en upload_csv_async: {str(e)}")
+        logger.error(f"💥 Traceback completo:\n{traceback.format_exc()}")
 
         error_response = ErrorResponse(
             error=ErrorDetail(

@@ -2,6 +2,7 @@
 Authentication service layer
 Handles user management, authentication, and session management
 """
+
 import logging
 from datetime import datetime, timezone
 from typing import List, Optional, Tuple
@@ -9,6 +10,7 @@ from typing import List, Optional, Tuple
 from fastapi import HTTPException, Request, status
 from sqlalchemy import and_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import col
 
 from .models import User, UserLogin, UserSession, UserStatus
 from .schemas import SessionInfo, Token, UserCreate, UserUpdate
@@ -19,7 +21,7 @@ from .security import (
     SecurityTokens,
     SessionSecurity,
     TokenSecurity,
-    create_credentials_exception,
+    crear_excepcion_credenciales,
 )
 
 logger = logging.getLogger(__name__)
@@ -31,401 +33,432 @@ class AuthService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def create_user(self, user_data: UserCreate) -> User:
+    async def crear_usuario(self, datos_usuario: UserCreate) -> User:
         """Create a new user with validation"""
         # Check if user already exists
-        existing_user = await self._get_user_by_email(user_data.email)
-        if existing_user:
+        usuario_existente = await self._obtener_usuario_por_email(datos_usuario.email)
+        if usuario_existente:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already registered"
+                detail="Email already registered",
             )
 
         # Validate password strength
-        is_valid, error_msg = PasswordSecurity.validate_password_strength(user_data.password)
-        if not is_valid:
+        es_valida, mensaje_error = PasswordSecurity.validar_fortaleza_contrasena(
+            datos_usuario.contrasena
+        )
+        if not es_valida:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=error_msg
+                status_code=status.HTTP_400_BAD_REQUEST, detail=mensaje_error
             )
 
         # Create user
-        hashed_password = PasswordSecurity.get_password_hash(user_data.password)
-        verification_token = SecurityTokens.generate_verification_token()
+        password_hasheada = PasswordSecurity.obtener_hash_contrasena(
+            datos_usuario.contrasena
+        )
+        token_verificacion = SecurityTokens.generar_token_verificacion()
 
-        user = User(
-            email=user_data.email,
-            nombre=user_data.nombre,
-            apellido=user_data.apellido,
-            hashed_password=hashed_password,
-            role=user_data.role,
-            email_verification_token=verification_token,
-            status=UserStatus.ACTIVE,  # Auto-activate for now
-            is_email_verified=False
+        usuario = User(
+            email=datos_usuario.email,
+            nombre=datos_usuario.nombre,
+            apellido=datos_usuario.apellido,
+            contrasena_hasheada=password_hasheada,
+            rol=datos_usuario.rol,
+            token_verificacion_email=token_verificacion,
+            estado=UserStatus.ACTIVE,  # Auto-activate for now
+            es_email_verificado=False,
         )
 
-        self.db.add(user)
+        self.db.add(usuario)
         await self.db.commit()
-        await self.db.refresh(user)
+        await self.db.refresh(usuario)
 
-        logger.info(f"Created new user: {user.email}")
-        return user
+        logger.info(f"Created new user: {usuario.email}")
+        return usuario
 
-    async def authenticate_user(
-        self,
-        credentials: UserLoginSchema,
-        request: Request
+    async def autenticar_usuario(
+        self, credenciales: UserLoginSchema, request: Request
     ) -> Tuple[User, Token]:
         """Authenticate user and create session - simplified and fixed"""
         # Get user with all needed data in single query
-        user = await self._get_user_by_email(credentials.email)
-        if not user:
+        usuario = await self._obtener_usuario_por_email(credenciales.email)
+        if not usuario:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid email or password"
+                detail="Invalid email or password",
             )
 
         # Extract ALL needed values BEFORE any database operations
-        user_id = user.id
-        user_email = user.email
-        user_nombre = user.nombre
-        user_apellido = user.apellido
-        user_role = user.role
-        user_status = user.status
-        user_locked_until = user.locked_until
-        user_hashed_password = user.hashed_password
+        user_id = usuario.id
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="User ID is missing",
+            )
+        user_email = usuario.email
+        user_nombre = usuario.nombre
+        user_apellido = usuario.apellido
+        user_role = usuario.rol
+        user_status = usuario.estado
+        user_locked_until = usuario.bloqueado_hasta
+        user_hashed_password = usuario.contrasena_hasheada
 
         # Check if user is locked
         if user_locked_until and user_locked_until > datetime.now(timezone.utc):
             raise HTTPException(
                 status_code=status.HTTP_423_LOCKED,
-                detail="Account is temporarily locked"
+                detail="Account is temporarily locked",
             )
 
         # Check user status
         if user_status != UserStatus.ACTIVE:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Account is {user_status.value}"
+                detail=f"Account is {user_status.value}",
             )
 
         # Verify password
-        if not PasswordSecurity.verify_password(credentials.password, user_hashed_password):
+        if not PasswordSecurity.verificar_contrasena(
+            credenciales.contrasena, user_hashed_password
+        ):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid email or password"
+                detail="Invalid email or password",
             )
 
         # Update user for successful login
-        user.login_attempts = 0
-        user.locked_until = None
-        user.last_login = datetime.now(timezone.utc)
+        usuario.intentos_login = 0
+        usuario.bloqueado_hasta = None
+        usuario.ultimo_login = datetime.now(timezone.utc)
 
         # Commit and refresh in single transaction
         await self.db.commit()
-        await self.db.refresh(user)
+        await self.db.refresh(usuario)
 
         # Create session
-        ip_address = self._get_client_ip(request)
+        ip_cliente = self._obtener_ip_cliente(request)
         user_agent = request.headers.get("user-agent", "")
-        session = await self._create_user_session(
-            user_id, ip_address, user_agent, credentials.remember_me
+        sesion = await self._crear_sesion_usuario(
+            user_id, ip_cliente, user_agent, credenciales.recordarme
         )
 
         # Create tokens using extracted values
-        token = self._create_tokens_with_data(
-            user_id, user_email, user_nombre, user_apellido, user_role, session
+        token = self._crear_tokens_con_datos(
+            user_id, user_email, user_nombre, user_apellido, user_role, sesion
         )
 
         logger.info(f"User {user_email} authenticated successfully")
-        return user, token
+        return usuario, token
 
-    async def refresh_token(self, refresh_token: str) -> Token:
+    async def refrescar_token(self, refresh_token: str) -> Token:
         """Refresh access token using refresh token"""
-        token_data = TokenSecurity.verify_token(refresh_token, "refresh")
-        if not token_data or not token_data.session_id:
-            raise create_credentials_exception("Invalid refresh token")
+        datos_token = TokenSecurity.verificar_token(refresh_token, "refresh")
+        if not datos_token or not datos_token.id_sesion:
+            raise crear_excepcion_credenciales("Invalid refresh token")
 
         # Get session
-        session = await self._get_session(token_data.session_id)
-        if not session or not session.is_active:
-            raise create_credentials_exception("Session expired or invalid")
+        sesion = await self._obtener_sesion(datos_token.id_sesion)
+        if not sesion or not sesion.es_activa:
+            raise crear_excepcion_credenciales("Session expired or invalid")
 
         # Get user
-        user = await self._get_user_by_id(session.user_id)
-        if not user or user.status != UserStatus.ACTIVE:
-            raise create_credentials_exception("User not found or inactive")
+        usuario = await self._obtener_usuario_por_id(sesion.user_id)
+        if not usuario or usuario.estado != UserStatus.ACTIVE:
+            raise crear_excepcion_credenciales("User not found or inactive")
 
         # Update session activity
-        session.last_activity = datetime.now(timezone.utc)
+        sesion.ultima_actividad = datetime.now(timezone.utc)
         await self.db.commit()
 
         # Create new tokens
-        return self._create_tokens(user, session)
+        return self._crear_tokens(usuario, sesion)
 
-    async def logout_user(self, session_id: int) -> None:
+    async def cerrar_sesion_usuario(self, session_id: int) -> None:
         """Logout user by deactivating session"""
-        session = await self._get_session(session_id)
-        if session:
-            session.is_active = False
+        sesion = await self._obtener_sesion(session_id)
+        if sesion:
+            sesion.es_activa = False
             await self.db.commit()
             logger.info(f"User session {session_id} logged out")
 
-    async def logout_specific_session(self, user_id: int, session_id: int) -> bool:
+    async def cerrar_sesion_especifica(self, user_id: int, session_id: int) -> bool:
         """
         Logout a specific session owned by the user
         Returns True if session was found and logged out, False otherwise
         """
-        session = await self._get_session(session_id)
+        sesion = await self._obtener_sesion(session_id)
 
         # Verificar que la sesión existe y pertenece al usuario
-        if not session or session.user_id != user_id:
+        if not sesion or sesion.user_id != user_id:
             return False
 
         # Cerrar la sesión
-        session.is_active = False
+        sesion.es_activa = False
         await self.db.commit()
         logger.info(f"User {user_id} logged out session {session_id}")
         return True
 
-    async def logout_all_sessions(self, user_id: int) -> None:
+    async def cerrar_todas_sesiones(self, user_id: int) -> None:
         """Logout user from all sessions"""
         await self.db.execute(
             update(UserSession)
-            .where(UserSession.user_id == user_id)
-            .values(is_active=False)
+            .where(col(UserSession.user_id) == user_id)
+            .values(es_activa=False)
         )
         await self.db.commit()
         logger.info(f"All sessions for user {user_id} logged out")
 
-    async def get_user_sessions(self, user_id: int, current_session_id: int = None) -> List[SessionInfo]:
+    async def obtener_sesiones_usuario(
+        self, user_id: int, current_session_id: Optional[int] = None
+    ) -> List[SessionInfo]:
         """Get active sessions for user"""
-        result = await self.db.execute(
+        resultado = await self.db.execute(
             select(UserSession)
-            .where(and_(
-                UserSession.user_id == user_id,
-                UserSession.is_active.is_(True),
-                UserSession.expires_at > datetime.now(timezone.utc)
-            ))
-            .order_by(UserSession.last_activity.desc())
+            .where(
+                and_(
+                    col(UserSession.user_id) == user_id,
+                    col(UserSession.es_activa).is_(True),
+                    col(UserSession.expira_en) > datetime.now(timezone.utc),
+                )
+            )
+            .order_by(col(UserSession.ultima_actividad).desc())
         )
-        sessions = result.scalars().all()
+        sesiones = resultado.scalars().all()
 
         return [
             SessionInfo(
-                id=session.id,
-                ip_address=session.ip_address,
-                user_agent=session.user_agent,
-                created_at=session.created_at,
-                last_activity=session.last_activity,
-                is_current=(session.id == current_session_id)
+                id=sesion.id if sesion.id is not None else 0,
+                direccion_ip=sesion.direccion_ip,
+                agente_usuario=sesion.agente_usuario,
+                created_at=sesion.created_at,
+                ultima_actividad=sesion.ultima_actividad,
+                es_actual=(sesion.id == current_session_id),
             )
-            for session in sessions
+            for sesion in sesiones
         ]
 
-    async def update_user(self, user_id: int, user_data: UserUpdate) -> User:
+    async def actualizar_usuario(self, user_id: int, datos_usuario: UserUpdate) -> User:
         """Update user information"""
-        user = await self._get_user_by_id(user_id)
-        if not user:
+        usuario = await self._obtener_usuario_por_id(user_id)
+        if not usuario:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
 
         # Check for email conflicts
-        if user_data.email and user_data.email != user.email:
-            existing = await self._get_user_by_email(user_data.email)
-            if existing:
+        if datos_usuario.email and datos_usuario.email != usuario.email:
+            existente = await self._obtener_usuario_por_email(datos_usuario.email)
+            if existente:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Email already registered"
+                    detail="Email already registered",
                 )
 
         # Update fields
-        update_data = user_data.model_dump(exclude_unset=True)
-        for field, value in update_data.items():
-            setattr(user, field, value)
+        datos_actualizacion = datos_usuario.model_dump(exclude_unset=True)
+        for campo, valor in datos_actualizacion.items():
+            setattr(usuario, campo, valor)
 
-        user.updated_at = datetime.now(timezone.utc)
+        usuario.updated_at = datetime.now(timezone.utc)
         await self.db.commit()
-        await self.db.refresh(user)
+        await self.db.refresh(usuario)
 
-        logger.info(f"Updated user {user.email}")
-        return user
+        logger.info(f"Updated user {usuario.email}")
+        return usuario
 
-    async def change_password(self, user_id: int, current_password: str, new_password: str) -> None:
+    async def cambiar_contrasena(
+        self, user_id: int, password_actual: str, nueva_password: str
+    ) -> None:
         """Change user password"""
-        user = await self._get_user_by_id(user_id)
-        if not user:
+        usuario = await self._obtener_usuario_por_id(user_id)
+        if not usuario:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
 
         # Verify current password
-        if not PasswordSecurity.verify_password(current_password, user.hashed_password):
+        if not PasswordSecurity.verificar_contrasena(
+            password_actual, usuario.contrasena_hasheada
+        ):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Current password is incorrect"
+                detail="Current password is incorrect",
             )
 
         # Validate new password
-        is_valid, error_msg = PasswordSecurity.validate_password_strength(new_password)
-        if not is_valid:
+        es_valida, mensaje_error = PasswordSecurity.validar_fortaleza_contrasena(
+            nueva_password
+        )
+        if not es_valida:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=error_msg
+                status_code=status.HTTP_400_BAD_REQUEST, detail=mensaje_error
             )
 
         # Update password
-        user.hashed_password = PasswordSecurity.get_password_hash(new_password)
-        user.updated_at = datetime.now(timezone.utc)
+        usuario.contrasena_hasheada = PasswordSecurity.obtener_hash_contrasena(
+            nueva_password
+        )
+        usuario.updated_at = datetime.now(timezone.utc)
         await self.db.commit()
 
         # Logout all other sessions for security
-        await self.logout_all_sessions(user_id)
+        await self.cerrar_todas_sesiones(user_id)
 
-        logger.info(f"Password changed for user {user.email}")
+        logger.info(f"Password changed for user {usuario.email}")
 
     # Private helper methods
 
-    async def _get_user_by_email(self, email: str) -> Optional[User]:
+    async def _obtener_usuario_por_email(self, email: str) -> Optional[User]:
         """Get user by email"""
-        result = await self.db.execute(
-            select(User).where(User.email == email)
-        )
-        return result.scalar_one_or_none()
+        resultado = await self.db.execute(select(User).where(col(User.email) == email))
+        return resultado.scalar_one_or_none()
 
-
-
-    async def _get_user_by_id(self, user_id: int) -> Optional[User]:
+    async def _obtener_usuario_por_id(self, user_id: int) -> Optional[User]:
         """Get user by ID"""
-        result = await self.db.execute(
-            select(User).where(User.id == user_id)
-        )
-        return result.scalar_one_or_none()
+        resultado = await self.db.execute(select(User).where(col(User.id) == user_id))
+        return resultado.scalar_one_or_none()
 
-    async def _get_session(self, session_id: int) -> Optional[UserSession]:
+    async def _obtener_sesion(self, session_id: int) -> Optional[UserSession]:
         """Get session by ID"""
-        result = await self.db.execute(
-            select(UserSession).where(UserSession.id == session_id)
+        resultado = await self.db.execute(
+            select(UserSession).where(col(UserSession.id) == session_id)
         )
-        return result.scalar_one_or_none()
+        return resultado.scalar_one_or_none()
 
-    async def _create_user_session(
-        self,
-        user_id: int,
-        ip_address: str,
-        user_agent: str,
-        remember_me: bool = False
+    async def _crear_sesion_usuario(
+        self, user_id: int, ip_address: str, user_agent: str, remember_me: bool = False
     ) -> UserSession:
         """Create new user session - fixed version without problematic cleanup"""
         # Session duration
-        hours = 24 * 7 if remember_me else SecurityConfig.SESSION_EXPIRE_HOURS
+        horas = 24 * 7 if remember_me else SecurityConfig.SESSION_EXPIRE_HOURS
 
-        session = UserSession(
+        sesion = UserSession(
             user_id=user_id,
-            session_token=SessionSecurity.generate_session_token(),
-            ip_address=ip_address,
-            user_agent=user_agent,
-            expires_at=SessionSecurity.get_session_expiry(hours)
+            token_sesion=SessionSecurity.generar_token_sesion(),
+            direccion_ip=ip_address,
+            agente_usuario=user_agent,
+            expira_en=SessionSecurity.obtener_expiracion_sesion(horas),
         )
 
-        self.db.add(session)
+        self.db.add(sesion)
         await self.db.commit()
-        await self.db.refresh(session)
+        await self.db.refresh(sesion)
 
-        return session
+        return sesion
 
-    async def _cleanup_user_sessions(self, user_id: int) -> None:
+    async def _limpiar_sesiones_usuario(self, user_id: int) -> None:
         """Clean up old sessions for user"""
         # Deactivate expired sessions
         await self.db.execute(
             update(UserSession)
-            .where(and_(
-                UserSession.user_id == user_id,
-                UserSession.expires_at < datetime.now(timezone.utc)
-            ))
-            .values(is_active=False)
+            .where(
+                and_(
+                    col(UserSession.user_id) == user_id,
+                    col(UserSession.expira_en) < datetime.now(timezone.utc),
+                )
+            )
+            .values(es_activa=False)
         )
 
         # Keep only the most recent active sessions - use subquery to avoid loading objects
-        subquery = select(UserSession.id).where(and_(
-            UserSession.user_id == user_id,
-            UserSession.is_active.is_(True)
-        )).order_by(UserSession.last_activity.desc()).offset(SecurityConfig.MAX_SESSIONS_PER_USER - 1)
+        subquery = (
+            select(col(UserSession.id))
+            .where(
+                and_(
+                    col(UserSession.user_id) == user_id,
+                    col(UserSession.es_activa).is_(True),
+                )
+            )
+            .order_by(col(UserSession.ultima_actividad).desc())
+            .offset(SecurityConfig.MAX_SESSIONS_PER_USER - 1)
+        )
 
         # Deactivate old sessions using direct UPDATE
         await self.db.execute(
             update(UserSession)
-            .where(UserSession.id.in_(subquery))
-            .values(is_active=False)
+            .where(col(UserSession.id).in_(subquery))
+            .values(es_activa=False)
         )
 
         await self.db.commit()
 
-    def _create_tokens(self, user: User, session: UserSession) -> Token:
+    def _crear_tokens(self, usuario: User, sesion: UserSession) -> Token:
         """Create JWT tokens for user session"""
-        return self._create_tokens_with_data(
-            user.id, user.email, user.nombre, user.apellido, user.role, session
+        if usuario.id is None:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="User ID is missing",
+            )
+        return self._crear_tokens_con_datos(
+            usuario.id,
+            usuario.email,
+            usuario.nombre,
+            usuario.apellido,
+            usuario.rol,
+            sesion,
         )
 
-    def _create_tokens_with_data(
-        self, user_id: int, user_email: str, user_nombre: str, user_apellido: str,
-        user_role, session: UserSession
+    def _crear_tokens_con_datos(
+        self,
+        user_id: int,
+        user_email: str,
+        user_nombre: str,
+        user_apellido: str,
+        user_role,
+        sesion: UserSession,
     ) -> Token:
         """Create JWT tokens using extracted data (avoids accessing expired user object)"""
         from .schemas import TokenUser
 
-        token_data = {
+        datos_token = {
             "sub": str(user_id),  # JWT standard requires sub to be a string
             "email": user_email,
             "role": user_role.value,
-            "session_id": session.id
+            "session_id": sesion.id,
         }
 
-        access_token = TokenSecurity.create_access_token(token_data)
-        refresh_token = TokenSecurity.create_refresh_token(token_data)
+        access_token = TokenSecurity.crear_token_acceso(datos_token)
+        refresh_token = TokenSecurity.crear_token_refresco(datos_token)
 
         # Include user info in response
-        user_info = TokenUser(
+        info_usuario = TokenUser(
             id=user_id,
             email=user_email,
             nombre=user_nombre,
             apellido=user_apellido,
-            role=user_role
+            rol=user_role,
         )
 
         return Token(
-            access_token=access_token,
-            refresh_token=refresh_token,
-            expires_in=SecurityConfig.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-            user=user_info
+            token_acceso=access_token,
+            token_refresco=refresh_token,
+            expira_en=SecurityConfig.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            usuario=info_usuario,
         )
 
-    async def _log_login_attempt(
+    async def _registrar_intento_login(
         self,
         email: str,
-        success: bool,
-        failure_reason: Optional[str] = None,
+        exito: bool,
+        razon_fallo: Optional[str] = None,
         ip_address: Optional[str] = None,
         user_agent: Optional[str] = None,
-        user_id: Optional[int] = None
+        user_id: Optional[int] = None,
     ) -> None:
         """Log login attempt for audit purposes"""
-        login_log = UserLogin(
+        log_login = UserLogin(
             user_id=user_id,
-            email_attempted=email,
-            success=success,
-            failure_reason=failure_reason,
-            ip_address=ip_address,
-            user_agent=user_agent
+            email_intentado=email,
+            exito=exito,
+            motivo_fallo=razon_fallo,
+            direccion_ip=ip_address,
+            agente_usuario=user_agent,
         )
 
-        self.db.add(login_log)
+        self.db.add(log_login)
         await self.db.commit()
 
-    def _get_client_ip(self, request: Request) -> str:
+    def _obtener_ip_cliente(self, request: Request) -> str:
         """Extract client IP address from request"""
         # Check for forwarded headers (reverse proxy)
         forwarded_for = request.headers.get("x-forwarded-for")

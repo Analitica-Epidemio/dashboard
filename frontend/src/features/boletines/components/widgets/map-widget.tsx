@@ -14,7 +14,7 @@ export function MapWidget({ widget, data, isLoading, onEdit, onDelete }: WidgetP
   // Parse data
   let mapData: Array<{ nombre: string; casos: number }> = [];
 
-  if (widget.data_config.source === "manual" && widget.data_config.manual_data) {
+  if (widget.data_config?.source === "manual" && widget.data_config?.manual_data) {
     const manualData = widget.data_config.manual_data as { departamentos?: Array<{ nombre: string; casos: number }> };
     mapData = manualData.departamentos || [];
   } else if (data) {
@@ -31,7 +31,7 @@ export function MapWidget({ widget, data, isLoading, onEdit, onDelete }: WidgetP
   }
 
   // Transform to DepartmentData format with default values for missing fields
-  const departmentData = mapData.map((dept, index) => ({
+  const departmentData = mapData.map((dept) => ({
     codigo_indec: 0, // Default value - will need proper mapping
     nombre: dept.nombre,
     zona_ugd: "", // Default empty

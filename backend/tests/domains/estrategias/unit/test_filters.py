@@ -3,7 +3,6 @@ Tests unitarios para tipos de filtros de clasificación.
 """
 
 import pandas as pd
-
 from app.domains.eventos_epidemiologicos.clasificacion.models import TipoFiltro
 
 

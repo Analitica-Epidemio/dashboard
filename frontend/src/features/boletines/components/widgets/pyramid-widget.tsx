@@ -14,7 +14,7 @@ export function PyramidWidget({ widget, data, isLoading, onEdit, onDelete }: Wid
   // Parse data
   let rawPyramidData: Array<{ age_group: string; male: number; female: number }> = [];
 
-  if (widget.data_config.source === "manual" && widget.data_config.manual_data) {
+  if (widget.data_config?.source === "manual" && widget.data_config?.manual_data) {
     const manualData = widget.data_config.manual_data as {
       data?: Array<{ age_group: string; male: number; female: number }>;
     };

@@ -223,8 +223,8 @@ export function ActiveSessions() {
 
           <div className="space-y-4">
             {sessions?.map((sessionInfo) => {
-              const device = getDeviceType(sessionInfo.user_agent);
-              const { browser, os } = parseUserAgent(sessionInfo.user_agent);
+              const device = getDeviceType(sessionInfo.agente_usuario);
+              const { browser, os } = parseUserAgent(sessionInfo.agente_usuario);
 
               return (
                 <div
@@ -242,7 +242,7 @@ export function ActiveSessions() {
                           <h4 className="font-semibold">
                             {browser} en {os}
                           </h4>
-                          {sessionInfo.is_current && (
+                          {sessionInfo.es_actual && (
                             <Badge variant="default" className="text-xs">
                               Esta sesión
                             </Badge>
@@ -253,14 +253,14 @@ export function ActiveSessions() {
                           <div className="flex items-center gap-2">
                             <MapPin className="h-3 w-3" />
                             <span>
-                              IP: {sessionInfo.ip_address || "Desconocida"}
+                              IP: {sessionInfo.direccion_ip || "Desconocida"}
                             </span>
                           </div>
 
                           <div>
                             Última actividad:{" "}
                             {format(
-                              new Date(sessionInfo.last_activity),
+                              new Date(sessionInfo.ultima_actividad),
                               "dd MMM yyyy, HH:mm",
                               { locale: es }
                             )}
@@ -279,7 +279,7 @@ export function ActiveSessions() {
                     </div>
 
                     {/* Botón para cerrar sesión */}
-                    {!sessionInfo.is_current && (
+                    {!sessionInfo.es_actual && (
                       <Button
                         variant="ghost"
                         size="sm"

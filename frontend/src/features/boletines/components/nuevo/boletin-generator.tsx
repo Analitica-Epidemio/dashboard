@@ -54,7 +54,7 @@ interface EventoSeleccionado {
   id: number;
   codigo: string;
   nombre: string;
-  tipo: "tipo_eno" | "grupo_eno";
+  tipo: "tipo_eno" | "grupo_eno" | "grupo_de_enfermedades";
   order: number;
 }
 
@@ -167,11 +167,11 @@ function EventoPreviewCard({
                         <span className={cn(
                           "text-xs",
                           preview.corredor.tendencia === "up" ? "text-red-600" :
-                          preview.corredor.tendencia === "down" ? "text-green-600" :
-                          "text-gray-500"
+                            preview.corredor.tendencia === "down" ? "text-green-600" :
+                              "text-gray-500"
                         )}>
                           {preview.corredor.tendencia === "up" ? "↑" :
-                           preview.corredor.tendencia === "down" ? "↓" : "→"}
+                            preview.corredor.tendencia === "down" ? "↓" : "→"}
                           {Math.abs(preview.corredor.porcentaje_cambio ?? 0).toFixed(1)}%
                         </span>
                       )}
@@ -228,7 +228,7 @@ function ZonaBadge({ zona }: { zona: ZonaEpidemica }) {
 // ============================================================================
 
 interface EventoSelectorProps {
-  onSelect: (evento: { id: number; codigo: string; nombre: string; tipo: "tipo_eno" | "grupo_eno" }) => void;
+  onSelect: (evento: { id: number; codigo: string; nombre: string; tipo: "tipo_eno" | "grupo_eno" | "grupo_de_enfermedades" }) => void;
   selectedCodigos: string[];
 }
 
@@ -249,7 +249,7 @@ function EventoSelector({ onSelect, selectedCodigos }: EventoSelectorProps) {
   }, [data?.data, search]);
 
   // Group by tipo
-  const grupoEnos = filteredEventos.filter((e) => e.tipo === "grupo_eno");
+  const grupoEnos = filteredEventos.filter((e) => e.tipo === "grupo_de_enfermedades");
   const tipoEnos = filteredEventos.filter((e) => e.tipo === "tipo_eno");
 
   return (
@@ -427,7 +427,7 @@ export function BoletinGenerator() {
 
   // Add evento
   const handleAddEvento = useCallback(
-    (evento: { id: number; codigo: string; nombre: string; tipo: "tipo_eno" | "grupo_eno" }) => {
+    (evento: { id: number; codigo: string; nombre: string; tipo: "tipo_eno" | "grupo_eno" | "grupo_de_enfermedades" }) => {
       setEventosSeleccionados((prev) => [
         ...prev,
         {

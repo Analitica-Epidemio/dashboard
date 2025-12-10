@@ -4,9 +4,10 @@ import React from "react";
 import { CheckCircle2, AlertTriangle, FileText, Table } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { SheetPreview } from "../hooks/use-server-preview";
+
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ModernSheetPreviewProps {
   sheets: SheetPreview[];
@@ -17,6 +18,8 @@ interface ModernSheetPreviewProps {
   isProcessing: boolean;
   filename: string;
   fileSize: number;
+  overriddenTypes?: Record<string, string>;
+  onTypeChange?: (sheetName: string, type: string) => void;
 }
 
 export function ModernSheetPreview({
@@ -28,15 +31,32 @@ export function ModernSheetPreview({
   isProcessing,
   filename,
   fileSize,
+  overriddenTypes = {},
+  onTypeChange,
 }: ModernSheetPreviewProps) {
   const validSheets = sheets.filter((s) => s.is_valid);
   const invalidSheets = sheets.filter((s) => !s.is_valid);
-  const selectedSheetData = sheets.find((s) => s.name === selectedSheet);
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  // Get badge style based on file type
+  const getTypeBadge = (detectedType: string | null) => {
+    switch (detectedType) {
+      case "NOMINAL":
+        return { label: "Nominal", className: "border-green-200 text-green-700 bg-green-50" };
+      case "CLI_P26":
+        return { label: "Clínico", className: "border-blue-200 text-blue-700 bg-blue-50" };
+      case "CLI_P26_INT":
+        return { label: "Camas IRA", className: "border-cyan-200 text-cyan-700 bg-cyan-50" };
+      case "LAB_P26":
+        return { label: "Laboratorio", className: "border-purple-200 text-purple-700 bg-purple-50" };
+      default:
+        return { label: "Desconocido", className: "border-red-200 text-red-700 bg-red-50" };
+    }
   };
 
   return (
@@ -68,6 +88,8 @@ export function ModernSheetPreview({
         <div className="space-y-3">
           {validSheets.map((sheet) => {
             const isSelected = selectedSheet === sheet.name;
+            const currentType = overriddenTypes[sheet.name] || sheet.detected_type || "CLI_P26";
+            const badgeStyle = getTypeBadge(currentType);
 
             return (
               <Card
@@ -89,10 +111,27 @@ export function ModernSheetPreview({
                         </CardDescription>
                       </div>
                     </div>
-                    <Badge variant="outline" className="text-xs border-green-200 text-green-700">
-                      <CheckCircle2 className="w-3 h-3 mr-1" />
-                      Válida
-                    </Badge>
+
+                    {/* Select de Tipo de Archivo */}
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <Select
+                        value={currentType}
+                        onValueChange={(val) => onTypeChange?.(sheet.name, val)}
+                      >
+                        <SelectTrigger className={cn("h-7 text-xs border bg-transparent w-[140px]", badgeStyle.className)}>
+                          <div className="flex items-center">
+                            <CheckCircle2 className="w-3 h-3 mr-1" />
+                            <SelectValue />
+                          </div>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="NOMINAL">Nominal</SelectItem>
+                          <SelectItem value="CLI_P26">Clínico</SelectItem>
+                          <SelectItem value="CLI_P26_INT">Camas IRA</SelectItem>
+                          <SelectItem value="LAB_P26">Laboratorio</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </CardHeader>
 

@@ -43,20 +43,24 @@ async def get_provincias_geojson(
 
     features = []
     for row in rows:
-        features.append({
-            "type": "Feature",
-            "properties": {
-                "id": row.id_provincia_indec,
-                "id_provincia_indec": row.id_provincia_indec,
-                "nombre": row.nombre,
-                "poblacion": row.poblacion,
-                "centroide": {
-                    "lat": row.latitud,
-                    "lon": row.longitud,
-                } if row.latitud and row.longitud else None,
-            },
-            "geometry": row.geometry,
-        })
+        features.append(
+            {
+                "type": "Feature",
+                "properties": {
+                    "id": row.id_provincia_indec,
+                    "id_provincia_indec": row.id_provincia_indec,
+                    "nombre": row.nombre,
+                    "poblacion": row.poblacion,
+                    "centroide": {
+                        "lat": row.latitud,
+                        "lon": row.longitud,
+                    }
+                    if row.latitud and row.longitud
+                    else None,
+                },
+                "geometry": row.geometry,
+            }
+        )
 
     return {
         "type": "FeatureCollection",
@@ -66,7 +70,7 @@ async def get_provincias_geojson(
 
 @router.get("/provincias/geojson-con-eventos")
 async def get_provincias_con_eventos(
-    id_grupo_eno: int | None = Query(None, description="Filtrar por grupo ENO"),
+    id_grupo: int | None = Query(None, description="Filtrar por grupo ENO"),
     session: AsyncSession = Depends(get_async_session),
 ) -> dict[str, Any]:
     """
@@ -77,9 +81,9 @@ async def get_provincias_con_eventos(
     params: dict[str, Any] = {}
 
     evento_join_condition = ""
-    if id_grupo_eno:
-        evento_join_condition = "AND e.id_grupo_eno = :id_grupo_eno"
-        params["id_grupo_eno"] = id_grupo_eno
+    if id_grupo:
+        evento_join_condition = "AND e.id_grupo = :id_grupo"
+        params["id_grupo"] = id_grupo
 
     query = text(f"""
         SELECT
@@ -118,23 +122,31 @@ async def get_provincias_con_eventos(
         if row.total_eventos > max_eventos:
             max_eventos = row.total_eventos
 
-        features.append({
-            "type": "Feature",
-            "properties": {
-                "id": row.id_provincia_indec,
-                "id_provincia_indec": row.id_provincia_indec,
-                "nombre": row.nombre,
-                "poblacion": row.poblacion,
-                "total_eventos": row.total_eventos,
-                "total_casos": row.total_casos,
-                "tasa_incidencia": round(row.total_casos / row.poblacion * 100000, 2) if row.poblacion else None,
-                "centroide": {
-                    "lat": row.latitud,
-                    "lon": row.longitud,
-                } if row.latitud and row.longitud else None,
-            },
-            "geometry": row.geometry,
-        })
+        features.append(
+            {
+                "type": "Feature",
+                "properties": {
+                    "id": row.id_provincia_indec,
+                    "id_provincia_indec": row.id_provincia_indec,
+                    "nombre": row.nombre,
+                    "poblacion": row.poblacion,
+                    "total_eventos": row.total_eventos,
+                    "total_casos": row.total_casos,
+                    "tasa_incidencia": round(
+                        row.total_casos / row.poblacion * 100000, 2
+                    )
+                    if row.poblacion
+                    else None,
+                    "centroide": {
+                        "lat": row.latitud,
+                        "lon": row.longitud,
+                    }
+                    if row.latitud and row.longitud
+                    else None,
+                },
+                "geometry": row.geometry,
+            }
+        )
 
     return {
         "type": "FeatureCollection",
@@ -142,7 +154,7 @@ async def get_provincias_con_eventos(
         "metadata": {
             "max_eventos": max_eventos,
             "total_provincias": len(features),
-        }
+        },
     }
 
 
@@ -197,22 +209,26 @@ async def get_departamentos_geojson(
 
     features = []
     for row in rows:
-        features.append({
-            "type": "Feature",
-            "properties": {
-                "id": row.id_departamento_indec,
-                "id_departamento_indec": row.id_departamento_indec,
-                "id_provincia_indec": row.id_provincia_indec,
-                "nombre": row.nombre,
-                "provincia": row.provincia_nombre,
-                "poblacion": row.poblacion,
-                "centroide": {
-                    "lat": row.latitud,
-                    "lon": row.longitud,
-                } if row.latitud and row.longitud else None,
-            },
-            "geometry": row.geometry,
-        })
+        features.append(
+            {
+                "type": "Feature",
+                "properties": {
+                    "id": row.id_departamento_indec,
+                    "id_departamento_indec": row.id_departamento_indec,
+                    "id_provincia_indec": row.id_provincia_indec,
+                    "nombre": row.nombre,
+                    "provincia": row.provincia_nombre,
+                    "poblacion": row.poblacion,
+                    "centroide": {
+                        "lat": row.latitud,
+                        "lon": row.longitud,
+                    }
+                    if row.latitud and row.longitud
+                    else None,
+                },
+                "geometry": row.geometry,
+            }
+        )
 
     return {
         "type": "FeatureCollection",
@@ -223,7 +239,7 @@ async def get_departamentos_geojson(
 @router.get("/departamentos/geojson-con-eventos")
 async def get_departamentos_con_eventos(
     id_provincia_indec: int | None = Query(None, description="Filtrar por provincia"),
-    id_grupo_eno: int | None = Query(None, description="Filtrar por grupo ENO"),
+    id_grupo: int | None = Query(None, description="Filtrar por grupo ENO"),
     session: AsyncSession = Depends(get_async_session),
 ) -> dict[str, Any]:
     """
@@ -241,9 +257,9 @@ async def get_departamentos_con_eventos(
         params["id_provincia"] = id_provincia_indec
 
     evento_join_condition = ""
-    if id_grupo_eno:
-        evento_join_condition = "AND e.id_grupo_eno = :id_grupo_eno"
-        params["id_grupo_eno"] = id_grupo_eno
+    if id_grupo:
+        evento_join_condition = "AND e.id_grupo = :id_grupo"
+        params["id_grupo"] = id_grupo
 
     where_sql = " AND ".join(where_clauses)
 
@@ -286,25 +302,33 @@ async def get_departamentos_con_eventos(
         if row.total_eventos > max_eventos:
             max_eventos = row.total_eventos
 
-        features.append({
-            "type": "Feature",
-            "properties": {
-                "id": row.id_departamento_indec,
-                "id_departamento_indec": row.id_departamento_indec,
-                "id_provincia_indec": row.id_provincia_indec,
-                "nombre": row.nombre,
-                "provincia": row.provincia_nombre,
-                "poblacion": row.poblacion,
-                "total_eventos": row.total_eventos,
-                "total_casos": row.total_casos,
-                "tasa_incidencia": round(row.total_casos / row.poblacion * 100000, 2) if row.poblacion else None,
-                "centroide": {
-                    "lat": row.latitud,
-                    "lon": row.longitud,
-                } if row.latitud and row.longitud else None,
-            },
-            "geometry": row.geometry,
-        })
+        features.append(
+            {
+                "type": "Feature",
+                "properties": {
+                    "id": row.id_departamento_indec,
+                    "id_departamento_indec": row.id_departamento_indec,
+                    "id_provincia_indec": row.id_provincia_indec,
+                    "nombre": row.nombre,
+                    "provincia": row.provincia_nombre,
+                    "poblacion": row.poblacion,
+                    "total_eventos": row.total_eventos,
+                    "total_casos": row.total_casos,
+                    "tasa_incidencia": round(
+                        row.total_casos / row.poblacion * 100000, 2
+                    )
+                    if row.poblacion
+                    else None,
+                    "centroide": {
+                        "lat": row.latitud,
+                        "lon": row.longitud,
+                    }
+                    if row.latitud and row.longitud
+                    else None,
+                },
+                "geometry": row.geometry,
+            }
+        )
 
     return {
         "type": "FeatureCollection",
@@ -312,5 +336,5 @@ async def get_departamentos_con_eventos(
         "metadata": {
             "max_eventos": max_eventos,
             "total_departamentos": len(features),
-        }
+        },
     }

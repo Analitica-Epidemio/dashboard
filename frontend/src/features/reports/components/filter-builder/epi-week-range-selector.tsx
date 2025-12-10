@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -23,9 +23,13 @@ export function EpiWeekRangeSelector() {
 
   const [epiStart, setEpiStart] = useState<EpiWeekRange | null>(null)
   const [epiEnd, setEpiEnd] = useState<EpiWeekRange | null>(null)
+  const initializedRef = useRef(false)
 
-  // Initialize with current values if they exist
+  // Initialize with current values if they exist (only once)
   useEffect(() => {
+    if (initializedRef.current) return
+    initializedRef.current = true
+
     if (dateRange.from) {
       const startWeek = getEpiWeek(dateRange.from)
       const dates = epiWeekToDates(startWeek.year, startWeek.week)
@@ -46,7 +50,7 @@ export function EpiWeekRangeSelector() {
         endDate: dates.end
       })
     }
-  }, [])
+  }, [dateRange.from, dateRange.to])
 
   // Update date range when epi weeks change
   useEffect(() => {

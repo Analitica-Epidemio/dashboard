@@ -1,602 +1,366 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
+import Link from "next/link";
 import {
-  Activity,
-  Users,
-  AlertCircle,
-  CheckCircle,
-  MapPin,
-  BarChart3
+    Activity,
+    Users,
+    Heart,
+    AlertTriangle,
+    TrendingUp,
+    Stethoscope,
+    FlaskConical,
+    ClipboardList,
+    Building2,
+    ChevronRight,
+    FileText,
+    Loader2,
 } from "lucide-react";
+import { useQueries } from "@tanstack/react-query";
 
+import { AppSidebar } from "@/features/layout/components/app-sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
-import { AppSidebar } from "@/features/layout/components";
-import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { PopulationPyramid } from "@/features/dashboard/components/charts/population-pyramid";
-import { $api } from "@/lib/api/client";
-import type { DashboardResumen } from "@/features/dashboard/api";
+import { apiClient } from "@/lib/api/client";
+import { createYearFilter, extractTotalValue, type PeriodoFilter } from "@/features/metricas";
 
-const COLORS = [
-  "#0088FE",
-  "#00C49F",
-  "#FFBB28",
-  "#FF8042",
-  "#8884D8",
-  "#82CA9D",
-];
-
-// Mapa de colores por clasificación
-const CLASIFICACION_COLORS: Record<string, string> = {
-  CONFIRMADOS: "#dc2626", // red-600
-  SOSPECHOSOS: "#ea580c", // orange-600
-  PROBABLES: "#f59e0b", // amber-500
-  EN_ESTUDIO: "#3b82f6", // blue-500
-  NEGATIVOS: "#65a30d", // lime-600
-  DESCARTADOS: "#6b7280", // gray-500
-  NOTIFICADOS: "#8b5cf6", // violet-500
-  CON_RESULTADO_MORTAL: "#991b1b", // red-900
-  SIN_RESULTADO_MORTAL: "#10b981", // green-500
-  REQUIERE_REVISION: "#f97316", // orange-500
-};
-
-// Tabs custom con estilo moderno
-interface ModernTabsProps {
-  tabs: Array<{ id: string; label: string; icon: React.ReactNode }>;
-  activeTab: string;
-  onChange: (tab: string) => void;
+// --- Types ---
+interface KpiProps {
+    title: string;
+    value: number | string;
+    icon: React.ElementType;
+    variant?: "default" | "warning" | "danger" | "success";
+    description?: string;
+    isLoading?: boolean;
 }
 
-function ModernTabs({ tabs, activeTab, onChange }: ModernTabsProps) {
-  return (
-    <div className="border-b border-border">
-      <div className="flex gap-1 overflow-x-auto scrollbar-hide">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => onChange(tab.id)}
-            className={cn(
-              "relative flex items-center gap-2 px-4 py-3 text-sm font-medium transition-all duration-200",
-              "whitespace-nowrap border-b-2 -mb-[1px]",
-              activeTab === tab.id
-                ? "border-primary text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
-            )}
-          >
-            <span className="flex-shrink-0">{tab.icon}</span>
-            <span className="hidden sm:inline">{tab.label}</span>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
+interface VigilanciaCardProps {
+    title: string;
+    icon: React.ElementType;
+    href: string;
+    metrics: { label: string; value: string | number }[];
+    trend?: { value: number; label: string };
+    variant?: "default" | "warning" | "danger";
+    isLoading?: boolean;
 }
 
-// Componente reutilizable para tarjetas de métricas
-interface MetricCardProps {
-  title: string;
-  value: number;
-  icon: React.ReactNode;
-  colorClass?: string;
-  subtitle?: string;
-}
-
-function MetricCard({ title, value, icon, colorClass = "text-blue-600", subtitle }: MetricCardProps) {
-  return (
-    <Card className="border-border/50 shadow-sm hover:shadow-md transition-shadow duration-200 p-0">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-3">
-        <CardTitle className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
-          {title}
-        </CardTitle>
-        <div className={cn("p-1 rounded-md bg-muted/50", colorClass)}>
-          {icon}
-        </div>
-      </CardHeader>
-      <CardContent className="pb-3 px-3 pt-0">
-        <div className={cn("text-lg font-bold tracking-tight", colorClass)}>
-          {value.toLocaleString()}
-        </div>
-        {subtitle && (
-          <p className="text-[11px] text-muted-foreground mt-0.5">{subtitle}</p>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-export default function DashboardPage() {
-  const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState("resumen");
-
-  const tabsConfig = [
-    { id: "resumen", label: "Resumen", icon: <BarChart3 className="h-4 w-4" /> },
-    { id: "grupos", label: "Grupos", icon: <AlertCircle className="h-4 w-4" /> },
-    { id: "demografico", label: "Demográfico", icon: <Users className="h-4 w-4" /> },
-    { id: "geografico", label: "Geográfico", icon: <MapPin className="h-4 w-4" /> },
-  ];
-
-  const queryParams = useMemo(() => ({
-    fecha_desde: searchParams.get("fecha_desde") || undefined,
-    fecha_hasta: searchParams.get("fecha_hasta") || undefined,
-    grupo_id: searchParams.get("grupo_id")
-      ? Number(searchParams.get("grupo_id"))
-      : undefined,
-    tipo_eno_ids: searchParams.get("tipo_eno_id")
-      ? [Number(searchParams.get("tipo_eno_id"))]
-      : undefined,
-    clasificacion: searchParams.get("clasificacion") || undefined,
-    provincia_id: searchParams.get("provincia_id")
-      ? Number(searchParams.get("provincia_id"))
-      : undefined,
-  }), [searchParams]);
-
-  const { data: response, isLoading: loading, error } = $api.useQuery(
-    'get',
-    '/api/v1/dashboard/resumen',
-    { params: { query: queryParams } }
-  );
-
-  const data = response?.data as DashboardResumen | undefined;
-
-  if (loading) {
-    return (
-      <div className="space-y-6 p-6">
-        <Skeleton className="h-10 w-64" />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-32" />
-          ))}
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Skeleton className="h-96" />
-          <Skeleton className="h-96" />
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !data) {
-    return (
-      <div className="p-6">
-        <Alert variant="destructive">
-          <AlertDescription>
-            {error ? "Error al cargar los datos del dashboard" : "No hay datos disponibles"}
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
-
-  // Validar que los datos tengan la estructura esperada
-  if (
-    !data.eventos_mas_tipicos ||
-    !data.grupos_mas_tipicos ||
-    !data.territorios_afectados
-  ) {
-    return (
-      <div className="p-6">
-        <Alert variant="destructive">
-          <AlertDescription>
-            Error: La respuesta del servidor no tiene la estructura esperada.
-            {JSON.stringify(data)}
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
-
-  // Extraer todas las clasificaciones únicas del dataset
-  const allClasificaciones = Array.from(
-    new Set(
-      data.eventos_mas_tipicos.flatMap((evento) =>
-        Object.keys(evento.clasificaciones)
-      )
-    )
-  ).sort();
-
-  // Preparar datos para gráficos con todas las clasificaciones dinámicamente
-  const eventosChartData = data.eventos_mas_tipicos.map((evento) => {
-    const dataPoint: Record<string, string | number> = {
-      nombre: evento.tipo_eno,
-      total: evento.total,
+// --- Components ---
+function KpiCard({ title, value, icon: Icon, variant = "default", description, isLoading }: KpiProps) {
+    const colorMap = {
+        default: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400",
+        success: "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400",
+        warning: "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400",
+        danger: "bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400",
     };
 
-    // Agregar cada clasificación dinámicamente
-    allClasificaciones.forEach((clasificacion) => {
-      dataPoint[clasificacion] = evento.clasificaciones[clasificacion] || 0;
+    return (
+        <Card className="shadow-sm">
+            <CardContent className="p-4 flex items-start justify-between">
+                <div>
+                    <p className="text-sm font-medium text-muted-foreground">{title}</p>
+                    <div className="mt-2 flex items-baseline gap-2">
+                        {isLoading ? (
+                            <Skeleton className="h-7 w-20" />
+                        ) : (
+                            <span className="text-2xl font-bold tracking-tight">
+                                {typeof value === 'number' ? value.toLocaleString() : value}
+                            </span>
+                        )}
+                    </div>
+                    {description && <p className="mt-1 text-xs text-muted-foreground">{description}</p>}
+                </div>
+                <div className={cn("p-2 rounded-lg", colorMap[variant])}>
+                    <Icon className="h-5 w-5" />
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
+function VigilanciaCard({ title, icon: Icon, href, metrics, trend, variant = "default", isLoading }: VigilanciaCardProps) {
+    const borderColors = {
+        default: "border-l-blue-500",
+        warning: "border-l-amber-500",
+        danger: "border-l-rose-500",
+    };
+
+    return (
+        <Card className={cn("shadow-sm border-l-4", borderColors[variant])}>
+            <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Icon className="h-5 w-5 text-muted-foreground" />
+                        <CardTitle className="text-base">{title}</CardTitle>
+                    </div>
+                    {trend && (
+                        <Badge variant={trend.value > 0 ? "destructive" : "secondary"} className="text-xs">
+                            {trend.value > 0 ? "↑" : "↓"} {Math.abs(trend.value)}% {trend.label}
+                        </Badge>
+                    )}
+                </div>
+            </CardHeader>
+            <CardContent>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                    {metrics.map((m, i) => (
+                        <div key={i}>
+                            <p className="text-xs text-muted-foreground">{m.label}</p>
+                            {isLoading ? (
+                                <Skeleton className="h-6 w-16 mt-1" />
+                            ) : (
+                                <p className="text-lg font-semibold">
+                                    {typeof m.value === 'number' ? m.value.toLocaleString() : m.value}
+                                </p>
+                            )}
+                        </div>
+                    ))}
+                </div>
+                <Button variant="ghost" size="sm" className="w-full justify-between" asChild>
+                    <Link href={href}>
+                        Ver más <ChevronRight className="h-4 w-4" />
+                    </Link>
+                </Button>
+            </CardContent>
+        </Card>
+    );
+}
+
+interface AlertItemProps {
+    type: "warning" | "danger" | "info";
+    title: string;
+    description: string;
+}
+
+function AlertItem({ type, title, description }: AlertItemProps) {
+    const config = {
+        warning: { icon: AlertTriangle, bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-800" },
+        danger: { icon: AlertTriangle, bg: "bg-rose-50", border: "border-rose-200", text: "text-rose-800" },
+        info: { icon: Activity, bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-800" },
+    };
+    const { icon: Icon, bg, border, text } = config[type];
+
+    return (
+        <div className={cn("flex items-start gap-3 p-3 rounded-lg border", bg, border)}>
+            <Icon className={cn("h-5 w-5 shrink-0 mt-0.5", text)} />
+            <div>
+                <p className={cn("font-medium text-sm", text)}>{title}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+            </div>
+        </div>
+    );
+}
+
+// --- Main Page ---
+// Helper to create metric query config
+function createMetricQuery(metric: string, periodo: PeriodoFilter) {
+    return {
+        queryKey: ["metricas", metric, periodo],
+        queryFn: async () => {
+            const response = await apiClient.POST("/api/v1/metricas/query", {
+                body: {
+                    metric,
+                    dimensions: [],
+                    filters: { periodo },
+                },
+            });
+            if (response.error) throw new Error(`Error fetching ${metric}`);
+            return response.data;
+        },
+        staleTime: 5 * 60 * 1000, // 5 minutes
+    };
+}
+
+export default function DashboardEjecutivoPage() {
+    // Get current week
+    const currentWeek = useMemo(() => {
+        const now = new Date();
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        const days = Math.floor((now.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
+        return Math.ceil((days + startOfYear.getDay() + 1) / 7);
+    }, []);
+
+    const currentYear = new Date().getFullYear();
+    const yearFilter = useMemo(() => createYearFilter(currentYear), [currentYear]);
+
+    // Fetch both metrics in parallel using useQueries
+    const [estudiadasQuery, positivasQuery] = useQueries({
+        queries: [
+            createMetricQuery("muestras_estudiadas", yearFilter),
+            createMetricQuery("muestras_positivas", yearFilter),
+        ],
     });
 
-    return dataPoint;
-  });
+    // Derive metrics from query results
+    const isLoading = estudiadasQuery.isLoading || positivasQuery.isLoading;
+    const labMetrics = useMemo(() => {
+        const estudiadas = extractTotalValue(estudiadasQuery.data);
+        const positivas = extractTotalValue(positivasQuery.data);
+        const positividad = estudiadas > 0 ? (positivas / estudiadas) * 100 : 0;
 
-  const gruposChartData = data.grupos_mas_tipicos.map((grupo) => ({
-    name: grupo.grupo_eno,
-    value: grupo.total,
-  }));
+        return {
+            muestrasEstudiadas: estudiadas,
+            muestrasPositivas: positivas,
+            positividad: Math.round(positividad * 10) / 10,
+        };
+    }, [estudiadasQuery.data, positivasQuery.data]);
 
-  const territoriosChartData = data.territorios_afectados
-    .slice(0, 10)
-    .map((territorio) => ({
-      nombre: territorio.nombre,
-      total: territorio.total_eventos,
-    }));
+    // Alerts based on real data
+    const alertas: AlertItemProps[] = [
+        { type: "info", title: "Sistema conectado al backend", description: `Datos en tiempo real del año ${currentYear}` },
+    ];
 
-  return (
-    <SidebarProvider>
-      <AppSidebar variant="inset" />
-      <SidebarInset>
-        {/* Header */}
-        <header className="flex h-14 items-center gap-4 border-b bg-background px-6">
-          <SidebarTrigger className="-ml-2" />
-          <Separator orientation="vertical" className="h-6" />
-          <div className="flex flex-1 items-center justify-between">
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg font-semibold">Dashboard Epidemiológico</h1>
-            </div>
-          </div>
-        </header>
+    if (labMetrics.muestrasPositivas > 0) {
+        alertas.push({
+            type: "warning",
+            title: `${labMetrics.muestrasPositivas.toLocaleString()} muestras positivas`,
+            description: `Positividad: ${labMetrics.positividad}% en ${currentYear}`,
+        });
+    }
 
-        <main className="overflow-y-scroll flex-1 bg-muted">
-          {/* Header Section */}
-          <div className="bg-background border-b border-border">
-            <div className="px-6 py-5">
-              <h1 className="text-xl font-semibold">
-                Dashboard Epidemiológico
-              </h1>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                Análisis integral de eventos epidemiológicos
-              </p>
-            </div>
-
-            <ModernTabs
-              tabs={tabsConfig}
-              activeTab={activeTab}
-              onChange={setActiveTab}
-            />
-          </div>
-
-          {/* Content Section */}
-          <div className="p-6">
-            {/* TAB: RESUMEN */}
-            {activeTab === "resumen" && (
-              <div className="space-y-6">
-              {/* Tarjetas resumen mejoradas */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                <MetricCard
-                  title="Total Eventos"
-                  value={data.tabla_resumen.total_eventos}
-                  icon={<Activity className="h-4 w-4" />}
-                  colorClass="text-blue-600"
-                  subtitle="Eventos registrados"
-                />
-                <MetricCard
-                  title="Confirmados"
-                  value={data.tabla_resumen.total_confirmados}
-                  icon={<CheckCircle className="h-4 w-4" />}
-                  colorClass="text-red-600"
-                  subtitle={`${((data.tabla_resumen.total_confirmados / data.tabla_resumen.total_eventos) * 100).toFixed(1)}% del total`}
-                />
-                <MetricCard
-                  title="Sospechosos"
-                  value={data.tabla_resumen.total_sospechosos}
-                  icon={<AlertCircle className="h-4 w-4" />}
-                  colorClass="text-orange-600"
-                  subtitle={`${((data.tabla_resumen.total_sospechosos / data.tabla_resumen.total_eventos) * 100).toFixed(1)}% del total`}
-                />
-                <MetricCard
-                  title="Personas Afectadas"
-                  value={data.tabla_resumen.total_personas_afectadas}
-                  icon={<Users className="h-4 w-4" />}
-                  colorClass="text-purple-600"
-                  subtitle="Individuos únicos"
-                />
-              </div>
-
-              {/* Período de datos */}
-              {data.tabla_resumen.fecha_primer_evento &&
-                data.tabla_resumen.fecha_ultimo_evento && (
-                  <Card className="border-border/50 shadow-sm">
-                    <CardHeader>
-                      <CardTitle className="text-sm">Período de Datos</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground">
-                        Desde{" "}
-                        <span className="font-medium text-foreground">
-                          {data.tabla_resumen.fecha_primer_evento}
-                        </span>{" "}
-                        hasta{" "}
-                        <span className="font-medium text-foreground">
-                          {data.tabla_resumen.fecha_ultimo_evento}
-                        </span>
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-
-              {/* Gráfico principal de eventos */}
-              <Card className="border-border/50 shadow-sm">
-                <CardHeader>
-                  <CardTitle>Eventos por Tipo</CardTitle>
-                  <CardDescription>
-                    Distribución de clasificaciones por tipo de evento
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={400}>
-                    <BarChart data={eventosChartData} margin={{ bottom: 80 }}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis
-                        dataKey="nombre"
-                        angle={-45}
-                        textAnchor="end"
-                        height={80}
-                        interval={0}
-                        tick={{ fontSize: 10 }}
-                      />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend wrapperStyle={{ paddingTop: "10px" }} />
-                      {allClasificaciones.map((clasificacion) => (
-                        <Bar
-                          key={clasificacion}
-                          dataKey={clasificacion}
-                          stackId="a"
-                          fill={CLASIFICACION_COLORS[clasificacion] || "#94a3b8"}
-                          name={clasificacion.replace(/_/g, " ")}
-                        />
-                      ))}
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
-              {/* Tabla detallada de eventos */}
-              <Card className="border-border/50 shadow-sm">
-                <CardHeader>
-                  <CardTitle>Detalle de Eventos por Clasificación</CardTitle>
-                  <CardDescription>
-                    Desglose completo de {data.eventos_mas_tipicos.length} tipos de eventos
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="overflow-x-auto border rounded-lg">
-                    <table className="w-full text-sm">
-                      <thead className="bg-muted">
-                        <tr className="border-b">
-                          <th className="text-left p-3 font-semibold sticky left-0 bg-muted z-10">Tipo de Evento</th>
-                          <th className="text-right p-3 font-semibold">Total</th>
-                          {allClasificaciones.map((clasificacion) => (
-                            <th key={clasificacion} className="text-right p-3 font-semibold whitespace-nowrap">
-                              {clasificacion.replace(/_/g, " ")}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {data.eventos_mas_tipicos.map((evento, idx) => (
-                          <tr key={idx} className="border-b hover:bg-muted/50 transition-colors">
-                            <td className="p-3 font-medium sticky left-0 bg-background hover:bg-muted/50 z-10">{evento.tipo_eno}</td>
-                            <td className="text-right p-3 font-semibold">
-                              {evento.total.toLocaleString()}
-                            </td>
-                            {allClasificaciones.map((clasificacion) => {
-                              const valor = evento.clasificaciones[clasificacion] || 0;
-                              const color = CLASIFICACION_COLORS[clasificacion];
-                              return (
-                                <td
-                                  key={clasificacion}
-                                  className="text-right p-3 font-medium whitespace-nowrap"
-                                  style={{ color: valor > 0 ? color : undefined }}
-                                >
-                                  {valor > 0 ? valor.toLocaleString() : "-"}
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
-              </div>
-            )}
-
-            {/* TAB: GRUPOS */}
-            {activeTab === "grupos" && (
-              <div className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Desglose detallado */}
-                <Card className="border-border/50 shadow-sm">
-                  <CardHeader>
-                    <CardTitle>Desglose por Grupo</CardTitle>
-                    <CardDescription>Tipos de eventos en cada grupo</CardDescription>
-                  </CardHeader>
-                  <CardContent className="max-h-[600px] overflow-y-auto">
-                    <div className="space-y-6">
-                      {data.grupos_mas_tipicos.map((grupo, idx) => (
-                        <div key={idx} className="border rounded-lg p-4 bg-muted/20">
-                          <div className="flex justify-between items-center mb-3">
-                            <h3 className="font-semibold text-lg flex items-center gap-2">
-                              <div
-                                className="w-3 h-3 rounded-full"
-                                style={{ backgroundColor: COLORS[idx % COLORS.length] }}
-                              />
-                              {grupo.grupo_eno}
-                            </h3>
-                            <div className="text-right">
-                              <div className="text-2xl font-bold text-primary">
-                                {grupo.total.toLocaleString()}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {((grupo.total / data.tabla_resumen.total_eventos) * 100).toFixed(1)}% del total
-                              </div>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                            {grupo.tipos.map((tipo, tidx) => (
-                              <div
-                                key={tidx}
-                                className="bg-background border rounded-md p-2 flex justify-between items-center hover:bg-muted/50 transition-colors"
-                              >
-                                <span className="text-sm truncate mr-2" title={tipo.tipo}>
-                                  {tipo.tipo}
-                                </span>
-                                <span className="text-sm font-semibold">
-                                  {tipo.total}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
+    return (
+        <SidebarProvider>
+            <AppSidebar variant="inset" />
+            <SidebarInset className="bg-muted/10 h-screen overflow-hidden flex flex-col">
+                {/* Header */}
+                <header className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b px-6 py-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-2xl font-bold flex items-center gap-2">
+                                Situación Epidemiológica
+                                {isLoading && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
+                            </h1>
+                            <p className="text-sm text-muted-foreground">
+                                Semana Epidemiológica {currentWeek} · Año {currentYear}
+                            </p>
                         </div>
-                      ))}
+                        <Button variant="outline" size="sm">
+                            <FileText className="h-4 w-4 mr-2" />
+                            Exportar PDF
+                        </Button>
                     </div>
-                  </CardContent>
-                </Card>
+                </header>
 
-                {/* Gráfico de pie */}
-                <Card className="border-border/50 shadow-sm">
-                  <CardHeader>
-                    <CardTitle>Distribución General</CardTitle>
-                    <CardDescription>Por grupos epidemiológicos</CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex items-center justify-center h-[600px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={gruposChartData}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={true}
-                          label={(entry: { name: string; value: number }) => `${entry.name}: ${entry.value}`}
-                          outerRadius={120}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {gruposChartData.map((_, index) => (
-                            <Cell
-                              key={`cell-${index}`}
-                              fill={COLORS[index % COLORS.length]}
+                {/* Content */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-6 max-w-[1600px] mx-auto w-full">
+                    {/* Global KPIs */}
+                    <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <KpiCard
+                            title="Muestras Estudiadas"
+                            value={labMetrics.muestrasEstudiadas}
+                            icon={Activity}
+                            variant="default"
+                            description="Laboratorio - Acumulado anual"
+                            isLoading={isLoading}
+                        />
+                        <KpiCard
+                            title="Muestras Positivas"
+                            value={labMetrics.muestrasPositivas}
+                            icon={Users}
+                            variant="warning"
+                            description="Detecciones confirmadas"
+                            isLoading={isLoading}
+                        />
+                        <KpiCard
+                            title="Positividad"
+                            value={`${labMetrics.positividad}%`}
+                            icon={TrendingUp}
+                            variant={labMetrics.positividad > 30 ? "danger" : "success"}
+                            description="Tasa de positividad"
+                            isLoading={isLoading}
+                        />
+                        <KpiCard
+                            title="Hospitalizados"
+                            value="N/D"
+                            icon={Heart}
+                            variant="default"
+                            description="Vigilancia hospitalaria (próximamente)"
+                            isLoading={false}
+                        />
+                        <KpiCard
+                            title="Brotes Activos"
+                            value="N/D"
+                            icon={AlertTriangle}
+                            variant="default"
+                            description="Detección de brotes (próximamente)"
+                            isLoading={false}
+                        />
+                        <KpiCard
+                            title="Alertas"
+                            value="N/D"
+                            icon={TrendingUp}
+                            variant="default"
+                            description="Sistema de alertas (próximamente)"
+                            isLoading={false}
+                        />
+                    </section>
+
+                    {/* Vigilancia Summary Cards */}
+                    <section>
+                        <h2 className="text-lg font-semibold mb-4">Resumen por Tipo de Vigilancia</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <VigilanciaCard
+                                title="Vigilancia Clínica"
+                                icon={Stethoscope}
+                                href="/vigilancia/clinica"
+                                metrics={[
+                                    { label: "Total Casos", value: "N/D" },
+                                    { label: "Tendencia", value: "N/D" },
+                                ]}
+                                variant="default"
+                                isLoading={false}
                             />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
-              </div>
-              </div>
-            )}
+                            <VigilanciaCard
+                                title="Vigilancia por Laboratorio"
+                                icon={FlaskConical}
+                                href="/vigilancia/laboratorio"
+                                metrics={[
+                                    { label: "Muestras", value: labMetrics.muestrasEstudiadas },
+                                    { label: "Positividad", value: `${labMetrics.positividad}%` },
+                                ]}
+                                variant={labMetrics.positividad > 30 ? "danger" : "warning"}
+                                isLoading={isLoading}
+                            />
+                            <VigilanciaCard
+                                title="Vigilancia Nominal"
+                                icon={ClipboardList}
+                                href="/vigilancia/nominal"
+                                metrics={[
+                                    { label: "Casos", value: "N/D" },
+                                    { label: "Letalidad", value: "N/D" },
+                                ]}
+                                variant="default"
+                                isLoading={false}
+                            />
+                            <VigilanciaCard
+                                title="Vigilancia Hospitalaria"
+                                icon={Building2}
+                                href="/vigilancia/hospitalaria"
+                                metrics={[
+                                    { label: "Internados", value: "N/D" },
+                                    { label: "UCI", value: "N/D" },
+                                ]}
+                                variant="default"
+                                isLoading={false}
+                            />
+                        </div>
+                    </section>
 
-            {/* TAB: DEMOGRÁFICO */}
-            {activeTab === "demografico" && (
-              <div className="space-y-6">
-              {data.piramide_poblacional.length > 0 ? (
-                <Card className="border-border/50 shadow-sm">
-                  <CardHeader>
-                    <CardTitle>Pirámide Poblacional de Eventos</CardTitle>
-                    <CardDescription>
-                      Distribución por edad y sexo de {data.tabla_resumen.total_personas_afectadas.toLocaleString()} personas afectadas
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex justify-center">
-                      <PopulationPyramid
-                        data={data.piramide_poblacional}
-                        width={800}
-                        height={500}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card className="border-border/50 shadow-sm">
-                  <CardContent className="py-12">
-                    <div className="text-center text-muted-foreground">
-                      <Users className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                      <p>No hay datos demográficos disponibles para el período seleccionado</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-              </div>
-            )}
-
-            {/* TAB: GEOGRÁFICO */}
-            {activeTab === "geografico" && (
-              <div className="space-y-6">
-              {territoriosChartData.length > 0 ? (
-                <Card className="border-border/50 shadow-sm">
-                  <CardHeader>
-                    <CardTitle>Distribución Geográfica</CardTitle>
-                    <CardDescription>
-                      Top {territoriosChartData.length} provincias por número de eventos
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ResponsiveContainer width="100%" height={500}>
-                      <BarChart data={territoriosChartData} layout="vertical">
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis type="number" />
-                        <YAxis
-                          dataKey="nombre"
-                          type="category"
-                          width={180}
-                          tick={{ fontSize: 12 }}
-                        />
-                        <Tooltip
-                          formatter={(value: number) => [value.toLocaleString(), "Total Eventos"]}
-                        />
-                        <Bar dataKey="total" fill="#3b82f6" name="Total Eventos" radius={[0, 4, 4, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card className="border-border/50 shadow-sm">
-                  <CardContent className="py-12">
-                    <div className="text-center text-muted-foreground">
-                      <MapPin className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                      <p>No hay datos geográficos disponibles para el período seleccionado</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-              </div>
-            )}
-          </div>
-        </main>
-      </SidebarInset>
-    </SidebarProvider>
-  );
+                    {/* Status Section */}
+                    <section>
+                        <h2 className="text-lg font-semibold mb-4">Estado del Sistema</h2>
+                        <Card>
+                            <CardContent className="p-4 space-y-3">
+                                {alertas.map((alerta, i) => (
+                                    <AlertItem key={i} {...alerta} />
+                                ))}
+                            </CardContent>
+                        </Card>
+                    </section>
+                </div>
+            </SidebarInset>
+        </SidebarProvider>
+    );
 }

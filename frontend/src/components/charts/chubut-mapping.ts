@@ -23,7 +23,7 @@ export function getSvgIdFromIndec(codigoIndec: number): string | undefined {
 
 export function getIndecFromSvgId(svgId: string): number | undefined {
   const entry = Object.entries(DEPARTAMENTO_INDEC_TO_SVG).find(
-    ([_, value]) => value === svgId
+    ([, value]) => value === svgId
   );
   return entry ? parseInt(entry[0]) : undefined;
 }

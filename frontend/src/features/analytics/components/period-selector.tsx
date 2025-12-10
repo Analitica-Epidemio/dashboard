@@ -20,17 +20,17 @@ interface PeriodOption {
 
 const PERIOD_OPTIONS: PeriodOption[] = [
   {
-    value: "ultima_semana_epi",
+    value: "ULTIMA_SEMANA_EPI",
     label: "Última semana epi",
     description: "Última semana epidemiológica completa",
   },
   {
-    value: "ultimas_4_semanas_epi",
+    value: "ULTIMAS_4_SEMANAS_EPI",
     label: "Últimas 4 semanas epi",
     description: "Últimas 4 semanas epidemiológicas",
   },
   {
-    value: "ultimas_12_semanas_epi",
+    value: "ULTIMAS_12_SEMANAS_EPI",
     label: "Últimas 12 semanas epi",
     description: "Últimas 12 semanas epidemiológicas",
   },
@@ -38,12 +38,12 @@ const PERIOD_OPTIONS: PeriodOption[] = [
 
 const YEAR_OPTIONS: PeriodOption[] = [
   {
-    value: "anio_hasta_fecha",
+    value: "ANIO_HASTA_FECHA",
     label: "Año hasta la fecha",
     description: "Del 1 de enero hasta hoy",
   },
   {
-    value: "anio_pasado",
+    value: "ANIO_PASADO",
     label: "Año completo anterior",
     description: "Año anterior completo",
   },

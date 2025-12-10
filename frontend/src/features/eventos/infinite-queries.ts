@@ -1,6 +1,6 @@
 'use client'
 
-import { useInfiniteQuery, type UseInfiniteQueryResult, type InfiniteData } from '@tanstack/react-query'
+import { useInfiniteQuery, type InfiniteData } from '@tanstack/react-query'
 import { env } from '@/env'
 import type { Group, Event } from '@/lib/types/eventos'
 

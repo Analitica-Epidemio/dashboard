@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 class IndicadoresData(BaseModel):
     """Indicadores clave para reportes"""
+
     total_casos: int = 0
     tasa_incidencia: float = 0.0
     areas_afectadas: int = 0
@@ -60,11 +61,11 @@ async def get_indicadores(
 
         # Filtros de fechas
         if fecha_desde:
-            where_clauses.append("e.fecha_minima_evento >= :fecha_desde")
+            where_clauses.append("e.fecha_minima_caso >= :fecha_desde")
             params["fecha_desde"] = date.fromisoformat(fecha_desde)
 
         if fecha_hasta:
-            where_clauses.append("e.fecha_minima_evento <= :fecha_hasta")
+            where_clauses.append("e.fecha_minima_caso <= :fecha_hasta")
             params["fecha_hasta"] = date.fromisoformat(fecha_hasta)
 
         # Filtro de provincia
@@ -75,15 +76,15 @@ async def get_indicadores(
         # Filtro de grupo
         if grupo_id:
             where_clauses.append("""
-                e.id_tipo_eno IN (
-                    SELECT id_tipo_eno FROM tipo_eno_grupo_eno WHERE id_grupo_eno = :grupo_id
+                e.id_enfermedad IN (
+                    SELECT id_enfermedad FROM enfermedad_grupo WHERE id_grupo = :grupo_id
                 )
             """)
             params["grupo_id"] = grupo_id
 
         # Filtro de tipos de ENO
         if tipo_eno_ids and len(tipo_eno_ids) > 0:
-            where_clauses.append("e.id_tipo_eno = ANY(:tipo_eno_ids)")
+            where_clauses.append("e.id_enfermedad = ANY(:tipo_eno_ids)")
             params["tipo_eno_ids"] = tipo_eno_ids
 
         # Filtro de clasificaciones
@@ -98,7 +99,7 @@ async def get_indicadores(
         SELECT
             COUNT(DISTINCT e.id) as total_casos,
             COUNT(DISTINCT d.id_departamento_indec) as areas_afectadas
-        FROM evento e
+        FROM caso_epidemiologico e
         LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
         LEFT JOIN localidad l ON est.id_localidad_indec = l.id_localidad_indec
         LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
@@ -114,7 +115,9 @@ async def get_indicadores(
         # Query 2: Población total
         if provincia_id:
             query_pob = "SELECT COALESCE(SUM(poblacion), 0) FROM departamento WHERE id_provincia_indec = :provincia_id"
-            result_pob = await db.execute(text(query_pob), {"provincia_id": provincia_id})
+            result_pob = await db.execute(
+                text(query_pob), {"provincia_id": provincia_id}
+            )
         else:
             query_pob = "SELECT COALESCE(SUM(poblacion), 0) FROM departamento"
             result_pob = await db.execute(text(query_pob), {})
@@ -122,7 +125,9 @@ async def get_indicadores(
         poblacion = result_pob.scalar() or 0
 
         # Calcular tasa de incidencia (por 100,000 habitantes)
-        tasa_incidencia = round((total_casos / poblacion) * 100000, 2) if poblacion > 0 else 0.0
+        tasa_incidencia = (
+            round((total_casos / poblacion) * 100000, 2) if poblacion > 0 else 0.0
+        )
 
         # TODO: Implementar cálculo de letalidad cuando se agregue la columna correspondiente
         # La tabla evento no tiene actualmente una columna para registrar fallecimientos

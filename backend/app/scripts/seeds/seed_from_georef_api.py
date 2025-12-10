@@ -9,12 +9,14 @@ Este script:
 3. Descarga localidades desde la API Georef
 4. Las inserta en la BD con coordenadas y población (censo 2010)
 """
+
 import json
 import os
 import time
 import urllib.request
 
 from sqlalchemy import create_engine, text
+from sqlalchemy.engine import Connection
 
 
 def normalizar_nombre(nombre: str) -> str:
@@ -30,7 +32,7 @@ def normalizar_nombre(nombre: str) -> str:
     )
 
 
-def seed_provincias_desde_georef(conn):
+def seed_provincias_desde_georef(conn: Connection) -> int:
     """Carga provincias desde API Georef"""
     print("\n📍 Descargando provincias desde API Georef...")
 
@@ -39,7 +41,7 @@ def seed_provincias_desde_georef(conn):
 
     try:
         with urllib.request.urlopen(url, timeout=30) as response:
-            data = json.loads(response.read().decode('utf-8'))
+            data = json.loads(response.read().decode("utf-8"))
     except Exception as e:
         print(f"❌ Error descargando provincias: {e}")
         return 0
@@ -71,27 +73,29 @@ def seed_provincias_desde_georef(conn):
         """)
 
         try:
-            conn.execute(stmt, {
-                "prov_id": id_provincia_indec,
-                "nombre": nombre,
-                "lat": latitud,
-                "lon": longitud
-            })
+            conn.execute(
+                stmt,
+                {
+                    "prov_id": id_provincia_indec,
+                    "nombre": nombre,
+                    "lat": latitud,
+                    "lon": longitud,
+                },
+            )
             inserted += 1
         except Exception as e:
             errors += 1
             print(f"   ⚠️  Error con {nombre}: {e}")
             continue
 
-    # Commit
-    conn.commit()
+    # Commit automático al salir del contexto engine.begin()
     print(f"✅ Provincias procesadas: {inserted}")
     if errors > 0:
         print(f"⚠️  Errores: {errors}")
     return inserted
 
 
-def seed_departamentos_desde_georef(conn):
+def seed_departamentos_desde_georef(conn: Connection) -> int:
     """Carga departamentos desde API Georef"""
     print("\n📍 Descargando departamentos desde API Georef...")
 
@@ -100,7 +104,7 @@ def seed_departamentos_desde_georef(conn):
 
     try:
         with urllib.request.urlopen(url, timeout=30) as response:
-            data = json.loads(response.read().decode('utf-8'))
+            data = json.loads(response.read().decode("utf-8"))
     except Exception as e:
         print(f"❌ Error descargando departamentos: {e}")
         return 0
@@ -135,13 +139,16 @@ def seed_departamentos_desde_georef(conn):
         """)
 
         try:
-            conn.execute(stmt, {
-                "dept_id": dept_id,
-                "nombre": nombre,
-                "prov_id": provincia_id,
-                "lat": latitud,
-                "lon": longitud
-            })
+            conn.execute(
+                stmt,
+                {
+                    "dept_id": dept_id,
+                    "nombre": nombre,
+                    "prov_id": provincia_id,
+                    "lat": latitud,
+                    "lon": longitud,
+                },
+            )
             inserted += 1
             if inserted % 50 == 0:
                 print(f"   Procesados: {inserted}...")
@@ -151,15 +158,14 @@ def seed_departamentos_desde_georef(conn):
                 print(f"   ⚠️  Error con {nombre}: {e}")
             continue
 
-    # Commit final de toda la sesión
-    conn.commit()
+    # Commit automático al salir del contexto engine.begin()
     print(f"\n✅ Departamentos procesados: {inserted}")
     if errors > 0:
         print(f"⚠️  Errores: {errors}")
     return inserted
 
 
-def seed_localidades_desde_georef(conn, max_localidades=5000):
+def seed_localidades_desde_georef(conn: Connection, max_localidades: int = 5000) -> int:
     """
     Carga localidades desde API Georef
 
@@ -181,7 +187,7 @@ def seed_localidades_desde_georef(conn, max_localidades=5000):
         try:
             print(f"   Descargando desde {inicio}...")
             with urllib.request.urlopen(url_con_params, timeout=30) as response:
-                data = json.loads(response.read().decode('utf-8'))
+                data = json.loads(response.read().decode("utf-8"))
         except Exception as e:
             print(f"❌ Error descargando localidades: {e}")
             break
@@ -248,14 +254,17 @@ def seed_localidades_desde_georef(conn, max_localidades=5000):
         """)
 
         try:
-            conn.execute(stmt, {
-                "loc_id": id_localidad,
-                "nombre": nombre,
-                "dept_id": dept_id,
-                "poblacion": poblacion,
-                "lat": latitud,
-                "lon": longitud
-            })
+            conn.execute(
+                stmt,
+                {
+                    "loc_id": id_localidad,
+                    "nombre": nombre,
+                    "dept_id": dept_id,
+                    "poblacion": poblacion,
+                    "lat": latitud,
+                    "lon": longitud,
+                },
+            )
             inserted += 1
             if inserted % 500 == 0:
                 print(f"   Procesadas: {inserted}...")
@@ -265,8 +274,7 @@ def seed_localidades_desde_georef(conn, max_localidades=5000):
                 print(f"   ⚠️  Error con {nombre}: {e}")
             continue
 
-    # Commit final
-    conn.commit()
+    # Commit automático al salir del contexto engine.begin()
     print(f"\n✅ Localidades procesadas: {inserted}")
     print(f"⚠️  Localidades sin departamento: {skipped_no_dept}")
     if errors > 0:
@@ -274,54 +282,52 @@ def seed_localidades_desde_georef(conn, max_localidades=5000):
     return inserted
 
 
-def main():
+def main() -> None:
     """Función principal"""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("🗺️  SEED DESDE API GEOREF (datos.gob.ar)")
-    print("="*70)
+    print("=" * 70)
     print("\nEste proceso descargará:")
     print("  📍 ~530 Departamentos con coordenadas")
     print("  📍 ~5,000 Localidades con coordenadas y población")
     print("\n⏱️  Esto puede tomar 2-3 minutos...")
-    print("="*70)
+    print("=" * 70)
 
     # Obtener la URL de la base de datos
     DATABASE_URL = os.getenv(
         "DATABASE_URL",
-        "postgresql://epidemiologia_user:epidemiologia_password@localhost:5432/epidemiologia_db"
+        "postgresql://epidemiologia_user:epidemiologia_password@localhost:5432/epidemiologia_db",
     )
 
     # Cambiar postgresql+asyncpg:// por postgresql://
     if "postgresql+asyncpg" in DATABASE_URL:
-        DATABASE_URL = DATABASE_URL.replace(
-            "postgresql+asyncpg://", "postgresql://"
-        )
+        DATABASE_URL = DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://")
 
     # Crear engine y conexión
     engine = create_engine(DATABASE_URL)
 
-    with engine.connect() as conn:
+    with engine.begin() as conn:
         # Paso 0: Provincias
-        print("\n" + "="*70)
+        print("\n" + "=" * 70)
         print("PASO 1/3: Provincias")
-        print("="*70)
+        print("=" * 70)
         prov_count = seed_provincias_desde_georef(conn)
 
         # Paso 1: Departamentos
-        print("\n" + "="*70)
+        print("\n" + "=" * 70)
         print("PASO 2/3: Departamentos")
-        print("="*70)
+        print("=" * 70)
         dept_count = seed_departamentos_desde_georef(conn)
 
         # Paso 2: Localidades
-        print("\n" + "="*70)
+        print("\n" + "=" * 70)
         print("PASO 3/3: Localidades")
-        print("="*70)
+        print("=" * 70)
         loc_count = seed_localidades_desde_georef(conn, max_localidades=5000)
 
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("✅ SEED DESDE GEOREF COMPLETADO")
-    print("="*70)
+    print("=" * 70)
     print("\nDatos cargados:")
     print(f"  ✅ {prov_count} Provincias")
     print(f"  ✅ {dept_count} Departamentos")
@@ -329,7 +335,7 @@ def main():
     print("\nLas localidades incluyen:")
     print("  • Coordenadas (latitud/longitud)")
     print("  • Población del Censo 2010")
-    print("="*70)
+    print("=" * 70)
 
 
 if __name__ == "__main__":

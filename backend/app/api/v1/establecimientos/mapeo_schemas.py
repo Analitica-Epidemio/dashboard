@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 class SugerenciaMapeo(BaseModel):
     """Sugerencia de mapeo SNVS → IGN."""
+
     id_establecimiento_ign: int
     nombre_ign: str
     codigo_refes: Optional[str]
@@ -24,6 +25,7 @@ class SugerenciaMapeo(BaseModel):
 
 class EstablecimientoSinMapear(BaseModel):
     """Establecimiento SNVS sin mapear a IGN."""
+
     id: int
     nombre: str
     codigo_snvs: Optional[str]
@@ -36,6 +38,7 @@ class EstablecimientoSinMapear(BaseModel):
 
 class EstablecimientosSinMapearResponse(BaseModel):
     """Respuesta de establecimientos sin mapear."""
+
     items: List[EstablecimientoSinMapear]
     total: int
     sin_mapear_count: int  # Total de establecimientos sin código REFES
@@ -44,6 +47,7 @@ class EstablecimientosSinMapearResponse(BaseModel):
 
 class EstablecimientoIGNResult(BaseModel):
     """Resultado de búsqueda de establecimientos IGN."""
+
     id: int
     nombre: str
     codigo_refes: Optional[str]
@@ -56,6 +60,7 @@ class EstablecimientoIGNResult(BaseModel):
 
 class BuscarIGNResponse(BaseModel):
     """Respuesta de búsqueda de establecimientos IGN."""
+
     items: List[EstablecimientoIGNResult]
     total: int
     page: int
@@ -64,23 +69,32 @@ class BuscarIGNResponse(BaseModel):
 
 class CrearMapeoRequest(BaseModel):
     """Request para crear un mapeo SNVS → IGN."""
-    id_establecimiento_snvs: int = Field(..., description="ID del establecimiento SNVS (source='SNVS')")
-    id_establecimiento_ign: int = Field(..., description="ID del establecimiento IGN (source='IGN')")
+
+    id_establecimiento_snvs: int = Field(
+        ..., description="ID del establecimiento SNVS (source='SNVS')"
+    )
+    id_establecimiento_ign: int = Field(
+        ..., description="ID del establecimiento IGN (source='IGN')"
+    )
     razon: Optional[str] = Field(None, description="Razón del mapeo")
 
 
 class ActualizarMapeoRequest(BaseModel):
     """Request para actualizar un mapeo existente."""
-    id_establecimiento_ign_nuevo: int = Field(..., description="Nuevo ID del establecimiento IGN")
+
+    id_establecimiento_ign_nuevo: int = Field(
+        ..., description="Nuevo ID del establecimiento IGN"
+    )
     razon: Optional[str] = Field(None, description="Nueva razón del mapeo")
 
 
 class MapeoInfo(BaseModel):
     """Información de un mapeo existente."""
+
     id_establecimiento_snvs: int
     nombre_snvs: str
     codigo_snvs: Optional[str]
-    id_establecimiento_ign: int
+    id_establecimiento_ign: Optional[int]
     nombre_ign: str
     codigo_refes: Optional[str]
     mapeo_score: Optional[float]
@@ -98,6 +112,7 @@ class MapeoInfo(BaseModel):
 
 class MapeosListResponse(BaseModel):
     """Respuesta de lista de mapeos."""
+
     items: List[MapeoInfo]
     total: int
     page: int
@@ -106,11 +121,13 @@ class MapeosListResponse(BaseModel):
 
 class AceptarSugerenciasBulkRequest(BaseModel):
     """Request para aceptar múltiples sugerencias."""
+
     mapeos: List[CrearMapeoRequest] = Field(..., description="Lista de mapeos a crear")
 
 
 class EstadisticasMapeosResponse(BaseModel):
     """Estadísticas generales de mapeos."""
+
     total_establecimientos_snvs: int
     establecimientos_sin_mapear: int
     establecimientos_mapeados: int

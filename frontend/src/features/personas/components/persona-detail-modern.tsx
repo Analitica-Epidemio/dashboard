@@ -6,30 +6,23 @@ import {
   MapPin,
   User,
   Activity,
-  FileText,
   Hash,
   Clock,
-  Shield,
   AlertTriangle,
-  Info,
   Heart,
   Syringe,
   TestTube,
   Stethoscope,
-  Building,
   ChevronDown,
   ChevronRight,
-  Users,
   Pill,
   Bed,
   Phone,
   CreditCard,
-  Baby,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   usePersona,
@@ -499,10 +492,10 @@ export function PersonaDetailModern({ tipoSujeto, personaId, onClose }: PersonaD
 
                   {/* Fechas */}
                   <div className="grid gap-x-6 gap-y-2 md:grid-cols-3 text-sm">
-                    {evento.fecha_minima_evento && (
+                    {evento.fecha_minima_caso && (
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground">Fecha del evento</p>
-                        <p className="font-medium">{formatDate(evento.fecha_minima_evento)}</p>
+                        <p className="font-medium">{formatDate(evento.fecha_minima_caso)}</p>
                       </div>
                     )}
                     {evento.fecha_inicio_sintomas && (
@@ -617,7 +610,7 @@ export function PersonaDetailModern({ tipoSujeto, personaId, onClose }: PersonaD
                                   Estudios Realizados
                                 </p>
                                 {evento.estudios
-                                  .filter((estudio) => {
+                                  .filter(() => {
                                     // Show all estudios for now (ideally filter by muestra_id)
                                     return true;
                                   })

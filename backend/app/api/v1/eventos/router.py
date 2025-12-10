@@ -8,21 +8,21 @@ from fastapi import APIRouter
 from app.core.schemas.response import ErrorResponse, SuccessResponse
 
 from .export import export_eventos
-from .get_detail import EventoDetailResponse, get_evento_detail
+from .get_detail import CasoEpidemiologicoDetailResponse, get_evento_detail
 from .get_domicilio_detalle import DomicilioDetalleResponse, get_domicilio_detalle
 from .get_domicilios_mapa import DomicilioMapaResponse, get_domicilios_mapa
-from .get_timeline import EventoTimelineResponse, get_evento_timeline
-from .list import EventoListResponse, list_eventos
+from .get_timeline import CasoEpidemiologicoTimelineResponse, get_evento_timeline
+from .list import CasoEpidemiologicoListResponse, list_eventos
 
 # Crear router principal
-router = APIRouter(prefix="/eventos", tags=["Eventos"])
+router = APIRouter(prefix="/eventos", tags=["CasoEpidemiologicos"])
 
 # Registrar endpoints de listado
 router.add_api_route(
     "/",
     list_eventos,
     methods=["GET"],
-    response_model=SuccessResponse[EventoListResponse],
+    response_model=SuccessResponse[CasoEpidemiologicoListResponse],
     responses={
         500: {"model": ErrorResponse, "description": "Error interno del servidor"}
     },
@@ -68,9 +68,12 @@ router.add_api_route(
     "/{evento_id}",
     get_evento_detail,
     methods=["GET"],
-    response_model=SuccessResponse[EventoDetailResponse],
+    response_model=SuccessResponse[CasoEpidemiologicoDetailResponse],
     responses={
-        404: {"model": ErrorResponse, "description": "Evento no encontrado"},
+        404: {
+            "model": ErrorResponse,
+            "description": "CasoEpidemiologico no encontrado",
+        },
         500: {"model": ErrorResponse, "description": "Error interno del servidor"},
     },
 )
@@ -79,9 +82,12 @@ router.add_api_route(
     "/{evento_id}/timeline",
     get_evento_timeline,
     methods=["GET"],
-    response_model=SuccessResponse[EventoTimelineResponse],
+    response_model=SuccessResponse[CasoEpidemiologicoTimelineResponse],
     responses={
-        404: {"model": ErrorResponse, "description": "Evento no encontrado"},
+        404: {
+            "model": ErrorResponse,
+            "description": "CasoEpidemiologico no encontrado",
+        },
         500: {"model": ErrorResponse, "description": "Error interno del servidor"},
     },
 )

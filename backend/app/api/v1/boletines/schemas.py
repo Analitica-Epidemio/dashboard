@@ -3,109 +3,18 @@ Schemas Pydantic para el sistema de boletines
 """
 
 from datetime import datetime
-from typing import Annotated, Any, Dict, List, Literal, Optional, Union
+from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Discriminator, Field
-
-# ============================================================================
-# Schemas de Configuración de Widgets
-# ============================================================================
-
-class WidgetPosition(BaseModel):
-    """Posición del widget en el grid"""
-    x: int = Field(..., ge=0, description="Posición X en el grid (columnas)")
-    y: int = Field(..., ge=0, description="Posición Y en el grid (filas)")
-    w: int = Field(..., ge=1, le=12, description="Ancho en columnas (1-12)")
-    h: int = Field(..., ge=1, description="Alto en filas")
-
-
-class KPIComparisonData(BaseModel):
-    """Datos de comparación para KPI"""
-    value: float = Field(..., description="Valor de la comparación (%)")
-    trend: Literal["up", "down", "neutral"] = Field(..., description="Tendencia")
-
-
-class KPIManualData(BaseModel):
-    """Datos manuales para widget KPI"""
-    value: float = Field(..., description="Valor principal del KPI")
-    label: Optional[str] = Field(None, description="Etiqueta del KPI")
-    comparison: Optional[KPIComparisonData] = Field(None, description="Datos de comparación")
-
-
-class KPIDataConfig(BaseModel):
-    """Configuración de datos para widget KPI"""
-    source: Literal["manual", "query"] = Field(..., description="Fuente de datos")
-    query_id: Optional[str] = Field(None, description="ID de la query si source=query")
-    query_params: Optional[Dict[str, Any]] = Field(None, description="Parámetros de la query")
-    manual_data: Optional[KPIManualData] = Field(None, description="Datos manuales para KPI")
-
-
-class GenericDataConfig(BaseModel):
-    """Configuración de datos genérica para otros widgets"""
-    source: Literal["manual", "query"] = Field(..., description="Fuente de datos")
-    query_id: Optional[str] = Field(None, description="ID de la query si source=query")
-    query_params: Optional[Dict[str, Any]] = Field(None, description="Parámetros de la query")
-    manual_data: Optional[Dict[str, Any]] = Field(None, description="Datos manuales")
-
-
-# Para compatibilidad con código existente
-WidgetDataConfig = KPIDataConfig | GenericDataConfig
-
-
-class WidgetVisualConfig(BaseModel):
-    """Configuración visual del widget"""
-    show_title: bool = Field(True, description="Mostrar título")
-    show_description: bool = Field(False, description="Mostrar descripción")
-    # Configuraciones específicas por tipo de widget (flexibles)
-    config: Optional[Dict[str, Any]] = Field(None, description="Configuración específica del tipo")
-
-
-class KPIWidget(BaseModel):
-    """Widget de KPI"""
-    id: str = Field(..., description="ID único del widget")
-    type: Literal["kpi"] = Field("kpi", description="Tipo de widget")
-    position: WidgetPosition = Field(..., description="Posición en el grid")
-    data_config: KPIDataConfig = Field(..., description="Configuración de datos para KPI")
-    visual_config: WidgetVisualConfig = Field(..., description="Configuración visual")
-    title: Optional[str] = Field(None, description="Título del widget")
-    description: Optional[str] = Field(None, description="Descripción del widget")
-
-
-class GenericWidget(BaseModel):
-    """Widget genérico (table, chart, etc)"""
-    id: str = Field(..., description="ID único del widget")
-    type: Literal[
-        "table", "line", "bar", "pie", "map",
-        "pyramid", "corridor", "text", "image", "divider", "pagebreak"
-    ] = Field(..., description="Tipo de widget")
-    position: WidgetPosition = Field(..., description="Posición en el grid")
-    data_config: GenericDataConfig = Field(..., description="Configuración de datos")
-    visual_config: WidgetVisualConfig = Field(..., description="Configuración visual")
-    title: Optional[str] = Field(None, description="Título del widget")
-    description: Optional[str] = Field(None, description="Descripción del widget")
-
-
-# Union type para todos los widgets (discriminated union por 'type')
-Widget = Annotated[
-    Union[KPIWidget, GenericWidget],
-    Discriminator('type')
-]
-
+from pydantic import BaseModel, Field
 
 # ============================================================================
-# Schemas de Layout y Portada
+# Schemas de Portada
 # ============================================================================
-
-class LayoutConfig(BaseModel):
-    """Configuración del layout del boletín"""
-    type: Literal["grid"] = Field("grid", description="Tipo de layout")
-    columns: int = Field(12, ge=1, le=24, description="Número de columnas")
-    row_height: int = Field(40, ge=10, description="Alto de fila en pixels")
-    margin: List[int] = Field([10, 10], description="Margen [horizontal, vertical]")
 
 
 class CoverConfig(BaseModel):
     """Configuración de la portada"""
+
     enabled: bool = Field(True, description="Mostrar portada")
     title: str = Field(..., description="Título del boletín")
     subtitle: Optional[str] = Field(None, description="Subtítulo")
@@ -114,56 +23,47 @@ class CoverConfig(BaseModel):
     footer: Optional[str] = Field(None, description="Texto del pie de página")
 
 
-class GlobalFilters(BaseModel):
-    """Filtros globales del boletín"""
-    temporal: Optional[Dict[str, Any]] = Field(None, description="Filtros temporales")
-    geografico: Optional[Dict[str, Any]] = Field(None, description="Filtros geográficos")
-    demografico: Optional[Dict[str, Any]] = Field(None, description="Filtros demográficos")
-
-
 # ============================================================================
 # Schemas de Templates
 # ============================================================================
 
+
 class BoletinTemplateCreate(BaseModel):
     """Schema para crear template"""
-    name: str = Field(..., min_length=1, max_length=255, description="Nombre del template")
+
+    name: str = Field(
+        ..., min_length=1, max_length=255, description="Nombre del template"
+    )
     description: Optional[str] = Field(None, description="Descripción")
-    category: str = Field(..., description="Categoría: semanal, brote, tendencias, etc.")
-    thumbnail: Optional[str] = Field(None, description="URL de thumbnail")
-    layout: LayoutConfig = Field(..., description="Configuración de layout")
+    category: str = Field(
+        ..., description="Categoría: semanal, brote, tendencias, etc."
+    )
     cover: Optional[CoverConfig] = Field(None, description="Configuración de portada")
-    widgets: List[Widget] = Field([], description="Lista de widgets")
-    global_filters: Optional[GlobalFilters] = Field(None, description="Filtros globales")
-    content: Optional[str] = Field(None, description="Contenido HTML del boletín (Tiptap)")
+    content: Optional[str] = Field(
+        None, description="Contenido HTML del boletín (Tiptap)"
+    )
     is_public: bool = Field(False, description="Template público")
 
 
 class BoletinTemplateUpdate(BaseModel):
     """Schema para actualizar template"""
+
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
     category: Optional[str] = None
-    thumbnail: Optional[str] = None
-    layout: Optional[LayoutConfig] = None
     cover: Optional[CoverConfig] = None
-    widgets: Optional[List[Widget]] = None
-    global_filters: Optional[GlobalFilters] = None
     content: Optional[str] = None
     is_public: Optional[bool] = None
 
 
 class BoletinTemplateResponse(BaseModel):
     """Schema de respuesta de template"""
+
     id: int
     name: str
     description: Optional[str]
     category: str
-    thumbnail: Optional[str]
-    layout: LayoutConfig
-    cover: Optional[CoverConfig]
-    widgets: List[Widget]
-    global_filters: Optional[GlobalFilters]
+    cover: Optional[Dict[str, Any]]
     content: Optional[str]
     created_by: Optional[int]
     created_at: datetime
@@ -179,15 +79,20 @@ class BoletinTemplateResponse(BaseModel):
 # Schemas de Instancias (Boletines Generados)
 # ============================================================================
 
+
 class BoletinGenerateRequest(BaseModel):
     """Request para generar un boletín"""
+
     template_id: int = Field(..., description="ID del template a usar")
-    name: str = Field(..., min_length=1, max_length=255, description="Nombre del boletín")
+    name: str = Field(
+        ..., min_length=1, max_length=255, description="Nombre del boletín"
+    )
     parameters: Dict[str, Any] = Field(..., description="Parámetros específicos")
 
 
 class BoletinInstanceResponse(BaseModel):
     """Schema de respuesta de instancia"""
+
     id: int
     template_id: Optional[int]
     name: str
@@ -205,14 +110,13 @@ class BoletinInstanceResponse(BaseModel):
 
 
 # ============================================================================
-# Schemas de Query Definitions - ELIMINADO (no usado)
-# Los schemas obsoletos QueryDefinitionCreate y QueryDefinitionResponse fueron eliminados
-# ============================================================================
 # Schemas de Queries Epidemiológicas (Responses)
 # ============================================================================
 
+
 class TopEnoItem(BaseModel):
     """Item en la lista de top ENOs"""
+
     evento: str
     n_casos: int
     tasa_por_100k: Optional[float] = None
@@ -220,14 +124,18 @@ class TopEnoItem(BaseModel):
 
 class CorredorEndemicoResponse(BaseModel):
     """Respuesta del corredor endémico"""
+
     semanas: List[int]
-    zonas: Dict[str, List[float]]  # {'exito': [...], 'seguridad': [...], 'alerta': [...], 'brote': [...]}
+    zonas: Dict[
+        str, List[float]
+    ]  # {'exito': [...], 'seguridad': [...], 'alerta': [...], 'brote': [...]}
     casos_actuales: List[int]
     tipo_ira: str
 
 
 class CapacidadHospitalariaResponse(BaseModel):
     """Respuesta de capacidad hospitalaria"""
+
     hospitales: List[str]
     dotacion: Dict[str, int]  # Por hospital
     ocupacion_ira: Dict[str, int]  # Por hospital
@@ -236,24 +144,28 @@ class CapacidadHospitalariaResponse(BaseModel):
 
 class VirusRespiratoriosResponse(BaseModel):
     """Respuesta de virus respiratorios"""
+
     por_semana: List[Dict[str, Any]]
     por_edad: List[Dict[str, Any]]
 
 
 class IntoxicacionCOResponse(BaseModel):
     """Respuesta de intoxicación por CO"""
+
     por_ugd: List[Dict[str, Any]]
     comparacion: Dict[str, Any]
 
 
 class DiarreasResponse(BaseModel):
     """Respuesta de diarreas"""
+
     corredor: Dict[str, Any]
     agentes_etiologicos: List[Dict[str, Any]]
 
 
 class SUHResponse(BaseModel):
     """Respuesta de SUH"""
+
     casos: List[Dict[str, Any]]
     historico: List[Dict[str, Any]]
 
@@ -262,45 +174,77 @@ class SUHResponse(BaseModel):
 # Schemas para el nuevo sistema de generación automática con snippets
 # ============================================================================
 
-class EventoSeleccionado(BaseModel):
-    """Evento seleccionado para incluir en el boletín"""
+
+class CasoEpidemiologicoSeleccionado(BaseModel):
+    """CasoEpidemiologico seleccionado para incluir en el boletín"""
+
     tipo_eno_id: int = Field(..., description="ID del tipo de evento")
     incluir_charts: bool = Field(True, description="Incluir charts del evento")
-    snippets_custom: Optional[List[str]] = Field(None, description="Códigos de snippets custom adicionales")
+    snippets_custom: Optional[List[str]] = Field(
+        None, description="Códigos de snippets custom adicionales"
+    )
 
 
 class GenerateDraftRequest(BaseModel):
     """Request para generar borrador de boletín automático"""
+
     semana: int = Field(..., description="Semana epidemiológica", ge=1, le=53)
     anio: int = Field(..., description="Año epidemiológico")
-    num_semanas: int = Field(4, description="Número de semanas de análisis", ge=1, le=52)
-    eventos_seleccionados: List[EventoSeleccionado] = Field(..., description="Eventos a incluir en el boletín")
-    titulo_custom: Optional[str] = Field(None, description="Título personalizado (opcional)")
+    num_semanas: int = Field(
+        4, description="Número de semanas de análisis", ge=1, le=52
+    )
+    eventos_seleccionados: List[CasoEpidemiologicoSeleccionado] = Field(
+        ..., description="CasoEpidemiologicos a incluir en el boletín"
+    )
+    titulo_custom: Optional[str] = Field(
+        None, description="Título personalizado (opcional)"
+    )
 
 
 class BoletinMetadata(BaseModel):
     """Metadatos del boletín generado"""
-    periodo_analisis: Dict[str, Any] = Field(..., description="Información del período analizado")
-    eventos_incluidos: List[Dict[str, Any]] = Field(..., description="Eventos incluidos con sus datos")
-    fecha_generacion: datetime = Field(..., description="Fecha de generación del borrador")
+
+    periodo_analisis: Dict[str, Any] = Field(
+        ..., description="Información del período analizado"
+    )
+    eventos_incluidos: List[Dict[str, Any]] = Field(
+        ..., description="CasoEpidemiologicos incluidos con sus datos"
+    )
+    fecha_generacion: datetime = Field(
+        ..., description="Fecha de generación del borrador"
+    )
 
 
 class GenerateDraftResponse(BaseModel):
     """Response al generar borrador de boletín"""
-    boletin_instance_id: int = Field(..., description="ID de la instancia de boletín creada")
+
+    boletin_instance_id: int = Field(
+        ..., description="ID de la instancia de boletín creada"
+    )
     content: str = Field(..., description="Contenido HTML generado (TipTap compatible)")
     metadata: BoletinMetadata = Field(..., description="Metadatos del boletín")
+    warnings: Optional[List[str]] = Field(
+        None, description="Advertencias de validación"
+    )
 
 
 # ============================================================================
 # Schemas para configuración de Template (BoletinTemplateConfig)
 # ============================================================================
 
+
 class BoletinTemplateConfigResponse(BaseModel):
     """Response de configuración de template de boletines"""
+
     id: int
-    static_content_template: Dict[str, Any] = Field(..., description="Template base en formato TipTap JSON (incluye selectedEventsPlaceholder)")
-    event_section_template: Dict[str, Any] = Field(default_factory=dict, description="Template de sección de evento (se repite por cada evento seleccionado)")
+    static_content_template: Dict[str, Any] = Field(
+        ...,
+        description="Template base en formato TipTap JSON (incluye selectedEventsPlaceholder)",
+    )
+    event_section_template: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Template de sección de evento (se repite por cada evento seleccionado)",
+    )
     updated_at: Optional[datetime] = Field(None, description="Última actualización")
     updated_by: Optional[int] = Field(None, description="Usuario que actualizó")
 
@@ -310,24 +254,77 @@ class BoletinTemplateConfigResponse(BaseModel):
 
 class UpdateStaticContentRequest(BaseModel):
     """Request para actualizar contenido estático"""
+
     content: Dict[str, Any] = Field(..., description="Contenido TipTap JSON")
 
 
 class UpdateEventSectionTemplateRequest(BaseModel):
     """Request para actualizar template de sección de evento"""
-    content: Dict[str, Any] = Field(..., description="Template TipTap JSON de sección de evento")
+
+    content: Dict[str, Any] = Field(
+        ..., description="Template TipTap JSON de sección de evento"
+    )
 
 
-class UpdateDynamicBlocksRequest(BaseModel):
-    """Request para actualizar array completo de bloques (reordenar)"""
-    blocks: List[Dict[str, Any]] = Field(..., description="Array completo de bloques dinámicos")
+# ============================================================================
+# Schemas para configuración de Secciones y Bloques (exposición al frontend)
+# ============================================================================
 
 
-class CreateDynamicBlockRequest(BaseModel):
-    """Request para crear un nuevo bloque dinámico"""
-    block: Dict[str, Any] = Field(..., description="Configuración del bloque a crear")
+class RangoTemporalInfo(BaseModel):
+    """Información legible sobre el rango temporal de un bloque"""
+
+    codigo: str = Field(
+        ..., description="Código del rango (anio_completo, ultimas_6_semanas, etc)"
+    )
+    descripcion: str = Field(..., description="Descripción legible del rango")
+    ejemplo: str = Field(
+        ..., description="Ejemplo concreto para la semana de referencia"
+    )
 
 
-class UpdateDynamicBlockRequest(BaseModel):
-    """Request para actualizar un bloque específico"""
-    block: Dict[str, Any] = Field(..., description="Nueva configuración del bloque")
+class BloqueConfigResponse(BaseModel):
+    """Configuración de un bloque para el frontend"""
+
+    id: int
+    slug: str
+    titulo_template: str
+    tipo_bloque: str
+    tipo_visualizacion: str
+    metrica_codigo: str
+    dimensiones: List[str]
+    rango_temporal: Optional[RangoTemporalInfo] = Field(
+        None, description="Información del rango temporal que usa el bloque"
+    )
+    descripcion: Optional[str] = None
+    orden: int
+
+    class Config:
+        from_attributes = True
+
+
+class SeccionConfigResponse(BaseModel):
+    """Configuración de una sección para el frontend"""
+
+    id: int
+    slug: str
+    titulo: str
+    descripcion: Optional[str] = None
+    orden: int
+    bloques: List[BloqueConfigResponse] = Field(
+        default_factory=list, description="Bloques de la sección"
+    )
+
+    class Config:
+        from_attributes = True
+
+
+class SeccionesConfigResponse(BaseModel):
+    """Respuesta con todas las secciones y sus bloques configurados"""
+
+    secciones: List[SeccionConfigResponse]
+    semana_referencia: int = Field(
+        ..., description="Semana epidemiológica de referencia"
+    )
+    anio_referencia: int = Field(..., description="Año de referencia")
+    total_bloques: int = Field(..., description="Total de bloques activos")

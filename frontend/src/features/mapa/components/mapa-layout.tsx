@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { MapPin, BarChart3, Filter, Download, Maximize2, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
 interface MapaLayoutProps {
@@ -14,8 +14,8 @@ interface MapaLayoutProps {
 
 export function MapaLayout({ children, sidebar, detailsPanel }: MapaLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [detailsPanelOpen, setDetailsPanelOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [detailsPanelOpen] = useState(false);
+  const [isMobile] = useState(false);
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">

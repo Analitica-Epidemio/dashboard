@@ -76,9 +76,9 @@ export function useJobProgress(): UseJobProgressReturn {
 
       // Detener polling si el job terminó
       if (
-        jobStatus.status === "completed" ||
-        jobStatus.status === "failed" ||
-        jobStatus.status === "cancelled"
+        jobStatus.status === "COMPLETED" ||
+        jobStatus.status === "FAILED" ||
+        jobStatus.status === "CANCELLED"
       ) {
         if (intervalRef.current) {
           clearInterval(intervalRef.current);
@@ -158,7 +158,7 @@ export function useJobProgress(): UseJobProgressReturn {
       // Actualizar estado local inmediatamente
       setState(prev => ({
         ...prev,
-        status: prev.status ? { ...prev.status, status: "cancelled" } : null,
+        status: prev.status ? { ...prev.status, status: "CANCELLED" } : null,
         isLoading: false,
         isPolling: false
       }));

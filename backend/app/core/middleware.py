@@ -3,13 +3,18 @@
 import logging
 import time
 import traceback
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBearer
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.base import (
+    BaseHTTPMiddleware,
+    DispatchFunction,
+    RequestResponseEndpoint,
+)
+from starlette.types import ASGIApp
 
 from app.core.exceptions import (
     AuthenticationException,
@@ -31,8 +36,13 @@ security = HTTPBearer()
 class ExceptionHandlerMiddleware(BaseHTTPMiddleware):
     """Middleware para manejo centralizado de excepciones."""
 
+    def __init__(
+        self, app: ASGIApp, dispatch: Optional[DispatchFunction] = None
+    ) -> None:
+        super().__init__(app, dispatch)
+
     async def dispatch(
-        self, request: Request, call_next: Callable[[Request], Any]
+        self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
         """Procesa la request y maneja excepciones."""
         # Generar ID único para tracking
@@ -137,8 +147,13 @@ class ExceptionHandlerMiddleware(BaseHTTPMiddleware):
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """Middleware para logging de requests."""
 
+    def __init__(
+        self, app: ASGIApp, dispatch: Optional[DispatchFunction] = None
+    ) -> None:
+        super().__init__(app, dispatch)
+
     async def dispatch(
-        self, request: Request, call_next: Callable[[Request], Any]
+        self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
         """Procesa la request y registra información."""
         start_time = time.time()
@@ -164,7 +179,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                 "path": path,
                 "status_code": status_code,
                 "duration_ms": int(process_time * 1000),
-            }
+            },
         )
 
         # Agregar headers de response
@@ -185,7 +200,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     - Información del servidor
     """
 
-    async def dispatch(self, request: Request, call_next):
+    def __init__(
+        self, app: ASGIApp, dispatch: Optional[DispatchFunction] = None
+    ) -> None:
+        super().__init__(app, dispatch)
+
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
         response = await call_next(request)
 
         # Prevenir XSS
@@ -203,7 +225,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # HSTS - Forzar HTTPS en producción
         # Solo habilitar en producción con HTTPS configurado
         if request.url.scheme == "https":
-            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=31536000; includeSubDomains"
+            )
 
         # Remover headers que exponen información del servidor
         if "Server" in response.headers:
@@ -213,7 +237,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
 
         # Permissions Policy - Deshabilitar features no necesarios
-        response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+        response.headers["Permissions-Policy"] = (
+            "geolocation=(), microphone=(), camera=()"
+        )
 
         return response
 
@@ -225,7 +251,14 @@ class AuthMiddleware(BaseHTTPMiddleware):
     Authentication is handled explicitly by FastAPI dependencies
     """
 
-    async def dispatch(self, request: Request, call_next):
+    def __init__(
+        self, app: ASGIApp, dispatch: Optional[DispatchFunction] = None
+    ) -> None:
+        super().__init__(app, dispatch)
+
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
         # Skip for OPTIONS requests (CORS preflight)
         if request.method == "OPTIONS":
             return await call_next(request)
@@ -234,19 +267,201 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
 
 def setup_middleware(app: FastAPI) -> None:
-    """Configura todos los middlewares de la aplicación."""
+    """Configura todos los middlewares de la aplicación.
 
-    # Middleware de autenticación (debe ir primero)
-    app.add_middleware(AuthMiddleware)
+    Nota: El orden de add_middleware es inverso al orden de ejecución.
+    El último middleware agregado es el primero en procesar la request.
+    """
+    # Los middlewares se agregan en orden inverso al deseado
+    # porque FastAPI los apila (el último agregado es el primero en ejecutar)
 
-    # Middleware de seguridad HTTP headers (crítico para producción)
-    app.add_middleware(SecurityHeadersMiddleware)
+    # 1. Exception handler (más externo - captura todo)
+    app.middleware("http")(create_exception_handler_middleware())
 
-    # Middleware de logging (debe ir antes del manejo de excepciones)
-    app.add_middleware(RequestLoggingMiddleware)
+    # 2. Request logging
+    app.middleware("http")(create_logging_middleware())
 
-    # Middleware de manejo de excepciones
-    app.add_middleware(ExceptionHandlerMiddleware)
+    # 3. Security headers
+    app.middleware("http")(create_security_headers_middleware())
+
+    # 4. Auth middleware (más interno)
+    app.middleware("http")(create_auth_middleware())
+
+
+def create_exception_handler_middleware() -> Callable[
+    [Request, Callable[[Request], Any]], Any
+]:
+    """Factory para el middleware de manejo de excepciones."""
+
+    async def middleware(
+        request: Request, call_next: Callable[[Request], Any]
+    ) -> Response:
+        request_id = str(uuid4())
+        request.state.request_id = request_id
+
+        try:
+            response: Response = await call_next(request)
+            return response
+        except EpidemiologiaException as e:
+            return await _handle_epidemiologia_exception(e, request_id)
+        except HTTPException as e:
+            return await _handle_http_exception(e, request_id)
+        except Exception as e:
+            return await _handle_generic_exception(e, request_id)
+
+    return middleware
+
+
+def create_logging_middleware() -> Callable[[Request, Callable[[Request], Any]], Any]:
+    """Factory para el middleware de logging."""
+
+    async def middleware(
+        request: Request, call_next: Callable[[Request], Any]
+    ) -> Response:
+        start_time = time.time()
+        method = request.method
+        path = request.url.path
+        request_id = getattr(request.state, "request_id", "unknown")
+
+        response: Response = await call_next(request)
+
+        process_time = time.time() - start_time
+        status_code = response.status_code
+
+        logger.info(
+            f"{method} {path} - {status_code} - {process_time:.3f}s",
+            extra={
+                "request_id": request_id,
+                "method": method,
+                "path": path,
+                "status_code": status_code,
+                "duration_ms": int(process_time * 1000),
+            },
+        )
+
+        response.headers["X-Request-ID"] = str(request_id)
+        response.headers["X-Process-Time"] = str(process_time)
+
+        return response
+
+    return middleware
+
+
+def create_security_headers_middleware() -> Callable[
+    [Request, Callable[[Request], Any]], Any
+]:
+    """Factory para el middleware de headers de seguridad."""
+
+    async def middleware(
+        request: Request, call_next: Callable[[Request], Any]
+    ) -> Response:
+        response: Response = await call_next(request)
+
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Content-Security-Policy"] = "default-src 'self'"
+
+        if request.url.scheme == "https":
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=31536000; includeSubDomains"
+            )
+
+        if "Server" in response.headers:
+            del response.headers["Server"]
+
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = (
+            "geolocation=(), microphone=(), camera=()"
+        )
+
+        return response
+
+    return middleware
+
+
+def create_auth_middleware() -> Callable[[Request, Callable[[Request], Any]], Any]:
+    """Factory para el middleware de autenticación."""
+
+    async def middleware(
+        request: Request, call_next: Callable[[Request], Any]
+    ) -> Response:
+        if request.method == "OPTIONS":
+            return await call_next(request)
+        return await call_next(request)
+
+    return middleware
+
+
+async def _handle_epidemiologia_exception(
+    exc: EpidemiologiaException, request_id: str
+) -> JSONResponse:
+    """Maneja excepciones específicas del dominio."""
+    status_code = _get_status_code_for_exception(exc)
+
+    error_detail = ErrorDetail(
+        code=exc.error_code or "UNKNOWN_ERROR", message=exc.message, field=None
+    )
+
+    response = ErrorResponse(error=error_detail, request_id=request_id)
+
+    return JSONResponse(status_code=status_code, content=response.model_dump())
+
+
+async def _handle_http_exception(exc: HTTPException, request_id: str) -> JSONResponse:
+    """Maneja excepciones HTTP."""
+    error_detail = ErrorDetail(
+        code=f"HTTP_{exc.status_code}",
+        message=str(exc.detail) if exc.detail else f"Error HTTP {exc.status_code}",
+        field=None,
+    )
+
+    logger.warning(f"HTTPException no estructurada [{request_id}]: {exc.detail}")
+
+    response = ErrorResponse(error=error_detail, request_id=request_id)
+
+    return JSONResponse(status_code=exc.status_code, content=response.model_dump())
+
+
+async def _handle_generic_exception(exc: Exception, request_id: str) -> JSONResponse:
+    """Red de seguridad para excepciones no esperadas."""
+    error_traceback = traceback.format_exc()
+    logger.error(f"Excepción no manejada [{request_id}]: {error_traceback}")
+
+    error_detail = ErrorDetail(
+        code="INTERNAL_SERVER_ERROR",
+        message="Se produjo un error interno. Por favor, intente nuevamente.",
+        field=None,
+    )
+
+    response = ErrorResponse(error=error_detail, request_id=request_id)
+
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content=response.model_dump(),
+    )
+
+
+def _get_status_code_for_exception(exc: EpidemiologiaException) -> int:
+    """Mapea tipos de excepción a códigos HTTP."""
+    if isinstance(exc, ValidationException):
+        return status.HTTP_422_UNPROCESSABLE_ENTITY
+    elif isinstance(exc, BusinessRuleException):
+        return status.HTTP_400_BAD_REQUEST
+    elif isinstance(exc, NotFoundException):
+        return status.HTTP_404_NOT_FOUND
+    elif isinstance(exc, DuplicateException):
+        return status.HTTP_409_CONFLICT
+    elif isinstance(exc, AuthenticationException):
+        return status.HTTP_401_UNAUTHORIZED
+    elif isinstance(exc, AuthorizationException):
+        return status.HTTP_403_FORBIDDEN
+    elif isinstance(exc, ExternalServiceException):
+        return status.HTTP_502_BAD_GATEWAY
+    elif isinstance(exc, DatabaseException):
+        return status.HTTP_500_INTERNAL_SERVER_ERROR
+    else:
+        return status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
 # Handler personalizado para excepciones de validación de Pydantic
@@ -257,24 +472,28 @@ async def validation_exception_handler(
     request_id = getattr(request.state, "request_id", str(uuid4()))
 
     errors = []
-    if hasattr(exc, "errors"):
-        for error in exc.errors():
+    errors_callable = getattr(exc, "errors", None)
+    if callable(errors_callable):
+        for error in errors_callable():
             error_detail = ErrorDetail(
                 code="VALIDATION_ERROR",
                 message=error.get("msg", "Error de validación"),
                 field=".".join(str(loc) for loc in error.get("loc", [])),
-                details=error,
             )
-            errors.append(error_detail.model_dump())
+            errors.append(error_detail)
     else:
         error_detail = ErrorDetail(
-            code="VALIDATION_ERROR", message=str(exc), field=None, details=None
+            code="VALIDATION_ERROR", message=str(exc), field=None
         )
-        errors.append(error_detail.model_dump())
+        errors.append(error_detail)
 
-    response: ErrorResponse = ErrorResponse(
-        message="Error de validación en los datos proporcionados", errors=errors
+    main_error = ErrorDetail(
+        code="VALIDATION_ERROR",
+        message="Error de validación en los datos proporcionados",
+        field=None,
     )
+
+    response = ErrorResponse(error=main_error, errors=errors, request_id=request_id)
 
     response_dict = response.model_dump()
     response_dict["request_id"] = request_id

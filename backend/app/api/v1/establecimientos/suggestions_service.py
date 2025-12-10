@@ -5,7 +5,7 @@ from difflib import SequenceMatcher
 from typing import List, Optional
 
 from sqlalchemy import func, or_, select
-from sqlmodel import Session
+from sqlmodel import Session, col
 
 from app.domains.territorio.establecimientos_models import Establecimiento
 from app.domains.territorio.geografia_models import Departamento, Localidad, Provincia
@@ -22,10 +22,10 @@ def normalizar_texto(texto: str) -> str:
         return ""
 
     texto = texto.upper()
-    texto = unicodedata.normalize('NFD', texto)
-    texto = ''.join(char for char in texto if unicodedata.category(char) != 'Mn')
-    texto = texto.replace('.', ' ').replace(',', ' ').replace('-', ' ')
-    texto = ' '.join(texto.split())
+    texto = unicodedata.normalize("NFD", texto)
+    texto = "".join(char for char in texto if unicodedata.category(char) != "Mn")
+    texto = texto.replace(".", " ").replace(",", " ").replace("-", " ")
+    texto = " ".join(texto.split())
 
     return texto.strip()
 
@@ -46,7 +46,7 @@ def calcular_score_match(
     similitud_nombre: float,
     provincia_match: bool,
     departamento_match: bool,
-    localidad_match: bool
+    localidad_match: bool,
 ) -> float:
     """
     Calcula score total de match (0-100):
@@ -55,7 +55,7 @@ def calcular_score_match(
     - 15% departamento
     - 15% localidad
     """
-    score = (similitud_nombre * 0.6)
+    score = similitud_nombre * 0.6
     if provincia_match:
         score += 10
     if departamento_match:
@@ -83,7 +83,7 @@ def generar_razon_match(
     localidad_match: bool,
     provincia_snvs: Optional[str] = None,
     departamento_snvs: Optional[str] = None,
-    localidad_snvs: Optional[str] = None
+    localidad_snvs: Optional[str] = None,
 ) -> str:
     """Genera descripción legible de la razón del match."""
     partes = [f"similitud nombre: {similitud_nombre}%"]
@@ -106,7 +106,7 @@ async def buscar_sugerencias_para_establecimiento(
     provincia_nombre_snvs: Optional[str],
     departamento_nombre_snvs: Optional[str],
     localidad_nombre_snvs: Optional[str],
-    limit: int = 5
+    limit: int = 5,
 ) -> List[dict]:
     """
     Busca sugerencias de establecimientos IGN para un establecimiento SNVS.
@@ -126,13 +126,21 @@ async def buscar_sugerencias_para_establecimiento(
     query = (
         select(
             Establecimiento,
-            Localidad.nombre.label("localidad_nombre"),
-            Departamento.nombre.label("departamento_nombre"),
-            Provincia.nombre.label("provincia_nombre")
+            col(Localidad.nombre).label("localidad_nombre"),
+            col(Departamento.nombre).label("departamento_nombre"),
+            col(Provincia.nombre).label("provincia_nombre"),
         )
-        .outerjoin(Localidad, Establecimiento.id_localidad_indec == Localidad.id_localidad_indec)
-        .outerjoin(Departamento, Localidad.id_departamento_indec == Departamento.id_departamento_indec)
-        .outerjoin(Provincia, Departamento.id_provincia_indec == Provincia.id_provincia_indec)
+        .outerjoin(
+            Localidad,
+            Establecimiento.id_localidad_indec == Localidad.id_localidad_indec,
+        )
+        .outerjoin(
+            Departamento,
+            Localidad.id_departamento_indec == Departamento.id_departamento_indec,
+        )
+        .outerjoin(
+            Provincia, Departamento.id_provincia_indec == Provincia.id_provincia_indec
+        )
         .where(Establecimiento.source == "IGN")
     )
 
@@ -140,8 +148,8 @@ async def buscar_sugerencias_para_establecimiento(
     if provincia_nombre_snvs:
         query = query.where(
             or_(
-                Provincia.nombre == provincia_nombre_snvs,
-                Provincia.nombre.is_(None)  # Incluir también los que no tienen provincia
+                col(Provincia.nombre) == provincia_nombre_snvs,
+                col(Provincia.nombre).is_(None),
             )
         )
 
@@ -156,32 +164,37 @@ async def buscar_sugerencias_para_establecimiento(
         provincia_nombre = row[3]
 
         # Calcular similitud de nombre
-        similitud_nombre = calcular_similitud_nombre(nombre_snvs, estab_ign.nombre or "")
+        similitud_nombre = calcular_similitud_nombre(
+            nombre_snvs, estab_ign.nombre or ""
+        )
 
         # Skip si similitud es muy baja (< 50%)
         if similitud_nombre < 50:
             continue
 
         # Verificar matches geográficos
-        provincia_match = (
-            provincia_nombre_snvs and provincia_nombre and
-            normalizar_texto(provincia_nombre_snvs) == normalizar_texto(provincia_nombre)
+        provincia_match = bool(
+            provincia_nombre_snvs
+            and provincia_nombre
+            and normalizar_texto(provincia_nombre_snvs)
+            == normalizar_texto(provincia_nombre)
         )
-        departamento_match = (
-            departamento_nombre_snvs and departamento_nombre and
-            normalizar_texto(departamento_nombre_snvs) == normalizar_texto(departamento_nombre)
+        departamento_match = bool(
+            departamento_nombre_snvs
+            and departamento_nombre
+            and normalizar_texto(departamento_nombre_snvs)
+            == normalizar_texto(departamento_nombre)
         )
-        localidad_match = (
-            localidad_nombre_snvs and localidad_nombre and
-            normalizar_texto(localidad_nombre_snvs) == normalizar_texto(localidad_nombre)
+        localidad_match = bool(
+            localidad_nombre_snvs
+            and localidad_nombre
+            and normalizar_texto(localidad_nombre_snvs)
+            == normalizar_texto(localidad_nombre)
         )
 
         # Calcular score
         score = calcular_score_match(
-            similitud_nombre,
-            provincia_match,
-            departamento_match,
-            localidad_match
+            similitud_nombre, provincia_match, departamento_match, localidad_match
         )
 
         # Determinar confianza
@@ -195,24 +208,26 @@ async def buscar_sugerencias_para_establecimiento(
             localidad_match,
             provincia_nombre,
             departamento_nombre,
-            localidad_nombre_snvs
+            localidad_nombre_snvs,
         )
 
-        sugerencias.append({
-            "id_establecimiento_ign": estab_ign.id,
-            "nombre_ign": estab_ign.nombre,
-            "codigo_refes": estab_ign.codigo_refes,
-            "localidad_nombre": localidad_nombre,
-            "departamento_nombre": departamento_nombre,
-            "provincia_nombre": provincia_nombre,
-            "similitud_nombre": similitud_nombre,
-            "score": score,
-            "confianza": confianza,
-            "razon": razon,
-            "provincia_match": provincia_match,
-            "departamento_match": departamento_match,
-            "localidad_match": localidad_match,
-        })
+        sugerencias.append(
+            {
+                "id_establecimiento_ign": estab_ign.id,
+                "nombre_ign": estab_ign.nombre,
+                "codigo_refes": estab_ign.codigo_refes,
+                "localidad_nombre": localidad_nombre,
+                "departamento_nombre": departamento_nombre,
+                "provincia_nombre": provincia_nombre,
+                "similitud_nombre": similitud_nombre,
+                "score": score,
+                "confianza": confianza,
+                "razon": razon,
+                "provincia_match": provincia_match,
+                "departamento_match": departamento_match,
+                "localidad_match": localidad_match,
+            }
+        )
 
     # Ordenar por score descendente y retornar top N
     sugerencias.sort(key=lambda x: x["score"], reverse=True)
@@ -225,7 +240,7 @@ async def buscar_establecimientos_ign(
     provincia_nombre: Optional[str] = None,
     departamento_nombre: Optional[str] = None,
     limit: int = 50,
-    offset: int = 0
+    offset: int = 0,
 ) -> tuple[List[dict], int]:
     """
     Busca establecimientos IGN con filtros.
@@ -237,13 +252,21 @@ async def buscar_establecimientos_ign(
     base_query = (
         select(
             Establecimiento,
-            Localidad.nombre.label("localidad_nombre"),
-            Departamento.nombre.label("departamento_nombre"),
-            Provincia.nombre.label("provincia_nombre")
+            col(Localidad.nombre).label("localidad_nombre"),
+            col(Departamento.nombre).label("departamento_nombre"),
+            col(Provincia.nombre).label("provincia_nombre"),
         )
-        .outerjoin(Localidad, Establecimiento.id_localidad_indec == Localidad.id_localidad_indec)
-        .outerjoin(Departamento, Localidad.id_departamento_indec == Departamento.id_departamento_indec)
-        .outerjoin(Provincia, Departamento.id_provincia_indec == Provincia.id_provincia_indec)
+        .outerjoin(
+            Localidad,
+            Establecimiento.id_localidad_indec == Localidad.id_localidad_indec,
+        )
+        .outerjoin(
+            Departamento,
+            Localidad.id_departamento_indec == Departamento.id_departamento_indec,
+        )
+        .outerjoin(
+            Provincia, Departamento.id_provincia_indec == Provincia.id_provincia_indec
+        )
         .where(Establecimiento.source == "IGN")
     )
 
@@ -254,15 +277,15 @@ async def buscar_establecimientos_ign(
         base_query = base_query.where(
             or_(
                 func.upper(func.unaccent(Establecimiento.nombre)).contains(query_norm),
-                Establecimiento.codigo_refes.contains(query)
+                col(Establecimiento.codigo_refes).contains(query),
             )
         )
 
     if provincia_nombre:
-        base_query = base_query.where(Provincia.nombre == provincia_nombre)
+        base_query = base_query.where(col(Provincia.nombre) == provincia_nombre)
 
     if departamento_nombre:
-        base_query = base_query.where(Departamento.nombre == departamento_nombre)
+        base_query = base_query.where(col(Departamento.nombre) == departamento_nombre)
 
     # Contar total
     count_query = select(func.count()).select_from(base_query.subquery())
@@ -275,15 +298,17 @@ async def buscar_establecimientos_ign(
     establecimientos = []
     for row in results:
         estab = row[0]
-        establecimientos.append({
-            "id": estab.id,
-            "nombre": estab.nombre,
-            "codigo_refes": estab.codigo_refes,
-            "localidad_nombre": row[1],
-            "departamento_nombre": row[2],
-            "provincia_nombre": row[3],
-            "latitud": estab.latitud,
-            "longitud": estab.longitud,
-        })
+        establecimientos.append(
+            {
+                "id": estab.id,
+                "nombre": estab.nombre,
+                "codigo_refes": estab.codigo_refes,
+                "localidad_nombre": row[1],
+                "departamento_nombre": row[2],
+                "provincia_nombre": row[3],
+                "latitud": estab.latitud,
+                "longitud": estab.longitud,
+            }
+        )
 
     return establecimientos, total
