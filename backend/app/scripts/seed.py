@@ -350,24 +350,10 @@ def main():
         print("PASO 7/10: CONFIGURACIÓN DE BOLETINES")
         print("=" * 70)
         try:
-            import asyncio
-
-            from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-
             from app.domains.boletines.seeds import seed_boletin_template_config
 
-            # Crear engine dedicado para este seed (evita problemas de event loop)
-            async_db_url = DATABASE_URL.replace(
-                "postgresql://", "postgresql+asyncpg://"
-            )
-            temp_engine = create_async_engine(async_db_url)
-
-            async def seed_boletin_async():
-                async with AsyncSession(temp_engine) as session:
-                    await seed_boletin_template_config(session)
-                await temp_engine.dispose()
-
-            asyncio.run(seed_boletin_async())
+            with Session(engine) as session:
+                seed_boletin_template_config(session)
             print("✅ Configuración de boletines cargada")
         except Exception as e:
             print(f"⚠️  Error cargando configuración de boletines: {e}")

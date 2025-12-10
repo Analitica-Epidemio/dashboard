@@ -35,7 +35,8 @@ Los slugs de TipoCasoEpidemiologicoPasivo se generan desde NOMBREEVENTOAGRP:
 - "Diarreas sin especificar" → "diarreas-sin-especificar"
 """
 
-from sqlmodel import Session, select
+from sqlalchemy.orm import Session
+from sqlmodel import select
 
 from app.domains.boletines.constants import TipoBloque, TipoVisualizacion
 from app.domains.boletines.models import BoletinBloque, BoletinSeccion
@@ -71,19 +72,20 @@ def seed_secciones_y_bloques(session: Session) -> None:
         seccion = session.execute(stmt).scalar_one()
         seccion_ids[seccion_data["slug"]] = seccion.id
 
-    # Insertar bloques
+    # Insertar bloques - crear copia para no modificar el original
     for bloque_data in bloques:
-        seccion_slug = bloque_data.pop("seccion_slug")
-        bloque_data["seccion_id"] = seccion_ids[seccion_slug]
+        bloque_dict = bloque_data.copy()
+        seccion_slug = bloque_dict.pop("seccion_slug")
+        bloque_dict["seccion_id"] = seccion_ids[seccion_slug]
 
-        stmt = select(BoletinBloque).where(BoletinBloque.slug == bloque_data["slug"])
+        stmt = select(BoletinBloque).where(BoletinBloque.slug == bloque_dict["slug"])
         existing = session.execute(stmt).scalar_one_or_none()
 
         if existing:
-            for key, value in bloque_data.items():
+            for key, value in bloque_dict.items():
                 setattr(existing, key, value)
         else:
-            bloque = BoletinBloque(**bloque_data)
+            bloque = BoletinBloque(**bloque_dict)
             session.add(bloque)
 
     session.commit()

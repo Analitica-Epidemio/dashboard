@@ -25,7 +25,9 @@ from app.domains.autenticacion.models import User, UserLogin, UserSession
 
 # BOLETINES DOMAIN
 from app.domains.boletines.models import (
+    BoletinBloque,
     BoletinInstance,
+    BoletinSeccion,
     BoletinSnippet,
     BoletinTemplate,
     BoletinTemplateConfig,
@@ -213,9 +215,11 @@ __all__ = [
     "CapaHidrografia",
     "CapaAreaUrbana",
     # Boletines
+    "BoletinBloque",
+    "BoletinInstance",
+    "BoletinSeccion",
     "BoletinSnippet",
     "BoletinTemplate",
-    "BoletinInstance",
     "BoletinTemplateConfig",
     "CapacidadHospitalaria",
     "VirusRespiratorio",
