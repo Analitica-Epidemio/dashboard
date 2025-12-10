@@ -264,3 +264,67 @@ class UpdateEventSectionTemplateRequest(BaseModel):
     content: Dict[str, Any] = Field(
         ..., description="Template TipTap JSON de sección de evento"
     )
+
+
+# ============================================================================
+# Schemas para configuración de Secciones y Bloques (exposición al frontend)
+# ============================================================================
+
+
+class RangoTemporalInfo(BaseModel):
+    """Información legible sobre el rango temporal de un bloque"""
+
+    codigo: str = Field(
+        ..., description="Código del rango (anio_completo, ultimas_6_semanas, etc)"
+    )
+    descripcion: str = Field(..., description="Descripción legible del rango")
+    ejemplo: str = Field(
+        ..., description="Ejemplo concreto para la semana de referencia"
+    )
+
+
+class BloqueConfigResponse(BaseModel):
+    """Configuración de un bloque para el frontend"""
+
+    id: int
+    slug: str
+    titulo_template: str
+    tipo_bloque: str
+    tipo_visualizacion: str
+    metrica_codigo: str
+    dimensiones: List[str]
+    rango_temporal: Optional[RangoTemporalInfo] = Field(
+        None, description="Información del rango temporal que usa el bloque"
+    )
+    descripcion: Optional[str] = None
+    orden: int
+
+    class Config:
+        from_attributes = True
+
+
+class SeccionConfigResponse(BaseModel):
+    """Configuración de una sección para el frontend"""
+
+    id: int
+    slug: str
+    titulo: str
+    descripcion: Optional[str] = None
+    orden: int
+    bloques: List[BloqueConfigResponse] = Field(
+        default_factory=list, description="Bloques de la sección"
+    )
+
+    class Config:
+        from_attributes = True
+
+
+class SeccionesConfigResponse(BaseModel):
+    """Respuesta con todas las secciones y sus bloques configurados"""
+
+    secciones: List[SeccionConfigResponse]
+    semana_referencia: int = Field(
+        ..., description="Semana epidemiológica de referencia"
+    )
+    anio_referencia: int = Field(..., description="Año de referencia")
+    total_bloques: int = Field(..., description="Total de bloques activos")

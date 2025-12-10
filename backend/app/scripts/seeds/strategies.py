@@ -5,8 +5,8 @@ Este módulo carga las estrategias de vigilancia en la base de datos.
 Puede ser ejecutado directamente o importado desde seed.py
 """
 
-import sys
 import datetime as dt
+import sys
 from pathlib import Path
 from typing import Dict, List, Optional
 

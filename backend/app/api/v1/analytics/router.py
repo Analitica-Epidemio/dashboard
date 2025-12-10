@@ -1,5 +1,8 @@
 """
 Analytics router
+
+Los datos de vigilancia agregada (CLI_P26, LAB_P26, CLI_P26_INT) se consultan
+directamente via POST /api/v1/metricas/query usando MetricService.
 """
 
 from fastapi import APIRouter

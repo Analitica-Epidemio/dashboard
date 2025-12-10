@@ -52,6 +52,16 @@ class AgregadaUploadHandler:
         tamano_archivo = getattr(archivo, "size", 0)
         logger.info(f"Procesando agregada [{tipo_dato}]: {nombre_archivo}")
 
+        # Mapear tipo_dato a file_type interno
+        tipo_dato_to_file_type = {
+            "clinicos": "CLI_P26",
+            "camas": "CLI_P26_INT",
+            "laboratorio": "LAB_P26",
+        }
+        file_type = tipo_dato_to_file_type.get(tipo_dato)
+        if not file_type:
+            raise ValueError(f"Tipo de dato no soportado: {tipo_dato}")
+
         # Validar archivo
         await file_validator.validar_planilla(archivo)
 
@@ -63,6 +73,7 @@ class AgregadaUploadHandler:
                 "nombre_archivo": nombre_archivo,
                 "nombre_hoja": nombre_hoja,
                 "tipo_dato": tipo_dato,
+                "file_type": file_type,  # Código interno para el processor
                 "tamano_archivo_bytes": tamano_archivo,
                 "tipo_contenido": archivo.content_type,
             },

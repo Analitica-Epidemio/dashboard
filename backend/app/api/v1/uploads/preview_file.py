@@ -7,7 +7,7 @@ import tempfile
 import time
 import uuid
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any, List, Literal, Optional
 
 import magic
 import pandas as pd
@@ -34,6 +34,27 @@ logger = logging.getLogger(__name__)
 TEMP_UPLOAD_DIR = Path(tempfile.gettempdir()) / "epidemio_uploads"
 TEMP_UPLOAD_DIR.mkdir(exist_ok=True)
 
+# Tipos de archivo soportados
+FileType = Literal["NOMINAL", "CLI_P26", "CLI_P26_INT", "LAB_P26"]
+
+# Columnas requeridas por tipo de archivo agregado
+CLI_P26_REQUIRED = {
+    "ID_AGRP_CLINICA",
+    "ID_ENCABEZADO",
+    "ANIO",
+    "SEMANA",
+    "CANTIDAD",
+    "NOMBREEVENTOAGRP",
+}
+LAB_P26_REQUIRED = {
+    "ID_AGRP_LABO",
+    "ID_ENCABEZADO",
+    "ANIO",
+    "SEMANA",
+    "ESTUDIADAS",
+    "EVENTO",
+}
+
 
 class SheetPreviewData(BaseModel):
     """Preview data for a single sheet."""
@@ -44,6 +65,7 @@ class SheetPreviewData(BaseModel):
     preview_rows: List[List[Any]]  # Any para permitir tipos mixtos
     is_valid: bool
     missing_columns: List[str]
+    detected_type: Optional[str] = None  # NOMINAL, CLI_P26, CLI_P26_INT, LAB_P26
 
 
 class FilePreviewResponse(BaseModel):
@@ -57,20 +79,59 @@ class FilePreviewResponse(BaseModel):
     total_sheets_count: int
 
 
+def detect_file_type(
+    columns: List[str], preview_rows: List[List[Any]] = []
+) -> Optional[str]:
+    """
+    Detect file type based on columns present.
+
+    Returns: NOMINAL, CLI_P26, CLI_P26_INT, LAB_P26, or None
+    """
+    columns_upper = {col.upper().strip() for col in columns}
+
+    # LAB_P26: tiene ID_AGRP_LABO
+    if "ID_AGRP_LABO" in columns_upper:
+        if LAB_P26_REQUIRED.issubset(columns_upper):
+            return "LAB_P26"
+        return None
+
+    # CLI_P26 / CLI_P26_INT: tiene ID_AGRP_CLINICA
+    if "ID_AGRP_CLINICA" in columns_upper:
+        if CLI_P26_REQUIRED.issubset(columns_upper):
+            # Distinguir CLI_P26_INT por contenido (si tiene preview_rows)
+            # Por ahora retornamos CLI_P26, el frontend puede distinguirlos después
+            return "CLI_P26"
+        return None
+
+    # NOMINAL: tiene las columnas de datos nominales
+    required_upper = {col.upper() for col in REQUIRED_COLUMNS}
+    if required_upper.issubset(columns_upper):
+        return "NOMINAL"
+
+    return None
+
+
 def validate_columns(columns: List[str]) -> bool:
-    """Check if sheet has all required columns."""
+    """Check if sheet has all required columns for NOMINAL type."""
     columns_upper = {col.upper().strip() for col in columns}
     required_upper = {col.upper() for col in REQUIRED_COLUMNS}
     return required_upper.issubset(columns_upper)
 
 
-def get_missing_columns(columns: List[str]) -> List[str]:
-    """Get list of missing required columns."""
+def get_missing_columns(
+    columns: List[str], file_type: Optional[str] = None
+) -> List[str]:
+    """Get list of missing required columns based on file type."""
     columns_upper = {col.upper().strip() for col in columns}
-    required_upper = {col.upper(): col for col in REQUIRED_COLUMNS}
-    missing = [
-        required_upper[req] for req in required_upper.keys() if req not in columns_upper
-    ]
+
+    if file_type == "LAB_P26":
+        required = LAB_P26_REQUIRED
+    elif file_type in ("CLI_P26", "CLI_P26_INT"):
+        required = CLI_P26_REQUIRED
+    else:
+        required = {col.upper() for col in REQUIRED_COLUMNS}
+
+    missing = [col for col in required if col not in columns_upper]
     return missing
 
 
@@ -243,8 +304,12 @@ async def preview_uploaded_file(
             csv_duration = time.time() - csv_start
             logger.info(f"✅ CSV analysis complete - took {csv_duration:.2f}s")
 
-            is_valid = validate_columns(columns)
-            missing = get_missing_columns(columns) if not is_valid else []
+            # Detect file type and validate
+            detected_type = detect_file_type(columns, preview_rows)
+            is_valid = detected_type is not None
+            missing = (
+                get_missing_columns(columns, detected_type) if not is_valid else []
+            )
 
             sheets_data.append(
                 SheetPreviewData(
@@ -254,6 +319,7 @@ async def preview_uploaded_file(
                     preview_rows=preview_rows,
                     is_valid=is_valid,
                     missing_columns=missing,
+                    detected_type=detected_type,
                 )
             )
 
@@ -307,8 +373,14 @@ async def preview_uploaded_file(
                         f"✅ Sheet '{sheet_name}': {total_rows:,} rows - took {sheet_duration:.2f}s"
                     )
 
-                    is_valid = validate_columns(columns)
-                    missing = get_missing_columns(columns) if not is_valid else []
+                    # Detect file type and validate
+                    detected_type = detect_file_type(columns, preview_rows)
+                    is_valid = detected_type is not None
+                    missing = (
+                        get_missing_columns(columns, detected_type)
+                        if not is_valid
+                        else []
+                    )
 
                     sheets_data.append(
                         SheetPreviewData(
@@ -318,6 +390,7 @@ async def preview_uploaded_file(
                             preview_rows=preview_rows,
                             is_valid=is_valid,
                             missing_columns=missing,
+                            detected_type=detected_type,
                         )
                     )
             finally:

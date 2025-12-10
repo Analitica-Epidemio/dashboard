@@ -145,12 +145,13 @@ async def get_evento_details(
         },
     )
     row_resumen = result_resumen.fetchone()
+    assert row_resumen is not None  # La query siempre retorna un row
 
     resumen = ResumenCasoEpidemiologico(
-        casos_actuales=int(row_resumen.casos_actuales),
-        casos_anteriores=int(row_resumen.casos_anteriores),
-        diferencia_absoluta=int(row_resumen.diferencia_absoluta),
-        diferencia_porcentual=round(float(row_resumen.diferencia_porcentual), 2),
+        casos_actuales=int(row_resumen.casos_actuales),  # type: ignore[attr-defined]
+        casos_anteriores=int(row_resumen.casos_anteriores),  # type: ignore[attr-defined]
+        diferencia_absoluta=int(row_resumen.diferencia_absoluta),  # type: ignore[attr-defined]
+        diferencia_porcentual=round(float(row_resumen.diferencia_porcentual), 2),  # type: ignore[attr-defined]
     )
 
     # 3. Obtener serie temporal semanal para ambos períodos

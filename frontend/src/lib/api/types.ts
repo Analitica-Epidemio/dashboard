@@ -635,26 +635,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/establecimientos/{id_establecimiento}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Obtener detalle de establecimiento
-         * @description Obtiene detalle completo de un establecimiento con todas las personas/eventos relacionados
-         */
-        get: operations["get_establecimiento_detalle_api_v1_establecimientos__id_establecimiento__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/establecimientos/sin-mapear": {
         parameters: {
             query?: never;
@@ -757,6 +737,26 @@ export interface paths {
          * @description Crea múltiples mapeos en una sola operación (útil para aceptar sugerencias de alta confianza)
          */
         post: operations["aceptar_sugerencias_bulk_api_v1_establecimientos_mapeos_bulk_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/establecimientos/{id_establecimiento}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Obtener detalle de establecimiento
+         * @description Obtiene detalle completo de un establecimiento con todas las personas/eventos relacionados
+         */
+        get: operations["get_establecimiento_detalle_api_v1_establecimientos__id_establecimiento__get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1813,54 +1813,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/boletines/config/dynamic-blocks": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Actualizar array completo de bloques dinámicos
-         * @description Reemplaza el array completo de bloques (útil para reordenar)
-         */
-        put: operations["update_dynamic_blocks_api_v1_boletines_config_dynamic_blocks_put"];
-        /**
-         * Agregar un nuevo bloque dinámico
-         * @description Agrega un bloque al final del array de bloques dinámicos
-         */
-        post: operations["create_dynamic_block_api_v1_boletines_config_dynamic_blocks_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/boletines/config/dynamic-blocks/{block_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Actualizar un bloque dinámico específico
-         * @description Actualiza la configuración de un bloque existente por su ID
-         */
-        put: operations["update_dynamic_block_api_v1_boletines_config_dynamic_blocks__block_id__put"];
-        post?: never;
-        /**
-         * Eliminar un bloque dinámico
-         * @description Elimina un bloque del array de bloques dinámicos por su ID
-         */
-        delete: operations["delete_dynamic_block_api_v1_boletines_config_dynamic_blocks__block_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/boletines/preview/evento": {
         parameters: {
             query?: never;
@@ -1913,6 +1865,34 @@ export interface paths {
          * @description Retorna todos los agentes etiológicos activos para usar en selectores de bloques dinámicos
          */
         get: operations["list_available_agentes_api_v1_boletines_preview_agentes_disponibles_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/boletines/secciones-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Obtener configuración de secciones y bloques
+         * @description Retorna la configuración de todas las secciones y bloques activos del boletín.
+         *
+         *         Incluye información detallada sobre:
+         *         - Qué métricas se consultan
+         *         - Qué rangos temporales se usan (con ejemplos concretos)
+         *         - Tipo de visualización de cada bloque
+         *
+         *         Usar los parámetros `semana` y `anio` para ver ejemplos de rangos
+         *         para una semana de referencia específica.
+         */
+        get: operations["get_secciones_config_api_v1_boletines_secciones_config_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2045,6 +2025,197 @@ export interface paths {
         get: operations["get_agentes_categorias_api_v1_agentes_categorias_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agrupaciones/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Agrupaciones
+         * @description Lista todas las agrupaciones activas.
+         *
+         *     Opcionalmente filtra por categoría funcional:
+         *     - respiratorio
+         *     - enterico
+         *     - vectorial
+         *     - etc.
+         */
+        get: operations["list_agrupaciones_api_v1_agrupaciones__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agrupaciones/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Agrupacion
+         * @description Obtiene detalle de una agrupación con sus agentes.
+         *
+         *     Útil para drill-down: ver qué agentes componen una agrupación.
+         */
+        get: operations["get_agrupacion_api_v1_agrupaciones__slug__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agrupaciones/{slug}/agente-ids": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Agrupacion Agente Ids
+         * @description Obtiene solo los IDs de agentes de una agrupación.
+         *
+         *     Optimizado para el sistema de métricas que necesita resolver
+         *     una agrupación a sus IDs de agentes para filtrar.
+         */
+        get: operations["get_agrupacion_agente_ids_api_v1_agrupaciones__slug__agente_ids_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/metricas/schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Schema
+         * @description Lista todos los cubes disponibles para el BI Engine.
+         *
+         *     Retorna información sobre cada tipo de vigilancia incluyendo:
+         *     - Métricas disponibles
+         *     - Dimensiones para agrupar
+         *     - Filtros aplicables
+         *     - Visualizaciones permitidas
+         *     - KPIs predefinidos
+         */
+        get: operations["get_schema_api_v1_metricas_schema_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/metricas/schema/{cube_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Cube Detail
+         * @description Obtiene el schema completo de un cube específico.
+         *
+         *     Útil para construir dinámicamente la UI de una página de vigilancia.
+         */
+        get: operations["get_cube_detail_api_v1_metricas_schema__cube_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/metricas/disponibles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Available Metrics
+         * @description Lista métricas y dimensiones disponibles.
+         *
+         *     Útil para construir UI de query builder dinámicamente.
+         */
+        get: operations["get_available_metrics_api_v1_metricas_disponibles_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/metricas/query": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Query Metric
+         * @description Query unificado para cualquier métrica.
+         *
+         *     Ejemplos de uso:
+         *
+         *     1. Casos de ETI por semana en 2025:
+         *     ```json
+         *     {
+         *         "metric": "casos_clinicos",
+         *         "dimensions": ["SEMANA_EPIDEMIOLOGICA"],
+         *         "filters": {"anio": 2025, "evento_nombre": "ETI"}
+         *     }
+         *     ```
+         *
+         *     2. Muestras de laboratorio por agente:
+         *     ```json
+         *     {
+         *         "metric": "muestras_estudiadas",
+         *         "dimensions": ["AGENTE_ETIOLOGICO"],
+         *         "filters": {"anio": 2025}
+         *     }
+         *     ```
+         *
+         *     3. Distribución por grupo etario:
+         *     ```json
+         *     {
+         *         "metric": "casos_clinicos",
+         *         "dimensions": ["GRUPO_ETARIO"],
+         *         "filters": {"anio": 2025, "semana": 48}
+         *     }
+         *     ```
+         */
+        post: operations["query_metric_api_v1_metricas_query_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2191,6 +2362,20 @@ export interface components {
             tasa_positividad: number;
         };
         /**
+         * AgenteSimple
+         * @description Agente simplificado para respuestas.
+         */
+        AgenteSimple: {
+            /** Id */
+            id: number;
+            /** Slug */
+            slug: string;
+            /** Nombre */
+            nombre: string;
+            /** Nombre Corto */
+            nombre_corto: string;
+        };
+        /**
          * AgentesCategoriasResponse
          * @description Respuesta con categorías y grupos de agentes
          */
@@ -2234,6 +2419,65 @@ export interface components {
              * @default 0
              */
             personas_activas: number;
+        };
+        /**
+         * AgrupacionDetailResponse
+         * @description Detalle de una agrupación con sus agentes.
+         */
+        AgrupacionDetailResponse: {
+            /** Id */
+            id: number;
+            /** Slug */
+            slug: string;
+            /** Nombre */
+            nombre: string;
+            /** Nombre Corto */
+            nombre_corto: string;
+            /** Color */
+            color: string;
+            /** Categoria */
+            categoria: string;
+            /** Orden */
+            orden: number;
+            /** Descripcion */
+            descripcion: string | null;
+            /** Agentes */
+            agentes: components["schemas"]["AgenteSimple"][];
+        };
+        /**
+         * AgrupacionListItem
+         * @description Item de agrupación para listados.
+         */
+        AgrupacionListItem: {
+            /** Id */
+            id: number;
+            /** Slug */
+            slug: string;
+            /** Nombre */
+            nombre: string;
+            /** Nombre Corto */
+            nombre_corto: string;
+            /** Color */
+            color: string;
+            /** Categoria */
+            categoria: string;
+            /** Orden */
+            orden: number;
+            /**
+             * Agentes Count
+             * @description Cantidad de agentes en la agrupación
+             */
+            agentes_count: number;
+        };
+        /**
+         * AgrupacionesListResponse
+         * @description Lista de agrupaciones.
+         */
+        AgrupacionesListResponse: {
+            /** Items */
+            items: components["schemas"]["AgrupacionListItem"][];
+            /** Total */
+            total: number;
         };
         /**
          * AmbitoConcurrenciaInfo
@@ -2439,6 +2683,32 @@ export interface components {
              */
             user_agent?: string | null;
         };
+        /**
+         * BloqueConfigResponse
+         * @description Configuración de un bloque para el frontend
+         */
+        BloqueConfigResponse: {
+            /** Id */
+            id: number;
+            /** Slug */
+            slug: string;
+            /** Titulo Template */
+            titulo_template: string;
+            /** Tipo Bloque */
+            tipo_bloque: string;
+            /** Tipo Visualizacion */
+            tipo_visualizacion: string;
+            /** Metrica Codigo */
+            metrica_codigo: string;
+            /** Dimensiones */
+            dimensiones: string[];
+            /** @description Información del rango temporal que usa el bloque */
+            rango_temporal?: components["schemas"]["RangoTemporalInfo"] | null;
+            /** Descripcion */
+            descripcion?: string | null;
+            /** Orden */
+            orden: number;
+        };
         /** Body_preview_uploaded_file_api_v1_uploads_preview_post */
         Body_preview_uploaded_file_api_v1_uploads_preview_post: {
             /**
@@ -2601,23 +2871,8 @@ export interface components {
              * @description Categoría: semanal, brote, tendencias, etc.
              */
             category: string;
-            /**
-             * Thumbnail
-             * @description URL de thumbnail
-             */
-            thumbnail?: string | null;
-            /** @description Configuración de layout */
-            layout: components["schemas"]["LayoutConfig"];
             /** @description Configuración de portada */
             cover?: components["schemas"]["CoverConfig"] | null;
-            /**
-             * Widgets
-             * @description Lista de widgets
-             * @default []
-             */
-            widgets: (components["schemas"]["KPIWidget-Input"] | components["schemas"]["GenericWidget"])[];
-            /** @description Filtros globales */
-            global_filters?: components["schemas"]["GlobalFilters"] | null;
             /**
              * Content
              * @description Contenido HTML del boletín (Tiptap)
@@ -2643,13 +2898,10 @@ export interface components {
             description: string | null;
             /** Category */
             category: string;
-            /** Thumbnail */
-            thumbnail: string | null;
-            layout: components["schemas"]["LayoutConfig"];
-            cover: components["schemas"]["CoverConfig"] | null;
-            /** Widgets */
-            widgets: (components["schemas"]["KPIWidget-Output"] | components["schemas"]["GenericWidget"])[];
-            global_filters: components["schemas"]["GlobalFilters"] | null;
+            /** Cover */
+            cover: {
+                [key: string]: unknown;
+            } | null;
             /** Content */
             content: string | null;
             /** Created By */
@@ -2677,13 +2929,7 @@ export interface components {
             description?: string | null;
             /** Category */
             category?: string | null;
-            /** Thumbnail */
-            thumbnail?: string | null;
-            layout?: components["schemas"]["LayoutConfig"] | null;
             cover?: components["schemas"]["CoverConfig"] | null;
-            /** Widgets */
-            widgets?: (components["schemas"]["KPIWidget-Input"] | components["schemas"]["GenericWidget"])[] | null;
-            global_filters?: components["schemas"]["GlobalFilters"] | null;
             /** Content */
             content?: string | null;
             /** Is Public */
@@ -3435,7 +3681,7 @@ export interface components {
              * @description Lista de eventos
              */
             data: components["schemas"]["CasoEpidemiologicoListItem"][];
-            pagination: components["schemas"]["PaginationInfo"];
+            pagination: components["schemas"]["app__api__v1__eventos__list__PaginationInfo"];
             /** @description Estadísticas agregadas */
             stats: components["schemas"]["app__api__v1__eventos__list__CasoEpidemiologicoStats"];
             /**
@@ -4078,19 +4324,6 @@ export interface components {
              * @description Razón del mapeo
              */
             razon?: string | null;
-        };
-        /**
-         * CreateDynamicBlockRequest
-         * @description Request para crear un nuevo bloque dinámico
-         */
-        CreateDynamicBlockRequest: {
-            /**
-             * Block
-             * @description Configuración del bloque a crear
-             */
-            block: {
-                [key: string]: unknown;
-            };
         };
         /**
          * DashboardChartsResponse
@@ -5565,69 +5798,11 @@ export interface components {
             content: string;
             /** @description Metadatos del boletín */
             metadata: components["schemas"]["BoletinMetadata"];
-        };
-        /**
-         * GenericDataConfig
-         * @description Configuración de datos genérica para otros widgets
-         */
-        GenericDataConfig: {
             /**
-             * Source
-             * @description Fuente de datos
-             * @enum {string}
+             * Warnings
+             * @description Advertencias de validación
              */
-            source: "manual" | "query";
-            /**
-             * Query Id
-             * @description ID de la query si source=query
-             */
-            query_id?: string | null;
-            /**
-             * Query Params
-             * @description Parámetros de la query
-             */
-            query_params?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Manual Data
-             * @description Datos manuales
-             */
-            manual_data?: {
-                [key: string]: unknown;
-            } | null;
-        };
-        /**
-         * GenericWidget
-         * @description Widget genérico (table, chart, etc)
-         */
-        GenericWidget: {
-            /**
-             * Id
-             * @description ID único del widget
-             */
-            id: string;
-            /**
-             * @description Tipo de widget (enum property replaced by openapi-typescript)
-             * @enum {string}
-             */
-            type: "bar" | "corridor" | "divider" | "image" | "line" | "map" | "pagebreak" | "pie" | "pyramid" | "table" | "text";
-            /** @description Posición en el grid */
-            position: components["schemas"]["WidgetPosition"];
-            /** @description Configuración de datos */
-            data_config: components["schemas"]["GenericDataConfig"];
-            /** @description Configuración visual */
-            visual_config: components["schemas"]["WidgetVisualConfig"];
-            /**
-             * Title
-             * @description Título del widget
-             */
-            title?: string | null;
-            /**
-             * Description
-             * @description Descripción del widget
-             */
-            description?: string | null;
+            warnings?: string[] | null;
         };
         /**
          * GeocodingStatsResponse
@@ -5676,33 +5851,6 @@ export interface components {
             by_estado: {
                 [key: string]: number;
             };
-        };
-        /**
-         * GlobalFilters
-         * @description Filtros globales del boletín
-         */
-        GlobalFilters: {
-            /**
-             * Temporal
-             * @description Filtros temporales
-             */
-            temporal?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Geografico
-             * @description Filtros geográficos
-             */
-            geografico?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Demografico
-             * @description Filtros demográficos
-             */
-            demografico?: {
-                [key: string]: unknown;
-            } | null;
         };
         /**
          * GrupoDeEnfermedadesBasic
@@ -5935,191 +6083,6 @@ export interface components {
             } | null;
         };
         /**
-         * KPIComparisonData
-         * @description Datos de comparación para KPI
-         */
-        KPIComparisonData: {
-            /**
-             * Value
-             * @description Valor de la comparación (%)
-             */
-            value: number;
-            /**
-             * Trend
-             * @description Tendencia
-             * @enum {string}
-             */
-            trend: "up" | "down" | "neutral";
-        };
-        /**
-         * KPIDataConfig
-         * @description Configuración de datos para widget KPI
-         */
-        "KPIDataConfig-Input": {
-            /**
-             * Source
-             * @description Fuente de datos
-             * @enum {string}
-             */
-            source: "manual" | "query";
-            /**
-             * Query Id
-             * @description ID de la query si source=query
-             */
-            query_id?: string | null;
-            /**
-             * Query Params
-             * @description Parámetros de la query
-             */
-            query_params?: {
-                [key: string]: unknown;
-            } | null;
-            /** @description Datos manuales para KPI */
-            manual_data?: components["schemas"]["KPIManualData"] | null;
-        };
-        /**
-         * KPIDataConfig
-         * @description Configuración de datos para widget KPI
-         */
-        "KPIDataConfig-Output": {
-            /**
-             * Source
-             * @description Fuente de datos
-             * @enum {string}
-             */
-            source: "manual" | "query";
-            /**
-             * Query Id
-             * @description ID de la query si source=query
-             */
-            query_id?: string | null;
-            /**
-             * Query Params
-             * @description Parámetros de la query
-             */
-            query_params?: {
-                [key: string]: unknown;
-            } | null;
-            /** @description Datos manuales para KPI */
-            manual_data?: components["schemas"]["KPIManualData"] | null;
-        };
-        /**
-         * KPIManualData
-         * @description Datos manuales para widget KPI
-         */
-        KPIManualData: {
-            /**
-             * Value
-             * @description Valor principal del KPI
-             */
-            value: number;
-            /**
-             * Label
-             * @description Etiqueta del KPI
-             */
-            label?: string | null;
-            /** @description Datos de comparación */
-            comparison?: components["schemas"]["KPIComparisonData"] | null;
-        };
-        /**
-         * KPIWidget
-         * @description Widget de KPI
-         */
-        "KPIWidget-Input": {
-            /**
-             * Id
-             * @description ID único del widget
-             */
-            id: string;
-            /**
-             * @description Tipo de widget (enum property replaced by openapi-typescript)
-             * @enum {string}
-             */
-            type: "kpi";
-            /** @description Posición en el grid */
-            position: components["schemas"]["WidgetPosition"];
-            /** @description Configuración de datos para KPI */
-            data_config: components["schemas"]["KPIDataConfig-Input"];
-            /** @description Configuración visual */
-            visual_config: components["schemas"]["WidgetVisualConfig"];
-            /**
-             * Title
-             * @description Título del widget
-             */
-            title?: string | null;
-            /**
-             * Description
-             * @description Descripción del widget
-             */
-            description?: string | null;
-        };
-        /**
-         * KPIWidget
-         * @description Widget de KPI
-         */
-        "KPIWidget-Output": {
-            /**
-             * Id
-             * @description ID único del widget
-             */
-            id: string;
-            /**
-             * @description Tipo de widget (enum property replaced by openapi-typescript)
-             * @enum {string}
-             */
-            type: "kpi";
-            /** @description Posición en el grid */
-            position: components["schemas"]["WidgetPosition"];
-            /** @description Configuración de datos para KPI */
-            data_config: components["schemas"]["KPIDataConfig-Output"];
-            /** @description Configuración visual */
-            visual_config: components["schemas"]["WidgetVisualConfig"];
-            /**
-             * Title
-             * @description Título del widget
-             */
-            title?: string | null;
-            /**
-             * Description
-             * @description Descripción del widget
-             */
-            description?: string | null;
-        };
-        /**
-         * LayoutConfig
-         * @description Configuración del layout del boletín
-         */
-        LayoutConfig: {
-            /**
-             * Type
-             * @description Tipo de layout
-             * @default grid
-             * @constant
-             */
-            type: "grid";
-            /**
-             * Columns
-             * @description Número de columnas
-             * @default 12
-             */
-            columns: number;
-            /**
-             * Row Height
-             * @description Alto de fila en pixels
-             * @default 40
-             */
-            row_height: number;
-            /**
-             * Margin
-             * @description Margen [horizontal, vertical]
-             * @default [
-             *       10,
-             *       10
-             *     ]
-             */
-            margin: number[];
-        };
-        /**
          * MapeoInfo
          * @description Información de un mapeo existente.
          */
@@ -6131,7 +6094,7 @@ export interface components {
             /** Codigo Snvs */
             codigo_snvs: string | null;
             /** Id Establecimiento Ign */
-            id_establecimiento_ign: number;
+            id_establecimiento_ign: number | null;
             /** Nombre Ign */
             nombre_ign: string;
             /** Codigo Refes */
@@ -6188,6 +6151,147 @@ export interface components {
             end_date: string;
         };
         /**
+         * MetricDataRow
+         * @description Fila de datos de métrica con todas las dimensiones posibles.
+         *
+         *     Los campos que vienen en cada response dependen de las dimensiones
+         *     solicitadas. El campo 'columns' en MetricQueryResponse indica
+         *     qué campos están presentes.
+         */
+        MetricDataRow: {
+            /** Valor */
+            valor?: number | null;
+            /** Valor Actual */
+            valor_actual?: number | null;
+            /** Valor Anterior */
+            valor_anterior?: number | null;
+            /** Semana Epidemiologica */
+            semana_epidemiologica?: number | null;
+            /** Anio Epidemiologico */
+            anio_epidemiologico?: number | null;
+            /** Provincia */
+            provincia?: string | null;
+            /** Departamento */
+            departamento?: string | null;
+            /** Establecimiento */
+            establecimiento?: string | null;
+            /** Grupo Etario */
+            grupo_etario?: string | null;
+            /** Sexo */
+            sexo?: string | null;
+            /** Tipo Evento */
+            tipo_evento?: string | null;
+            /** Agente Etiologico */
+            agente_etiologico?: string | null;
+            /** Agrupacion */
+            agrupacion?: string | null;
+            /** Tecnica */
+            tecnica?: string | null;
+            /** Zona Exito */
+            zona_exito?: number | null;
+            /** Zona Seguridad */
+            zona_seguridad?: number | null;
+            /** Zona Alerta */
+            zona_alerta?: number | null;
+            /** Zona Brote */
+            zona_brote?: number | null;
+            /** Corredor Valido */
+            corredor_valido?: boolean | null;
+            /** Delta Porcentaje */
+            delta_porcentaje?: number | null;
+            /** Tendencia */
+            tendencia?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * MetricFilters
+         * @description Filtros unificados para queries de métricas.
+         */
+        MetricFilters: {
+            /** @description Período a consultar */
+            periodo: components["schemas"]["PeriodoFilter"];
+            /**
+             * Evento Id
+             * @description ID de tipo de evento (single)
+             */
+            evento_id?: number | null;
+            /**
+             * Evento Ids
+             * @description IDs de tipos de evento (multi-select)
+             */
+            evento_ids?: number[] | null;
+            /**
+             * Evento Nombre
+             * @description Nombre parcial de evento
+             */
+            evento_nombre?: string | null;
+            /**
+             * Grupo Id
+             * @description ID de grupo ENO (single)
+             */
+            grupo_id?: number | null;
+            /**
+             * Grupo Ids
+             * @description IDs de grupos ENO (multi-select)
+             */
+            grupo_ids?: number[] | null;
+            /**
+             * Agente Id
+             * @description ID de agente etiológico (single)
+             */
+            agente_id?: number | null;
+            /**
+             * Agente Ids
+             * @description IDs de agentes etiológicos (multi-select)
+             */
+            agente_ids?: number[] | null;
+            /**
+             * Agente Nombre
+             * @description Nombre parcial de agente
+             */
+            agente_nombre?: string | null;
+            /**
+             * Agrupacion Slug
+             * @description Slug de agrupación de agentes (ej: 'influenza-a'). Resuelve a múltiples agente_ids.
+             */
+            agrupacion_slug?: string | null;
+            /**
+             * Provincia Id
+             * @description ID INDEC de provincia
+             */
+            provincia_id?: number | null;
+            /**
+             * Provincia Nombre
+             * @description Nombre de provincia
+             */
+            provincia_nombre?: string | null;
+            /**
+             * Departamento Id
+             * @description ID INDEC de departamento
+             */
+            departamento_id?: number | null;
+            /**
+             * Establecimiento Id
+             * @description ID de establecimiento
+             */
+            establecimiento_id?: number | null;
+        };
+        /**
+         * MetricInfoResponse
+         * @description Información de métricas disponibles.
+         */
+        MetricInfoResponse: {
+            /** Metrics */
+            metrics: {
+                [key: string]: unknown;
+            }[];
+            /** Dimensions */
+            dimensions: {
+                [key: string]: unknown;
+            }[];
+        };
+        /**
          * MetricItem
          * @description Item de métrica para preview
          */
@@ -6202,6 +6306,64 @@ export interface components {
             trend_value?: number | null;
             /** Alert */
             alert?: boolean | null;
+        };
+        /**
+         * MetricQueryMetadata
+         * @description Metadata de respuesta de query.
+         */
+        MetricQueryMetadata: {
+            /** Metric */
+            metric: string;
+            /** Metric Label */
+            metric_label?: string | null;
+            /** Dimensions */
+            dimensions: string[];
+            /** Total Rows */
+            total_rows: number;
+            /** Source */
+            source?: string | null;
+            /** Compute */
+            compute?: string | null;
+            /** Warnings */
+            warnings?: string[] | null;
+        };
+        /**
+         * MetricQueryRequest
+         * @description Request para query de métricas.
+         */
+        MetricQueryRequest: {
+            /**
+             * Metric
+             * @description Código de la métrica (ej: casos_clinicos)
+             */
+            metric: string;
+            /**
+             * Dimensions
+             * @description Dimensiones para agrupar (ej: [SEMANA_EPIDEMIOLOGICA, TIPO_EVENTO])
+             * @default []
+             */
+            dimensions: string[];
+            /** @description Filtros a aplicar */
+            filters: components["schemas"]["MetricFilters"];
+            /**
+             * Compute
+             * @description Cálculo post-query: 'corredor_endemico'
+             */
+            compute?: string | null;
+        };
+        /**
+         * MetricQueryResponse
+         * @description Response de query de métricas.
+         */
+        MetricQueryResponse: {
+            /**
+             * Columns
+             * @description Lista de campos presentes en cada fila de data
+             */
+            columns: string[];
+            /** Data */
+            data: components["schemas"]["MetricDataRow"][];
+            metadata: components["schemas"]["MetricQueryMetadata"];
         };
         /**
          * MetricValue
@@ -6321,42 +6483,6 @@ export interface components {
             links?: {
                 [key: string]: string | null;
             } | null;
-        };
-        /**
-         * PaginationInfo
-         * @description Información de paginación
-         */
-        PaginationInfo: {
-            /**
-             * Page
-             * @description Página actual
-             */
-            page: number;
-            /**
-             * Page Size
-             * @description Tamaño de página
-             */
-            page_size: number;
-            /**
-             * Total
-             * @description Total de registros
-             */
-            total: number;
-            /**
-             * Total Pages
-             * @description Total de páginas
-             */
-            total_pages: number;
-            /**
-             * Has Next
-             * @description Si hay página siguiente
-             */
-            has_next: boolean;
-            /**
-             * Has Prev
-             * @description Si hay página anterior
-             */
-            has_prev: boolean;
         };
         /**
          * PaginationMeta
@@ -6484,6 +6610,32 @@ export interface components {
              * @description Fecha de fin del período
              */
             fecha_fin: string;
+        };
+        /**
+         * PeriodoFilter
+         * @description Filtro de período temporal unificado. Soporta rangos que cruzan años.
+         */
+        PeriodoFilter: {
+            /**
+             * Anio Desde
+             * @description Año de inicio
+             */
+            anio_desde: number;
+            /**
+             * Semana Desde
+             * @description Semana de inicio (1-53)
+             */
+            semana_desde: number;
+            /**
+             * Anio Hasta
+             * @description Año de fin
+             */
+            anio_hasta: number;
+            /**
+             * Semana Hasta
+             * @description Semana de fin (1-53)
+             */
+            semana_hasta: number;
         };
         /**
          * PersonaDetailResponse
@@ -6688,7 +6840,7 @@ export interface components {
              * @description Lista de personas
              */
             data: components["schemas"]["PersonaListItem"][];
-            pagination: components["schemas"]["PaginationInfo"];
+            pagination: components["schemas"]["app__api__v1__eventos__list__PaginationInfo"];
             /** @description Estadísticas agregadas sobre todos los resultados */
             stats: components["schemas"]["AggregatedStats"];
             /**
@@ -6843,6 +6995,11 @@ export interface components {
              * @description Nombre de la hoja a procesar
              */
             sheet_name: string;
+            /**
+             * File Type
+             * @description Tipo de archivo detectado (NOMINAL, CLI_P26, etc.)
+             */
+            file_type: string;
         };
         /**
          * PuntoDatosPiramide
@@ -6855,6 +7012,27 @@ export interface components {
             male: number;
             /** Female */
             female: number;
+        };
+        /**
+         * RangoTemporalInfo
+         * @description Información legible sobre el rango temporal de un bloque
+         */
+        RangoTemporalInfo: {
+            /**
+             * Codigo
+             * @description Código del rango (anio_completo, ultimas_6_semanas, etc)
+             */
+            codigo: string;
+            /**
+             * Descripcion
+             * @description Descripción legible del rango
+             */
+            descripcion: string;
+            /**
+             * Ejemplo
+             * @description Ejemplo concreto para la semana de referencia
+             */
+            ejemplo: string;
         };
         /**
          * RefreshToken
@@ -6944,6 +7122,50 @@ export interface components {
              * @description Cambio absoluto
              */
             diferencia_absoluta: number;
+        };
+        /**
+         * SeccionConfigResponse
+         * @description Configuración de una sección para el frontend
+         */
+        SeccionConfigResponse: {
+            /** Id */
+            id: number;
+            /** Slug */
+            slug: string;
+            /** Titulo */
+            titulo: string;
+            /** Descripcion */
+            descripcion?: string | null;
+            /** Orden */
+            orden: number;
+            /**
+             * Bloques
+             * @description Bloques de la sección
+             */
+            bloques?: components["schemas"]["BloqueConfigResponse"][];
+        };
+        /**
+         * SeccionesConfigResponse
+         * @description Respuesta con todas las secciones y sus bloques configurados
+         */
+        SeccionesConfigResponse: {
+            /** Secciones */
+            secciones: components["schemas"]["SeccionConfigResponse"][];
+            /**
+             * Semana Referencia
+             * @description Semana epidemiológica de referencia
+             */
+            semana_referencia: number;
+            /**
+             * Anio Referencia
+             * @description Año de referencia
+             */
+            anio_referencia: number;
+            /**
+             * Total Bloques
+             * @description Total de bloques activos
+             */
+            total_bloques: number;
         };
         /**
          * SectionPreviewResponse
@@ -7518,6 +7740,18 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /** SuccessResponse[SeccionesConfigResponse] */
+        SuccessResponse_SeccionesConfigResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["SeccionesConfigResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
         /** SuccessResponse[SectionPreviewResponse] */
         SuccessResponse_SectionPreviewResponse_: {
             /** @description Datos de la respuesta */
@@ -7749,7 +7983,7 @@ export interface components {
          * @description Clasificaciones estándar de eventos epidemiológicos
          * @enum {string}
          */
-        TipoClasificacion: "CONFIRMADOS" | "SOSPECHOSOS" | "PROBABLES" | "EN_ESTUDIO" | "NEGATIVOS" | "DESCARTADOS" | "NOTIFICADOS" | "CON_RESULTADO_MORTAL" | "SIN_RESULTADO_MORTAL" | "REQUIERE_REVISION";
+        TipoClasificacion: "CONFIRMADOS" | "SOSPECHOSOS" | "PROBABLES" | "EN_ESTUDIO" | "NEGATIVOS" | "DESCARTADOS" | "NOTIFICADOS" | "CON_RESULTADO_MORTAL" | "SIN_RESULTADO_MORTAL" | "REQUIERE_REVISION" | "TODOS";
         /**
          * TipoFiltro
          * @description Tipos de filtros soportados para clasificación
@@ -7924,32 +8158,6 @@ export interface components {
              * @description Número estimado de batches a procesar
              */
             estimated_batches?: number | null;
-        };
-        /**
-         * UpdateDynamicBlockRequest
-         * @description Request para actualizar un bloque específico
-         */
-        UpdateDynamicBlockRequest: {
-            /**
-             * Block
-             * @description Nueva configuración del bloque
-             */
-            block: {
-                [key: string]: unknown;
-            };
-        };
-        /**
-         * UpdateDynamicBlocksRequest
-         * @description Request para actualizar array completo de bloques (reordenar)
-         */
-        UpdateDynamicBlocksRequest: {
-            /**
-             * Blocks
-             * @description Array completo de bloques dinámicos
-             */
-            blocks: {
-                [key: string]: unknown;
-            }[];
         };
         /**
          * UpdateEventSectionTemplateRequest
@@ -8143,57 +8351,6 @@ export interface components {
              * @description Timestamp de generación
              */
             generated_at: number;
-        };
-        /**
-         * WidgetPosition
-         * @description Posición del widget en el grid
-         */
-        WidgetPosition: {
-            /**
-             * X
-             * @description Posición X en el grid (columnas)
-             */
-            x: number;
-            /**
-             * Y
-             * @description Posición Y en el grid (filas)
-             */
-            y: number;
-            /**
-             * W
-             * @description Ancho en columnas (1-12)
-             */
-            w: number;
-            /**
-             * H
-             * @description Alto en filas
-             */
-            h: number;
-        };
-        /**
-         * WidgetVisualConfig
-         * @description Configuración visual del widget
-         */
-        WidgetVisualConfig: {
-            /**
-             * Show Title
-             * @description Mostrar título
-             * @default true
-             */
-            show_title: boolean;
-            /**
-             * Show Description
-             * @description Mostrar descripción
-             * @default false
-             */
-            show_description: boolean;
-            /**
-             * Config
-             * @description Configuración específica del tipo
-             */
-            config?: {
-                [key: string]: unknown;
-            } | null;
         };
         /**
          * WrapperConfiguracionGraficoArea
@@ -8668,6 +8825,42 @@ export interface components {
              * @default 0
              */
             sin_clasificar: number;
+        };
+        /**
+         * PaginationInfo
+         * @description Información de paginación
+         */
+        app__api__v1__eventos__list__PaginationInfo: {
+            /**
+             * Page
+             * @description Página actual
+             */
+            page: number;
+            /**
+             * Page Size
+             * @description Tamaño de página
+             */
+            page_size: number;
+            /**
+             * Total
+             * @description Total de registros
+             */
+            total: number;
+            /**
+             * Total Pages
+             * @description Total de páginas
+             */
+            total_pages: number;
+            /**
+             * Has Next
+             * @description Si hay página siguiente
+             */
+            has_next: boolean;
+            /**
+             * Has Prev
+             * @description Si hay página anterior
+             */
+            has_prev: boolean;
         };
         /**
          * DiagnosticoInfo
@@ -9772,61 +9965,6 @@ export interface operations {
             };
         };
     };
-    get_establecimiento_detalle_api_v1_establecimientos__id_establecimiento__get: {
-        parameters: {
-            query?: {
-                /** @description Filtrar eventos desde esta fecha */
-                fecha_desde?: string | null;
-                /** @description Filtrar eventos hasta esta fecha */
-                fecha_hasta?: string | null;
-            };
-            header?: never;
-            path: {
-                /** @description ID del establecimiento */
-                id_establecimiento: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SuccessResponse_EstablecimientoDetalleResponse_"];
-                };
-            };
-            /** @description Establecimiento no encontrado */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description Error interno del servidor */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
     get_establecimientos_sin_mapear_api_v1_establecimientos_sin_mapear_get: {
         parameters: {
             query?: {
@@ -10129,6 +10267,61 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_establecimiento_detalle_api_v1_establecimientos__id_establecimiento__get: {
+        parameters: {
+            query?: {
+                /** @description Filtrar eventos desde esta fecha */
+                fecha_desde?: string | null;
+                /** @description Filtrar eventos hasta esta fecha */
+                fecha_hasta?: string | null;
+            };
+            header?: never;
+            path: {
+                /** @description ID del establecimiento */
+                id_establecimiento: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_EstablecimientoDetalleResponse_"];
+                };
+            };
+            /** @description Establecimiento no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno del servidor */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -12696,264 +12889,6 @@ export interface operations {
             };
         };
     };
-    update_dynamic_blocks_api_v1_boletines_config_dynamic_blocks_put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateDynamicBlocksRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SuccessResponse_BoletinTemplateConfigResponse_"];
-                };
-            };
-            /** @description Datos inválidos */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Sin permisos (requiere admin) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Configuración no encontrada */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description Error interno */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    create_dynamic_block_api_v1_boletines_config_dynamic_blocks_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateDynamicBlockRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SuccessResponse_BoletinTemplateConfigResponse_"];
-                };
-            };
-            /** @description Bloque con ID duplicado o datos inválidos */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Sin permisos (requiere admin) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Configuración no encontrada */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description Error interno */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    update_dynamic_block_api_v1_boletines_config_dynamic_blocks__block_id__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                block_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateDynamicBlockRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SuccessResponse_BoletinTemplateConfigResponse_"];
-                };
-            };
-            /** @description Sin permisos (requiere admin) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Configuración o bloque no encontrado */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description Error interno */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    delete_dynamic_block_api_v1_boletines_config_dynamic_blocks__block_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                block_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SuccessResponse_BoletinTemplateConfigResponse_"];
-                };
-            };
-            /** @description Sin permisos (requiere admin) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Configuración o bloque no encontrado */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description Error interno */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
     preview_evento_api_v1_boletines_preview_evento_get: {
         parameters: {
             query: {
@@ -13055,6 +12990,49 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SuccessResponse_List_AgenteDisponible__"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_secciones_config_api_v1_boletines_secciones_config_get: {
+        parameters: {
+            query?: {
+                /** @description Semana epidemiológica de referencia (default: semana actual) */
+                semana?: number | null;
+                /** @description Año de referencia (default: año actual) */
+                anio?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_SeccionesConfigResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
             /** @description Error interno */
@@ -13274,6 +13252,209 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_agrupaciones_api_v1_agrupaciones__get: {
+        parameters: {
+            query?: {
+                categoria?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgrupacionesListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_agrupacion_api_v1_agrupaciones__slug__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgrupacionDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_agrupacion_agente_ids_api_v1_agrupaciones__slug__agente_ids_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_schema_api_v1_metricas_schema_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    get_cube_detail_api_v1_metricas_schema__cube_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cube_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_available_metrics_api_v1_metricas_disponibles_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetricInfoResponse"];
+                };
+            };
+        };
+    };
+    query_metric_api_v1_metricas_query_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MetricQueryRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetricQueryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

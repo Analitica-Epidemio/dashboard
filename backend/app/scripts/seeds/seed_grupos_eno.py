@@ -17,10 +17,10 @@ FUENTE: Sistema Nacional de Vigilancia de la Salud (SNVS) - Argentina
 
 from typing import List, TypedDict
 
-from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy import text
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
-from sqlmodel import delete
+from sqlmodel import col, delete
 
 from app.domains.vigilancia_nominal.models.enfermedad import (
     EnfermedadGrupo,
@@ -415,31 +415,41 @@ def seed_grupos_eno(session: Session) -> int:
 
     from sqlmodel import select
 
-    grupo_hack = session.exec(
-        select(GrupoDeEnfermedades).where(
-            GrupoDeEnfermedades.slug == "vigilancia-epidemiologica"
+    grupo_hack = (
+        session.execute(
+            select(GrupoDeEnfermedades).where(
+                GrupoDeEnfermedades.slug == "vigilancia-epidemiologica"
+            )
         )
-    ).first()
+        .scalars()
+        .first()
+    )
 
     if grupo_hack:
         # Delete references
         session.execute(
-            delete(EnfermedadGrupo).where(EnfermedadGrupo.id_grupo == grupo_hack.id)
+            delete(EnfermedadGrupo).where(
+                col(EnfermedadGrupo.id_grupo) == grupo_hack.id
+            )
         )
         # Delete group
         session.delete(grupo_hack)
         print("  🗑️  Eliminado grupo hack 'vigilancia-epidemiologica'")
-
-
 
     inserted = 0
     updated = 0
 
     for grupo in GRUPOS_ENO:
         # Check if exists for stats
-        existing = session.exec(
-            select(GrupoDeEnfermedades).where(GrupoDeEnfermedades.slug == grupo["codigo"])
-        ).first()
+        existing = (
+            session.execute(
+                select(GrupoDeEnfermedades).where(
+                    GrupoDeEnfermedades.slug == grupo["codigo"]
+                )
+            )
+            .scalars()
+            .first()
+        )
 
         # UPSERT usando ON CONFLICT
         stmt = (
@@ -464,13 +474,13 @@ def seed_grupos_eno(session: Session) -> int:
         session.execute(stmt)
 
         if not existing:
-             inserted += 1
-             ventana_str = (
+            inserted += 1
+            ventana_str = (
                 f"{grupo['ventana_dias_default']} días"
                 if grupo["ventana_dias_default"]
                 else "acumulado"
             )
-             print(f"  ✓ {grupo['codigo']} ({ventana_str})")
+            print(f"  ✓ {grupo['codigo']} ({ventana_str})")
         else:
             updated += 1
 

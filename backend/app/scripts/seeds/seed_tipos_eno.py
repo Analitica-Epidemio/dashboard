@@ -22,9 +22,10 @@ FUENTES DE REFERENCIA:
 
 from typing import List, Optional, TypedDict
 
+from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
-from sqlmodel import delete, select
+from sqlmodel import col, delete, select
 
 from app.domains.vigilancia_nominal.models.enfermedad import (
     Enfermedad,
@@ -1838,7 +1839,7 @@ def seed_tipos_eno(session: Session) -> int:
     # Obtener mapeo de códigos de grupo a IDs
     # Cargar mapa de grupos (slug -> id)
     # SELECT id, slug FROM grupo_de_enfermedades
-    grupos = session.exec(select(GrupoDeEnfermedades)).all()
+    grupos = session.execute(select(GrupoDeEnfermedades)).scalars().all()
     grupo_map = {g.slug: g.id for g in grupos}
 
     print(f"\n📂 Grupos ENO disponibles: {len(grupo_map)}")
@@ -1846,6 +1847,8 @@ def seed_tipos_eno(session: Session) -> int:
     inserted = 0
     updated = 0
     skipped = 0
+    eliminados = 0
+    con_referencias = []
     grupos_faltantes = set()
 
     for tipo in TIPOS_ENO:
@@ -1890,6 +1893,7 @@ def seed_tipos_eno(session: Session) -> int:
         )
 
         row = result.fetchone()
+        assert row is not None  # RETURNING siempre retorna un row
         tipo_id = row[0]
         was_inserted = row[1]
 
@@ -1902,7 +1906,7 @@ def seed_tipos_eno(session: Session) -> int:
         # Crear relaciones con grupos (limpiar existentes primero)
         # DELETE FROM enfermedad_grupo WHERE id_enfermedad = :tipo_id
         session.execute(
-            delete(EnfermedadGrupo).where(EnfermedadGrupo.id_enfermedad == tipo_id)
+            delete(EnfermedadGrupo).where(col(EnfermedadGrupo.id_enfermedad) == tipo_id)
         )
 
         for grupo_codigo in grupos_validos:
@@ -1919,8 +1923,8 @@ def seed_tipos_eno(session: Session) -> int:
     codigos_seed = {t["slug"] for t in TIPOS_ENO}
 
     # Buscar tipos en BD que no están en el seed
-    tipos_bd = session.exec(select(Enfermedad)).all()
-    
+    tipos_bd = session.execute(select(Enfermedad)).scalars().all()
+
     for tipo in tipos_bd:
         if tipo.slug not in codigos_seed:
             # Verificar si tiene referencias (casos, etc) - simplificado: borrar si no es usado
@@ -1928,7 +1932,9 @@ def seed_tipos_eno(session: Session) -> int:
             # pero aquí el script original borraba. Repliquémoslo con cuidado o asumiendo que es safe en dev.
             # DELETE FROM enfermedad_grupo WHERE id_enfermedad = :id
             session.execute(
-                delete(EnfermedadGrupo).where(EnfermedadGrupo.id_enfermedad == tipo.id)
+                delete(EnfermedadGrupo).where(
+                    col(EnfermedadGrupo.id_enfermedad) == tipo.id
+                )
             )
             # DELETE FROM enfermedad WHERE id = :id
             session.delete(tipo)

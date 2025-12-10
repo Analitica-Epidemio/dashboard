@@ -52,10 +52,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
-from sqlalchemy import case, func, text
+from sqlalchemy import case, func
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.engine import Connection
-from sqlmodel import select, update
+from sqlmodel import col, select, update
 
 from app.domains.territorio.establecimientos_models import Establecimiento
 from app.domains.territorio.geografia_models import Departamento, Localidad
@@ -171,15 +171,15 @@ def asignar_localidad_por_coordenadas(
 
     stmt_dept = (
         select(Departamento.id_departamento_indec)
-        .where(Departamento.latitud.between(lat_min, lat_max))
-        .where(Departamento.longitud.between(lng_min, lng_max))
+        .where(col(Departamento.latitud).between(lat_min, lat_max))
+        .where(col(Departamento.longitud).between(lng_min, lng_max))
         .order_by(
-            (Departamento.latitud - lat) * (Departamento.latitud - lat)
-            + (Departamento.longitud - lng) * (Departamento.longitud - lng)
+            (col(Departamento.latitud) - lat) * (col(Departamento.latitud) - lat)  # type: ignore[operator]
+            + (col(Departamento.longitud) - lng) * (col(Departamento.longitud) - lng)  # type: ignore[operator]
         )
         .limit(1)
     )
-    
+
     dept_result = conn.execute(stmt_dept)
 
     dept_row = dept_result.first()
@@ -193,15 +193,15 @@ def asignar_localidad_por_coordenadas(
     stmt_loc = (
         select(Localidad.id_localidad_indec)
         .where(Localidad.id_departamento_indec == id_departamento)
-        .where(Localidad.latitud.is_not(None))
-        .where(Localidad.longitud.is_not(None))
+        .where(col(Localidad.latitud).is_not(None))
+        .where(col(Localidad.longitud).is_not(None))
         .order_by(
-            (Localidad.latitud - lat) * (Localidad.latitud - lat)
-            + (Localidad.longitud - lng) * (Localidad.longitud - lng)
+            (col(Localidad.latitud) - lat) * (col(Localidad.latitud) - lat)  # type: ignore[operator]
+            + (col(Localidad.longitud) - lng) * (col(Localidad.longitud) - lng)  # type: ignore[operator]
         )
         .limit(1)
     )
-    
+
     loc_result = conn.execute(stmt_loc)
     loc_row = loc_result.first()
 
@@ -335,16 +335,18 @@ def seed_refes(conn: Connection) -> int:
         # Usa insert() de SQLAlchemy para bulk
         values_list = []
         for est in batch:
-            values_list.append({
-                "codigo_refes": est["codigo_refes"],
-                "nombre": est["nombre"],
-                "latitud": est["latitud"],
-                "longitud": est["longitud"],
-                "id_localidad_indec": est["id_localidad_indec"],
-                "source": est.get("source"),
-                "created_at": func.current_timestamp(),
-                "updated_at": func.current_timestamp()
-            })
+            values_list.append(
+                {
+                    "codigo_refes": est["codigo_refes"],
+                    "nombre": est["nombre"],
+                    "latitud": est["latitud"],
+                    "longitud": est["longitud"],
+                    "id_localidad_indec": est["id_localidad_indec"],
+                    "source": est.get("source"),
+                    "created_at": func.current_timestamp(),
+                    "updated_at": func.current_timestamp(),
+                }
+            )
 
         stmt = insert(Establecimiento).values(values_list)
 
@@ -424,26 +426,27 @@ def cargar_mapping_snvs(conn: Connection) -> int:
         )
 
         # Construir expresión CASE
-        
+
         # Primero, necesitamos una lista de tuplas para el case
-        # case_parts ya contiene strings "WHEN ... THEN ...", 
+        # case_parts ya contiene strings "WHEN ... THEN ...",
         # pero para SQLAlchemy ORM usamos case() expression object.
-        
-        case_map = {ign_data["codigo_refes"]: codigo_snvs for codigo_snvs, ign_data in batch if ign_data.get("codigo_refes")}
+
+        case_map = {
+            ign_data["codigo_refes"]: codigo_snvs
+            for codigo_snvs, ign_data in batch
+            if ign_data.get("codigo_refes")
+        }
 
         if not case_map:
-             print("⏭️  (sin mappings válidos)")
-             continue
+            print("⏭️  (sin mappings válidos)")
+            continue
 
         stmt = (
             update(Establecimiento)
-            .where(Establecimiento.codigo_refes.in_(case_map.keys()))
+            .where(col(Establecimiento.codigo_refes).in_(case_map.keys()))
             .values(
-                codigo_snvs=case(
-                    case_map,
-                    value=Establecimiento.codigo_refes
-                ),
-                updated_at=func.current_timestamp()
+                codigo_snvs=case(case_map, value=Establecimiento.codigo_refes),
+                updated_at=func.current_timestamp(),
             )
         )
 

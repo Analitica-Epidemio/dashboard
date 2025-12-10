@@ -1,6 +1,17 @@
 """
 Servicio centralizado para queries de boletines epidemiológicos.
 Todas las queries retornan datos estructurados listos para renderizar.
+
+Este servicio integra:
+- Datos nominales (CasoEpidemiologico) para ENOs y comparaciones
+- Datos agregados (CLI_P26, LAB_P26, CLI_P26_INT) via MetricService para:
+  - Corredores endémicos de eventos respiratorios/diarreas
+  - Distribución de agentes etiológicos
+  - Ocupación hospitalaria
+
+Los catálogos se obtienen dinámicamente de la base de datos:
+- TipoCasoEpidemiologicoPasivo: eventos clínicos con campo 'slug' (eti, neumonia, etc.)
+- AgenteEtiologico: agentes con campo 'grupo' (respiratorio, enterico)
 """
 
 import logging

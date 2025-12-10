@@ -55,16 +55,15 @@ import os
 import sys
 from pathlib import Path
 
+from dotenv import load_dotenv
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import Session
+
 # Agregar el directorio raíz al path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
 # Cargar variables de entorno desde .env
-from dotenv import load_dotenv
-
 load_dotenv()
-
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import Session
 
 
 def truncate_tables():
@@ -290,6 +289,30 @@ def main():
 
             traceback.print_exc()
 
+        # Paso 4.7: Agrupaciones de Agentes (para charts agrupados)
+        print("\n" + "=" * 70)
+        print("PASO 4.7/10: AGRUPACIONES DE AGENTES")
+        print("=" * 70)
+        try:
+            from app.domains.catalogos.agentes.seed_agrupaciones import (
+                seed_agrupaciones,
+            )
+
+            with Session(engine) as session:
+                stats = seed_agrupaciones(session)  # type: ignore[arg-type]
+                print(f"✅ Agrupaciones creadas: {stats['agrupaciones_creadas']}")
+                print(f"   Actualizadas: {stats['agrupaciones_actualizadas']}")
+                print(f"   Agentes vinculados: {stats['agentes_vinculados']}")
+                if stats["agentes_no_encontrados"]:
+                    print(
+                        f"   ⚠️ Agentes no encontrados: {len(stats['agentes_no_encontrados'])}"
+                    )
+        except Exception as e:
+            print(f"⚠️  Error cargando agrupaciones: {e}")
+            import traceback
+
+            traceback.print_exc()
+
         # Paso 5: Estrategias
         print("\n" + "=" * 70)
         print("PASO 5/10: ESTRATEGIAS")
@@ -370,7 +393,9 @@ def main():
 
                 traceback.print_exc()
         else:
-            print("  ⏭️  Superadmin de desarrollo omitido (usar 'make superadmin' para crear uno seguro)")
+            print(
+                "  ⏭️  Superadmin de desarrollo omitido (usar 'make superadmin' para crear uno seguro)"
+            )
 
         # Resumen
         print("\n" + "=" * 70)

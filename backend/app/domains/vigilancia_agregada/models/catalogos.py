@@ -39,6 +39,7 @@ class TipoCasoEpidemiologicoPasivo(BaseModel, table=True):
     compartido AgenteEtiologico de app.domains.catalogos.agentes.
 
     Attributes:
+        slug: Identificador único kebab-case para URLs y templates (ej: 'eti')
         id_snvs: ID único del evento en el sistema SNVS
         nombre: Nombre descriptivo del evento
         grupo_nombre: Nombre del grupo al que pertenece (opcional)
@@ -47,13 +48,21 @@ class TipoCasoEpidemiologicoPasivo(BaseModel, table=True):
 
     __tablename__ = "tipo_evento_pasivo"
     __table_args__ = (
+        Index("ix_tipo_evento_pasivo_slug", "slug"),
         Index("ix_tipo_evento_pasivo_snvs", "id_snvs"),
         Index("ix_tipo_evento_pasivo_origen", "origen"),
     )
 
     # ═══════════════════════════════════════════════════════════════
-    # Identificación SNVS
+    # Identificación
     # ═══════════════════════════════════════════════════════════════
+
+    slug: str = Field(
+        max_length=100,
+        unique=True,
+        index=True,
+        description="Identificador único kebab-case para URLs y templates (ej: 'eti', 'neumonia')",
+    )
 
     id_snvs: int = Field(
         ...,

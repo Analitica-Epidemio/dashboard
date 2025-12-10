@@ -1,10 +1,9 @@
 "use client";
 
 import React from "react";
-import { User, FileText, Activity, AlertCircle, Calendar, MapPin } from "lucide-react";
+import { User, FileText, Activity, Calendar, MapPin } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import type { PersonaListItem } from "@/features/personas/api";
 
 interface PersonSummaryCardProps {

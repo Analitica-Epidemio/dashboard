@@ -22,7 +22,7 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-from sqlmodel import select, update
+from sqlmodel import col, select, update
 
 from app.domains.territorio.geografia_models import Departamento, Provincia
 
@@ -161,12 +161,12 @@ def seed_poblacion_provincias(session: Session, archivo_path: Path) -> None:
         # Actualizar provincia
         stmt = (
             update(Provincia)
-            .where(Provincia.id_provincia_indec == codigo_indec)
+            .where(col(Provincia.id_provincia_indec) == codigo_indec)
             .values(poblacion=poblacion_total)
         )
         result = session.execute(stmt)
 
-        if result.rowcount > 0:
+        if result.rowcount > 0:  # type: ignore[union-attr]
             updated_count += 1
             print(f"✅ {jurisdiccion}: {poblacion_total:,} habitantes")
         else:
@@ -219,7 +219,9 @@ def seed_poblacion_departamentos(session: Session, archivo_path: Path) -> None:
             df = pd.read_excel(archivo_path, sheet_name=cuadro, header=2)
 
             # Obtener nombre de provincia
-            stmt_prov = select(Provincia.nombre).where(Provincia.id_provincia_indec == id_provincia_indec)
+            stmt_prov = select(Provincia.nombre).where(
+                Provincia.id_provincia_indec == id_provincia_indec
+            )
             result_prov = session.execute(stmt_prov).first()
 
             if not result_prov:
@@ -230,9 +232,12 @@ def seed_poblacion_departamentos(session: Session, archivo_path: Path) -> None:
 
             # Pre-cargar departamentos de la provincia para normalizar en Python
             # Esto evita la query compleja con REPLACE múltiples en SQL
-            deptos_bd = session.exec(
-                select(Departamento).where(Departamento.id_provincia_indec == id_provincia_indec)
-            ).all()
+            deptos_result = session.execute(
+                select(Departamento).where(
+                    Departamento.id_provincia_indec == id_provincia_indec
+                )
+            )
+            deptos_bd = deptos_result.scalars().all()
 
             # Mapa: nombre_normalizado -> id_departamento
             depto_map = {normalizar_nombre(d.nombre): d.id for d in deptos_bd}
@@ -279,7 +284,7 @@ def seed_poblacion_departamentos(session: Session, archivo_path: Path) -> None:
                     # UPDATE usando ID
                     stmt_update = (
                         update(Departamento)
-                        .where(Departamento.id == id_depto)
+                        .where(col(Departamento.id) == id_depto)
                         .values(poblacion=poblacion)
                     )
                     session.execute(stmt_update)

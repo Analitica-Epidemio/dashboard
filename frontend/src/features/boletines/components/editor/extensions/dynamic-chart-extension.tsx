@@ -4,7 +4,6 @@ import { BarChart3, Loader2, AlertCircle } from "lucide-react";
 import { UniversalChart } from "@/components/charts/universal-chart";
 import { $api } from "@/lib/api/client";
 import type { DynamicChartAttrs } from '../tiptap';
-import type { components } from "@/lib/api/types";
 
 import type { UniversalChartSpec } from "@/lib/types/chart-spec";
 

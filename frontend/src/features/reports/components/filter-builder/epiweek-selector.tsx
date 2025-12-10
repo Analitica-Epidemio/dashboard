@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getEpiWeek, epiWeekToDates } from './epiweek-utils'; // Asegurate de tener esta función
+import { getEpiWeek } from './epiweek-utils'; // Asegurate de tener esta función
 import { ChevronRight, ChevronLeft, ChevronFirst, ChevronLast } from 'lucide-react';
 
 function getCalendarWeeks(year: number, month: number) {

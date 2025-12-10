@@ -1,16 +1,16 @@
 import {
-  IconDashboard,
   IconListDetails,
   IconFileUpload,
   IconSettings,
-  IconUsers,
-  IconMap,
   IconFileText,
-  IconHome,
   IconTrendingUp,
   IconBuildingHospital,
   IconBook,
   IconDatabase,
+  IconStethoscope,
+  IconFlask,
+  IconClipboardList,
+  IconActivity,
 } from "@tabler/icons-react";
 
 export interface NavItem {
@@ -38,6 +38,48 @@ export const navigationConfig = {
   },
 
   navMain: [
+    // SECCIÓN: VIGILANCIA (Nueva sección principal)
+    {
+      id: "header-vigilancia",
+      title: "Vigilancia",
+      type: "header",
+    },
+    {
+      id: "dashboard-ejecutivo",
+      title: "Dashboard",
+      icon: IconActivity,
+      url: "/dashboard",
+      type: "link",
+    },
+    {
+      id: "vigilancia-clinica",
+      title: "Clínica",
+      icon: IconStethoscope,
+      url: "/vigilancia/clinica",
+      type: "link",
+    },
+    {
+      id: "vigilancia-laboratorio",
+      title: "Laboratorio",
+      icon: IconFlask,
+      url: "/vigilancia/laboratorio",
+      type: "link",
+    },
+    {
+      id: "vigilancia-nominal",
+      title: "Nominal",
+      icon: IconClipboardList,
+      url: "/vigilancia/nominal",
+      type: "link",
+    },
+    {
+      id: "vigilancia-hospitalaria",
+      title: "Hospitalaria",
+      icon: IconBuildingHospital,
+      url: "/vigilancia/hospitalaria",
+      type: "link",
+    },
+
     // SECCIÓN: DATOS
     {
       id: "header-datos",
@@ -45,52 +87,10 @@ export const navigationConfig = {
       type: "header",
     },
     {
-      id: "dashboard",
-      title: "Resumen",
-      icon: IconDashboard,
-      url: "/dashboard",
-      type: "link",
-    },
-    {
       id: "eventos",
       title: "Eventos",
       icon: IconListDetails,
       url: "/dashboard/eventos",
-      type: "link",
-    },
-    {
-      id: "personas",
-      title: "Personas",
-      icon: IconUsers,
-      url: "/dashboard/personas",
-      type: "link",
-    },
-    {
-      id: "establecimientos",
-      title: "Establecimientos",
-      icon: IconBuildingHospital,
-      url: "/dashboard/establecimientos",
-      type: "link",
-    },
-    {
-      id: "domicilios",
-      title: "Domicilios",
-      icon: IconHome,
-      url: "/dashboard/domicilios",
-      type: "link",
-    },
-
-    // SECCIÓN: ANÁLISIS
-    {
-      id: "header-analisis",
-      title: "Análisis",
-      type: "header",
-    },
-    {
-      id: "mapa",
-      title: "Mapa",
-      icon: IconMap,
-      url: "/dashboard/mapa",
       type: "link",
     },
     {

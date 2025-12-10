@@ -124,10 +124,6 @@ const VARIABLE_META: Record<string, {
   },
 };
 
-interface VariableNodeAttributes {
-  variableKey: string;
-}
-
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
     variableNode: {

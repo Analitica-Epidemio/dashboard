@@ -2,7 +2,6 @@
 
 import { Node, mergeAttributes } from "@tiptap/core";
 import { ReactNodeViewRenderer, NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
-import type { VariableAttrs } from '../tiptap';
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -196,7 +195,7 @@ export const VariableExtension = Node.create({
   addCommands() {
     return {
       insertVariable:
-        (variableKey: string, _variableLabel?: string, _variableEmoji?: string, _variableType?: 'basic' | 'stat' | 'chart') =>
+        (variableKey: string) =>
         ({ commands }) => {
           return commands.insertContent({
             type: this.name,
@@ -212,10 +211,7 @@ export const VariableExtension = Node.create({
 // Helper para insertar una variable
 export const insertVariable = (
   editor: import("@tiptap/react").Editor,
-  variableKey: string,
-  _variableLabel: string,
-  _variableEmoji: string = "📊",
-  _variableType: "basic" | "stat" | "chart" = "basic"
+  variableKey: string
 ) => {
   editor
     .chain()

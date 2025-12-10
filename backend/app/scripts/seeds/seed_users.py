@@ -45,7 +45,9 @@ def seed_superadmin(session: Session, force: bool = False) -> None:
         print("\n   Solo usar en desarrollo local. En producción usar: make superadmin")
 
         try:
-            respuesta = input("\n¿Crear superadmin de desarrollo? [y/N]: ").strip().lower()
+            respuesta = (
+                input("\n¿Crear superadmin de desarrollo? [y/N]: ").strip().lower()
+            )
             if respuesta not in ["y", "yes", "si", "sí"]:
                 print("  ⏭️  Omitido. Usar 'make superadmin' para crear uno seguro.")
                 return

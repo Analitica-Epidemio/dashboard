@@ -24,7 +24,10 @@ from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAuthOrSignedUrl
 from app.domains.autenticacion.models import User
-from app.domains.boletines.models import BoletinInstance, BoletinTemplateConfig
+from app.domains.boletines.models import (
+    BoletinInstance,
+    BoletinSeccion,
+)
 from app.domains.boletines.services.block_renderer import BoletinBlockRenderer
 from app.domains.boletines.services.query import BoletinQueryService
 
@@ -64,29 +67,20 @@ async def generate_draft(
     )
 
     try:
-        # 1. Cargar configuración del template
-        config = await get_template_config(db)
-        if not config:
-            raise HTTPException(
-                status_code=500,
-                detail="No se encontró configuración de template. Ejecute el seed primero.",
-            )
+        # 1. Cargar secciones y bloques activos desde DB
+        secciones = await get_secciones_activas(db)
+        if not secciones:
+            logger.warning("No hay secciones configuradas, generando boletín básico")
 
         # 2. Construir contexto Jinja2
         context = build_context(request)
 
-        # 3. Procesar template unificado
-        static_template = config.static_content_template or {
-            "type": "doc",
-            "content": [],
-        }
-        event_template = config.event_section_template or None
-        final_content, validation_warnings = await process_unified_template(
+        # 3. Generar contenido desde secciones y bloques
+        final_content, validation_warnings = await generate_content_from_secciones(
             db=db,
-            template=static_template,
+            secciones=secciones,
             request=request,
             context=context,
-            event_template=event_template,
         )
 
         # 7. Guardar instancia
@@ -876,19 +870,531 @@ def replace_template_variables_in_node(
     return processed
 
 
-async def get_template_config(db: AsyncSession) -> Optional[BoletinTemplateConfig]:
+async def get_secciones_activas(db: AsyncSession) -> list[BoletinSeccion]:
     """
-    Obtiene la configuración del template (singleton, id=1).
+    Obtiene las secciones activas con sus bloques ordenados.
 
     Args:
         db: Sesión de base de datos
 
     Returns:
-        BoletinTemplateConfig o None si no existe
+        Lista de BoletinSeccion con bloques cargados
     """
-    stmt = select(BoletinTemplateConfig).where(col(BoletinTemplateConfig.id) == 1)
+    from sqlalchemy.orm import selectinload
+
+    stmt = (
+        select(BoletinSeccion)
+        .where(col(BoletinSeccion.activo).is_(True))
+        .options(selectinload(BoletinSeccion.bloques))  # type: ignore[arg-type]
+        .order_by(col(BoletinSeccion.orden))
+    )
     result = await db.execute(stmt)
-    return result.scalar_one_or_none()
+    return list(result.scalars().all())
+
+
+async def generate_content_from_secciones(
+    db: AsyncSession,
+    secciones: list[BoletinSeccion],
+    request: "GenerateDraftRequest",
+    context: dict[str, Any],
+) -> tuple[dict[str, Any], list[str]]:
+    """
+    Genera contenido TipTap desde las secciones y bloques configurados.
+
+    Args:
+        db: Sesión de base de datos
+        secciones: Lista de secciones activas con bloques
+        request: Parámetros de generación
+        context: Contexto con variables Jinja2
+
+    Returns:
+        Tuple de (TipTap JSON document, warnings)
+    """
+    from sqlalchemy.orm import Session as SyncSession
+
+    from app.domains.boletines.services.adapter import (
+        BloqueQueryAdapter,
+        BoletinContexto,
+    )
+
+    warnings: list[str] = []
+    content_nodes: list[dict[str, Any]] = []
+
+    # Título del boletín
+    titulo = (
+        request.titulo_custom
+        or f"Boletín Epidemiológico SE {request.semana}/{request.anio}"
+    )
+    content_nodes.append(
+        {
+            "type": "heading",
+            "attrs": {"level": 1},
+            "content": [{"type": "text", "text": titulo}],
+        }
+    )
+
+    # Subtítulo con período
+    content_nodes.append(
+        {
+            "type": "paragraph",
+            "content": [
+                {
+                    "type": "text",
+                    "text": f"Período: SE {context['semana_inicio']}-{context['semana']}/{context['anio']} "
+                    f"({context['fecha_inicio']} al {context['fecha_fin']})",
+                }
+            ],
+        }
+    )
+
+    # Espacio
+    content_nodes.append({"type": "paragraph", "content": []})
+
+    # Si no hay secciones, generar contenido básico
+    if not secciones:
+        content_nodes.append(
+            {
+                "type": "paragraph",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "No hay secciones configuradas. Configure las secciones en la base de datos.",
+                    }
+                ],
+            }
+        )
+        warnings.append("No hay secciones configuradas")
+        return {"type": "doc", "content": content_nodes}, warnings
+
+    # Crear sesión síncrona con engine separado
+    # No podemos usar el bind de la async session porque causa errores de greenlet
+    import os
+
+    from sqlalchemy import create_engine
+
+    DATABASE_URL = os.getenv(
+        "DATABASE_URL",
+        "postgresql://epidemiologia_user:epidemiologia_password@localhost:5433/epidemiologia_db",
+    )
+    # Asegurar que usamos driver síncrono
+    if "postgresql+asyncpg" in DATABASE_URL:
+        DATABASE_URL = DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://")
+
+    sync_engine = create_engine(DATABASE_URL)
+    sync_session = SyncSession(bind=sync_engine)
+
+    try:
+        adapter = BloqueQueryAdapter(sync_session)
+        bloque_contexto = BoletinContexto(
+            semana_actual=context["semana"],
+            anio_actual=context["anio"],
+            num_semanas=context["num_semanas"],
+        )
+
+        for seccion in secciones:
+            logger.info(f"📄 Procesando sección: {seccion.titulo}")
+
+            # Título de sección
+            content_nodes.append(
+                {
+                    "type": "heading",
+                    "attrs": {"level": 2},
+                    "content": [{"type": "text", "text": seccion.titulo}],
+                }
+            )
+
+            # Contenido introductorio si existe
+            if seccion.contenido_intro:
+                intro_content = seccion.contenido_intro.get("content", [])
+                content_nodes.extend(intro_content)
+
+            # Procesar bloques activos de la sección
+            bloques_activos = [b for b in seccion.bloques if b.activo]
+
+            if not bloques_activos:
+                content_nodes.append(
+                    {
+                        "type": "paragraph",
+                        "content": [
+                            {
+                                "type": "text",
+                                "marks": [{"type": "italic"}],
+                                "text": "Sin bloques configurados para esta sección.",
+                            }
+                        ],
+                    }
+                )
+                continue
+
+            for bloque in bloques_activos:
+                try:
+                    logger.info(f"  📊 Procesando bloque: {bloque.slug}")
+
+                    # Ejecutar el bloque usando el adapter (síncrono)
+                    resultado = adapter.ejecutar_bloque(
+                        bloque=bloque,
+                        contexto=bloque_contexto,
+                    )
+
+                    # Agregar título del bloque
+                    content_nodes.append(
+                        {
+                            "type": "heading",
+                            "attrs": {"level": 3},
+                            "content": [{"type": "text", "text": resultado.titulo}],
+                        }
+                    )
+
+                    # Agregar contenido del bloque según tipo de visualización
+                    if resultado.series and len(resultado.series) > 0:
+                        # Renderizar datos como tabla simple por ahora
+                        content_nodes.extend(_render_resultado_como_tiptap(resultado))
+                    else:
+                        content_nodes.append(
+                            {
+                                "type": "paragraph",
+                                "content": [
+                                    {
+                                        "type": "text",
+                                        "marks": [{"type": "italic"}],
+                                        "text": "Sin datos disponibles para este bloque.",
+                                    }
+                                ],
+                            }
+                        )
+
+                    # Espacio después del bloque
+                    content_nodes.append({"type": "paragraph", "content": []})
+
+                except Exception as e:
+                    logger.error(
+                        f"  ❌ Error en bloque {bloque.slug}: {e}", exc_info=True
+                    )
+                    warnings.append(f"Error en bloque {bloque.slug}: {str(e)}")
+                    content_nodes.append(
+                        {
+                            "type": "paragraph",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": f"⚠️ Error procesando bloque: {str(e)}",
+                                }
+                            ],
+                        }
+                    )
+
+            # Espacio después de la sección
+            content_nodes.append({"type": "paragraph", "content": []})
+
+    finally:
+        sync_session.close()
+        sync_engine.dispose()
+
+    logger.info(f"✓ Contenido generado: {len(content_nodes)} nodos")
+    return {"type": "doc", "content": content_nodes}, warnings
+
+
+def _render_resultado_como_tiptap(resultado: Any) -> list[dict[str, Any]]:
+    """
+    Renderiza un BloqueResultado como nodos TipTap.
+
+    Genera charts (dynamicChart) o tablas según tipo_visualizacion:
+    - area_chart, stacked_bar, grouped_bar, line_chart -> dynamicChart
+    - table -> tabla TipTap nativa
+    """
+    from app.domains.boletines.services.adapter import BloqueResultado
+
+    if not isinstance(resultado, BloqueResultado):
+        return []
+
+    tipo_viz = resultado.tipo_visualizacion
+
+    # Tipos de visualización que son charts (uppercase)
+    chart_types = {"AREA_CHART", "STACKED_BAR", "GROUPED_BAR", "LINE_CHART"}
+
+    if tipo_viz in chart_types:
+        # Renderizar como dynamicChart
+        return _render_chart_resultado(resultado)
+    else:
+        # Renderizar como tabla
+        return _render_table_resultado(resultado)
+
+
+def _render_chart_resultado(resultado: Any) -> list[dict[str, Any]]:
+    """
+    Renderiza un BloqueResultado como nodo dynamicChart con UniversalChartSpec embebido.
+
+    El frontend espera un spec en formato UniversalChartSpec:
+    {
+        id: string,
+        title: string,
+        type: 'line' | 'bar' | 'area' | 'pie',
+        data: { type: 'bar', data: { labels: string[], datasets: Dataset[] } },
+        config: { type: 'bar', config: BarChartConfig }
+    }
+    """
+    from app.domains.boletines.services.adapter import BloqueResultado
+
+    if not isinstance(resultado, BloqueResultado):
+        return []
+
+    logger.info(f"     🎨 Renderizando chart: {resultado.slug}")
+    logger.info(f"        tipo_visualizacion: {resultado.tipo_visualizacion}")
+    logger.info(f"        series: {len(resultado.series)}")
+    for i, serie in enumerate(resultado.series):
+        data_count = len(serie.get("data", []))
+        logger.info(f"        Serie {i}: '{serie.get('serie')}' - {data_count} filas")
+        if "error" in serie:
+            logger.warning(f"        Serie {i} tiene error: {serie['error']}")
+
+    nodes: list[dict[str, Any]] = []
+
+    # Mapear tipo_visualizacion a ChartType del frontend (uppercase enum values)
+    chart_type_map = {
+        "AREA_CHART": "area",
+        "STACKED_BAR": "bar",
+        "GROUPED_BAR": "bar",
+        "LINE_CHART": "line",
+    }
+
+    chart_type = chart_type_map.get(resultado.tipo_visualizacion, "bar")
+
+    # Obtener la dimensión principal (eje X) de los metadata
+    x_dimension = None
+    if resultado.metadata.get("dimensiones"):
+        dims = resultado.metadata["dimensiones"]
+        if dims:
+            x_dim = dims[0]
+            x_dimension_map = {
+                "SEMANA_EPIDEMIOLOGICA": "semana_epidemiologica",
+                "GRUPO_ETARIO": "grupo_etario",
+                "TIPO_EVENTO": "tipo_evento",
+                "PROVINCIA": "provincia",
+                "AGENTE_ETIOLOGICO": "agente_etiologico",
+            }
+            x_dimension = x_dimension_map.get(x_dim, x_dim.lower())
+
+    # Recopilar todos los valores únicos del eje X (labels)
+    all_x_values: list[Any] = []
+    for serie in resultado.series:
+        if "error" in serie:
+            continue
+        data = serie.get("data", [])
+        for row in data:
+            x_val = (
+                row.get(x_dimension)
+                if x_dimension
+                else row.get("semana_epidemiologica")
+            )
+            if x_val is not None and x_val not in all_x_values:
+                all_x_values.append(x_val)
+
+    # Ordenar valores del eje X
+    try:
+        all_x_values.sort(
+            key=lambda v: int(v)
+            if isinstance(v, (int, str)) and str(v).isdigit()
+            else 0
+        )
+    except (ValueError, TypeError):
+        pass
+
+    # Crear labels para el eje X
+    labels = []
+    for x_val in all_x_values:
+        if x_dimension == "semana_epidemiologica":
+            labels.append(f"SE {x_val}")
+        else:
+            labels.append(str(x_val))
+
+    # Crear datasets (una por cada serie)
+    datasets = []
+    for serie in resultado.series:
+        if "error" in serie:
+            continue
+
+        data = serie.get("data", [])
+        if not data:
+            continue
+
+        serie_label = serie.get("serie", serie.get("slug", "Serie"))
+        serie_color = serie.get("color", "#4CAF50")
+
+        # Mapear datos de la serie a la posición correcta en el array
+        data_map = {}
+        for row in data:
+            x_val = (
+                row.get(x_dimension)
+                if x_dimension
+                else row.get("semana_epidemiologica")
+            )
+            if x_val is not None:
+                data_map[x_val] = row.get("valor", 0)
+
+        # Crear array de datos alineado con labels
+        data_array = [data_map.get(x_val, 0) for x_val in all_x_values]
+
+        datasets.append(
+            {
+                "label": serie_label,
+                "data": data_array,
+                "color": serie_color,
+            }
+        )
+
+    # Construir UniversalChartSpec
+    spec = {
+        "id": resultado.slug,
+        "title": resultado.titulo,
+        "type": chart_type,
+        "data": {
+            "type": chart_type,
+            "data": {
+                "labels": labels,
+                "datasets": datasets,
+            },
+        },
+        "config": {
+            "type": chart_type,
+            "config": {
+                "height": resultado.config_visual.get("height", 350),
+                "showLegend": len(datasets) > 1,
+                "showGrid": True,
+                "stacked": resultado.tipo_visualizacion == "STACKED_BAR",
+            },
+        },
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    # Crear nodo dynamicChart con spec embebido
+    chart_node = {
+        "type": "dynamicChart",
+        "attrs": {
+            "chartCode": resultado.slug,
+            "title": resultado.titulo,
+            "height": resultado.config_visual.get("height", 350),
+            "spec": spec,
+        },
+    }
+
+    nodes.append(chart_node)
+
+    # Espacio después del chart
+    nodes.append({"type": "paragraph", "content": []})
+
+    return nodes
+
+
+def _render_table_resultado(resultado: Any) -> list[dict[str, Any]]:
+    """
+    Renderiza un BloqueResultado como tabla TipTap nativa.
+    """
+    from app.domains.boletines.services.adapter import BloqueResultado
+
+    if not isinstance(resultado, BloqueResultado):
+        return []
+
+    nodes: list[dict[str, Any]] = []
+
+    for serie in resultado.series:
+        # Si hay error en la serie, mostrar mensaje
+        if "error" in serie:
+            nodes.append(
+                {
+                    "type": "paragraph",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": f"⚠️ Error en {serie['serie']}: {serie['error']}",
+                        }
+                    ],
+                }
+            )
+            continue
+
+        data = serie.get("data", [])
+        if not data:
+            continue
+
+        # Agregar nombre de la serie si hay más de una
+        if len(resultado.series) > 1:
+            nodes.append(
+                {
+                    "type": "paragraph",
+                    "content": [
+                        {
+                            "type": "text",
+                            "marks": [{"type": "bold"}],
+                            "text": f"{serie['serie']}:",
+                        }
+                    ],
+                }
+            )
+
+        # Crear tabla TipTap con los datos
+        if isinstance(data, list) and len(data) > 0:
+            # Obtener columnas del primer registro
+            first_row = data[0]
+            if isinstance(first_row, dict):
+                columns = list(first_row.keys())
+
+                # Header row
+                header_cells = [
+                    {
+                        "type": "tableHeader",
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "content": [{"type": "text", "text": str(col)}],
+                            }
+                        ],
+                    }
+                    for col in columns
+                ]
+
+                # Data rows
+                data_rows = []
+                for row in data[:20]:  # Limitar a 20 filas
+                    cells = [
+                        {
+                            "type": "tableCell",
+                            "content": [
+                                {
+                                    "type": "paragraph",
+                                    "content": [
+                                        {"type": "text", "text": str(row.get(col, ""))}
+                                    ],
+                                }
+                            ],
+                        }
+                        for col in columns
+                    ]
+                    data_rows.append({"type": "tableRow", "content": cells})
+
+                table_node = {
+                    "type": "table",
+                    "content": [
+                        {"type": "tableRow", "content": header_cells},
+                        *data_rows,
+                    ],
+                }
+                nodes.append(table_node)
+
+                if len(data) > 20:
+                    nodes.append(
+                        {
+                            "type": "paragraph",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "marks": [{"type": "italic"}],
+                                    "text": f"... y {len(data) - 20} filas más",
+                                }
+                            ],
+                        }
+                    )
+
+    return nodes
 
 
 def build_context(request: GenerateDraftRequest) -> dict[str, Any]:

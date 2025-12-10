@@ -140,7 +140,7 @@ def setup_standard_middleware(app: FastAPI) -> None:
     if settings.ENVIRONMENT == "development":
         # En desarrollo, permitir cualquier origen localhost
         app.add_middleware(
-            CORSMiddleware,
+            CORSMiddleware,  # type: ignore[arg-type]
             allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
             allow_credentials=True,
             allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
@@ -151,7 +151,7 @@ def setup_standard_middleware(app: FastAPI) -> None:
         )
     elif settings.BACKEND_CORS_ORIGINS:
         app.add_middleware(
-            CORSMiddleware,
+            CORSMiddleware,  # type: ignore[arg-type]
             allow_origins=settings.BACKEND_CORS_ORIGINS,
             allow_credentials=True,
             allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
@@ -163,7 +163,7 @@ def setup_standard_middleware(app: FastAPI) -> None:
         allowed_hosts_list = [
             host.strip() for host in settings.ALLOWED_HOSTS.split(",")
         ]
-        app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts_list)
+        app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts_list)  # type: ignore[arg-type]
 
     # Middleware personalizado para logging de requests
     @app.middleware("http")

@@ -13,12 +13,18 @@ Ejemplos de agentes:
 - Parásitos: Giardia, Cryptosporidium, Toxoplasma
 """
 
-from typing import Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import Column, Index, Text
-from sqlmodel import Field
+from sqlmodel import Field, Relationship
 
 from app.core.models import BaseModel
+
+if TYPE_CHECKING:
+    from .agrupacion import AgrupacionAgentes
+
+# Import link model for Relationship (must be actual class, not string)
+from .agrupacion import AgrupacionAgenteLink
 
 
 class CategoriaAgente:
@@ -122,4 +128,10 @@ class AgenteEtiologico(BaseModel, table=True):
         default=True,
         index=True,
         description="Si el agente está activo para uso en el sistema",
+    )
+
+    # Relación con agrupaciones (many-to-many)
+    agrupaciones: List["AgrupacionAgentes"] = Relationship(
+        back_populates="agentes",
+        link_model=AgrupacionAgenteLink,
     )

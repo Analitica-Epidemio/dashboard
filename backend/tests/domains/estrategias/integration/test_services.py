@@ -9,8 +9,6 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pandas as pd
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.domains.eventos_epidemiologicos.clasificacion.models import (
     ClassificationRule,
     EventStrategy,
@@ -21,6 +19,8 @@ from app.domains.eventos_epidemiologicos.clasificacion.models import (
 from app.domains.eventos_epidemiologicos.clasificacion.services import (
     EventClassificationService,
 )
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from tests.domains.estrategias.fixtures.csv_samples import RABIA_SAMPLES
 
 

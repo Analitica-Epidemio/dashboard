@@ -32,11 +32,13 @@ export default function ModernUploadPage() {
 
   const [selectedSheet, setSelectedSheet] = useState<string | null>(null);
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
-  const [jobFailed, setJobFailed] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState<{
     sheetName: string;
     totalRows: number;
   } | null>(null);
+
+  // Nuevo estado para overrides manuales
+  const [overriddenTypes, setOverriddenTypes] = useState<Record<string, string>>({});
 
   // Handle file selection
   const handleFileSelected = useCallback(
@@ -61,14 +63,37 @@ export default function ModernUploadPage() {
     [uploadForPreview]
   );
 
+  // Handle type override
+  const handleTypeChange = useCallback((sheetName: string, newType: string) => {
+    setOverriddenTypes(prev => ({
+      ...prev,
+      [sheetName]: newType
+    }));
+  }, []);
+
   // Handle processing
   const handleProcess = useCallback(async () => {
     if (!previewData || !selectedSheet) return;
+
+    const selectedSheetData = previewData.sheets.find(s => s.name === selectedSheet);
+
+    const override = overriddenTypes[selectedSheet];
+    const detected = selectedSheetData?.detected_type;
+
+    if (!detected && !override) {
+      console.error("No detected_type for selected sheet");
+      return;
+    }
+
+    // Usar el tipo manual si existe, sino el detectado. 
+    // Typescript sabe que uno de los dos existe por el check anterior.
+    const effectiveType = override || detected!;
 
     try {
       const result = await processSheet({
         upload_id: previewData.upload_id,
         sheet_name: selectedSheet,
+        file_type: effectiveType,
       });
 
       // Iniciar job con el ID real
@@ -78,7 +103,7 @@ export default function ModernUploadPage() {
       console.error("Error processing sheet:", error);
       setCurrentJobId(null);
     }
-  }, [previewData, selectedSheet, processSheet, startPolling]);
+  }, [previewData, selectedSheet, processSheet, startPolling, overriddenTypes]);
 
   // Handle job completion
   const handleJobComplete = useCallback(
@@ -89,7 +114,6 @@ export default function ModernUploadPage() {
           totalRows: resultData.total_rows,
         });
       }
-      setJobFailed(false);
       setCurrentJobId(null);
     },
     [selectedSheet]
@@ -100,11 +124,9 @@ export default function ModernUploadPage() {
     console.error("Job error:", error);
     // Si es "retry", volver a intentar con el mismo archivo
     if (error === "retry") {
-      setJobFailed(false);
       setCurrentJobId(null);
       return;
     }
-    setJobFailed(true);
     // NO limpiar currentJobId - dejar que UploadProgress muestre el error
   }, []);
 
@@ -113,18 +135,18 @@ export default function ModernUploadPage() {
     reset();
     setSelectedSheet(null);
     setCurrentJobId(null);
-    setJobFailed(false);
     setUploadSuccess(null);
+    setOverriddenTypes({});
   }, [reset]);
 
   // Determine current view
   const currentView = uploadSuccess
     ? "success"
     : currentJobId
-    ? "processing"
-    : previewData
-    ? "preview"
-    : "upload";
+      ? "processing"
+      : previewData
+        ? "preview"
+        : "upload";
 
   return (
     <SidebarProvider
@@ -206,6 +228,8 @@ export default function ModernUploadPage() {
                   isProcessing={isProcessing}
                   filename={previewData.filename}
                   fileSize={previewData.file_size}
+                  overriddenTypes={overriddenTypes}
+                  onTypeChange={handleTypeChange}
                 />
               )}
 

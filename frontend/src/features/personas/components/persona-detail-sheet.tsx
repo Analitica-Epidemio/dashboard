@@ -18,7 +18,6 @@ import {
   TestTube,
   Syringe,
   AlertCircle,
-  ChevronRight,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { getClasificacionColorClasses, getClasificacionLabel } from "@/features/eventos/api";
@@ -32,7 +31,6 @@ interface PersonaDetailSheetProps {
 export function PersonaDetailSheet({
   tipoSujeto,
   personaId,
-  onClose,
 }: PersonaDetailSheetProps) {
   const [activeTab, setActiveTab] = useState("resumen");
 
@@ -168,7 +166,7 @@ export function PersonaDetailSheet({
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {persona.eventos.slice(0, 5).map((evento, idx: number) => (
+                    {persona.eventos.slice(0, 5).map((evento) => (
                       <div key={evento.id} className="flex items-start gap-3 pb-3 border-b last:border-0">
                         <div className="flex-shrink-0 w-2 h-2 mt-1.5 rounded-full bg-primary" />
                         <div className="flex-1 min-w-0">

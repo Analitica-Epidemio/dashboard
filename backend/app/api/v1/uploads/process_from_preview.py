@@ -8,6 +8,7 @@ import logging
 import os
 import tempfile
 from pathlib import Path
+from typing import Literal
 
 from fastapi import Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -16,6 +17,9 @@ from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAnyRole
 from app.domains.autenticacion.models import User
 from app.domains.jobs.schemas import AsyncJobResponse
+from app.domains.vigilancia_agregada.procesamiento.upload_handler import (
+    agregada_upload_handler,
+)
 from app.domains.vigilancia_nominal.procesamiento.upload_handler import (
     nominal_upload_handler,
 )
@@ -25,12 +29,18 @@ logger = logging.getLogger(__name__)
 # Mismo directorio temporal que la vista previa
 DIRECTORIO_UPLOAD_TEMP = Path(tempfile.gettempdir()) / "epidemio_uploads"
 
+# Tipos de archivo soportados
+FileType = Literal["NOMINAL", "CLI_P26", "CLI_P26_INT", "LAB_P26"]
+
 
 class ProcessFromPreviewRequest(BaseModel):
     """Request para procesar un archivo previamente subido."""
 
     upload_id: str = Field(..., description="ID de subida del endpoint de preview")
     sheet_name: str = Field(..., description="Nombre de la hoja a procesar")
+    file_type: str = Field(
+        ..., description="Tipo de archivo detectado (NOMINAL, CLI_P26, etc.)"
+    )
 
 
 async def process_file_from_preview(
@@ -105,15 +115,38 @@ async def process_file_from_preview(
             file=BytesIO(contenido_archivo), filename=nombre_final, size=tamano_archivo
         )
 
-        # Iniciar procesamiento asíncrono (el processor soporta Excel y CSV directamente)
+        # Iniciar procesamiento asíncrono según tipo de archivo
+        tipo_archivo = request.file_type
         logger.info(
-            f"🚀 Iniciando job de Celery - procesará {ext_archivo} directamente"
+            f"🚀 Iniciando job de Celery - tipo: {tipo_archivo}, formato: {ext_archivo}"
         )
-        job = await nominal_upload_handler.iniciar_procesamiento(
-            archivo=archivo_upload,
-            nombre_archivo=nombre_archivo_original,
-            nombre_hoja=nombre_hoja if ext_archivo != ".csv" else None,
-        )
+
+        if tipo_archivo == "NOMINAL":
+            # Vigilancia nominal
+            job = await nominal_upload_handler.iniciar_procesamiento(
+                archivo=archivo_upload,
+                nombre_archivo=nombre_archivo_original,
+                nombre_hoja=nombre_hoja if ext_archivo != ".csv" else None,
+            )
+        elif tipo_archivo in ("CLI_P26", "CLI_P26_INT", "LAB_P26"):
+            # Vigilancia agregada
+            # Mapear tipo a tipo_dato del handler
+            tipo_dato_map = {
+                "CLI_P26": "clinicos",
+                "CLI_P26_INT": "camas",
+                "LAB_P26": "laboratorio",
+            }
+            job = await agregada_upload_handler.iniciar_procesamiento(
+                archivo=archivo_upload,
+                nombre_archivo=nombre_archivo_original,
+                tipo_dato=tipo_dato_map[tipo_archivo],  # type: ignore[arg-type]
+                nombre_hoja=nombre_hoja if ext_archivo != ".csv" else None,
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Tipo de archivo no soportado: {tipo_archivo}",
+            )
 
         logger.info(f"✅ Job creado - job_id: {job.id}")
 

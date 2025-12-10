@@ -6,7 +6,7 @@ import {
   PieChart,
   Table,
   Type,
-  Image,
+  Image as ImageIcon,
   Minus,
   FileText,
   Map,
@@ -112,7 +112,7 @@ const WIDGET_DEFINITIONS: WidgetDefinition[] = [
     type: "image",
     name: "Imagen",
     description: "Imagen o logo",
-    icon: <Image className="w-4 h-4" />,
+    icon: <ImageIcon className="w-4 h-4" />,
     category: "content",
   },
 

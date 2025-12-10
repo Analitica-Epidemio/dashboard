@@ -20,12 +20,10 @@ import {
   Building,
   ChevronDown,
   ChevronRight,
-  ExternalLink,
   Users,
   UserCheck,
   Pill,
   Bed,
-  FlaskConical,
   MapPinned,
   BadgeCheck,
   Baby,
@@ -42,7 +40,6 @@ import {
   getClasificacionColorClasses,
 } from "@/features/eventos/api";
 import { cn } from "@/lib/utils";
-import type { components } from "@/lib/api/types";
 
 // Trazabilidad types - using generic object since specific schemas are not in OpenAPI
 type TrazabilidadClasificacion = {

@@ -75,6 +75,7 @@ def execute_job(self, job_id: str) -> Dict[str, Any]:
             # Obtener datos de input en español
             ruta_archivo = job.get_input("ruta_archivo")
             nombre_hoja = job.get_input("nombre_hoja")
+            file_type = job.get_input("file_type")  # Para agregada
 
             if not ruta_archivo:
                 raise Exception(f"Job {job_id} no tiene ruta_archivo en input_data")
@@ -102,7 +103,15 @@ def execute_job(self, job_id: str) -> Dict[str, Any]:
             processor_factory = get_processor(processor_type)
             processor = processor_factory(session, update_progress)
 
-            result = processor.procesar_archivo(ruta_archivo_obj, nombre_hoja)
+            # Pasar file_type si está disponible (para vigilancia_agregada)
+            if file_type:
+                result = processor.procesar_archivo(
+                    ruta_archivo_obj,
+                    nombre_hoja,
+                    file_type=file_type,  # type: ignore[call-arg]
+                )
+            else:
+                result = processor.procesar_archivo(ruta_archivo_obj, nombre_hoja)
 
             result_data = {
                 "ruta_archivo": str(ruta_archivo),

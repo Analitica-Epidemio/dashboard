@@ -12,7 +12,7 @@ export function PieChartWidget({ widget, data, isLoading, onEdit, onDelete }: Wi
   // Parse data
   let chartData: Array<{ name: string; value: number }> = [];
 
-  if (widget.data_config.source === "manual" && widget.data_config.manual_data) {
+  if (widget.data_config?.source === "manual" && widget.data_config?.manual_data) {
     const manualData = widget.data_config.manual_data as { data?: Array<{ name: string; value: number }> };
     chartData = manualData.data || [];
   } else if (data) {

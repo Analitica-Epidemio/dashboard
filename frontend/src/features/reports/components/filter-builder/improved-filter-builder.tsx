@@ -8,11 +8,8 @@ import { Input } from '@/components/ui/input'
 import {
   Plus,
   Wand2,
-  X,
-  Edit2,
   Copy,
   Trash2,
-  Sparkles,
   Info
 } from 'lucide-react'
 import {
@@ -45,11 +42,6 @@ export function ImprovedFilterBuilder() {
     addFilterCombination,
     removeFilterCombination,
     duplicateFilterCombination,
-    startEditingCombination,
-    editingCombinationId,
-    getEditingCombination,
-    updateFilterCombination,
-    cancelEditing,
   } = useFilterContext()
 
   const [showWizard, setShowWizard] = useState(false)

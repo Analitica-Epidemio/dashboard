@@ -13,7 +13,7 @@ export function LineChartWidget({ widget, data, isLoading, onEdit, onDelete }: W
   let chartData: Record<string, unknown>[] = [];
   let lines: string[] = [];
 
-  if (widget.data_config.source === "manual" && widget.data_config.manual_data) {
+  if (widget.data_config?.source === "manual" && widget.data_config?.manual_data) {
     const manualData = widget.data_config.manual_data as { data?: Record<string, unknown>[]; lines?: string[] };
     chartData = manualData.data || [];
     lines = manualData.lines || [];

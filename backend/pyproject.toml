@@ -88,12 +88,3 @@ unresolved-attribute = "warn"
 # deprecated: session.execute() es la forma correcta para queries multi-columna
 # aunque SQLModel lo marca deprecated a favor de exec() que no soporta tuplas
 deprecated = "ignore"
-
-# Overrides para archivos específicos con falsos positivos de Starlette middleware
-[[tool.ty.overrides]]
-include = ["app/main.py", "app/core/middleware.py"]
-
-[tool.ty.overrides.rules]
-# Starlette usa ParamSpec que ty no maneja bien con add_middleware
-invalid-argument-type = "ignore"
-

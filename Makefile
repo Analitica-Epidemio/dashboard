@@ -7,9 +7,10 @@
 # Desarrollo diario:
 #   Terminal 1: make up
 #   Terminal 2: make dev
-#   Terminal 3: make frontend
+#   Terminal 3: make celery
+#   Terminal 4: make frontend
 
-.PHONY: help install up down logs dev frontend migrate migration seed superadmin reset lint typecheck test prod
+.PHONY: help install up down logs dev celery frontend migrate migration seed superadmin reset lint typecheck test prod
 
 help:
 	@echo "Setup:"
@@ -20,6 +21,7 @@ help:
 	@echo "  down        Detener contenedores"
 	@echo "  logs        Ver logs"
 	@echo "  dev         Iniciar backend (hot-reload)"
+	@echo "  celery      Iniciar worker Celery (procesa uploads)"
 	@echo "  frontend    Iniciar frontend (hot-reload)"
 	@echo ""
 	@echo "Base de datos:"
@@ -62,6 +64,9 @@ dev:
 
 frontend:
 	cd frontend && pnpm dev
+
+celery:
+	cd backend && uv run celery -A app.core.celery_app worker -Q default,file_processing,geocoding,maintenance -l info
 
 # Base de datos
 migrate:

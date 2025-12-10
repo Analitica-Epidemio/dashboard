@@ -145,8 +145,8 @@ export default function MapaPage() {
     per_page: 100,
   });
 
-  const domicilios = data?.data?.items || [];
-  const tiposEno = tiposEnoResponse?.data || [];
+  const domicilios = useMemo(() => data?.data?.items || [], [data?.data?.items]);
+  const tiposEno = useMemo(() => tiposEnoResponse?.data || [], [tiposEnoResponse?.data]);
 
   // Solo cargar eventos cuando el modo timeline está habilitado
   useEffect(() => {

@@ -5,11 +5,12 @@ Modelos de base de datos para el sistema de boletines epidemiológicos
 from datetime import date, datetime
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import JSON, Column, Text
+from sqlalchemy import JSON, Column, Index, Text
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship
 
 from app.core.models import BaseModel
+from app.domains.boletines.constants import TipoBloque, TipoVisualizacion
 
 
 class BoletinSnippet(BaseModel, table=True):
@@ -250,3 +251,116 @@ class BoletinInstance(BaseModel, table=True):
     template: Mapped[Optional[BoletinTemplate]] = Relationship(
         back_populates="instances"
     )
+
+
+# =============================================================================
+# Modelos de Secciones y Bloques Configurables
+# =============================================================================
+
+
+class BoletinSeccion(BaseModel, table=True):
+    """
+    Sección temática del boletín epidemiológico.
+
+    Agrupa bloques relacionados bajo un tema común (IRA, Diarreas, SUH, etc.).
+    """
+
+    __tablename__ = "boletin_secciones"
+    __table_args__ = (
+        Index("idx_boletin_seccion_slug", "slug"),
+        Index("idx_boletin_seccion_orden", "orden"),
+        Index("idx_boletin_seccion_activo", "activo"),
+    )
+
+    slug: str = Field(
+        max_length=100,
+        unique=True,
+        index=True,
+        description="Identificador único kebab-case",
+    )
+    titulo: str = Field(
+        max_length=300,
+        description="Título de la sección",
+    )
+    contenido_intro: Optional[Dict[str, Any]] = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="Contenido TipTap JSON introductorio opcional",
+    )
+    orden: int = Field(default=0, index=True)
+    activo: bool = Field(default=True, index=True)
+    descripcion: Optional[str] = Field(
+        default=None,
+        sa_column=Column(Text),
+    )
+
+    bloques: List["BoletinBloque"] = Relationship(
+        back_populates="seccion",
+        sa_relationship_kwargs={"lazy": "selectin", "order_by": "BoletinBloque.orden"},
+    )
+
+
+class BoletinBloque(BaseModel, table=True):
+    """
+    Bloque individual de visualización/datos del boletín.
+
+    Configura qué métrica consultar, cómo agrupar, qué cálculos aplicar
+    y de dónde obtener las series (catálogos dinámicos o config manual).
+    """
+
+    __tablename__ = "boletin_bloques"
+    __table_args__ = (
+        Index("idx_boletin_bloque_slug", "slug"),
+        Index("idx_boletin_bloque_seccion", "seccion_id"),
+        Index("idx_boletin_bloque_orden", "orden"),
+        Index("idx_boletin_bloque_activo", "activo"),
+    )
+
+    seccion_id: int = Field(
+        foreign_key="boletin_secciones.id",
+        index=True,
+    )
+    slug: str = Field(
+        max_length=100,
+        unique=True,
+        index=True,
+    )
+    titulo_template: str = Field(
+        max_length=500,
+        description="Template Jinja2 para título",
+    )
+
+    # Configuración de query
+    tipo_bloque: TipoBloque = Field()
+    tipo_visualizacion: TipoVisualizacion = Field()
+    metrica_codigo: str = Field(max_length=100)
+    dimensiones: List[str] = Field(
+        default_factory=list,
+        sa_column=Column(JSON, nullable=False),
+    )
+    compute: Optional[str] = Field(default=None, max_length=100)
+
+    # Criterios y series
+    criterios_fijos: Dict[str, Any] = Field(
+        default_factory=dict,
+        sa_column=Column(JSON, nullable=False),
+    )
+    series_source: Optional[str] = Field(default=None, max_length=200)
+    series_config: Optional[List[Dict[str, Any]]] = Field(
+        default=None,
+        sa_column=Column(JSON),
+    )
+
+    # Visual y estado
+    config_visual: Dict[str, Any] = Field(
+        default_factory=dict,
+        sa_column=Column(JSON, nullable=False),
+    )
+    orden: int = Field(default=0, index=True)
+    activo: bool = Field(default=True, index=True)
+    descripcion: Optional[str] = Field(
+        default=None,
+        sa_column=Column(Text),
+    )
+
+    seccion: Optional[BoletinSeccion] = Relationship(back_populates="bloques")

@@ -95,7 +95,16 @@ Propiedad del Ministerio de Salud.
 
 ---
 
-## Estándar de Código (Hybrid Spanglish)
+## Documentacion Tecnica
+
+Para documentacion detallada de la arquitectura, ver **[docs/](docs/README.md)**:
+
+- [Arquitectura de Procesamiento](docs/arquitectura-procesamiento.md) - Como se cargan datos del SNVS
+- [Sistema de Metricas](docs/sistema-metricas.md) - Como el frontend consulta datos
+
+---
+
+## Estandar de Codigo (Hybrid Spanglish)
 
 Para mantener la consistencia y facilitar la comunicación con expertos del dominio, utilizamos un estándar híbrido:
 

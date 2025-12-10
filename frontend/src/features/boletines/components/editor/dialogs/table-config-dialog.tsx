@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Table, Database, FileText, Activity, Droplet } from "lucide-react";
+import { Database, FileText, Activity, Droplet } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface TableConfig {

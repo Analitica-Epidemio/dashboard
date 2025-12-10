@@ -204,9 +204,10 @@ export const PopulationPyramid: React.FC<PopulationPyramidProps> = ({
       .style("fill", "#ec4899")
       .text("Femenino");
 
-    // Cleanup
+    // Cleanup - copy ref to local variable per React hooks rules
+    const svgElement = svgRef.current;
     return () => {
-      d3.select(svgRef.current).selectAll("*").remove();
+      d3.select(svgElement).selectAll("*").remove();
     };
   }, [data, width, height]);
 

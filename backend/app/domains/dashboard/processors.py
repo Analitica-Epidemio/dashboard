@@ -324,16 +324,23 @@ class ChartDataProcessor:
             e.id_enfermedad,
             COUNT(*) as casos
         FROM caso_epidemiologico e
-        LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
-        LEFT JOIN localidad l ON est.id_localidad_indec = l.id_localidad_indec
-        LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
-        WHERE e.id_enfermedad = ANY(:tipo_eno_ids)
         """
 
         params = {"tipo_eno_ids": all_tipo_eno_ids}
 
+        # Lazy Joins: Solo hacer JOINs geográficos si hay filtro de provincia
+        if filtros.get("provincia_id"):
+            query += """
+            LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
+            LEFT JOIN localidad l ON est.id_localidad_indec = l.id_localidad_indec
+            LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
+            """
+
+        query += " WHERE e.id_enfermedad = ANY(:tipo_eno_ids)"
+
         # Filtro de provincia
-        query, params = self._agregar_filtro_provincia(query, filtros, params, "d")
+        if filtros.get("provincia_id"):
+            query, params = self._agregar_filtro_provincia(query, filtros, params, "d")
 
         # Filtro de clasificación
         query = self._agregar_filtro_clasificacion(query, filtros, params, "e")
@@ -654,107 +661,6 @@ class ChartDataProcessor:
         )
 
         # Query para obtener datos históricos (últimos 5 años antes del rango)
-        query = """
-        SELECT
-            fecha_minima_caso_semana_epi as semana,
-            fecha_minima_caso_anio_epi as año,
-            COUNT(*) as casos
-        FROM caso_epidemiologico e
-        WHERE fecha_minima_caso >= :fecha_historica_inicio
-            AND fecha_minima_caso < :fecha_desde
-        """
-
-        params = {
-            "fecha_desde": fecha_desde,
-            "fecha_historica_inicio": date(fecha_desde.year - 5, 1, 1),  # 5 años atrás
-        }
-
-        logger.info(
-            f"Corredor endémico - DEBUG: fecha_desde={fecha_desde}, fecha_historica_inicio={params['fecha_historica_inicio']}"
-        )
-
-        if filtros.get("grupo_id"):
-            query += """
-                AND e.id_enfermedad IN (
-                    SELECT id_enfermedad FROM enfermedad_grupo WHERE id_grupo = :grupo_id
-                )
-            """
-            params["grupo_id"] = filtros["grupo_id"]
-
-        if filtros.get("tipo_eno_ids"):
-            tipo_eno_ids = filtros["tipo_eno_ids"]
-            if tipo_eno_ids and len(tipo_eno_ids) > 0:
-                query += " AND e.id_enfermedad = ANY(:tipo_eno_ids)"
-                params["tipo_eno_ids"] = tipo_eno_ids
-
-        # Filtro por clasificación estrategia
-        query = self._agregar_filtro_clasificacion(query, filtros, params, "e")
-
-        query += " GROUP BY semana, año ORDER BY semana, año"
-
-        result = await self.db.execute(text(query), params)
-        rows = result.fetchall()
-
-        logger.info(
-            f"Corredor endémico - DEBUG: Registros históricos encontrados: {len(rows)}"
-        )
-        if rows:
-            logger.info(f"Corredor endémico - DEBUG: Primeros 5 registros: {rows[:5]}")
-
-        # Validar que hay suficientes datos históricos
-        if not rows or len(rows) < 10:  # Mínimo 10 registros históricos
-            # Extraer años únicos de los registros disponibles
-            años_disponibles = sorted(list(set(row[1] for row in rows))) if rows else []
-            return {
-                "type": "area",
-                "data": {"labels": [], "datasets": [], "metadata": []},
-                "error": {
-                    "code": "INSUFFICIENT_HISTORICAL_DATA",
-                    "title": "Sin datos históricos",
-                    "message": f"Se requieren al menos 3 años de datos previos a {año_inicio} para calcular las referencias estadísticas del corredor endémico.",
-                    "details": {
-                        "selected_period": f"{año_inicio}-{año_fin}",
-                        "historical_search_range": f"{params['fecha_historica_inicio'].strftime('%Y')} - {fecha_desde.year - 1}",
-                        "records_found": len(rows) if rows else 0,
-                        "records_required": 10,
-                        "years_found": años_disponibles,
-                    },
-                    "suggestion": f"Importe datos de al menos 3 años anteriores a {año_inicio} para habilitar este gráfico.",
-                },
-            }
-
-        # Procesar datos para calcular percentiles
-        df = pd.DataFrame(rows, columns=pd.Index(["semana", "año", "casos"]))
-
-        logger.info(f"Corredor endémico - DEBUG: DataFrame shape: {df.shape}")
-        logger.info(f"Corredor endémico - DEBUG: DataFrame head:\n{df.head(10)}")
-
-        # Validar que tenemos al menos 3 años diferentes de datos
-        años_unicos = df["año"].nunique()
-        años_lista = sorted(df["año"].unique().tolist())
-        logger.info(f"Corredor endémico - Años únicos en histórico: {años_unicos}")
-        logger.info(f"Corredor endémico - DEBUG: Lista de años: {años_lista}")
-
-        if años_unicos < 3:
-            año_texto = "año" if años_unicos == 1 else "años"
-            return {
-                "type": "area",
-                "data": {"labels": [], "datasets": [], "metadata": []},
-                "error": {
-                    "code": "INSUFFICIENT_HISTORICAL_YEARS",
-                    "title": "Datos históricos insuficientes",
-                    "message": f"Se necesitan al menos 3 años de datos previos a {año_inicio}. Solo hay {años_unicos} {año_texto} disponible{'s' if años_unicos > 1 else ''}: {', '.join(map(str, años_lista))}.",
-                    "details": {
-                        "selected_period": f"{año_inicio}-{año_fin}",
-                        "historical_search_range": f"{params['fecha_historica_inicio'].strftime('%Y')} - {fecha_desde.year - 1}",
-                        "years_found": años_lista,
-                        "years_count": años_unicos,
-                        "years_required": 3,
-                    },
-                    "suggestion": f"Importe datos de al menos {3 - años_unicos} año{'s' if (3 - años_unicos) > 1 else ''} adicional{'es' if (3 - años_unicos) > 1 else ''} anterior{'es' if (3 - años_unicos) > 1 else ''} a {años_lista[0]}.",
-                },
-            }
-
         # Generar lista de semanas del rango seleccionado
         weeks_in_range = []
         if semana_inicio is None or semana_fin is None:
@@ -764,31 +670,9 @@ class ChartDataProcessor:
             weeks_in_range = list(range(semana_inicio, semana_fin + 1))
         else:
             # Múltiples años - para simplificar, mostrar todas las semanas
-            # TODO: Manejar rangos multi-año correctamente
             weeks_in_range = list(range(1, 53))
 
-        logger.info(
-            f"Corredor endémico - Semanas a mostrar: {len(weeks_in_range)} semanas"
-        )
-
-        # Calcular percentiles solo para las semanas en el rango
-        percentiles = (
-            df.groupby("semana")["casos"]
-            .agg(
-                [
-                    ("minimo", lambda x: x.quantile(0.25)),
-                    ("mediana", lambda x: x.quantile(0.5)),
-                    ("maximo", lambda x: x.quantile(0.75)),
-                ]
-            )
-            .reset_index()
-        )
-
-        # Filtrar percentiles para solo las semanas del rango
-        weeks_df = pd.DataFrame({"semana": weeks_in_range})
-        percentiles = weeks_df.merge(percentiles, on="semana", how="left").fillna(0)
-
-        # Obtener casos actuales para el período seleccionado
+        # 1. Obtener casos actuales (SIEMPRE se muestran, independiente del histórico)
         current_query = """
         SELECT
             fecha_minima_caso_semana_epi as semana,
@@ -814,7 +698,7 @@ class ChartDataProcessor:
                 current_query += " AND id_enfermedad = ANY(:tipo_eno_ids)"
                 current_params["tipo_eno_ids"] = tipo_eno_ids
 
-        # Filtro por clasificación estrategia
+        # Filtro por clasificación estrategia (para datos actuales)
         current_query = self._agregar_filtro_clasificacion(
             current_query, filtros, current_params
         )
@@ -831,11 +715,97 @@ class ChartDataProcessor:
         )
 
         # Merge casos actuales con las semanas del rango
+        weeks_df = pd.DataFrame({"semana": weeks_in_range})
         if not current_df.empty:
             current_data = weeks_df.merge(current_df, on="semana", how="left").fillna(0)
             casos_actuales = current_data["casos"].tolist()
         else:
             casos_actuales = [0] * len(weeks_in_range)
+
+        # 2. Obtener datos históricos (excluyendo 2020 y 2021)
+        query = """
+        SELECT
+            fecha_minima_caso_semana_epi as semana,
+            fecha_minima_caso_anio_epi as año,
+            COUNT(*) as casos
+        FROM caso_epidemiologico e
+        WHERE fecha_minima_caso >= :fecha_historica_inicio
+            AND fecha_minima_caso < :fecha_desde
+            AND fecha_minima_caso_anio_epi NOT IN (2020, 2021) -- Excluir años pandemicos anómalos
+        """
+
+        params = {
+            "fecha_desde": fecha_desde,
+            "fecha_historica_inicio": date(fecha_desde.year - 5, 1, 1),  # 5 años atrás
+        }
+
+        if filtros.get("grupo_id"):
+            query += """
+                AND e.id_enfermedad IN (
+                    SELECT id_enfermedad FROM enfermedad_grupo WHERE id_grupo = :grupo_id
+                )
+            """
+            params["grupo_id"] = filtros["grupo_id"]
+
+        if filtros.get("tipo_eno_ids"):
+            tipo_eno_ids = filtros["tipo_eno_ids"]
+            if tipo_eno_ids and len(tipo_eno_ids) > 0:
+                query += " AND e.id_enfermedad = ANY(:tipo_eno_ids)"
+                params["tipo_eno_ids"] = tipo_eno_ids
+
+        # Filtro por clasificación estrategia (para histórico)
+        query = self._agregar_filtro_clasificacion(query, filtros, params, "e")
+
+        query += " GROUP BY semana, año ORDER BY semana, año"
+
+        result = await self.db.execute(text(query), params)
+        rows = result.fetchall()
+
+        # 3. Validar datos históricos y Calcular Percentiles
+        warnings = []
+        corredor_valido = False
+        percentiles = pd.DataFrame()
+
+        if not rows or len(rows) < 10:
+            warnings.append(
+                "Datos históricos insuficientes para calcular zonas (se requieren min 2 años previos excluyendo 2020-2021)."
+            )
+        else:
+            df = pd.DataFrame(rows, columns=pd.Index(["semana", "año", "casos"]))
+
+            # Validar años únicos (Mínimo 2 años requeridos, bajado de 3)
+            años_unicos = df["año"].nunique()
+            años_lista = sorted(df["año"].unique().tolist())
+
+            if años_unicos < 2:
+                warnings.append(
+                    f"Se requieren min 2 años de historia (excl. 2020-2021). Disponibles: {años_unicos} ({', '.join(map(str, años_lista))})."
+                )
+            else:
+                corredor_valido = True
+                # Calcular percentiles solo para las semanas en el rango
+                percentiles = (
+                    df.groupby("semana")["casos"]
+                    .agg(
+                        [
+                            ("minimo", lambda x: x.quantile(0.25)),
+                            ("mediana", lambda x: x.quantile(0.5)),
+                            ("maximo", lambda x: x.quantile(0.75)),
+                        ]
+                    )
+                    .reset_index()
+                )
+
+        # Preparar DataFrame de zonas (lleno con 0 si no es válido)
+        if corredor_valido and not percentiles.empty:
+            percentiles_merged = weeks_df.merge(
+                percentiles, on="semana", how="left"
+            ).fillna(0)
+        else:
+            # Crear dataframe con ceros
+            percentiles_merged = pd.DataFrame(
+                {"semana": weeks_in_range, "minimo": 0, "mediana": 0, "maximo": 0}
+            )
 
         # Generar metadata para las semanas del rango
         metadata = []
@@ -871,22 +841,26 @@ class ChartDataProcessor:
 
         return {
             "type": "area",
+            "metadata": {
+                "warnings": warnings,
+                "years_found": años_lista if "años_lista" in locals() else [],  # type: ignore[possibly-unresolved-reference]
+            },
             "data": {
                 "labels": labels,
                 "datasets": [
                     {
                         "label": "Máximo (P75)",
-                        "data": percentiles["maximo"].tolist(),
+                        "data": percentiles_merged["maximo"].tolist(),
                         "color": "rgba(255, 0, 0, 0.8)",
                     },
                     {
                         "label": "Mediana (P50)",
-                        "data": percentiles["mediana"].tolist(),
+                        "data": percentiles_merged["mediana"].tolist(),
                         "color": "rgba(255, 165, 0, 0.8)",
                     },
                     {
                         "label": "Mínimo (P25)",
-                        "data": percentiles["minimo"].tolist(),
+                        "data": percentiles_merged["minimo"].tolist(),
                         "color": "rgba(0, 255, 0, 0.8)",
                     },
                     {
@@ -1274,10 +1248,19 @@ class ChartDataProcessor:
             END as grupo_edad,
             COUNT(*) as casos
         FROM caso_epidemiologico e
-        LEFT JOIN ciudadano c ON e.codigo_ciudadano = c.codigo_ciudadano
-        LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
-        LEFT JOIN localidad l ON est.id_localidad_indec = l.id_localidad_indec
-        LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
+        """
+
+        params = {}
+
+        # Lazy Joins: Solo hacer JOINs geográficos si hay filtro de provincia
+        if filtros.get("provincia_id"):
+            query += """
+            LEFT JOIN establecimiento est ON e.id_establecimiento_notificacion = est.id
+            LEFT JOIN localidad l ON est.id_localidad_indec = l.id_localidad_indec
+            LEFT JOIN departamento d ON l.id_departamento_indec = d.id_departamento_indec
+            """
+
+        query += """
         WHERE e.fecha_nacimiento IS NOT NULL
           AND e.fecha_minima_caso IS NOT NULL
         """
