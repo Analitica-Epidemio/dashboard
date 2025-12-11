@@ -1,7 +1,10 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import type { DashboardFilters } from '../types'
+interface DashboardFilters {
+  selectedGroupId: string | null;
+  selectedEventId: string | null;
+}
 import type { Group, Event } from '@/lib/types/eventos'
 import { useGroups, useAllEvents, useEventsByGroup } from '@/features/eventos/api'
 

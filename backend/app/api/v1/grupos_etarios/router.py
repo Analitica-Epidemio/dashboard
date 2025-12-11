@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from backend.app.schemas.responses import SuccessResponse, ErrorResponse
+from app.core.schemas.response import SuccessResponse
 from .schemas import (
     ConfiguracionRangosCreate,
     ConfiguracionRangosOut,
@@ -16,10 +16,12 @@ router.add_api_route(
     response_model=SuccessResponse[list[ConfiguracionRangosOut]],
 )
 
+
 # POST
 def _crear(payload: ConfiguracionRangosCreate):
     obj = create_config(payload)
     return SuccessResponse(data=obj)
+
 
 router.add_api_route(
     "/",
@@ -28,6 +30,7 @@ router.add_api_route(
     response_model=SuccessResponse[ConfiguracionRangosOut],
 )
 
+
 # DELETE
 def _delete(config_id: int):
     ok = delete_config(config_id)
@@ -35,10 +38,10 @@ def _delete(config_id: int):
         raise HTTPException(status_code=404, detail="Configuración no encontrada")
     return SuccessResponse(data=True)
 
+
 router.add_api_route(
     "/{config_id}",
     _delete,
     methods=["DELETE"],
     response_model=SuccessResponse[bool],
 )
-

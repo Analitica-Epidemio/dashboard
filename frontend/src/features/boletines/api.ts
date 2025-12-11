@@ -111,7 +111,7 @@ export function useUpdateEventSectionTemplate() {
  * ```
  */
 export function useChartsDisponibles() {
-  return $api.useQuery('get', '/api/v1/boletines/charts-disponibles');
+  return $api.useQuery('get', '/api/v1/charts/disponibles', {});
 }
 
 // ============================================================================

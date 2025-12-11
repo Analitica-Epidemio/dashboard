@@ -305,7 +305,7 @@ export function MenuBar({ editor }: MenuBarProps) {
               {variables.map((variable) => (
                 <DropdownMenuItem
                   key={variable.key}
-                  onClick={() => insertVariable(editor, variable.key, variable.label, variable.emoji, variable.type)}
+                  onClick={() => insertVariable(editor, variable.key)}
                   className="text-sm flex-col items-start py-2 px-3"
                 >
                   <div className="flex items-center gap-2 w-full">

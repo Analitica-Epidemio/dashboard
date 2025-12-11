@@ -55,7 +55,7 @@ export interface ChartFilters {
 export function useChartsDisponibles() {
   return $api.useQuery(
     'get',
-    '/api/v1/boletines/charts-disponibles',
+    '/api/v1/charts/disponibles',
     {},
     {
       staleTime: 5 * 60 * 1000, // Cache for 5 minutes
