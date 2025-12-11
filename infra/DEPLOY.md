@@ -90,13 +90,17 @@ DB_PASSWORD=password_seguro_aqui
 
 # Seguridad (generar con: openssl rand -hex 32)
 SECRET_KEY=clave_secreta_aqui
+NEXTAUTH_SECRET=otra_clave_secreta_aqui
 
-# URLs del servidor
-NEXT_PUBLIC_API_HOST=http://192.168.1.100/api
-FRONTEND_URL=http://192.168.1.100
-CORS_ORIGINS=http://192.168.1.100
+# URLs del servidor (usar HTTPS en produccion!)
+NEXT_PUBLIC_API_HOST=https://192.168.1.100
+FRONTEND_URL=https://192.168.1.100
+NEXTAUTH_URL=https://192.168.1.100
+CORS_ORIGINS=https://192.168.1.100
 ALLOWED_HOSTS=192.168.1.100,localhost
 ```
+
+> **IMPORTANTE:** NextAuth requiere HTTPS para que las cookies de sesion funcionen correctamente. Ver seccion "Configuracion HTTPS" mas abajo.
 
 ### 2. Setup del servidor (solo una vez)
 
@@ -237,6 +241,99 @@ cat .env.deploy
     └── ...
 ```
 
+## Configuracion HTTPS
+
+NextAuth (el sistema de autenticacion) requiere HTTPS para setear cookies seguras. Sin HTTPS, el login no funcionara correctamente.
+
+### Opcion A: Certificado autofirmado (para red interna)
+
+Ideal para servidores en red local sin dominio publico.
+
+```bash
+# Conectate al servidor
+make deploy-ssh
+
+# Generar certificado autofirmado (valido por 1 año)
+sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout /etc/ssl/private/epidemiologia.key \
+  -out /etc/ssl/certs/epidemiologia.crt \
+  -subj "/CN=192.168.1.100"
+
+# Editar nginx.conf para habilitar HTTPS
+sudo nano /etc/nginx/sites-enabled/dashboard.conf
+# Descomentar la seccion HTTPS del archivo
+
+# Verificar y recargar Nginx
+sudo nginx -t && sudo systemctl reload nginx
+
+# Salir
+exit
+```
+
+> **Nota:** El browser mostrara una advertencia de "conexion no segura" porque el certificado es autofirmado. Podes ignorarla haciendo click en "Avanzado" > "Continuar".
+
+### Opcion B: Let's Encrypt (con dominio publico)
+
+Requiere:
+- Un dominio publico (ej: `epidemiologia.miorganizacion.gob.ar`)
+- Que el servidor sea accesible desde internet en puertos 80 y 443
+
+```bash
+# Conectate al servidor
+make deploy-ssh
+
+# Instalar certbot
+sudo apt update
+sudo apt install -y certbot python3-certbot-nginx
+
+# Obtener certificado (reemplaza con tu dominio)
+sudo certbot --nginx -d epidemiologia.miorganizacion.gob.ar
+
+# Certbot configura Nginx automaticamente y renueva el certificado cada 90 dias
+
+# Salir
+exit
+```
+
+### Despues de configurar HTTPS
+
+1. Actualizar `.env.deploy` con URLs HTTPS:
+
+```bash
+NEXT_PUBLIC_API_HOST=https://192.168.1.100  # o tu dominio
+FRONTEND_URL=https://192.168.1.100
+NEXTAUTH_URL=https://192.168.1.100
+CORS_ORIGINS=https://192.168.1.100
+```
+
+2. Hacer deploy para que tome los cambios:
+
+```bash
+make deploy
+```
+
+### Troubleshooting HTTPS
+
+**Error: Cookie rejected because non-HTTPS**
+
+El login falla porque NextAuth intenta setear cookies seguras pero estas usando HTTP.
+
+Solucion: Configurar HTTPS (ver arriba).
+
+**NextAuth devuelve `{"url":"http://localhost:3000"}`**
+
+La variable `NEXTAUTH_URL` no esta configurada correctamente.
+
+Solucion:
+1. Verificar que `.env.deploy` tenga `NEXTAUTH_URL=https://tu-ip-o-dominio`
+2. Hacer `make deploy` para reconstruir el frontend
+
+**El browser muestra "Conexion no segura"**
+
+Normal si usas certificado autofirmado. Podes:
+- Ignorar la advertencia (click en "Avanzado" > "Continuar")
+- O usar Let's Encrypt si tenes dominio publico
+
 ## Glosario
 
 | Termino | Que significa |
@@ -249,3 +346,6 @@ cat .env.deploy
 | **SSH** | Protocolo para conectarse de forma segura a un servidor |
 | **Deploy key** | Clave SSH especifica para un repositorio (no asociada a una persona) |
 | **Rollback** | Volver a la version anterior de la aplicacion |
+| **HTTPS/SSL** | Conexion encriptada entre el browser y el servidor |
+| **Certificado autofirmado** | Certificado SSL generado localmente (sin autoridad certificadora) |
+| **Let's Encrypt** | Servicio gratuito de certificados SSL validos |
