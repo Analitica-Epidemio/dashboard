@@ -93,6 +93,8 @@ cmd_deploy() {
         echo "DB_USER=${DB_USER:?requerido}"
         echo "DB_PASSWORD=${DB_PASSWORD:?requerido}"
         echo "SECRET_KEY=${SECRET_KEY:?requerido}"
+        echo "NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-$SECRET_KEY}"
+        echo "NEXTAUTH_URL=${NEXTAUTH_URL:-$FRONTEND_URL}"
         echo "NEXT_PUBLIC_API_HOST=${NEXT_PUBLIC_API_HOST:-http://localhost:8000}"
         echo "FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}"
         echo "CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}"
@@ -140,16 +142,17 @@ curl -sf http://localhost:$api_port/health > /dev/null || { echo "ERROR: La apli
 
 echo ""
 echo "6/7 Aplicando migraciones de base de datos..."
-sudo docker compose -f compose.prod.yaml -p ${APP_NAME}_$target exec -T api alembic upgrade head 2>/dev/null || echo "    (sin migraciones pendientes)"
+sudo docker compose -f compose.prod.yaml -p ${APP_NAME}_$target exec -T api alembic upgrade head || true
 
 echo ""
-echo "7/7 Cambiando trafico a la nueva version..."
-sudo sed -i 's/localhost:300[0-9]/localhost:$frontend_port/g; s/localhost:800[0-9]/localhost:$api_port/g' /etc/nginx/sites-enabled/${APP_NAME}.conf
+echo "7/7 Cambiando trafico a la nueva version ($target)..."
+sudo sed -i "s/localhost:300[0-9]/localhost:$frontend_port/g; s/localhost:800[0-9]/localhost:$api_port/g" /etc/nginx/sites-enabled/${APP_NAME}.conf
 sudo nginx -t && sudo nginx -s reload
 echo "$target" > $REMOTE_DIR/active_env
+echo "    Ambiente activo guardado: $target"
 
 echo ""
-echo "Apagando version anterior ($active)..."
+echo "8/8 Apagando version anterior ($active)..."
 sudo docker compose -f compose.prod.yaml -p ${APP_NAME}_$active stop 2>/dev/null || true
 
 echo ""
@@ -202,7 +205,7 @@ sleep 10
 curl -sf http://localhost:$api_port/health > /dev/null || { echo "ERROR: No responde"; exit 1; }
 
 echo "3/3 Cambiando trafico..."
-sudo sed -i 's/localhost:300[0-9]/localhost:$frontend_port/g; s/localhost:800[0-9]/localhost:$api_port/g' /etc/nginx/sites-enabled/${APP_NAME}.conf
+sudo sed -i "s/localhost:300[0-9]/localhost:$frontend_port/g; s/localhost:800[0-9]/localhost:$api_port/g" /etc/nginx/sites-enabled/${APP_NAME}.conf
 sudo nginx -t && sudo nginx -s reload
 echo "$target" > $REMOTE_DIR/active_env
 

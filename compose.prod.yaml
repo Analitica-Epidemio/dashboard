@@ -16,7 +16,8 @@ services:
         NEXT_PUBLIC_API_HOST: ${NEXT_PUBLIC_API_HOST}
         NEXT_PUBLIC_APP_ENV: production
         SECRET_KEY: ${SECRET_KEY}
-        NEXTAUTH_SECRET: ${SECRET_KEY}
+        NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-${SECRET_KEY}}
+        NEXTAUTH_URL: ${NEXTAUTH_URL:-${FRONTEND_URL}}
     image: ${APP_NAME:-epidemiologia}-frontend:${ENV_COLOR:-prod}
     ports:
       - "127.0.0.1:${FRONTEND_PORT:-3000}:3000"
@@ -24,7 +25,8 @@ services:
       NEXT_PUBLIC_API_HOST: ${NEXT_PUBLIC_API_HOST}
       NEXT_PUBLIC_APP_ENV: production
       SECRET_KEY: ${SECRET_KEY}
-      NEXTAUTH_SECRET: ${SECRET_KEY}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-${SECRET_KEY}}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-${FRONTEND_URL}}
       NODE_ENV: production
     restart: unless-stopped
     healthcheck:
