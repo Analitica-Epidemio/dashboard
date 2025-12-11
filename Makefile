@@ -37,7 +37,12 @@ help:
 	@echo "  test        Correr tests"
 	@echo ""
 	@echo "Producción:"
-	@echo "  prod        Levantar stack de producción"
+	@echo "  prod            Levantar stack de producción local"
+	@echo "  deploy          Deploy al servidor (ver infra/DEPLOY.md)"
+	@echo "  deploy-rollback Volver a la version anterior"
+	@echo "  deploy-status   Ver estado del servidor"
+	@echo "  deploy-logs     Ver logs del servidor"
+	@echo "  deploy-ssh      Conectarse al servidor"
 
 # Setup
 install:
@@ -98,6 +103,26 @@ typecheck:
 test:
 	cd backend && uv run pytest
 
-# Producción
+# Producción local
 prod:
 	docker compose -f compose.prod.yaml up -d
+
+# Deploy SSH - requiere .env.deploy con SSH_HOST, SSH_USER, etc.
+# Ver infra/DEPLOY.md para documentacion
+deploy:
+	./scripts/deploy.sh
+
+deploy-setup:
+	./scripts/deploy.sh setup
+
+deploy-status:
+	./scripts/deploy.sh status
+
+deploy-logs:
+	./scripts/deploy.sh logs
+
+deploy-ssh:
+	./scripts/deploy.sh ssh
+
+deploy-rollback:
+	./scripts/deploy.sh rollback

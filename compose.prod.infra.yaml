@@ -1,0 +1,43 @@
+# Infraestructura compartida (DB, Redis)
+# Corre siempre, independiente de blue/green
+#
+# Se levanta UNA vez con: docker compose -f compose.infra.yaml up -d
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: ${APP_NAME:-epidemiologia}_postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    container_name: ${APP_NAME:-epidemiologia}_redis
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    restart: always
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  default:
+    name: ${APP_NAME:-epidemiologia}_network
