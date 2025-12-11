@@ -1,6 +1,6 @@
 """
-Registry de métricas y dimensiones.
-====================================
+Registry de métricas, dimensiones y sources.
+============================================
 
 Este es el ÚNICO lugar donde se definen métricas y dimensiones.
 El schema para frontend se GENERA desde aquí (ver schema.py).
@@ -8,6 +8,7 @@ El schema para frontend se GENERA desde aquí (ver schema.py).
 ARCHIVOS:
     - metrics.py: Define métricas (qué columna, qué agregación)
     - dimensions.py: Define dimensiones (por qué agrupar)
+    - sources.py: Config de UI por tipo de vigilancia (filtros, KPIs)
 
 USO:
     from app.domains.metricas.registry import get_metric, get_dimension
@@ -30,6 +31,16 @@ from .metrics import (
     get_metric,
     list_metrics,
 )
+from .sources import (
+    SOURCES,
+    FilterConfig,
+    FilterType,
+    KPIConfig,
+    SourceConfig,
+    VisualizationType,
+    get_source_config,
+    list_enabled_sources,
+)
 
 __all__ = [
     # Métricas
@@ -44,4 +55,13 @@ __all__ = [
     "DimensionCode",
     "DimensionDefinition",
     "get_dimension",
+    # Sources (UI config)
+    "SOURCES",
+    "SourceConfig",
+    "FilterConfig",
+    "KPIConfig",
+    "VisualizationType",
+    "FilterType",
+    "get_source_config",
+    "list_enabled_sources",
 ]
