@@ -76,7 +76,7 @@ Editar `.env.deploy`:
 
 ```bash
 # Nombre de la app (para containers, volumenes, etc)
-APP_NAME=epidemiologia
+APP_NAME=dashboard
 
 # Conexion SSH al servidor
 SSH_HOST=192.168.1.100
@@ -84,8 +84,8 @@ SSH_USER=tu_usuario
 SSH_PORT=22
 
 # Base de datos
-DB_NAME=epidemiologia_db
-DB_USER=epidemiologia_user
+DB_NAME=dashboard_db
+DB_USER=dashboard_user
 DB_PASSWORD=password_seguro_aqui
 
 # Seguridad (generar con: openssl rand -hex 32)
@@ -127,12 +127,12 @@ Host github.com
 EOF
 
 # Clonar el repositorio
-cd /opt/epidemiologia  # o donde hayas configurado REMOTE_DIR
+cd /opt/dashboard  # o donde hayas configurado REMOTE_DIR
 git clone git@github.com:tu-org/tu-repo.git app
 
 # Instalar y configurar Nginx
 sudo apt update && sudo apt install -y nginx
-sudo cp /opt/epidemiologia/app/infra/nginx.conf /etc/nginx/sites-enabled/epidemiologia.conf
+sudo cp /opt/dashboard/app/infra/nginx.conf /etc/nginx/sites-enabled/dashboard.conf
 sudo nginx -t && sudo systemctl reload nginx
 
 # Salir
@@ -228,7 +228,7 @@ cat .env.deploy
 ## Estructura en el servidor
 
 ```
-/opt/epidemiologia/           # REMOTE_DIR
+/opt/dashboard/           # REMOTE_DIR
 ├── active_env                # Archivo que dice "blue" o "green"
 └── app/                      # Repositorio clonado
     ├── .env                  # Variables de produccion (generado por deploy)
