@@ -1,3 +1,6 @@
+from pydantic import BaseModel
+from typing import Optional, List
+
 class RangoEdadSchema(BaseModel):
     desde: float
     hasta: Optional[float] = None

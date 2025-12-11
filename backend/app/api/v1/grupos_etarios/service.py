@@ -1,17 +1,17 @@
 from sqlmodel import select
-from backend.app.db.session import get_session
+from app.core.database import get_async_session
 from .models import ConfiguracionRangos
 from .schemas import (
     ConfiguracionRangosCreate,
 )
 
 def list_configs():
-    session = get_session()
+    session = get_async_session()
     data = session.exec(select(ConfiguracionRangos)).all()
     return data
 
 def create_config(payload: ConfiguracionRangosCreate):
-    session = get_session()
+    session = get_async_session()
     new = ConfiguracionRangos.from_orm(payload)
     session.add(new)
     session.commit()
@@ -19,7 +19,7 @@ def create_config(payload: ConfiguracionRangosCreate):
     return new
 
 def delete_config(config_id: int):
-    session = get_session()
+    session = get_async_session()
     obj = session.get(ConfiguracionRangos, config_id)
     if not obj:
         return None

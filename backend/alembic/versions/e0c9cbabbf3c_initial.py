@@ -1,20 +1,20 @@
-""".
+"""initial
 
-Revision ID: 825deb7f4ce8
+Revision ID: e0c9cbabbf3c
 Revises: 
-Create Date: 2025-11-27 14:41:19.079858
+Create Date: 2025-12-04 13:39:12.566254
 
 """
 from typing import Sequence, Union
 
-import geoalchemy2  # Required for Geometry types
+from alembic import op
 import sqlalchemy as sa
 import sqlmodel  # Always import sqlmodel for SQLModel types
+import geoalchemy2  # Required for Geometry types
 
-from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = '825deb7f4ce8'
+revision: str = 'e0c9cbabbf3c'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -593,7 +593,6 @@ def upgrade() -> None:
     sa.Column('parameters', sa.JSON(), nullable=False),
     sa.Column('template_snapshot', sa.JSON(), nullable=False),
     sa.Column('content', sa.Text(), nullable=True),
-    sa.Column('status', sqlmodel.sql.sqltypes.AutoString(length=20), nullable=False),
     sa.Column('pdf_path', sqlmodel.sql.sqltypes.AutoString(length=500), nullable=True),
     sa.Column('pdf_size', sa.Integer(), nullable=True),
     sa.Column('generated_at', sa.DateTime(), nullable=True),
@@ -604,7 +603,6 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_boletin_instances_name'), 'boletin_instances', ['name'], unique=False)
-    op.create_index(op.f('ix_boletin_instances_status'), 'boletin_instances', ['status'], unique=False)
     op.create_index(op.f('ix_boletin_instances_template_id'), 'boletin_instances', ['template_id'], unique=False)
     op.create_table('ciudadano_domicilio',
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
@@ -1099,7 +1097,6 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_ciudadano_domicilio_id_domicilio'), table_name='ciudadano_domicilio')
     op.drop_table('ciudadano_domicilio')
     op.drop_index(op.f('ix_boletin_instances_template_id'), table_name='boletin_instances')
-    op.drop_index(op.f('ix_boletin_instances_status'), table_name='boletin_instances')
     op.drop_index(op.f('ix_boletin_instances_name'), table_name='boletin_instances')
     op.drop_table('boletin_instances')
     op.drop_index(op.f('ix_viajes_ciudadano_id_snvs_viaje_epidemiologico'), table_name='viajes_ciudadano')
