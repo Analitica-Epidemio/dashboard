@@ -1,5 +1,8 @@
 """
 Analytics router
+
+Los datos de vigilancia agregada (CLI_P26, LAB_P26, CLI_P26_INT) se consultan
+directamente via POST /api/v1/metricas/query usando MetricService.
 """
 
 from fastapi import APIRouter
@@ -13,7 +16,7 @@ from app.api.v1.analytics.get_top_winners_losers import get_top_winners_losers
 from app.api.v1.analytics.schemas import (
     AnalyticsResponse,
     CalculateChangesResponse,
-    EventoDetailsResponse,
+    CasoEpidemiologicoDetailsResponse,
     TopChangesByGroupResponse,
     TopWinnersLosersResponse,
 )
@@ -93,11 +96,14 @@ router.add_api_route(
     "/evento-details/{tipo_eno_id}",
     get_evento_details,
     methods=["GET"],
-    response_model=SuccessResponse[EventoDetailsResponse],
+    response_model=SuccessResponse[CasoEpidemiologicoDetailsResponse],
     name="get_evento_details",
     summary="Obtiene detalles completos de un evento (para dialog)",
     responses={
-        404: {"model": ErrorResponse, "description": "Evento no encontrado"},
+        404: {
+            "model": ErrorResponse,
+            "description": "CasoEpidemiologico no encontrado",
+        },
         500: {"model": ErrorResponse, "description": "Error interno del servidor"},
     },
 )

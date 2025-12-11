@@ -29,9 +29,7 @@ class CapaHidrografia(BaseModel, table=True):
         None, max_length=200, description="Nombre del curso de agua"
     )
     tipo: Optional[str] = Field(
-        None,
-        max_length=50,
-        description="Tipo: río, arroyo, canal, laguna, etc."
+        None, max_length=50, description="Tipo: río, arroyo, canal, laguna, etc."
     )
 
     # Geometría - spatial_index=False para crear index explícito
@@ -39,7 +37,7 @@ class CapaHidrografia(BaseModel, table=True):
     geometria: Optional[str] = Field(
         default=None,
         sa_column=Column(Geometry("MULTILINESTRING", srid=4326, spatial_index=False)),
-        description="Geometría del curso de agua (MultiLineString en WGS84)"
+        description="Geometría del curso de agua (MultiLineString en WGS84)",
     )
 
     # Metadatos
@@ -71,8 +69,7 @@ class CapaAreaUrbana(BaseModel, table=True):
 
     # Relación geográfica
     id_departamento_indec: Optional[int] = Field(
-        None,
-        description="Código INDEC del departamento al que pertenece"
+        None, description="Código INDEC del departamento al que pertenece"
     )
 
     # Datos poblacionales
@@ -85,7 +82,7 @@ class CapaAreaUrbana(BaseModel, table=True):
     geometria: Optional[str] = Field(
         default=None,
         sa_column=Column(Geometry("MULTIPOLYGON", srid=4326, spatial_index=False)),
-        description="Geometría del área urbana (MultiPolygon en WGS84)"
+        description="Geometría del área urbana (MultiPolygon en WGS84)",
     )
 
     # Metadatos

@@ -7,7 +7,6 @@
  * @module features/uploads/api
  */
 
-import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useRef } from 'react';
 import { $api } from '@/lib/api/client';
 
@@ -147,7 +146,6 @@ export function useCancelJob() {
 export function useUploadWorkflow() {
   const uploadMutation = useUploadCsv();
   const cancelMutation = useCancelJob();
-  const queryClient = useQueryClient();
 
   const currentJobIdRef = useRef<string | null>(null);
 

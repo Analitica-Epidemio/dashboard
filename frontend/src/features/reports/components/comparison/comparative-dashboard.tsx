@@ -3,7 +3,7 @@
  * Displays charts in columns for each filter combination
  */
 
-import React, { useState } from "react";
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CompactFilterBar } from "./compact-filter-bar";
@@ -129,7 +129,10 @@ const DynamicChartsColumn: React.FC<{
 
         {/* Dynamic Charts (UniversalChartSpec) */}
         {data?.data?.charts?.map((chartSpec) => (
-          <UniversalChart key={chartSpec.id} spec={chartSpec} />
+          <UniversalChart
+            key={chartSpec.id}
+            spec={chartSpec}
+          />
         ))}
 
         {/* If no charts available */}
@@ -269,7 +272,7 @@ export const ComparativeDashboard: React.FC<ComparativeDashboardProps> = ({
       <CompactFilterBar
         dateRange={dateRange}
         filterCombinations={filterCombinations}
-        onEditFilters={onBack || (() => {})}
+        onEditFilters={onBack || (() => { })}
         onGenerateZipReport={handleGenerateZipReport}
         onGenerateSignedUrl={handleGenerateSignedUrl}
         isGeneratingReport={generateZipReportMutation.isPending}

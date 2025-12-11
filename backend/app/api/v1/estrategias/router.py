@@ -7,9 +7,9 @@ from typing import List
 from fastapi import APIRouter, status
 
 from app.core.schemas.response import ErrorResponse, PaginatedResponse, SuccessResponse
-from app.domains.eventos_epidemiologicos.clasificacion.schemas import (
+from app.domains.vigilancia_nominal.clasificacion.schemas import (
     AuditLogResponse,
-    EventStrategyResponse,
+    EstrategiaClasificacionResponse,
     StrategyTestResponse,
 )
 
@@ -29,7 +29,7 @@ router.add_api_route(
     "/",
     list_strategies,
     methods=["GET"],
-    response_model=PaginatedResponse[EventStrategyResponse],
+    response_model=PaginatedResponse[EstrategiaClasificacionResponse],
     responses={
         500: {"model": ErrorResponse, "description": "Error interno del servidor"}
     },
@@ -40,7 +40,7 @@ router.add_api_route(
     "/{strategy_id}",
     get_strategy,
     methods=["GET"],
-    response_model=SuccessResponse[EventStrategyResponse],
+    response_model=SuccessResponse[EstrategiaClasificacionResponse],
     responses={
         404: {"model": ErrorResponse, "description": "Estrategia no encontrada"},
         500: {"model": ErrorResponse, "description": "Error interno del servidor"},
@@ -52,7 +52,7 @@ router.add_api_route(
     "/",
     create_strategy,
     methods=["POST"],
-    response_model=SuccessResponse[EventStrategyResponse],
+    response_model=SuccessResponse[EstrategiaClasificacionResponse],
     status_code=status.HTTP_201_CREATED,
     responses={
         400: {"model": ErrorResponse, "description": "Datos inválidos"},
@@ -69,7 +69,7 @@ router.add_api_route(
     "/{strategy_id}",
     update_strategy,
     methods=["PUT"],
-    response_model=SuccessResponse[EventStrategyResponse],
+    response_model=SuccessResponse[EstrategiaClasificacionResponse],
     responses={
         404: {"model": ErrorResponse, "description": "Estrategia no encontrada"},
         400: {"model": ErrorResponse, "description": "Datos inválidos"},
@@ -98,7 +98,7 @@ router.add_api_route(
     "/{strategy_id}/activate",
     activate_strategy,
     methods=["POST"],
-    response_model=SuccessResponse[EventStrategyResponse],
+    response_model=SuccessResponse[EstrategiaClasificacionResponse],
     responses={
         404: {"model": ErrorResponse, "description": "Estrategia no encontrada"},
         409: {

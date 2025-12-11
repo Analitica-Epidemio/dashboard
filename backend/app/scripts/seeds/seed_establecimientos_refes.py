@@ -49,20 +49,30 @@ import json
 import sys
 import warnings
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
-from sqlalchemy import Connection, text
+from sqlalchemy import case, func
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.engine import Connection
+from sqlmodel import col, select, update
+
+from app.domains.territorio.establecimientos_models import Establecimiento
+from app.domains.territorio.geografia_models import Departamento, Localidad
+
+if TYPE_CHECKING:
+    import geopandas as gpd
 
 # Suprimir warnings de SSL inseguro
 from urllib3.exceptions import InsecureRequestWarning
 
-warnings.simplefilter('ignore', InsecureRequestWarning)
+warnings.simplefilter("ignore", InsecureRequestWarning)
 
 # Agregar el directorio raíz al path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
 
-def descargar_establecimientos_wfs():
+def descargar_establecimientos_wfs() -> "gpd.GeoDataFrame":
     """
     Descarga establecimientos de salud desde el servicio WFS del IGN.
 
@@ -89,7 +99,7 @@ def descargar_establecimientos_wfs():
             cache_key="establecimientos_ign_salud",
             max_age_days=7,
             timeout=300,
-            verify_ssl=False
+            verify_ssl=False,
         )
 
         # Cargar GeoJSON en GeoDataFrame
@@ -104,7 +114,7 @@ def descargar_establecimientos_wfs():
         raise
 
 
-def limpiar_string(val) -> str | None:
+def limpiar_string(val: Any) -> str | None:
     """Limpia y normaliza strings."""
     if pd.isna(val) or val == "" or val == "S/D" or val == "s/d":
         return None
@@ -112,7 +122,7 @@ def limpiar_string(val) -> str | None:
     return str(val).strip().replace("'", "''")[:200]  # Limitar longitud
 
 
-def limpiar_coordenada(val) -> float | None:
+def limpiar_coordenada(val: Any) -> float | None:
     """Limpia y valida coordenadas."""
     if pd.isna(val):
         return None
@@ -127,7 +137,9 @@ def limpiar_coordenada(val) -> float | None:
         return None
 
 
-def asignar_localidad_por_coordenadas(conn: Connection, lat: float, lng: float) -> int | None:
+def asignar_localidad_por_coordenadas(
+    conn: Connection, lat: float, lng: float
+) -> int | None:
     """
     Asigna localidad INDEC usando reverse geocoding mejorado.
 
@@ -151,16 +163,24 @@ def asignar_localidad_por_coordenadas(conn: Connection, lat: float, lng: float) 
     """
     # Paso 1: Encontrar departamento más cercano
     # Buffer de 0.5 grados (~55km) para limitar búsqueda
-    dept_result = conn.execute(text("""
-        SELECT id_departamento_indec
-        FROM departamento
-        WHERE latitud BETWEEN :lat - 0.5 AND :lat + 0.5
-          AND longitud BETWEEN :lng - 0.5 AND :lng + 0.5
-        ORDER BY
-            (latitud - :lat) * (latitud - :lat) +
-            (longitud - :lng) * (longitud - :lng)
-        LIMIT 1
-    """), {"lat": lat, "lng": lng})
+    # Paso 1: Encontrar departamento más cercano
+    # Buffer de 0.5 grados (~55km) para limitar búsqueda
+    # SELECT id_departamento_indec FROM departamento ...
+    lat_min, lat_max = lat - 0.5, lat + 0.5
+    lng_min, lng_max = lng - 0.5, lng + 0.5
+
+    stmt_dept = (
+        select(Departamento.id_departamento_indec)
+        .where(col(Departamento.latitud).between(lat_min, lat_max))
+        .where(col(Departamento.longitud).between(lng_min, lng_max))
+        .order_by(
+            (col(Departamento.latitud) - lat) * (col(Departamento.latitud) - lat)  # type: ignore[operator]
+            + (col(Departamento.longitud) - lng) * (col(Departamento.longitud) - lng)  # type: ignore[operator]
+        )
+        .limit(1)
+    )
+
+    dept_result = conn.execute(stmt_dept)
 
     dept_row = dept_result.first()
     if not dept_row:
@@ -170,34 +190,32 @@ def asignar_localidad_por_coordenadas(conn: Connection, lat: float, lng: float) 
 
     # Paso 2: Dentro de ese departamento, buscar localidad más cercana
     # Priorizar localidades con coordenadas válidas
-    loc_result = conn.execute(text("""
-        SELECT
-            id_localidad_indec,
-            latitud,
-            longitud,
-            (latitud - :lat) * (latitud - :lat) +
-            (longitud - :lng) * (longitud - :lng) as distancia
-        FROM localidad
-        WHERE id_departamento_indec = :dept_id
-          AND latitud IS NOT NULL
-          AND longitud IS NOT NULL
-        ORDER BY distancia
-        LIMIT 1
-    """), {"lat": lat, "lng": lng, "dept_id": id_departamento})
+    stmt_loc = (
+        select(Localidad.id_localidad_indec)
+        .where(Localidad.id_departamento_indec == id_departamento)
+        .where(col(Localidad.latitud).is_not(None))
+        .where(col(Localidad.longitud).is_not(None))
+        .order_by(
+            (col(Localidad.latitud) - lat) * (col(Localidad.latitud) - lat)  # type: ignore[operator]
+            + (col(Localidad.longitud) - lng) * (col(Localidad.longitud) - lng)  # type: ignore[operator]
+        )
+        .limit(1)
+    )
 
+    loc_result = conn.execute(stmt_loc)
     loc_row = loc_result.first()
 
     # Si encontramos localidad con coordenadas, usarla
     if loc_row:
-        return loc_row[0]
+        return int(loc_row[0])
 
     # Fallback: Si ninguna localidad tiene coordenadas, usar la primera del departamento
-    fallback_result = conn.execute(text("""
-        SELECT id_localidad_indec
-        FROM localidad
-        WHERE id_departamento_indec = :dept_id
-        LIMIT 1
-    """), {"dept_id": id_departamento})
+    stmt_fallback = (
+        select(Localidad.id_localidad_indec)
+        .where(Localidad.id_departamento_indec == id_departamento)
+        .limit(1)
+    )
+    fallback_result = conn.execute(stmt_fallback)
 
     fallback_row = fallback_result.first()
     return fallback_row[0] if fallback_row else None
@@ -215,9 +233,9 @@ def seed_refes(conn: Connection) -> int:
     Returns:
         Número de establecimientos insertados
     """
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("🏥 CARGANDO ESTABLECIMIENTOS DE SALUD (IGN)")
-    print("="*70)
+    print("=" * 70)
 
     # 1. Descargar datos desde WFS del IGN (retorna GeoDataFrame)
     gdf = descargar_establecimientos_wfs()
@@ -227,8 +245,8 @@ def seed_refes(conn: Connection) -> int:
 
     # 2. Extraer coordenadas de la geometría Point
     # La geometría viene del WFS, extraer lat/lon
-    gdf['latitud'] = gdf.geometry.y
-    gdf['longitud'] = gdf.geometry.x
+    gdf["latitud"] = gdf.geometry.y
+    gdf["longitud"] = gdf.geometry.x
 
     # 3. Mapeo de columnas IGN a nuestro modelo
     # Columnas IGN: id, gid, entidad, fna, gna, nam, fdc, sag
@@ -236,10 +254,10 @@ def seed_refes(conn: Connection) -> int:
     # gna = Generic Name (tipo: Hospital, Centro de Salud, etc.)
     # nam = Name (nombre corto/localidad)
     column_mapping = {
-        'gid': 'codigo_refes',           # Usar GID como código único
-        'fna': 'nombre',                 # Nombre completo
-        'gna': 'tipo_establecimiento',   # Tipo (Hospital, Centro de Salud, etc.)
-        'nam': 'nombre_corto',           # Nombre corto
+        "gid": "codigo_refes",  # Usar GID como código único
+        "fna": "nombre",  # Nombre completo
+        "gna": "tipo_establecimiento",  # Tipo (Hospital, Centro de Salud, etc.)
+        "nam": "nombre_corto",  # Nombre corto
     }
 
     # Renombrar columnas
@@ -251,26 +269,30 @@ def seed_refes(conn: Connection) -> int:
     print("\n🗺️  Asignando localidades con reverse geocoding...")
     localidades_asignadas = 0
 
-    for idx, row in df_renamed.iterrows():
+    for idx, (_, row) in enumerate(df_renamed.iterrows()):
         if idx % 1000 == 0 and idx > 0:
-            print(f"   Procesados: {idx}/{len(df_renamed)} ({localidades_asignadas} con localidad)")
+            print(
+                f"   Procesados: {idx}/{len(df_renamed)} ({localidades_asignadas} con localidad)"
+            )
 
         # Datos básicos de IGN
-        codigo_refes = limpiar_string(row.get('codigo_refes'))
-        nombre = limpiar_string(row.get('nombre'))
+        codigo_refes = limpiar_string(row.get("codigo_refes"))
+        nombre = limpiar_string(row.get("nombre"))
 
         if not nombre:
             continue  # Skip si no hay nombre
 
         # Coordenadas (ya extraídas de la geometría)
-        latitud = limpiar_coordenada(row.get('latitud'))
-        longitud = limpiar_coordenada(row.get('longitud'))
+        latitud = limpiar_coordenada(row.get("latitud"))
+        longitud = limpiar_coordenada(row.get("longitud"))
 
         # Asignar localidad por reverse geocoding
         id_localidad = None
         if latitud and longitud:
             try:
-                id_localidad = asignar_localidad_por_coordenadas(conn, latitud, longitud)
+                id_localidad = asignar_localidad_por_coordenadas(
+                    conn, latitud, longitud
+                )
                 if id_localidad:
                     localidades_asignadas += 1
             except Exception:
@@ -278,14 +300,16 @@ def seed_refes(conn: Connection) -> int:
                 pass
 
         # IGN provee: código, nombre, coordenadas + reverse geocoding de localidad
-        establecimientos.append({
-            'codigo_refes': str(codigo_refes) if codigo_refes else None,
-            'nombre': nombre,
-            'latitud': latitud,
-            'longitud': longitud,
-            'id_localidad_indec': id_localidad,
-            'source': 'IGN',
-        })
+        establecimientos.append(
+            {
+                "codigo_refes": str(codigo_refes) if codigo_refes else None,
+                "nombre": nombre,
+                "latitud": latitud,
+                "longitud": longitud,
+                "id_localidad_indec": id_localidad,
+                "source": "IGN",
+            }
+        )
 
     if not establecimientos:
         print("⚠️  No se encontraron establecimientos válidos")
@@ -299,47 +323,47 @@ def seed_refes(conn: Connection) -> int:
     total_batches = (len(establecimientos) + batch_size - 1) // batch_size
 
     for i in range(0, len(establecimientos), batch_size):
-        batch = establecimientos[i:i + batch_size]
+        batch = establecimientos[i : i + batch_size]
         batch_num = (i // batch_size) + 1
 
-        print(f"📦 Insertando batch {batch_num}/{total_batches} ({len(batch)} establecimientos)...", end=" ")
+        print(
+            f"📦 Insertando batch {batch_num}/{total_batches} ({len(batch)} establecimientos)...",
+            end=" ",
+        )
 
-        # Construir valores para INSERT (incluye localidad y source)
+        # Construir lista de diccionarios para INSERT
+        # Usa insert() de SQLAlchemy para bulk
         values_list = []
         for est in batch:
-            values = f"""(
-                {f"'{est['codigo_refes']}'" if est['codigo_refes'] else 'NULL'},
-                {f"'{est['nombre']}'" if est['nombre'] else 'NULL'},
-                {est['latitud'] if est['latitud'] is not None else 'NULL'},
-                {est['longitud'] if est['longitud'] is not None else 'NULL'},
-                {est['id_localidad_indec'] if est.get('id_localidad_indec') else 'NULL'},
-                {f"'{est['source']}'" if est.get('source') else 'NULL'},
-                CURRENT_TIMESTAMP,
-                CURRENT_TIMESTAMP
-            )"""
-            values_list.append(values)
+            values_list.append(
+                {
+                    "codigo_refes": est["codigo_refes"],
+                    "nombre": est["nombre"],
+                    "latitud": est["latitud"],
+                    "longitud": est["longitud"],
+                    "id_localidad_indec": est["id_localidad_indec"],
+                    "source": est.get("source"),
+                    "created_at": func.current_timestamp(),
+                    "updated_at": func.current_timestamp(),
+                }
+            )
 
-        stmt = text(f"""
-            INSERT INTO establecimiento (
-                codigo_refes, nombre,
-                latitud, longitud, id_localidad_indec, source,
-                created_at, updated_at
-            ) VALUES {','.join(values_list)}
-        """)
+        stmt = insert(Establecimiento).values(values_list)
 
         try:
             conn.execute(stmt)
-            conn.commit()
             inserted_count += len(batch)
             print("✅")
         except Exception as e:
             print(f"❌ Error: {e}")
             continue
 
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print(f"✅ ESTABLECIMIENTOS REFES CARGADOS: {inserted_count:,}")
-    print(f"🗺️  Con localidad asignada: {localidades_asignadas:,} ({localidades_asignadas/inserted_count*100:.1f}%)")
-    print("="*70)
+    print(
+        f"🗺️  Con localidad asignada: {localidades_asignadas:,} ({localidades_asignadas / inserted_count * 100:.1f}%)"
+    )
+    print("=" * 70)
 
     # Cargar mapping SNVS → IGN
     cargar_mapping_snvs(conn)
@@ -361,21 +385,23 @@ def cargar_mapping_snvs(conn: Connection) -> int:
     Returns:
         Número de establecimientos actualizados con código SNVS
     """
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("🔗 CARGANDO MAPPING SNVS → IGN")
-    print("="*70)
+    print("=" * 70)
 
     # Cargar archivo de mapping
-    mapping_path = Path(__file__).parent / "data" / "establecimientos_mapping_final.json"
+    mapping_path = (
+        Path(__file__).parent / "data" / "establecimientos_mapping_final.json"
+    )
 
     if not mapping_path.exists():
         print(f"⚠️  Archivo de mapping no encontrado: {mapping_path}")
         return 0
 
-    with open(mapping_path, 'r', encoding='utf-8') as f:
+    with open(mapping_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    mapping = data.get('mapping', {})
+    mapping = data.get("mapping", {})
 
     if not mapping:
         print("⚠️  No se encontró mapping en el archivo")
@@ -391,51 +417,50 @@ def cargar_mapping_snvs(conn: Connection) -> int:
     total_batches = (len(mapping_items) + batch_size - 1) // batch_size
 
     for i in range(0, len(mapping_items), batch_size):
-        batch = mapping_items[i:i + batch_size]
+        batch = mapping_items[i : i + batch_size]
         batch_num = (i // batch_size) + 1
 
-        print(f"📦 Actualizando batch {batch_num}/{total_batches} ({len(batch)} mappings)...", end=" ")
+        print(
+            f"📦 Actualizando batch {batch_num}/{total_batches} ({len(batch)} mappings)...",
+            end=" ",
+        )
 
-        # Construir CASE para UPDATE masivo
-        case_parts = []
-        codigo_refes_list = []
+        # Construir expresión CASE
 
-        for codigo_snvs, ign_data in batch:
-            codigo_refes = ign_data.get('codigo_refes')
+        # Primero, necesitamos una lista de tuplas para el case
+        # case_parts ya contiene strings "WHEN ... THEN ...",
+        # pero para SQLAlchemy ORM usamos case() expression object.
 
-            if not codigo_refes or not codigo_snvs:
-                continue
+        case_map = {
+            ign_data["codigo_refes"]: codigo_snvs
+            for codigo_snvs, ign_data in batch
+            if ign_data.get("codigo_refes")
+        }
 
-            # Guardar el código SNVS del CSV en el establecimiento IGN
-            case_parts.append(f"WHEN codigo_refes = '{codigo_refes}' THEN '{codigo_snvs}'")
-            codigo_refes_list.append(f"'{codigo_refes}'")
-
-        if not case_parts:
+        if not case_map:
             print("⏭️  (sin mappings válidos)")
             continue
 
-        # UPDATE usando CASE para actualizar múltiples registros
-        stmt = text(f"""
-            UPDATE establecimiento
-            SET codigo_snvs = CASE
-                {' '.join(case_parts)}
-            END,
-            updated_at = CURRENT_TIMESTAMP
-            WHERE codigo_refes IN ({','.join(codigo_refes_list)})
-        """)
+        stmt = (
+            update(Establecimiento)
+            .where(col(Establecimiento.codigo_refes).in_(case_map.keys()))
+            .values(
+                codigo_snvs=case(case_map, value=Establecimiento.codigo_refes),
+                updated_at=func.current_timestamp(),
+            )
+        )
 
         try:
             result = conn.execute(stmt)
-            conn.commit()
             updated_count += result.rowcount
             print(f"✅ ({result.rowcount} actualizados)")
         except Exception as e:
             print(f"❌ Error: {e}")
             continue
 
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print(f"✅ MAPPING SNVS CARGADO: {updated_count:,} establecimientos actualizados")
-    print("="*70)
+    print("=" * 70)
 
     return updated_count
 
@@ -445,18 +470,22 @@ if __name__ == "__main__":
 
     from sqlalchemy import create_engine
 
-    DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://epidemiologia_user:epidemiologia_password@localhost:5432/epidemiologia_db")
+    DATABASE_URL = os.getenv(
+        "DATABASE_URL",
+        "postgresql://epidemiologia_user:epidemiologia_password@localhost:5432/epidemiologia_db",
+    )
     if "postgresql+asyncpg" in DATABASE_URL:
         DATABASE_URL = DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://")
 
     engine = create_engine(DATABASE_URL)
 
     try:
-        with engine.connect() as conn:
+        with engine.begin() as conn:
             count = seed_refes(conn)
             print(f"\n✅ Total insertado: {count:,} establecimientos")
     except Exception as e:
         print(f"\n❌ Error: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)

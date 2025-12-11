@@ -46,19 +46,27 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("🔄 Initializing Celery and testing Redis connection...")
     try:
         from app.core.celery_app import celery_app
+
         logger.info(f"📡 Celery broker configured: {celery_app.conf.broker_url}")
-        logger.info(f"🗄️ Celery result backend configured: {celery_app.conf.result_backend}")
+        logger.info(
+            f"🗄️ Celery result backend configured: {celery_app.conf.result_backend}"
+        )
 
         # Test Redis connection
         import redis
-        redis_url_parts = settings.REDIS_URL.replace('redis://', '').split(':')
+
+        redis_url_parts = settings.REDIS_URL.replace("redis://", "").split(":")
         redis_host = redis_url_parts[0]
-        redis_port_db = redis_url_parts[1].split('/')
+        redis_port_db = redis_url_parts[1].split("/")
         redis_port = int(redis_port_db[0])
         redis_db = int(redis_port_db[1]) if len(redis_port_db) > 1 else 0
 
-        logger.info(f"🔍 Testing Redis connection to {redis_host}:{redis_port}, DB: {redis_db}")
-        redis_client = redis.Redis(host=redis_host, port=redis_port, db=redis_db, socket_connect_timeout=3)
+        logger.info(
+            f"🔍 Testing Redis connection to {redis_host}:{redis_port}, DB: {redis_db}"
+        )
+        redis_client = redis.Redis(
+            host=redis_host, port=redis_port, db=redis_db, socket_connect_timeout=3
+        )
         redis_client.ping()
         logger.info("✅ Redis connection successful on startup!")
 
@@ -66,6 +74,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.error(f"❌ Redis/Celery initialization failed: {str(e)}")
         logger.error(f"❌ Error type: {type(e).__name__}")
         logger.warning("⚠️ File upload functionality will not work without Redis!")
+
+    # Registrar processors de cada dominio
+    # Al importar, cada módulo se registra automáticamente
+    logger.info("📦 Registrando processors de dominios...")
+    import app.domains.vigilancia_agregada.procesamiento  # noqa: F401
+    import app.domains.vigilancia_nominal.procesamiento  # noqa: F401
+    from app.domains.jobs.registry import list_processors
+
+    logger.info(f"✅ Processors registrados: {list_processors()}")
 
     logger.info("🏥 Sistema de Epidemiología listo para recibir requests")
 
@@ -123,7 +140,7 @@ def setup_standard_middleware(app: FastAPI) -> None:
     if settings.ENVIRONMENT == "development":
         # En desarrollo, permitir cualquier origen localhost
         app.add_middleware(
-            CORSMiddleware,
+            CORSMiddleware,  # type: ignore[arg-type]
             allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
             allow_credentials=True,
             allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
@@ -134,7 +151,7 @@ def setup_standard_middleware(app: FastAPI) -> None:
         )
     elif settings.BACKEND_CORS_ORIGINS:
         app.add_middleware(
-            CORSMiddleware,
+            CORSMiddleware,  # type: ignore[arg-type]
             allow_origins=settings.BACKEND_CORS_ORIGINS,
             allow_credentials=True,
             allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
@@ -143,8 +160,10 @@ def setup_standard_middleware(app: FastAPI) -> None:
 
     # Trusted hosts para seguridad en producción
     if settings.ALLOWED_HOSTS:
-        allowed_hosts = [host.strip() for host in settings.ALLOWED_HOSTS.split(",")]
-        app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
+        allowed_hosts_list = [
+            host.strip() for host in settings.ALLOWED_HOSTS.split(",")
+        ]
+        app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts_list)  # type: ignore[arg-type]
 
     # Middleware personalizado para logging de requests
     @app.middleware("http")
@@ -168,7 +187,7 @@ def setup_standard_middleware(app: FastAPI) -> None:
             f"Time: {process_time:.3f}s"
         )
 
-        return response  # type: ignore[no-any-return]
+        return response
 
 
 def setup_exception_handlers(app: FastAPI) -> None:

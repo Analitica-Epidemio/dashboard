@@ -59,10 +59,6 @@ export function DengueClusterLayer({
           ? CLUSTER_COLORS.active
           : CLUSTER_COLORS.inactive;
 
-        // Convertir metros a grados aproximados para Leaflet
-        // 1 grado de latitud ≈ 111,320 metros
-        const radiusInDegrees = cluster.radiusMeters / 111320;
-
         return (
           <Circle
             key={cluster.id}

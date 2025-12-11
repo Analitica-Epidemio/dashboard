@@ -194,10 +194,10 @@ export function StrategyPreview({ strategy, onClose, onEdit }: StrategyPreviewPr
                 {targetType === "animal"
                   ? "Animal"
                   : targetType === "humano"
-                  ? "Humano"
-                  : targetType === "cualquiera"
-                  ? "Cualquiera"
-                  : "Indeterminado"}
+                    ? "Humano"
+                    : targetType === "cualquiera"
+                      ? "Cualquiera"
+                      : "Indeterminado"}
               </strong>
             </div>
             {minConfidence !== undefined && minConfidence !== null && minConfidence > 0 && (
@@ -327,7 +327,7 @@ export function StrategyPreview({ strategy, onClose, onEdit }: StrategyPreviewPr
           <div className="space-y-1">
             <h2 className="text-xl font-semibold">{strategy.name}</h2>
             <p className="text-sm text-muted-foreground">
-              {strategy.tipo_eno_name || `Evento ${strategy.tipo_eno_id}`}
+              {strategy.tipo_enfermedad_name || `Evento ${strategy.id_enfermedad}`}
             </p>
           </div>
           <Badge

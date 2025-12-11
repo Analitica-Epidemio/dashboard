@@ -24,24 +24,28 @@ async def aceptar_sugerencias_bulk(
     for mapeo_request in request.mapeos:
         try:
             resultado = await crear_mapeo_snvs_ign(mapeo_request, session)
-            resultados_exitosos.append({
-                "id_establecimiento_snvs": mapeo_request.id_establecimiento_snvs,
-                "id_establecimiento_ign": mapeo_request.id_establecimiento_ign,
-                "status": "success",
-                "data": resultado
-            })
+            resultados_exitosos.append(
+                {
+                    "id_establecimiento_snvs": mapeo_request.id_establecimiento_snvs,
+                    "id_establecimiento_ign": mapeo_request.id_establecimiento_ign,
+                    "status": "success",
+                    "data": resultado,
+                }
+            )
         except Exception as e:
-            resultados_fallidos.append({
-                "id_establecimiento_snvs": mapeo_request.id_establecimiento_snvs,
-                "id_establecimiento_ign": mapeo_request.id_establecimiento_ign,
-                "status": "error",
-                "error": str(e)
-            })
+            resultados_fallidos.append(
+                {
+                    "id_establecimiento_snvs": mapeo_request.id_establecimiento_snvs,
+                    "id_establecimiento_ign": mapeo_request.id_establecimiento_ign,
+                    "status": "error",
+                    "error": str(e),
+                }
+            )
 
     return {
         "message": f"Procesados {len(request.mapeos)} mapeos",
         "exitosos": len(resultados_exitosos),
         "fallidos": len(resultados_fallidos),
         "resultados_exitosos": resultados_exitosos,
-        "resultados_fallidos": resultados_fallidos
+        "resultados_fallidos": resultados_fallidos,
     }

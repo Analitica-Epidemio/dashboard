@@ -9,8 +9,6 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pandas as pd
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.domains.eventos_epidemiologicos.clasificacion.models import (
     ClassificationRule,
     EventStrategy,
@@ -21,6 +19,8 @@ from app.domains.eventos_epidemiologicos.clasificacion.models import (
 from app.domains.eventos_epidemiologicos.clasificacion.services import (
     EventClassificationService,
 )
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from tests.domains.estrategias.fixtures.csv_samples import RABIA_SAMPLES
 
 
@@ -167,7 +167,7 @@ class TestEventClassificationServiceIntegration:
 
         # Validaciones
         assert result_df["clasificacion"].iloc[0] == TipoClasificacion.TODOS.value
-        assert result_df["es_positivo"].iloc[0] == False
+        assert result_df["es_positivo"].iloc[0] is False
 
     @pytest.mark.asyncio
     async def test_apply_rule_campo_igual(self, classification_service):
@@ -309,7 +309,7 @@ class TestEventClassificationServiceIntegration:
 
         # Debe aplicarse la regla de mayor prioridad (confirmados)
         assert result_df["clasificacion"].iloc[0] == TipoClasificacion.CONFIRMADOS.value
-        assert result_df["es_positivo"].iloc[0] == True
+        assert result_df["es_positivo"].iloc[0] is True
 
     @pytest.mark.asyncio
     async def test_confidence_threshold_enforcement(self, classification_service):

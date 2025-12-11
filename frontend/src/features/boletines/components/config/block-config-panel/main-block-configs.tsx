@@ -7,7 +7,7 @@
  * selección manual de eventos/agentes.
  */
 
-import { Activity, Calendar, Filter, LayoutGrid, Layers, Bug, LineChart } from "lucide-react";
+import { Activity, Calendar, Filter, LayoutGrid, Layers, LineChart } from "lucide-react";
 import {
   SectionCard,
   ContextBanner,

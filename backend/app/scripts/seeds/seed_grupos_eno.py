@@ -1,5 +1,5 @@
 """
-Seed de Grupos ENO (Eventos de Notificación Obligatoria).
+Seed de Grupos ENO (CasoEpidemiologicos de Notificación Obligatoria).
 
 Este seed carga todos los grupos ENO oficiales del SNVS con:
 - Nombre completo
@@ -15,12 +15,29 @@ en la visualización temporal del mapa:
 FUENTE: Sistema Nacional de Vigilancia de la Salud (SNVS) - Argentina
 """
 
+from typing import List, TypedDict
+
 from sqlalchemy import text
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
+from sqlmodel import col, delete
+
+from app.domains.vigilancia_nominal.models.enfermedad import (
+    EnfermedadGrupo,
+    GrupoDeEnfermedades,
+)
+
+
+class GrupoEnoData(TypedDict):
+    nombre: str
+    codigo: str
+    descripcion: str
+    ventana_dias_default: int | None
+
 
 # Lista completa de grupos ENO con sus configuraciones
 # Excluye "Vigilancia Epidemiológica" que era un hack genérico
-GRUPOS_ENO = [
+GRUPOS_ENO: List[GrupoEnoData] = [
     # Enfermedades transmitidas por vectores
     {
         "nombre": "Dengue",
@@ -76,7 +93,6 @@ GRUPOS_ENO = [
         "descripcion": "Vigilancia de Enfermedad de Chagas aguda y crónica",
         "ventana_dias_default": None,  # Enfermedad crónica
     },
-
     # Enfermedades respiratorias
     {
         "nombre": "Infecciones Respiratorias Agudas",
@@ -120,7 +136,6 @@ GRUPOS_ENO = [
         "descripcion": "Vigilancia de Psitacosis (Chlamydia psittaci)",
         "ventana_dias_default": 14,
     },
-
     # ITS y enfermedades crónicas
     {
         "nombre": "VIH-SIDA",
@@ -146,7 +161,6 @@ GRUPOS_ENO = [
         "descripcion": "Vigilancia de Hepatitis A, B, C, D y E",
         "ventana_dias_default": None,  # B y C pueden ser crónicas
     },
-
     # Enfermedades gastrointestinales
     {
         "nombre": "Diarreas y Patógenos de Transmisión Alimentaria",
@@ -190,7 +204,6 @@ GRUPOS_ENO = [
         "descripcion": "Vigilancia de Cólera (evento de notificación internacional - RSI)",
         "ventana_dias_default": 7,
     },
-
     # Zoonosis
     {
         "nombre": "Rabia",
@@ -222,13 +235,12 @@ GRUPOS_ENO = [
         "descripcion": "Vigilancia de Carbunco/Ántrax cutáneo, inhalatorio y gastrointestinal",
         "ventana_dias_default": 14,
     },
-
     # Envenenamientos/intoxicaciones
     {
         "nombre": "Envenenamiento por Animales Ponzoñosos",
         "codigo": "envenenamiento-por-animales-ponzonosos",
         "descripcion": "Vigilancia de Ofidismo, Araneísmo, Escorpionismo",
-        "ventana_dias_default": 7,  # Eventos puntuales
+        "ventana_dias_default": 7,  # CasoEpidemiologicos puntuales
     },
     {
         "nombre": "Intoxicaciones",
@@ -236,7 +248,6 @@ GRUPOS_ENO = [
         "descripcion": "Vigilancia de intoxicaciones por monóxido de carbono, plaguicidas, etc.",
         "ventana_dias_default": 7,
     },
-
     # Lesiones
     {
         "nombre": "Lesiones Intencionales",
@@ -250,7 +261,6 @@ GRUPOS_ENO = [
         "descripcion": "Vigilancia de accidentes de tránsito, caídas, quemaduras",
         "ventana_dias_default": 7,
     },
-
     # Enfermedades prevenibles por vacunas
     {
         "nombre": "Enfermedad Febril Exantemática (EFE)",
@@ -282,7 +292,6 @@ GRUPOS_ENO = [
         "descripcion": "Vigilancia de Difteria",
         "ventana_dias_default": 14,
     },
-
     # Meningitis/encefalitis
     {
         "nombre": "Meningoencefalitis",
@@ -296,7 +305,6 @@ GRUPOS_ENO = [
         "descripcion": "Vigilancia de infecciones invasivas bacterianas y otras",
         "ventana_dias_default": 14,
     },
-
     # Micosis
     {
         "nombre": "Micosis Sistémicas Endémicas",
@@ -310,7 +318,6 @@ GRUPOS_ENO = [
         "descripcion": "Vigilancia de Criptococosis, Aspergilosis, Candidiasis invasiva",
         "ventana_dias_default": None,
     },
-
     # Síndrome febril
     {
         "nombre": "Síndrome Febril Agudo Inespecífico (SFAI)",
@@ -318,7 +325,6 @@ GRUPOS_ENO = [
         "descripcion": "Vigilancia de síndromes febriles sin etiología definida",
         "ventana_dias_default": 14,
     },
-
     # Otras
     {
         "nombre": "Rickettsiosis",
@@ -368,7 +374,6 @@ GRUPOS_ENO = [
         "descripcion": "Vigilancia de enfermedades detectadas por pesquisa neonatal",
         "ventana_dias_default": None,
     },
-
     # Vigilancia especial
     {
         "nombre": "Vigilancia Animal",
@@ -395,45 +400,86 @@ def seed_grupos_eno(session: Session) -> int:
         Número de grupos insertados/actualizados
     """
     print("\n" + "=" * 70)
-    print("🏥 CARGANDO GRUPOS ENO (Eventos de Notificación Obligatoria)")
+    print("🏥 CARGANDO GRUPOS ENO (CasoEpidemiologicos de Notificación Obligatoria)")
     print("=" * 70)
 
     # Primero eliminar el grupo "Vigilancia Epidemiológica" si existe (era un hack)
-    delete_hack = text("""
-        DELETE FROM grupo_eno
-        WHERE codigo = 'vigilancia-epidemiologica'
-    """)
-    result = session.execute(delete_hack)
-    if result.rowcount > 0:
+    # Primero eliminar referencias en enfermedad_grupo
+    # Primero eliminar el grupo "Vigilancia Epidemiológica" si existe (era un hack)
+    # Primero eliminar referencias en enfermedad_grupo
+    # Subquery para obtener el ID del grupo
+    # SELECT id FROM grupo_de_enfermedades WHERE slug = 'vigilancia-epidemiologica'
+    # Como delete con subquery es complejo en ORM puro para delete masivo,
+    # podemos hacerlo en dos pasos o usar la subquery explícita si el driver lo soporta.
+    # Dado que es un script de seed, lo hacemos simple:
+
+    from sqlmodel import select
+
+    grupo_hack = (
+        session.execute(
+            select(GrupoDeEnfermedades).where(
+                GrupoDeEnfermedades.slug == "vigilancia-epidemiologica"
+            )
+        )
+        .scalars()
+        .first()
+    )
+
+    if grupo_hack:
+        # Delete references
+        session.execute(
+            delete(EnfermedadGrupo).where(
+                col(EnfermedadGrupo.id_grupo) == grupo_hack.id
+            )
+        )
+        # Delete group
+        session.delete(grupo_hack)
         print("  🗑️  Eliminado grupo hack 'vigilancia-epidemiologica'")
 
     inserted = 0
     updated = 0
 
     for grupo in GRUPOS_ENO:
+        # Check if exists for stats
+        existing = (
+            session.execute(
+                select(GrupoDeEnfermedades).where(
+                    GrupoDeEnfermedades.slug == grupo["codigo"]
+                )
+            )
+            .scalars()
+            .first()
+        )
+
         # UPSERT usando ON CONFLICT
-        stmt = text("""
-            INSERT INTO grupo_eno (nombre, codigo, descripcion, ventana_dias_default, created_at, updated_at)
-            VALUES (:nombre, :codigo, :descripcion, :ventana_dias, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-            ON CONFLICT (codigo) DO UPDATE SET
-                nombre = EXCLUDED.nombre,
-                descripcion = EXCLUDED.descripcion,
-                ventana_dias_default = EXCLUDED.ventana_dias_default,
-                updated_at = CURRENT_TIMESTAMP
-            RETURNING (xmax = 0) AS inserted
-        """)
+        stmt = (
+            insert(GrupoDeEnfermedades)
+            .values(
+                nombre=grupo["nombre"],
+                slug=grupo["codigo"],
+                descripcion=grupo["descripcion"],
+                ventana_dias_visualizacion=grupo["ventana_dias_default"],
+            )
+            .on_conflict_do_update(
+                index_elements=["slug"],
+                set_={
+                    "nombre": grupo["nombre"],
+                    "descripcion": grupo["descripcion"],
+                    "ventana_dias_visualizacion": grupo["ventana_dias_default"],
+                    "updated_at": text("CURRENT_TIMESTAMP"),
+                },
+            )
+        )
 
-        result = session.execute(stmt, {
-            "nombre": grupo["nombre"],
-            "codigo": grupo["codigo"],
-            "descripcion": grupo["descripcion"],
-            "ventana_dias": grupo["ventana_dias_default"],
-        })
+        session.execute(stmt)
 
-        row = result.fetchone()
-        if row and row[0]:  # xmax = 0 means INSERT
+        if not existing:
             inserted += 1
-            ventana_str = f"{grupo['ventana_dias_default']} días" if grupo["ventana_dias_default"] else "acumulado"
+            ventana_str = (
+                f"{grupo['ventana_dias_default']} días"
+                if grupo["ventana_dias_default"]
+                else "acumulado"
+            )
             print(f"  ✓ {grupo['codigo']} ({ventana_str})")
         else:
             updated += 1
@@ -445,7 +491,7 @@ def seed_grupos_eno(session: Session) -> int:
     return inserted + updated
 
 
-def main():
+def main() -> None:
     """Función principal para ejecutar el seed."""
     import os
 
@@ -453,7 +499,7 @@ def main():
 
     database_url = os.getenv(
         "DATABASE_URL",
-        "postgresql://epidemiologia_user:epidemiologia_password@localhost:5432/epidemiologia_db"
+        "postgresql://epidemiologia_user:epidemiologia_password@localhost:5432/epidemiologia_db",
     )
 
     if "postgresql+asyncpg" in database_url:

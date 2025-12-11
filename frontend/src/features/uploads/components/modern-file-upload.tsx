@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useState } from "react";
-import { Upload, FileSpreadsheet, AlertCircle, Loader2 } from "lucide-react";
+import { FileSpreadsheet, AlertCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ModernFileUploadProps {

@@ -5,8 +5,8 @@ Este módulo carga las estrategias de vigilancia en la base de datos.
 Puede ser ejecutado directamente o importado desde seed.py
 """
 
+import datetime as dt
 import sys
-from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -15,26 +15,31 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from sqlmodel import col
 
-from app.domains.eventos_epidemiologicos.clasificacion.models import (
+from app.domains.vigilancia_nominal.clasificacion.models import (
     ClassificationRule,
-    EventStrategy,
+    EstrategiaClasificacion,
     FilterCondition,
     TipoClasificacion,
     TipoFiltro,
 )
-from app.domains.eventos_epidemiologicos.eventos.models import GrupoEno, TipoEno
+from app.domains.vigilancia_nominal.models.enfermedad import (
+    Enfermedad,
+    EnfermedadGrupo,
+    GrupoDeEnfermedades,
+)
 
 
 class StrategySeeder:
-    """Seeder para migrar estrategias desde el código legacy."""
+    """Seeder para migrar estrategias desde el codigo legacy."""
 
     def __init__(self, session: Session):
         self.session = session
-        self.created_strategies: Dict[str, EventStrategy] = {}
-        self.tipo_enos: Dict[str, TipoEno] = {}
+        self.created_strategies: Dict[str, EstrategiaClasificacion] = {}
+        self.tipo_enos: Dict[str, Enfermedad] = {}
 
-    def seed_all(self):
+    def seed_all(self) -> None:
         """Ejecuta el seed completo de todas las estrategias."""
         print("🚀 Iniciando migración de estrategias...")
 
@@ -84,7 +89,7 @@ class StrategySeeder:
             f"✨ Migración completada: {len(self.created_strategies)} estrategias creadas"
         )
 
-    def _ensure_tipo_enos(self):
+    def _ensure_tipo_enos(self) -> None:
         """Asegura que existen los tipos ENO necesarios."""
         # Primero verificar/crear grupo ENO
         grupo = self._get_or_create_grupo_eno(
@@ -99,8 +104,14 @@ class StrategySeeder:
             ("VIH", "vih"),
             ("SUH - Sindrome Urémico Hemolítico", "suh-sindrome-uremico-hemolitico"),
             ("Intento de Suicidio", "intento-de-suicidio"),
-            ("Intoxicación/Exposición por Monóxido de Carbono", "intoxicacion-exposicion-por-monoxido-de-carbono"),
-            ("Estudio de SARS-COV-2 en situaciones especiales", "estudio-de-sars-cov-2-en-situaciones-especiales"),
+            (
+                "Intoxicación/Exposición por Monóxido de Carbono",
+                "intoxicacion-exposicion-por-monoxido-de-carbono",
+            ),
+            (
+                "Estudio de SARS-COV-2 en situaciones especiales",
+                "estudio-de-sars-cov-2-en-situaciones-especiales",
+            ),
             (
                 "Unidad Centinela de Infección Respiratoria Aguda Grave (UC-IRAG)",
                 "unidad-centinela-de-infeccion-respiratoria-aguda-grave-uc-irag",
@@ -113,9 +124,15 @@ class StrategySeeder:
                 "otras-infecciones-invasivas-bacterianas-y-otras",
             ),
             ("Hidatidosis", "hidatidosis"),
-            ("Accidente potencialmente rábico (APR)", "accidente-potencialmente-rabico-apr"),
+            (
+                "Accidente potencialmente rábico (APR)",
+                "accidente-potencialmente-rabico-apr",
+            ),
             ("Hantavirosis", "hantavirosis"),
-            ("Araneísmo-Envenenamiento por Latrodectus (Latrodectismo)", "araneismo-envenenamiento-por-latrodectus-latrodectismo"),
+            (
+                "Araneísmo-Envenenamiento por Latrodectus (Latrodectismo)",
+                "araneismo-envenenamiento-por-latrodectus-latrodectismo",
+            ),
             ("Chagas crónico", "chagas-cronico"),
             ("Brucelosis", "brucelosis"),
             ("Sospecha de brote de ETA", "sospecha-de-brote-de-eta"),
@@ -124,25 +141,30 @@ class StrategySeeder:
             ("Hepatitis C", "hepatitis-c"),
         ]
 
+        if grupo.id is None:
+            raise ValueError("Grupo de enfermedades no tiene ID asignado")
+
         for nombre, codigo in tipos_required:
             tipo_eno = self._get_or_create_tipo_eno(nombre, codigo, grupo.id)
             # Almacenar con el nombre original para matching en create_strategy
             self.tipo_enos[nombre] = tipo_eno
 
-    def _get_or_create_grupo_eno(self, nombre: str, descripcion: str) -> GrupoEno:
+    def _get_or_create_grupo_eno(
+        self, nombre: str, descripcion: str
+    ) -> GrupoDeEnfermedades:
         """Obtiene o crea un grupo ENO."""
-        # Usar kebab-case para código
-        codigo_kebab = "vigilancia-epidemiologica"
+        # Usar kebab-case para slug
+        slug_kebab = "vigilancia-epidemiologica"
 
-        # Buscar existente por nombre (sin convertir a mayúsculas)
+        # Buscar existente por nombre (sin convertir a mayusculas)
         result = self.session.execute(
-            select(GrupoEno).where(GrupoEno.nombre == nombre)
+            select(GrupoDeEnfermedades).where(col(GrupoDeEnfermedades.nombre) == nombre)
         )
         grupo = result.scalar_one_or_none()
 
         if not grupo:
-            grupo = GrupoEno(
-                nombre=nombre, descripcion=descripcion, codigo=codigo_kebab
+            grupo = GrupoDeEnfermedades(
+                nombre=nombre, descripcion=descripcion, slug=slug_kebab
             )
             self.session.add(grupo)
             self.session.flush()
@@ -150,24 +172,37 @@ class StrategySeeder:
         return grupo
 
     def _get_or_create_tipo_eno(
-        self, nombre: str, codigo: str, grupo_id: int
-    ) -> TipoEno:
+        self, nombre: str, slug: str, grupo_id: int
+    ) -> Enfermedad:
         """Obtiene o crea un tipo ENO."""
 
-        # Buscar existente por código kebab-case
+        # Buscar existente por slug kebab-case
         result = self.session.execute(
-            select(TipoEno).where(TipoEno.codigo == codigo)
+            select(Enfermedad).where(col(Enfermedad.slug) == slug)
         )
         tipo_eno = result.scalar_one_or_none()
 
         if not tipo_eno:
-            tipo_eno = TipoEno(
+            tipo_eno = Enfermedad(
                 nombre=nombre,
-                codigo=codigo,  # kebab-case
-                id_grupo_eno=grupo_id,
-                descripcion=f"Eventos de tipo {nombre}",
+                slug=slug,  # kebab-case
+                descripcion=f"CasoEpidemiologicos de tipo {nombre}",
             )
             self.session.add(tipo_eno)
+            self.session.flush()
+
+            # Verificar que tipo_eno tiene ID antes de crear la relación
+            if tipo_eno.id is None:
+                raise ValueError(
+                    f"Enfermedad '{nombre}' no tiene ID asignado después de flush"
+                )
+
+            # Crear relación con el grupo
+            enfermedad_grupo = EnfermedadGrupo(
+                id_enfermedad=tipo_eno.id,
+                id_grupo=grupo_id,
+            )
+            self.session.add(enfermedad_grupo)
             self.session.flush()
 
         return tipo_eno
@@ -179,28 +214,33 @@ class StrategySeeder:
         description: str,
         config: Optional[Dict] = None,
         confidence_threshold: float = 0.7,
-    ) -> EventStrategy:
+    ) -> EstrategiaClasificacion:
         """Crea una estrategia base."""
         tipo_eno = self.tipo_enos.get(tipo_eno_name)
         if not tipo_eno:
             raise ValueError(f"Tipo ENO '{tipo_eno_name}' no encontrado")
 
         # Verificar si ya existe
+        if tipo_eno.id is None:
+            raise ValueError(f"Tipo ENO '{tipo_eno_name}' no tiene ID asignado")
+
         result = self.session.execute(
-            select(EventStrategy).where(EventStrategy.tipo_eno_id == tipo_eno.id)
+            select(EstrategiaClasificacion).where(
+                col(EstrategiaClasificacion.id_enfermedad) == tipo_eno.id
+            )
         )
         existing = result.scalar_one_or_none()
 
         if existing:
             return existing
 
-        strategy = EventStrategy(
-            tipo_eno_id=tipo_eno.id,
+        strategy = EstrategiaClasificacion(
+            id_enfermedad=tipo_eno.id,
             name=name,
             description=description,
             config=config or {},
             confidence_threshold=confidence_threshold,
-            valid_from=datetime(2000, 1, 1),
+            valid_from=dt.datetime(2000, 1, 1),
             valid_until=None,
             is_active=True,
             created_by="seed_script",
@@ -214,7 +254,7 @@ class StrategySeeder:
 
     def _add_classification_rule(
         self,
-        strategy: EventStrategy,
+        strategy: EstrategiaClasificacion,
         classification: TipoClasificacion,
         name: str,
         conditions: List[Dict],
@@ -223,6 +263,9 @@ class StrategySeeder:
         ejemplos: Optional[str] = None,
     ) -> ClassificationRule:
         """Agrega una regla de clasificación con sus condiciones."""
+        if strategy.id is None:
+            raise ValueError("Strategy debe tener ID asignado antes de agregar reglas")
+
         rule = ClassificationRule(
             strategy_id=strategy.id,
             classification=classification,
@@ -239,6 +282,9 @@ class StrategySeeder:
         self.session.add(rule)
         self.session.flush()
 
+        if rule.id is None:
+            raise ValueError("Rule debe tener ID asignado después de flush")
+
         # Agregar condiciones
         for idx, condition_data in enumerate(conditions):
             condition = FilterCondition(rule_id=rule.id, order=idx, **condition_data)
@@ -249,7 +295,7 @@ class StrategySeeder:
 
     # ============== ESTRATEGIAS ESPECÍFICAS ==============
 
-    def _seed_dengue(self):
+    def _seed_dengue(self) -> None:
         """Seed para Dengue."""
         strategy = self._create_strategy(
             tipo_eno_name="Dengue",
@@ -316,18 +362,15 @@ class StrategySeeder:
                     "filter_type": TipoFiltro.CAMPO_EN_LISTA,
                     "field_name": "CLASIFICACION_MANUAL",
                     "config": {
-                        "values": [
-                            "caso descartado",
-                            "descartado"
-                        ],
-                        "strict": False
-                    }
+                        "values": ["caso descartado", "descartado"],
+                        "strict": False,
+                    },
                 }
             ],
             priority=3,
         )
 
-    def _seed_apr_rabia(self):
+    def _seed_apr_rabia(self) -> None:
         """Seed para Accidente potencialmente rábico (APR)."""
         strategy = self._create_strategy(
             tipo_eno_name="Accidente potencialmente rábico (APR)",
@@ -427,13 +470,15 @@ class StrategySeeder:
             justificacion="Casos descartados tras análisis de laboratorio",
         )
 
-    def _seed_uc_irag(self):
+    def _seed_uc_irag(self) -> None:
         """Seed para UC-IRAG."""
         strategy = self._create_strategy(
             tipo_eno_name="Unidad Centinela de Infección Respiratoria Aguda Grave (UC-IRAG)",
             name="Estrategia UC-IRAG",
             description="Estrategia para procesar casos de UC-IRAG",
-            config={"eventos_relacionados": ["COVID", "SARS-COV-2", "Influenza", "VSR"]},
+            config={
+                "eventos_relacionados": ["COVID", "SARS-COV-2", "Influenza", "VSR"]
+            },
         )
 
         # Regla: Confirmados (resultado positivo)
@@ -451,7 +496,7 @@ class StrategySeeder:
             priority=1,
         )
 
-    def _seed_sifilis(self):
+    def _seed_sifilis(self) -> None:
         """Seed para Sífilis (grupo con múltiples subtipos)."""
         strategy = self._create_strategy(
             tipo_eno_name="Sífilis",
@@ -497,7 +542,7 @@ class StrategySeeder:
             priority=2,
         )
 
-    def _seed_coqueluche(self):
+    def _seed_coqueluche(self) -> None:
         """Seed para Coqueluche."""
         strategy = self._create_strategy(
             tipo_eno_name="Coqueluche",
@@ -546,7 +591,7 @@ class StrategySeeder:
             priority=2,
         )
 
-    def _seed_hantavirus(self):
+    def _seed_hantavirus(self) -> None:
         """Seed para Hantavirus."""
         strategy = self._create_strategy(
             tipo_eno_name="Hantavirosis",
@@ -599,7 +644,7 @@ class StrategySeeder:
             priority=3,
         )
 
-    def _seed_chagas_cronico(self):
+    def _seed_chagas_cronico(self) -> None:
         """Seed para Chagas crónico."""
         strategy = self._create_strategy(
             tipo_eno_name="Chagas crónico",
@@ -622,7 +667,7 @@ class StrategySeeder:
             priority=1,
         )
 
-    def _seed_hepatitis_b(self):
+    def _seed_hepatitis_b(self) -> None:
         """Seed para Hepatitis B."""
         strategy = self._create_strategy(
             tipo_eno_name="Hepatitis B",
@@ -645,7 +690,7 @@ class StrategySeeder:
             priority=1,
         )
 
-    def _seed_intento_suicidio(self):
+    def _seed_intento_suicidio(self) -> None:
         """Seed para Intento de Suicidio."""
         strategy = self._create_strategy(
             tipo_eno_name="Intento de Suicidio",
@@ -683,7 +728,7 @@ class StrategySeeder:
             priority=2,
         )
 
-    def _seed_hidatidosis(self):
+    def _seed_hidatidosis(self) -> None:
         """Seed para Hidatidosis."""
         strategy = self._create_strategy(
             tipo_eno_name="Hidatidosis",
@@ -706,7 +751,7 @@ class StrategySeeder:
             priority=1,
         )
 
-    def _seed_meningoencefalitis(self):
+    def _seed_meningoencefalitis(self) -> None:
         """Seed para Meningoencefalitis."""
         strategy = self._create_strategy(
             tipo_eno_name="Meningoencefalitis",
@@ -729,7 +774,7 @@ class StrategySeeder:
             priority=1,
         )
 
-    def _seed_suh(self):
+    def _seed_suh(self) -> None:
         """Seed para SUH - Síndrome Urémico Hemolítico."""
         strategy = self._create_strategy(
             tipo_eno_name="SUH - Sindrome Urémico Hemolítico",
@@ -752,7 +797,7 @@ class StrategySeeder:
             priority=1,
         )
 
-    def _seed_botulismo(self):
+    def _seed_botulismo(self) -> None:
         """Seed para Botulismo del lactante."""
         strategy = self._create_strategy(
             tipo_eno_name="Botulismo del lactante",
@@ -775,7 +820,7 @@ class StrategySeeder:
             priority=1,
         )
 
-    def _seed_efe(self):
+    def _seed_efe(self) -> None:
         """Seed para Enfermedad Febril Exantemática."""
         strategy = self._create_strategy(
             tipo_eno_name="Enfermedad Febril Exantemática-EFE",
@@ -798,7 +843,7 @@ class StrategySeeder:
             priority=1,
         )
 
-    def _seed_paf(self):
+    def _seed_paf(self) -> None:
         """Seed para PAF - Poliomielitis."""
         strategy = self._create_strategy(
             tipo_eno_name="Poliomielitis-PAF",
@@ -836,7 +881,7 @@ class StrategySeeder:
             priority=2,
         )
 
-    def _seed_mordedura_perro(self):
+    def _seed_mordedura_perro(self) -> None:
         """Seed para Mordedura de perro."""
         strategy = self._create_strategy(
             tipo_eno_name="Lesiones graves por mordedura de perro",
@@ -859,7 +904,7 @@ class StrategySeeder:
             priority=1,
         )
 
-    def _seed_apr(self):
+    def _seed_apr(self) -> None:
         """Seed APR (Accidentes por Ponzoña de Arácnidos)."""
         print("  📋 Creando estrategia APR...")
 
@@ -884,7 +929,7 @@ class StrategySeeder:
             priority=1,
         )
 
-    def _seed_hepatitis_b_per_ges(self):
+    def _seed_hepatitis_b_per_ges(self) -> None:
         """Seed Hepatitis B en personas gestantes."""
         print("  📋 Creando estrategia Hepatitis B en gestantes...")
 
@@ -909,7 +954,7 @@ class StrategySeeder:
             priority=1,
         )
 
-    def _seed_hepatitis_c(self):
+    def _seed_hepatitis_c(self) -> None:
         """Seed Hepatitis C."""
         print("  📋 Creando estrategia Hepatitis C...")
 
@@ -934,7 +979,7 @@ class StrategySeeder:
             priority=1,
         )
 
-    def _seed_int_mon_carbono(self):
+    def _seed_int_mon_carbono(self) -> None:
         """Seed Intoxicación/Exposición por Monóxido de Carbono."""
         strategy = self._create_strategy(
             tipo_eno_name="Intoxicación/Exposición por Monóxido de Carbono",
@@ -957,7 +1002,7 @@ class StrategySeeder:
             priority=1,
         )
 
-    def _seed_otras_infecciones_invasivas(self):
+    def _seed_otras_infecciones_invasivas(self) -> None:
         """Seed Otras infecciones invasivas (bacterianas y otras)."""
         strategy = self._create_strategy(
             tipo_eno_name="Otras infecciones invasivas (bacterianas y otras)",
@@ -982,7 +1027,7 @@ class StrategySeeder:
 
     # ==== NUEVAS ESTRATEGIAS BASADAS EN CSV ====
 
-    def _seed_tuberculosis(self):
+    def _seed_tuberculosis(self) -> None:
         """Seed Tuberculosis."""
         strategy = self._create_strategy(
             tipo_eno_name="Tuberculosis",
@@ -1005,7 +1050,7 @@ class StrategySeeder:
             priority=1,
         )
 
-    def _seed_vih(self):
+    def _seed_vih(self) -> None:
         """Seed VIH."""
         strategy = self._create_strategy(
             tipo_eno_name="VIH",
@@ -1028,7 +1073,7 @@ class StrategySeeder:
             priority=1,
         )
 
-    def _seed_sars_cov2_especial(self):
+    def _seed_sars_cov2_especial(self) -> None:
         """Seed SARS-COV-2 en situaciones especiales."""
         strategy = self._create_strategy(
             tipo_eno_name="Estudio de SARS-COV-2 en situaciones especiales",
@@ -1051,7 +1096,7 @@ class StrategySeeder:
             priority=1,
         )
 
-    def _seed_sifilis_gestantes(self):
+    def _seed_sifilis_gestantes(self) -> None:
         """Seed Sífilis en personas gestantes."""
         strategy = self._create_strategy(
             tipo_eno_name="Sífilis en personas gestantes",
@@ -1074,7 +1119,7 @@ class StrategySeeder:
             priority=1,
         )
 
-    def _seed_diarrea_aguda(self):
+    def _seed_diarrea_aguda(self) -> None:
         """Seed Diarrea aguda."""
         strategy = self._create_strategy(
             tipo_eno_name="Diarrea aguda",
@@ -1097,7 +1142,7 @@ class StrategySeeder:
             priority=1,
         )
 
-    def _seed_araneismo(self):
+    def _seed_araneismo(self) -> None:
         """Seed Araneísmo-Envenenamiento por Latrodectus."""
         strategy = self._create_strategy(
             tipo_eno_name="Araneísmo-Envenenamiento por Latrodectus (Latrodectismo)",
@@ -1120,7 +1165,7 @@ class StrategySeeder:
             priority=1,
         )
 
-    def _seed_brucelosis(self):
+    def _seed_brucelosis(self) -> None:
         """Seed Brucelosis."""
         strategy = self._create_strategy(
             tipo_eno_name="Brucelosis",
@@ -1143,7 +1188,7 @@ class StrategySeeder:
             priority=1,
         )
 
-    def _seed_brote_eta(self):
+    def _seed_brote_eta(self) -> None:
         """Seed Sospecha de brote de ETA."""
         strategy = self._create_strategy(
             tipo_eno_name="Sospecha de brote de ETA",
@@ -1167,7 +1212,7 @@ class StrategySeeder:
         )
 
 
-def seed_all_strategies(session: Session):
+def seed_all_strategies(session: Session) -> None:
     """
     Función de wrapper para seed.py - carga todas las estrategias.
     Recibe una sesión existente.
@@ -1176,7 +1221,7 @@ def seed_all_strategies(session: Session):
     seeder.seed_all()
 
 
-def main():
+def main() -> None:
     """Función principal para ejecutar el seed."""
     import os
 

@@ -16,13 +16,11 @@ import type { BoletinSemanalTemplate, SeccionConfig } from "./types";
 interface BoletinSemanalEditorProps {
   initialTemplate: BoletinSemanalTemplate;
   onSave: (template: BoletinSemanalTemplate) => void;
-  onCancel: () => void;
 }
 
 export function BoletinSemanalEditor({
   initialTemplate,
   onSave,
-  onCancel,
 }: BoletinSemanalEditorProps) {
   const [template, setTemplate] = useState<BoletinSemanalTemplate>(initialTemplate);
   const [hasChanges, setHasChanges] = useState(false);

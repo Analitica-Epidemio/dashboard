@@ -18,7 +18,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-async def main():
+async def main() -> None:
     """Ejecuta el seed de configuración de boletines."""
     logger.info("=" * 70)
     logger.info("SEED: Configuración de Template de Boletines")

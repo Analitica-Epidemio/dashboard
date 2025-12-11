@@ -1,98 +1,56 @@
 """
-🦠 EPIDEMIOLOGÍA CHUBUT - Dominios de Negocio (FIXED)
-
-Esta nueva estructura corrige los problemas conceptuales encontrados
-en la arquitectura anterior, aplicando correctamente los principios DDD.
+EPIDEMIOLOGIA CHUBUT - Dominios de Negocio
 
 DOMINIOS POR BOUNDED CONTEXT:
-├── autenticacion/              🔐 SUPPORTING - Usuarios y sesiones
-├── sujetos_epidemiologicos/    👥🐕 SUPPORTING - Ciudadanos, animales y viajes
-├── eventos_epidemiologicos/    🦠 CORE - Eventos, clasificación y ámbitos
-├── atencion_medica/           ⚕️ SUPPORTING - Síntomas, diagnósticos, muestras
-└── territorio/                🗺️ SUPPORTING - Geografía y establecimientos
+├── autenticacion/              Usuarios y sesiones
+├── vigilancia_nominal/         Casos individuales (sujetos, atencion, clasificacion)
+├── vigilancia_agregada/        Datos agregados (conteos semanales)
+├── catalogos/                  Catálogos compartidos (agentes etiológicos)
+├── territorio/                 Geografía y establecimientos
+├── boletines/                  Generación de boletines
+├── procesamiento/              Carga y procesamiento de archivos
+├── dashboard/                  Configuración de dashboards
+└── analitica/                  Servicios de métricas
 
 PRINCIPIOS APLICADOS:
-✅ Separación clara de responsabilidades
-✅ Nombres que "gritan" el propósito del dominio
-✅ Cohesión conceptual alta
-✅ Acoplamiento bajo entre dominios
-✅ Un archivo = Un concepto específico
-✅ Imports corregidos y actualizados
+- Separación clara de responsabilidades
+- Cohesión conceptual alta
+- Acoplamiento bajo entre dominios
 """
 
 # Import all models for Alembic auto-detection
-# 🔐 AUTENTICACION DOMAIN
-from app.domains.atencion_medica.diagnosticos_models import (
-    DiagnosticoEvento,
-    EstudioEvento,
-    InternacionEvento,
-    TratamientoEvento,
-)
-from app.domains.atencion_medica.investigaciones_models import (
-    ContactosNotificacion,
-    InvestigacionEvento,
-)
 
-# ⚕️ ATENCION MEDICA DOMAIN
-from app.domains.atencion_medica.salud_models import (
-    Comorbilidad,
-    Determinacion,
-    Muestra,
-    MuestraEvento,
-    ResultadoTecnica,
-    Sintoma,
-    Tecnica,
-    Vacuna,
-    VacunasCiudadano,
-)
+# AUTENTICACION DOMAIN
 from app.domains.autenticacion.models import User, UserLogin, UserSession
 
-# 📋 BOLETINES DOMAIN
+# BOLETINES DOMAIN
 from app.domains.boletines.models import (
+    BoletinBloque,
     BoletinInstance,
+    BoletinSeccion,
+    BoletinSnippet,
     BoletinTemplate,
     BoletinTemplateConfig,
     CapacidadHospitalaria,
     VirusRespiratorio,
 )
 
-# 🦠 EVENTOS EPIDEMIOLOGICOS DOMAIN
-# IMPORTANTE: agentes debe importarse ANTES de eventos para que SQLAlchemy pueda
-# resolver la relación Evento.agentes_detectados -> EventoAgente
-from app.domains.eventos_epidemiologicos.agentes.models import (
+# CATALOGOS COMPARTIDOS
+from app.domains.catalogos.agentes.models import (
     AgenteEtiologico,
-    AgenteExtraccionConfig,
-    EventoAgente,
+    CategoriaAgente,
+    GrupoAgente,
 )
-from app.domains.eventos_epidemiologicos.ambitos_models import (
-    AmbitosConcurrenciaEvento,
-)
-from app.domains.eventos_epidemiologicos.clasificacion.models import (
-    ClassificationRule,
-    EventClassificationAudit,
-    EventStrategy,
-    FilterCondition,
-    StrategyChangeLog,
-    TipoClasificacion,
-)
-from app.domains.eventos_epidemiologicos.eventos.models import (
-    AntecedenteEpidemiologico,
-    AntecedentesEpidemiologicosEvento,
-    DetalleEventoSintomas,
-    Evento,
-    GrupoEno,
-    TipoEno,
-)
-from app.domains.sujetos_epidemiologicos.animales_models import Animal
 
-# 👥 SUJETOS EPIDEMIOLOGICOS DOMAIN
-from app.domains.sujetos_epidemiologicos.ciudadanos_models import (
-    Ciudadano,
-    CiudadanoComorbilidades,
-    CiudadanoDatos,
-    CiudadanoDomicilio,
+# DASHBOARD DOMAIN
+from app.domains.dashboard.models import (
+    DashboardChart,
 )
-from app.domains.sujetos_epidemiologicos.viajes_models import ViajesCiudadano
+
+# JOBS DOMAIN
+from app.domains.jobs.models import Job
+
+# TERRITORIO DOMAIN
 from app.domains.territorio.capas_gis_models import (
     CapaAreaUrbana,
     CapaHidrografia,
@@ -100,25 +58,84 @@ from app.domains.territorio.capas_gis_models import (
 from app.domains.territorio.establecimientos_models import (
     Establecimiento,
 )
-
-# 🗺️ TERRITORIO DOMAIN
 from app.domains.territorio.geografia_models import (
     Departamento,
     Domicilio,
     Localidad,
     Provincia,
 )
-from app.features.analitica.models import (
-    DatamartEpidemiologia,
+
+# VIGILANCIA AGREGADA DOMAIN (datos agregados)
+from app.domains.vigilancia_agregada.constants import (
+    EstadoNotificacion,
+    OrigenDatosPasivos,
+    Sexo,
+)
+from app.domains.vigilancia_agregada.models.cargas import (
+    NotificacionSemanal,
+)
+from app.domains.vigilancia_agregada.models.catalogos import (
+    RangoEtario,
+    TipoCasoEpidemiologicoPasivo,
+)
+from app.domains.vigilancia_agregada.models.conteos import (
+    ConteoCamasIRA,
+    ConteoCasosClinicos,
+    ConteoEstudiosLab,
+)
+from app.domains.vigilancia_nominal.clasificacion.models import (
+    ClassificationRule,
+    EstrategiaClasificacion,
+    EventClassificationAudit,
+    FilterCondition,
+    StrategyChangeLog,
+    TipoClasificacion,
 )
 
-# 📊 FEATURES MODELS (para detección de Alembic)
-# Idealmente estos deberían estar en domains, pero por ahora están en features
-from app.features.dashboard.models import (
-    DashboardChart,
-)
-from app.features.procesamiento_archivos.models import (
-    ProcessingJob,
+# VIGILANCIA NOMINAL DOMAIN (casos individuales)
+# Incluye: sujetos, enfermedades, agentes, atención médica, clasificación
+from app.domains.vigilancia_nominal.models import (
+    # Agentes (detecciones)
+    AgenteExtraccionConfig,
+    # Ámbitos
+    AmbitosConcurrenciaCaso,
+    # Sujetos
+    Animal,
+    # Caso (modelo central)
+    AntecedenteEpidemiologico,
+    AntecedentesCasoEpidemiologico,
+    CasoAgente,
+    CasoEpidemiologico,
+    CasoGrupoEnfermedad,
+    Ciudadano,
+    CiudadanoComorbilidades,
+    CiudadanoDatos,
+    CiudadanoDomicilio,
+    # Salud (catálogos y registros)
+    Comorbilidad,
+    # Atención médica
+    ContactosNotificacion,
+    DetalleCasoSintomas,
+    Determinacion,
+    DiagnosticoCasoEpidemiologico,
+    # Enfermedades
+    Enfermedad,
+    EnfermedadGrupo,
+    EstudioCasoEpidemiologico,
+    GrupoDeEnfermedades,
+    InternacionCasoEpidemiologico,
+    InvestigacionCasoEpidemiologico,
+    Muestra,
+    MuestraCasoEpidemiologico,
+    PersonaDomicilio,
+    ResultadoDeteccion,
+    ResultadoTecnica,
+    Sintoma,
+    Tecnica,
+    TratamientoCasoEpidemiologico,
+    Vacuna,
+    VacunasCiudadano,
+    ViajesCiudadano,
 )
 
 # Export all models for external access
@@ -127,46 +144,68 @@ __all__ = [
     "User",
     "UserSession",
     "UserLogin",
-    # Sujetos epidemiologicos
+    # Catalogos compartidos
+    "AgenteEtiologico",
+    "CategoriaAgente",
+    "GrupoAgente",
+    # Vigilancia nominal - Caso
+    "CasoEpidemiologico",
+    "CasoGrupoEnfermedad",
+    "DetalleCasoSintomas",
+    "AntecedenteEpidemiologico",
+    "AntecedentesCasoEpidemiologico",
+    # Vigilancia nominal - Enfermedades
+    "Enfermedad",
+    "GrupoDeEnfermedades",
+    "EnfermedadGrupo",
+    # Vigilancia nominal - Sujetos
     "Ciudadano",
     "CiudadanoDatos",
     "CiudadanoDomicilio",
     "CiudadanoComorbilidades",
+    "PersonaDomicilio",
     "Animal",
     "ViajesCiudadano",
-    # Eventos epidemiologicos
-    "Evento",
-    "TipoEno",
-    "GrupoEno",
-    "DetalleEventoSintomas",
-    "AntecedenteEpidemiologico",
-    "AntecedentesEpidemiologicosEvento",
-    "AmbitosConcurrenciaEvento",
-    "EventStrategy",
+    # Vigilancia nominal - Agentes
+    "AgenteExtraccionConfig",
+    "CasoAgente",
+    "ResultadoDeteccion",
+    # Vigilancia nominal - Clasificación
+    "EstrategiaClasificacion",
     "FilterCondition",
     "ClassificationRule",
     "EventClassificationAudit",
     "StrategyChangeLog",
     "TipoClasificacion",
-    "AgenteEtiologico",
-    "AgenteExtraccionConfig",
-    "EventoAgente",
-    # Atencion medica
+    # Vigilancia nominal - Atención médica
+    "DiagnosticoCasoEpidemiologico",
+    "InternacionCasoEpidemiologico",
+    "TratamientoCasoEpidemiologico",
+    "InvestigacionCasoEpidemiologico",
+    "ContactosNotificacion",
+    # Vigilancia nominal - Salud
     "Sintoma",
     "Comorbilidad",
     "Vacuna",
     "VacunasCiudadano",
     "Muestra",
-    "MuestraEvento",
+    "MuestraCasoEpidemiologico",
+    "EstudioCasoEpidemiologico",
     "Tecnica",
     "ResultadoTecnica",
     "Determinacion",
-    "DiagnosticoEvento",
-    "EstudioEvento",
-    "InternacionEvento",
-    "TratamientoEvento",
-    "InvestigacionEvento",
-    "ContactosNotificacion",
+    # Vigilancia nominal - Ámbitos
+    "AmbitosConcurrenciaCaso",
+    # Vigilancia agregada
+    "OrigenDatosPasivos",
+    "RangoEtario",
+    "TipoCasoEpidemiologicoPasivo",
+    "EstadoNotificacion",
+    "NotificacionSemanal",
+    "ConteoCasosClinicos",
+    "ConteoEstudiosLab",
+    "ConteoCamasIRA",
+    "Sexo",
     # Territorio
     "Provincia",
     "Departamento",
@@ -176,13 +215,15 @@ __all__ = [
     "CapaHidrografia",
     "CapaAreaUrbana",
     # Boletines
-    "BoletinTemplate",
+    "BoletinBloque",
     "BoletinInstance",
+    "BoletinSeccion",
+    "BoletinSnippet",
+    "BoletinTemplate",
     "BoletinTemplateConfig",
     "CapacidadHospitalaria",
     "VirusRespiratorio",
     # Features
     "DashboardChart",
-    "ProcessingJob",
-    "DatamartEpidemiologia",
+    "Job",
 ]

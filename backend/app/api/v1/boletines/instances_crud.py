@@ -9,6 +9,7 @@ from fastapi import Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import col
 
 from app.api.v1.boletines.schemas import (
     BoletinGenerateRequest,
@@ -18,14 +19,15 @@ from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAuthOrSignedUrl
 from app.domains.autenticacion.models import User
+from app.domains.boletines.html_renderer import BulletinHTMLRenderer
 from app.domains.boletines.models import BoletinInstance, BoletinTemplate
-from app.features.boletines.html_renderer import BulletinHTMLRenderer
 
 logger = logging.getLogger(__name__)
 
 
 class UpdateInstanceContentRequest(BaseModel):
     """Request para actualizar el contenido HTML de una instancia"""
+
     content: str
 
 
@@ -39,7 +41,9 @@ async def create_instance(
     El PDF se generará en un paso posterior.
     """
     # Verificar que el template existe
-    stmt = select(BoletinTemplate).where(BoletinTemplate.id == request_data.template_id)
+    stmt = select(BoletinTemplate).where(
+        col(BoletinTemplate.id) == request_data.template_id
+    )
     result = await db.execute(stmt)
     template = result.scalar_one_or_none()
 
@@ -73,15 +77,15 @@ async def list_instances(
     """
     Listar instancias de boletines generados.
     """
-    stmt = select(BoletinInstance).order_by(BoletinInstance.created_at.desc())
+    stmt = select(BoletinInstance).order_by(col(BoletinInstance.created_at).desc())
 
     # Filtros
     if template_id:
-        stmt = stmt.where(BoletinInstance.template_id == template_id)
+        stmt = stmt.where(col(BoletinInstance.template_id) == template_id)
 
     # Si no es admin, solo mostrar propias instancias
-    if current_user and not getattr(current_user, 'is_admin', False):
-        stmt = stmt.where(BoletinInstance.generated_by == current_user.id)
+    if current_user and not getattr(current_user, "is_admin", False):
+        stmt = stmt.where(col(BoletinInstance.generated_by) == current_user.id)
 
     # Paginación
     stmt = stmt.offset(offset).limit(limit)
@@ -102,7 +106,7 @@ async def get_instance(
     """
     Obtener una instancia específica por ID.
     """
-    stmt = select(BoletinInstance).where(BoletinInstance.id == instance_id)
+    stmt = select(BoletinInstance).where(col(BoletinInstance.id) == instance_id)
     result = await db.execute(stmt)
     instance = result.scalar_one_or_none()
 
@@ -110,8 +114,13 @@ async def get_instance(
         raise HTTPException(status_code=404, detail="Instancia no encontrada")
 
     # Verificar permisos
-    if not current_user or (instance.generated_by != current_user.id and not getattr(current_user, 'is_admin', False)):
-        raise HTTPException(status_code=403, detail="No tiene permisos para ver esta instancia")
+    if not current_user or (
+        instance.generated_by != current_user.id
+        and not getattr(current_user, "is_admin", False)
+    ):
+        raise HTTPException(
+            status_code=403, detail="No tiene permisos para ver esta instancia"
+        )
 
     return SuccessResponse(data=BoletinInstanceResponse.model_validate(instance))
 
@@ -124,7 +133,7 @@ async def delete_instance(
     """
     Eliminar una instancia.
     """
-    stmt = select(BoletinInstance).where(BoletinInstance.id == instance_id)
+    stmt = select(BoletinInstance).where(col(BoletinInstance.id) == instance_id)
     result = await db.execute(stmt)
     instance = result.scalar_one_or_none()
 
@@ -132,8 +141,13 @@ async def delete_instance(
         raise HTTPException(status_code=404, detail="Instancia no encontrada")
 
     # Verificar permisos
-    if not current_user or (instance.generated_by != current_user.id and not getattr(current_user, 'is_admin', False)):
-        raise HTTPException(status_code=403, detail="No tiene permisos para eliminar esta instancia")
+    if not current_user or (
+        instance.generated_by != current_user.id
+        and not getattr(current_user, "is_admin", False)
+    ):
+        raise HTTPException(
+            status_code=403, detail="No tiene permisos para eliminar esta instancia"
+        )
 
     # TODO: Eliminar archivo PDF si existe
     # if instance.pdf_path and os.path.exists(instance.pdf_path):
@@ -156,7 +170,7 @@ async def update_instance_content(
     """
     Actualizar el contenido HTML de una instancia de boletín.
     """
-    stmt = select(BoletinInstance).where(BoletinInstance.id == instance_id)
+    stmt = select(BoletinInstance).where(col(BoletinInstance.id) == instance_id)
     result = await db.execute(stmt)
     instance = result.scalar_one_or_none()
 
@@ -164,8 +178,13 @@ async def update_instance_content(
         raise HTTPException(status_code=404, detail="Instancia no encontrada")
 
     # Verificar permisos
-    if not current_user or (instance.generated_by != current_user.id and not getattr(current_user, 'is_admin', False)):
-        raise HTTPException(status_code=403, detail="No tiene permisos para editar esta instancia")
+    if not current_user or (
+        instance.generated_by != current_user.id
+        and not getattr(current_user, "is_admin", False)
+    ):
+        raise HTTPException(
+            status_code=403, detail="No tiene permisos para editar esta instancia"
+        )
 
     # Actualizar contenido
     instance.content = request_data.content
@@ -173,7 +192,9 @@ async def update_instance_content(
     await db.commit()
     await db.refresh(instance)
 
-    logger.info(f"Contenido actualizado para instancia: {instance.name} (ID: {instance.id})")
+    logger.info(
+        f"Contenido actualizado para instancia: {instance.name} (ID: {instance.id})"
+    )
 
     return SuccessResponse(data=BoletinInstanceResponse.model_validate(instance))
 
@@ -191,7 +212,7 @@ async def generate_instance_pdf(
 
     from fastapi.responses import FileResponse
 
-    stmt = select(BoletinInstance).where(BoletinInstance.id == instance_id)
+    stmt = select(BoletinInstance).where(col(BoletinInstance.id) == instance_id)
     result = await db.execute(stmt)
     instance = result.scalar_one_or_none()
 
@@ -199,22 +220,32 @@ async def generate_instance_pdf(
         raise HTTPException(status_code=404, detail="Instancia no encontrada")
 
     # Verificar permisos
-    if not current_user or (instance.generated_by != current_user.id and not getattr(current_user, 'is_admin', False)):
-        raise HTTPException(status_code=403, detail="No tiene permisos para generar PDF de esta instancia")
+    if not current_user or (
+        instance.generated_by != current_user.id
+        and not getattr(current_user, "is_admin", False)
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="No tiene permisos para generar PDF de esta instancia",
+        )
 
     if not instance.content:
-        raise HTTPException(status_code=400, detail="La instancia no tiene contenido para generar PDF")
+        raise HTTPException(
+            status_code=400, detail="La instancia no tiene contenido para generar PDF"
+        )
 
     try:
         # Detectar si el contenido es JSON TipTap y convertirlo a HTML
         content = instance.content.strip()
         if content.startswith("{") or content.startswith("["):
+            import json
+
             try:
-                import json
                 parsed = json.loads(content)
                 if isinstance(parsed, dict) and parsed.get("type") == "doc":
                     # Es JSON TipTap, convertir a HTML
-                    from app.features.boletines.tiptap_to_html import tiptap_to_html
+                    from app.domains.boletines.tiptap_to_html import tiptap_to_html
+
                     content = tiptap_to_html(parsed)
             except json.JSONDecodeError:
                 pass  # No es JSON válido, usar como HTML
@@ -223,15 +254,17 @@ async def generate_instance_pdf(
         html_renderer = BulletinHTMLRenderer(db)
         rendered_html = await html_renderer.render_html_with_charts(content)
 
-        safe_name = (instance.name or f"boletin_{instance_id}").strip() or f"boletin_{instance_id}"
+        safe_name = (
+            instance.name or f"boletin_{instance_id}"
+        ).strip() or f"boletin_{instance_id}"
 
         # Crear archivo temporal para el PDF
-        temp_pdf = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
+        temp_pdf = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
         temp_pdf_path = temp_pdf.name
         temp_pdf.close()
 
         # Generar PDF usando el servicio serverside
-        from app.features.reporteria.serverside_pdf_generator import (
+        from app.domains.reporteria.serverside_pdf_generator import (
             ServerSidePDFGenerator,
         )
 
@@ -240,7 +273,7 @@ async def generate_instance_pdf(
             html_content=rendered_html,
             output_path=temp_pdf_path,
             page_size="A4",
-            margin="20mm"
+            margin="20mm",
         )
 
         # Actualizar la instancia con la ruta del PDF
@@ -259,11 +292,9 @@ async def generate_instance_pdf(
 
         return FileResponse(
             path=temp_pdf_path,
-            media_type='application/pdf',
+            media_type="application/pdf",
             filename=filename,
-            headers={
-                "Content-Disposition": f"attachment; filename={filename}"
-            }
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
         )
 
     except Exception as e:

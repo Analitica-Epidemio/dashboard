@@ -10,13 +10,15 @@ Y actualiza las tablas provincia y departamento con las geometrías.
 IMPORTANTE: Este seed solo actualiza registros existentes (no crea nuevos).
 Debe ejecutarse DESPUÉS del seed principal de geografía.
 """
+
 import json
 import os
 import urllib.request
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from shapely.geometry import shape
 from sqlalchemy import create_engine, text
+from sqlalchemy.engine import Connection
 
 # URLs de descarga directa de GeoJSON
 PROVINCIAS_GEOJSON_URL = "https://infra.datos.gob.ar/georef/provincias.geojson"
@@ -26,13 +28,15 @@ DEPARTAMENTOS_GEOJSON_URL = "https://infra.datos.gob.ar/georef/departamentos.geo
 FUENTE = "Georef API (datos.gob.ar)"
 
 
-def descargar_geojson(url: str, nombre: str) -> Optional[dict]:
+def descargar_geojson(url: str, nombre: str) -> Optional[Dict[str, Any]]:
     """Descarga un GeoJSON desde una URL."""
     print(f"   Descargando {nombre} desde {url}...")
     try:
         with urllib.request.urlopen(url, timeout=120) as response:
             data = json.loads(response.read().decode("utf-8"))
-            return data
+            import typing
+
+            return typing.cast(Dict[str, Any], data)
     except Exception as e:
         print(f"❌ Error descargando {nombre}: {e}")
         return None
@@ -49,12 +53,13 @@ def geometry_to_multipolygon_wkt(geometry: dict) -> str:
     # Si es Polygon, convertir a MultiPolygon
     if geom.geom_type == "Polygon":
         from shapely.geometry import MultiPolygon
+
         geom = MultiPolygon([geom])
 
-    return geom.wkt
+    return str(geom.wkt)
 
 
-def seed_geometrias_provincias(conn) -> int:
+def seed_geometrias_provincias(conn: Connection) -> int:
     """
     Descarga GeoJSON de provincias y actualiza las geometrías en la BD.
 
@@ -84,6 +89,7 @@ def seed_geometrias_provincias(conn) -> int:
     errors = 0
 
     for feature in features:
+        props = {}
         try:
             props = feature.get("properties", {})
             geometry = feature.get("geometry")
@@ -108,11 +114,10 @@ def seed_geometrias_provincias(conn) -> int:
                 WHERE id_provincia_indec = :prov_id
             """)
 
-            result = conn.execute(stmt, {
-                "geom_wkt": geom_wkt,
-                "fuente": FUENTE,
-                "prov_id": id_provincia_indec
-            })
+            result = conn.execute(
+                stmt,
+                {"geom_wkt": geom_wkt, "fuente": FUENTE, "prov_id": id_provincia_indec},
+            )
 
             if result.rowcount > 0:
                 updated += 1
@@ -120,9 +125,11 @@ def seed_geometrias_provincias(conn) -> int:
         except Exception as e:
             errors += 1
             if errors < 5:
-                print(f"   ⚠️  Error procesando provincia {props.get('nombre', 'desconocida')}: {e}")
+                print(
+                    f"   ⚠️  Error procesando provincia {props.get('nombre', 'desconocida')}: {e}"
+                )
 
-    conn.commit()
+    # Commit automático al salir del contexto engine.begin()
     print(f"✅ Geometrías de provincias actualizadas: {updated}")
     if errors > 0:
         print(f"⚠️  Errores: {errors}")
@@ -130,7 +137,7 @@ def seed_geometrias_provincias(conn) -> int:
     return updated
 
 
-def seed_geometrias_departamentos(conn) -> int:
+def seed_geometrias_departamentos(conn: Connection) -> int:
     """
     Descarga GeoJSON de departamentos y actualiza las geometrías en la BD.
 
@@ -161,6 +168,7 @@ def seed_geometrias_departamentos(conn) -> int:
     not_found = 0
 
     for feature in features:
+        props = {}
         try:
             props = feature.get("properties", {})
             geometry = feature.get("geometry")
@@ -195,12 +203,15 @@ def seed_geometrias_departamentos(conn) -> int:
                   AND id_provincia_indec = :prov_id
             """)
 
-            result = conn.execute(stmt, {
-                "geom_wkt": geom_wkt,
-                "fuente": FUENTE,
-                "dept_id": id_departamento_indec,
-                "prov_id": id_provincia_indec
-            })
+            result = conn.execute(
+                stmt,
+                {
+                    "geom_wkt": geom_wkt,
+                    "fuente": FUENTE,
+                    "dept_id": id_departamento_indec,
+                    "prov_id": id_provincia_indec,
+                },
+            )
 
             if result.rowcount > 0:
                 updated += 1
@@ -212,19 +223,23 @@ def seed_geometrias_departamentos(conn) -> int:
         except Exception as e:
             errors += 1
             if errors < 5:
-                print(f"   ⚠️  Error procesando departamento {props.get('nombre', 'desconocido')}: {e}")
+                print(
+                    f"   ⚠️  Error procesando departamento {props.get('nombre', 'desconocido')}: {e}"
+                )
 
-    conn.commit()
+    # Commit automático al salir del contexto engine.begin()
     print(f"✅ Geometrías de departamentos actualizadas: {updated}")
     if not_found > 0:
-        print(f"ℹ️  Departamentos no encontrados en BD: {not_found} (normal si no están todos)")
+        print(
+            f"ℹ️  Departamentos no encontrados en BD: {not_found} (normal si no están todos)"
+        )
     if errors > 0:
         print(f"⚠️  Errores: {errors}")
 
     return updated
 
 
-def main():
+def main() -> None:
     """Función principal para ejecutar standalone."""
     print("\n" + "=" * 70)
     print("🗺️  SEED DE GEOMETRÍAS DESDE API GEOREF")
@@ -248,7 +263,7 @@ def main():
     # Crear engine y conexión
     engine = create_engine(DATABASE_URL)
 
-    with engine.connect() as conn:
+    with engine.begin() as conn:
         # Provincias
         prov_count = seed_geometrias_provincias(conn)
 

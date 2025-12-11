@@ -11,6 +11,7 @@ export interface SheetPreview {
   preview_rows: unknown[][];
   is_valid: boolean;
   missing_columns: string[];
+  detected_type: string | null;  // NOMINAL, CLI_P26, CLI_P26_INT, LAB_P26
 }
 
 export interface FilePreviewData {
@@ -25,6 +26,7 @@ export interface FilePreviewData {
 interface ProcessRequest {
   upload_id: string;
   sheet_name: string;
+  file_type: string;  // Tipo explícito a procesar
 }
 
 interface ProcessResponse {

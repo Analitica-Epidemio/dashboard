@@ -3,14 +3,17 @@
 from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import BigInteger, Column, Text
+from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship
 
 from app.core.models import BaseModel
 
 if TYPE_CHECKING:
-    from app.domains.atencion_medica.salud_models.models import MuestraEvento
-    from app.domains.diagnosticos.models import DiagnosticoEvento
     from app.domains.territorio.geografia_models import Localidad
+    from app.domains.vigilancia_nominal.models.atencion import (
+        DiagnosticoCasoEpidemiologico,
+    )
+    from app.domains.vigilancia_nominal.models.salud import MuestraCasoEpidemiologico
 
 
 class Establecimiento(BaseModel, table=True):
@@ -33,7 +36,7 @@ class Establecimiento(BaseModel, table=True):
     source: Optional[str] = Field(
         None,
         max_length=20,
-        description="Origen de los datos: 'IGN' (Instituto Geográfico Nacional) o 'SNVS' (Sistema Nacional de Vigilancia)"
+        description="Origen de los datos: 'IGN' (Instituto Geográfico Nacional) o 'SNVS' (Sistema Nacional de Vigilancia)",
     )
 
     # Campos IGN (Instituto Geográfico Nacional)
@@ -58,7 +61,7 @@ class Establecimiento(BaseModel, table=True):
         sa_type=BigInteger,
         foreign_key="localidad.id_localidad_indec",
         index=True,
-        description="ID INDEC de la localidad donde se encuentra el establecimiento"
+        description="ID INDEC de la localidad donde se encuentra el establecimiento",
     )
 
     # Campos de mapeo SNVS → IGN
@@ -66,7 +69,9 @@ class Establecimiento(BaseModel, table=True):
         None, description="Si el mapeo SNVS→IGN fue validado manualmente"
     )
     mapeo_confianza: Optional[str] = Field(
-        None, max_length=20, description="Nivel de confianza del mapeo: HIGH, MEDIUM, LOW"
+        None,
+        max_length=20,
+        description="Nivel de confianza del mapeo: HIGH, MEDIUM, LOW",
     )
     mapeo_score: Optional[float] = Field(
         None, description="Score de similitud del mapeo (0-100)"
@@ -82,10 +87,12 @@ class Establecimiento(BaseModel, table=True):
     )
 
     # Relaciones
-    localidad_establecimiento: Optional["Localidad"] = Relationship(
+    localidad_establecimiento: Mapped[Optional["Localidad"]] = Relationship(
         back_populates="establecimientos"
     )
-    muestras: List["MuestraEvento"] = Relationship(back_populates="establecimiento")
-    diagnosticos: List["DiagnosticoEvento"] = Relationship(
+    muestras: Mapped[List["MuestraCasoEpidemiologico"]] = Relationship(
+        back_populates="establecimiento"
+    )
+    diagnosticos: Mapped[List["DiagnosticoCasoEpidemiologico"]] = Relationship(
         back_populates="establecimiento"
     )

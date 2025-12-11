@@ -293,10 +293,10 @@ export interface paths {
          *     **Ventajas:**
          *     - No bloquea la UI
          *     - Procesa archivos grandes sin timeout
-         *     - Progress tracking en tiempo real
-         *     - Error handling robusto
+         *     - Seguimiento de progreso en tiempo real
+         *     - Manejo de errores robusto
          *
-         *     **Returns:** Job ID para seguimiento del progreso
+         *     **Retorna:** Job ID para seguimiento del progreso
          */
         post: operations["upload_csv_async_api_v1_uploads_csv_async_post"];
         delete?: never;
@@ -313,23 +313,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Job Status
-         * @description Obtener estado de un job de procesamiento.
-         *
-         *     **Polling endpoint** para seguimiento en tiempo real:
-         *     - Progreso percentage (0-100)
-         *     - Paso actual de procesamiento
-         *     - Errores si los hay
-         *     - Resultado final cuando completa
-         *
-         *     **Estados posibles:**
-         *     - `pending`: En cola esperando
-         *     - `in_progress`: Procesando activamente
-         *     - `completed`: Completado exitosamente
-         *     - `failed`: Error en procesamiento
-         *     - `cancelled`: Cancelado por usuario
+         * Get Job Status Endpoint
+         * @description Get current status of a processing job.
          */
-        get: operations["get_job_status_api_v1_uploads_jobs__job_id__status_get"];
+        get: operations["get_job_status_endpoint_api_v1_uploads_jobs__job_id__status_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -349,19 +336,10 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * Cancel Job
-         * @description Cancelar un job en progreso.
-         *
-         *     **Funcionalidad:**
-         *     - Revoca la task de Celery
-         *     - Marca el job como cancelado
-         *     - Limpia archivos temporales
-         *
-         *     **Limitaciones:**
-         *     - Solo jobs en estado `pending` o `in_progress`
-         *     - Jobs completados no se pueden cancelar
+         * Cancel Job Endpoint
+         * @description Cancel a running processing job.
          */
-        delete: operations["cancel_job_api_v1_uploads_jobs__job_id__delete"];
+        delete: operations["cancel_job_endpoint_api_v1_uploads_jobs__job_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -406,17 +384,17 @@ export interface paths {
         put?: never;
         /**
          * Process File From Preview
-         * @description Process a file that was previously uploaded and previewed.
+         * @description Procesar un archivo que fue previamente subido y previsualizado.
          *
-         *     **Flow:**
-         *     1. Find temp file by upload_id
-         *     2. Load file into memory (keeps original format: Excel or CSV)
-         *     3. Start async processing with Celery (processor handles both formats)
-         *     4. Clean up temp file
+         *     **Flujo:**
+         *     1. Buscar archivo temporal por upload_id
+         *     2. Cargar archivo en memoria (mantiene formato original: Excel o CSV)
+         *     3. Iniciar procesamiento asíncrono con Celery (el procesador maneja ambos formatos)
+         *     4. Limpiar archivo temporal
          *
-         *     **Returns:** Job ID for progress tracking
+         *     **Retorna:** Job ID para seguimiento del progreso
          *
-         *     **Optimization:** No Excel→CSV conversion! Processor reads Excel directly with calamine (~4x faster).
+         *     **Optimización:** ¡Sin conversión Excel→CSV! El procesador lee Excel directamente con calamine (~4x más rápido).
          */
         post: operations["process_file_from_preview_api_v1_uploads_process_post"];
         delete?: never;
@@ -491,7 +469,7 @@ export interface paths {
          * Get Dashboard Resumen
          * @description Obtiene estadísticas resumen del dashboard:
          *     - Tabla resumen con totales
-         *     - Eventos más típicos
+         *     - CasoEpidemiologicos más típicos
          *     - Grupos más típicos
          *     - Pirámide poblacional
          *     - Territorios afectados (jerárquico)
@@ -657,26 +635,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/establecimientos/{id_establecimiento}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Obtener detalle de establecimiento
-         * @description Obtiene detalle completo de un establecimiento con todas las personas/eventos relacionados
-         */
-        get: operations["get_establecimiento_detalle_api_v1_establecimientos__id_establecimiento__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/establecimientos/sin-mapear": {
         parameters: {
             query?: never;
@@ -779,6 +737,26 @@ export interface paths {
          * @description Crea múltiples mapeos en una sola operación (útil para aceptar sugerencias de alta confianza)
          */
         post: operations["aceptar_sugerencias_bulk_api_v1_establecimientos_mapeos_bulk_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/establecimientos/{id_establecimiento}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Obtener detalle de establecimiento
+         * @description Obtiene detalle completo de un establecimiento con todas las personas/eventos relacionados
+         */
+        get: operations["get_establecimiento_detalle_api_v1_establecimientos__id_establecimiento__get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1231,13 +1209,13 @@ export interface paths {
         };
         /**
          * Get Dashboard Charts
-         * @description Obtiene los charts aplicables como UniversalChartSpec con datos REALES
+         * @description Obtiene los charts aplicables como EspecificacionGraficoUniversal con datos REALES
          *
          *     Flujo:
          *     1. Busca qué charts aplican según las condiciones en BD
-         *     2. Convierte filtros a ChartFilters
+         *     2. Convierte filtros a FiltrosGrafico
          *     3. Usa ChartSpecGenerator para generar specs con datos REALES
-         *     4. Devuelve UniversalChartSpec listo para renderizar
+         *     4. Devuelve EspecificacionGraficoUniversal listo para renderizar
          */
         get: operations["get_dashboard_charts_api_v1_charts_dashboard_get"];
         put?: never;
@@ -1835,54 +1813,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/boletines/config/dynamic-blocks": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Actualizar array completo de bloques dinámicos
-         * @description Reemplaza el array completo de bloques (útil para reordenar)
-         */
-        put: operations["update_dynamic_blocks_api_v1_boletines_config_dynamic_blocks_put"];
-        /**
-         * Agregar un nuevo bloque dinámico
-         * @description Agrega un bloque al final del array de bloques dinámicos
-         */
-        post: operations["create_dynamic_block_api_v1_boletines_config_dynamic_blocks_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/boletines/config/dynamic-blocks/{block_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Actualizar un bloque dinámico específico
-         * @description Actualiza la configuración de un bloque existente por su ID
-         */
-        put: operations["update_dynamic_block_api_v1_boletines_config_dynamic_blocks__block_id__put"];
-        post?: never;
-        /**
-         * Eliminar un bloque dinámico
-         * @description Elimina un bloque del array de bloques dinámicos por su ID
-         */
-        delete: operations["delete_dynamic_block_api_v1_boletines_config_dynamic_blocks__block_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/boletines/preview/evento": {
         parameters: {
             query?: never;
@@ -1892,7 +1822,7 @@ export interface paths {
         };
         /**
          * Preview genérico de datos para cualquier evento
-         * @description Recibe el código de un TipoEno o GrupoEno y genera un resumen de datos
+         * @description Recibe el código de un Enfermedad o GrupoDeEnfermedades y genera un resumen de datos
          */
         get: operations["preview_evento_api_v1_boletines_preview_evento_get"];
         put?: never;
@@ -1912,7 +1842,7 @@ export interface paths {
         };
         /**
          * Listar eventos disponibles para preview
-         * @description Retorna todos los TipoEno y GrupoEno con código para usar en el selector
+         * @description Retorna todos los Enfermedad y GrupoDeEnfermedades con código para usar en el selector
          */
         get: operations["list_available_eventos_api_v1_boletines_preview_eventos_disponibles_get"];
         put?: never;
@@ -1935,6 +1865,34 @@ export interface paths {
          * @description Retorna todos los agentes etiológicos activos para usar en selectores de bloques dinámicos
          */
         get: operations["list_available_agentes_api_v1_boletines_preview_agentes_disponibles_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/boletines/secciones-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Obtener configuración de secciones y bloques
+         * @description Retorna la configuración de todas las secciones y bloques activos del boletín.
+         *
+         *         Incluye información detallada sobre:
+         *         - Qué métricas se consultan
+         *         - Qué rangos temporales se usan (con ejemplos concretos)
+         *         - Tipo de visualización de cada bloque
+         *
+         *         Usar los parámetros `semana` y `anio` para ver ejemplos de rangos
+         *         para una semana de referencia específica.
+         */
+        get: operations["get_secciones_config_api_v1_boletines_secciones_config_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2073,6 +2031,197 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/agrupaciones/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Agrupaciones
+         * @description Lista todas las agrupaciones activas.
+         *
+         *     Opcionalmente filtra por categoría funcional:
+         *     - respiratorio
+         *     - enterico
+         *     - vectorial
+         *     - etc.
+         */
+        get: operations["list_agrupaciones_api_v1_agrupaciones__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agrupaciones/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Agrupacion
+         * @description Obtiene detalle de una agrupación con sus agentes.
+         *
+         *     Útil para drill-down: ver qué agentes componen una agrupación.
+         */
+        get: operations["get_agrupacion_api_v1_agrupaciones__slug__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agrupaciones/{slug}/agente-ids": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Agrupacion Agente Ids
+         * @description Obtiene solo los IDs de agentes de una agrupación.
+         *
+         *     Optimizado para el sistema de métricas que necesita resolver
+         *     una agrupación a sus IDs de agentes para filtrar.
+         */
+        get: operations["get_agrupacion_agente_ids_api_v1_agrupaciones__slug__agente_ids_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/metricas/schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Schema
+         * @description Lista todos los cubes disponibles para el BI Engine.
+         *
+         *     Retorna información sobre cada tipo de vigilancia incluyendo:
+         *     - Métricas disponibles
+         *     - Dimensiones para agrupar
+         *     - Filtros aplicables
+         *     - Visualizaciones permitidas
+         *     - KPIs predefinidos
+         */
+        get: operations["get_schema_api_v1_metricas_schema_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/metricas/schema/{cube_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Cube Detail
+         * @description Obtiene el schema completo de un cube específico.
+         *
+         *     Útil para construir dinámicamente la UI de una página de vigilancia.
+         */
+        get: operations["get_cube_detail_api_v1_metricas_schema__cube_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/metricas/disponibles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Available Metrics
+         * @description Lista métricas y dimensiones disponibles.
+         *
+         *     Útil para construir UI de query builder dinámicamente.
+         */
+        get: operations["get_available_metrics_api_v1_metricas_disponibles_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/metricas/query": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Query Metric
+         * @description Query unificado para cualquier métrica.
+         *
+         *     Ejemplos de uso:
+         *
+         *     1. Casos de ETI por semana en 2025:
+         *     ```json
+         *     {
+         *         "metric": "casos_clinicos",
+         *         "dimensions": ["SEMANA_EPIDEMIOLOGICA"],
+         *         "filters": {"anio": 2025, "evento_nombre": "ETI"}
+         *     }
+         *     ```
+         *
+         *     2. Muestras de laboratorio por agente:
+         *     ```json
+         *     {
+         *         "metric": "muestras_estudiadas",
+         *         "dimensions": ["AGENTE_ETIOLOGICO"],
+         *         "filters": {"anio": 2025}
+         *     }
+         *     ```
+         *
+         *     3. Distribución por grupo etario:
+         *     ```json
+         *     {
+         *         "metric": "casos_clinicos",
+         *         "dimensions": ["GRUPO_ETARIO"],
+         *         "filters": {"anio": 2025, "semana": 48}
+         *     }
+         *     ```
+         */
+        post: operations["query_metric_api_v1_metricas_query_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/": {
         parameters: {
             query?: never;
@@ -2195,13 +2344,13 @@ export interface components {
             total_eventos: number;
             /**
              * Eventos Positivos
-             * @description Eventos con resultado positivo
+             * @description CasoEpidemiologicos con resultado positivo
              * @default 0
              */
             eventos_positivos: number;
             /**
              * Eventos Negativos
-             * @description Eventos con resultado negativo
+             * @description CasoEpidemiologicos con resultado negativo
              * @default 0
              */
             eventos_negativos: number;
@@ -2211,6 +2360,20 @@ export interface components {
              * @default 0
              */
             tasa_positividad: number;
+        };
+        /**
+         * AgenteSimple
+         * @description Agente simplificado para respuestas.
+         */
+        AgenteSimple: {
+            /** Id */
+            id: number;
+            /** Slug */
+            slug: string;
+            /** Nombre */
+            nombre: string;
+            /** Nombre Corto */
+            nombre_corto: string;
         };
         /**
          * AgentesCategoriasResponse
@@ -2256,6 +2419,65 @@ export interface components {
              * @default 0
              */
             personas_activas: number;
+        };
+        /**
+         * AgrupacionDetailResponse
+         * @description Detalle de una agrupación con sus agentes.
+         */
+        AgrupacionDetailResponse: {
+            /** Id */
+            id: number;
+            /** Slug */
+            slug: string;
+            /** Nombre */
+            nombre: string;
+            /** Nombre Corto */
+            nombre_corto: string;
+            /** Color */
+            color: string;
+            /** Categoria */
+            categoria: string;
+            /** Orden */
+            orden: number;
+            /** Descripcion */
+            descripcion: string | null;
+            /** Agentes */
+            agentes: components["schemas"]["AgenteSimple"][];
+        };
+        /**
+         * AgrupacionListItem
+         * @description Item de agrupación para listados.
+         */
+        AgrupacionListItem: {
+            /** Id */
+            id: number;
+            /** Slug */
+            slug: string;
+            /** Nombre */
+            nombre: string;
+            /** Nombre Corto */
+            nombre_corto: string;
+            /** Color */
+            color: string;
+            /** Categoria */
+            categoria: string;
+            /** Orden */
+            orden: number;
+            /**
+             * Agentes Count
+             * @description Cantidad de agentes en la agrupación
+             */
+            agentes_count: number;
+        };
+        /**
+         * AgrupacionesListResponse
+         * @description Lista de agrupaciones.
+         */
+        AgrupacionesListResponse: {
+            /** Items */
+            items: components["schemas"]["AgrupacionListItem"][];
+            /** Total */
+            total: number;
         };
         /**
          * AmbitoConcurrenciaInfo
@@ -2374,62 +2596,6 @@ export interface components {
             fecha_antecedente?: string | null;
         };
         /**
-         * AreaChartConfig
-         * @description Configuración específica para area charts
-         */
-        AreaChartConfig: {
-            /** Height */
-            height?: number | null;
-            /** Width */
-            width?: number | null;
-            /**
-             * Showlegend
-             * @default true
-             */
-            showLegend: boolean | null;
-            /**
-             * Showgrid
-             * @default true
-             */
-            showGrid: boolean | null;
-            /** Colors */
-            colors?: string[] | null;
-            /**
-             * Stacked
-             * @default false
-             */
-            stacked: boolean | null;
-            /**
-             * Fillopacity
-             * @default 0.6
-             */
-            fillOpacity: number | null;
-        };
-        /**
-         * AreaChartConfigWrapper
-         * @description Wrapper con discriminador para area chart config
-         */
-        AreaChartConfigWrapper: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "area";
-            config: components["schemas"]["AreaChartConfig"];
-        };
-        /**
-         * AreaChartData
-         * @description Wrapper con discriminador para area chart data
-         */
-        AreaChartData: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "area";
-            data: components["schemas"]["BaseChartData"];
-        };
-        /**
          * AsyncJobResponse
          * @description Respuesta cuando se inicia un job asíncrono.
          */
@@ -2518,72 +2684,30 @@ export interface components {
             user_agent?: string | null;
         };
         /**
-         * BarChartConfig
-         * @description Configuración específica para bar charts
+         * BloqueConfigResponse
+         * @description Configuración de un bloque para el frontend
          */
-        BarChartConfig: {
-            /** Height */
-            height?: number | null;
-            /** Width */
-            width?: number | null;
-            /**
-             * Showlegend
-             * @default true
-             */
-            showLegend: boolean | null;
-            /**
-             * Showgrid
-             * @default true
-             */
-            showGrid: boolean | null;
-            /** Colors */
-            colors?: string[] | null;
-            /**
-             * Stacked
-             * @default false
-             */
-            stacked: boolean | null;
-            /**
-             * Horizontal
-             * @default false
-             */
-            horizontal: boolean | null;
-        };
-        /**
-         * BarChartConfigWrapper
-         * @description Wrapper con discriminador para bar chart config
-         */
-        BarChartConfigWrapper: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "bar";
-            config: components["schemas"]["BarChartConfig"];
-        };
-        /**
-         * BarChartData
-         * @description Wrapper con discriminador para bar chart data
-         */
-        BarChartData: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "bar";
-            data: components["schemas"]["BaseChartData"];
-        };
-        /**
-         * BaseChartData
-         * @description Datos para line, bar, area, pie charts
-         */
-        BaseChartData: {
-            /** Labels */
-            labels: string[];
-            /** Datasets */
-            datasets: components["schemas"]["Dataset"][];
-            /** Metadata */
-            metadata?: components["schemas"]["WeekMetadata"][] | null;
+        BloqueConfigResponse: {
+            /** Id */
+            id: number;
+            /** Slug */
+            slug: string;
+            /** Titulo Template */
+            titulo_template: string;
+            /** Tipo Bloque */
+            tipo_bloque: string;
+            /** Tipo Visualizacion */
+            tipo_visualizacion: string;
+            /** Metrica Codigo */
+            metrica_codigo: string;
+            /** Dimensiones */
+            dimensiones: string[];
+            /** @description Información del rango temporal que usa el bloque */
+            rango_temporal?: components["schemas"]["RangoTemporalInfo"] | null;
+            /** Descripcion */
+            descripcion?: string | null;
+            /** Orden */
+            orden: number;
         };
         /** Body_preview_uploaded_file_api_v1_uploads_preview_post */
         Body_preview_uploaded_file_api_v1_uploads_preview_post: {
@@ -2683,7 +2807,7 @@ export interface components {
             };
             /**
              * Eventos Incluidos
-             * @description Eventos incluidos con sus datos
+             * @description CasoEpidemiologicos incluidos con sus datos
              */
             eventos_incluidos: {
                 [key: string]: unknown;
@@ -2747,23 +2871,8 @@ export interface components {
              * @description Categoría: semanal, brote, tendencias, etc.
              */
             category: string;
-            /**
-             * Thumbnail
-             * @description URL de thumbnail
-             */
-            thumbnail?: string | null;
-            /** @description Configuración de layout */
-            layout: components["schemas"]["LayoutConfig"];
             /** @description Configuración de portada */
             cover?: components["schemas"]["CoverConfig"] | null;
-            /**
-             * Widgets
-             * @description Lista de widgets
-             * @default []
-             */
-            widgets: (components["schemas"]["KPIWidget-Input"] | components["schemas"]["GenericWidget"])[];
-            /** @description Filtros globales */
-            global_filters?: components["schemas"]["GlobalFilters"] | null;
             /**
              * Content
              * @description Contenido HTML del boletín (Tiptap)
@@ -2789,13 +2898,10 @@ export interface components {
             description: string | null;
             /** Category */
             category: string;
-            /** Thumbnail */
-            thumbnail: string | null;
-            layout: components["schemas"]["LayoutConfig"];
-            cover: components["schemas"]["CoverConfig"] | null;
-            /** Widgets */
-            widgets: (components["schemas"]["KPIWidget-Output"] | components["schemas"]["GenericWidget"])[];
-            global_filters: components["schemas"]["GlobalFilters"] | null;
+            /** Cover */
+            cover: {
+                [key: string]: unknown;
+            } | null;
             /** Content */
             content: string | null;
             /** Created By */
@@ -2823,13 +2929,7 @@ export interface components {
             description?: string | null;
             /** Category */
             category?: string | null;
-            /** Thumbnail */
-            thumbnail?: string | null;
-            layout?: components["schemas"]["LayoutConfig"] | null;
             cover?: components["schemas"]["CoverConfig"] | null;
-            /** Widgets */
-            widgets?: (components["schemas"]["KPIWidget-Input"] | components["schemas"]["GenericWidget"])[] | null;
-            global_filters?: components["schemas"]["GlobalFilters"] | null;
             /** Content */
             content?: string | null;
             /** Is Public */
@@ -2883,9 +2983,9 @@ export interface components {
         CalculateChangesResponse: {
             /**
              * Eventos
-             * @description Eventos con sus cambios calculados
+             * @description CasoEpidemiologicos con sus cambios calculados
              */
-            eventos: components["schemas"]["EventoCambioConCategoria"][];
+            eventos: components["schemas"]["CasoEpidemiologicoCambioConCategoria"][];
         };
         /**
          * CasoDetalle
@@ -2949,6 +3049,722 @@ export interface components {
             sexo?: string | null;
         };
         /**
+         * CasoEpidemiologicoCambio
+         * @description CasoEpidemiologico con su cambio entre dos períodos
+         */
+        CasoEpidemiologicoCambio: {
+            /**
+             * Tipo Eno Id
+             * @description ID del tipo de evento
+             */
+            tipo_eno_id: number;
+            /**
+             * Tipo Eno Nombre
+             * @description Nombre del evento
+             */
+            tipo_eno_nombre: string;
+            /**
+             * Grupo Eno Id
+             * @description ID del grupo epidemiológico
+             */
+            grupo_eno_id: number;
+            /**
+             * Grupo Eno Nombre
+             * @description Nombre del grupo
+             */
+            grupo_eno_nombre: string;
+            /**
+             * Casos Actuales
+             * @description Casos en período actual
+             */
+            casos_actuales: number;
+            /**
+             * Casos Anteriores
+             * @description Casos en período anterior
+             */
+            casos_anteriores: number;
+            /**
+             * Diferencia Absoluta
+             * @description Diferencia absoluta de casos
+             */
+            diferencia_absoluta: number;
+            /**
+             * Diferencia Porcentual
+             * @description % de cambio
+             */
+            diferencia_porcentual: number;
+            /**
+             * Tasa Incidencia Actual
+             * @description Tasa por 100k habitantes en período actual
+             */
+            tasa_incidencia_actual?: number | null;
+            /**
+             * Tasa Incidencia Anterior
+             * @description Tasa por 100k habitantes en período anterior
+             */
+            tasa_incidencia_anterior?: number | null;
+        };
+        /**
+         * CasoEpidemiologicoCambioConCategoria
+         * @description CasoEpidemiologico con cambio y su categoría automática
+         */
+        CasoEpidemiologicoCambioConCategoria: {
+            /**
+             * Tipo Eno Id
+             * @description ID del tipo de evento
+             */
+            tipo_eno_id: number;
+            /**
+             * Tipo Eno Nombre
+             * @description Nombre del evento
+             */
+            tipo_eno_nombre: string;
+            /**
+             * Grupo Eno Id
+             * @description ID del grupo epidemiológico
+             */
+            grupo_eno_id: number;
+            /**
+             * Grupo Eno Nombre
+             * @description Nombre del grupo
+             */
+            grupo_eno_nombre: string;
+            /**
+             * Casos Actuales
+             * @description Casos en período actual
+             */
+            casos_actuales: number;
+            /**
+             * Casos Anteriores
+             * @description Casos en período anterior
+             */
+            casos_anteriores: number;
+            /**
+             * Diferencia Absoluta
+             * @description Diferencia absoluta de casos
+             */
+            diferencia_absoluta: number;
+            /**
+             * Diferencia Porcentual
+             * @description % de cambio
+             */
+            diferencia_porcentual: number;
+            /**
+             * Tasa Incidencia Actual
+             * @description Tasa por 100k habitantes en período actual
+             */
+            tasa_incidencia_actual?: number | null;
+            /**
+             * Tasa Incidencia Anterior
+             * @description Tasa por 100k habitantes en período anterior
+             */
+            tasa_incidencia_anterior?: number | null;
+            /**
+             * Categoria
+             * @description Categoría: 'crecimiento' o 'decrecimiento'
+             */
+            categoria: string;
+        };
+        /**
+         * CasoEpidemiologicoCompleto
+         * @description CasoEpidemiologico completo con toda su información
+         */
+        CasoEpidemiologicoCompleto: {
+            /** Id */
+            id: number;
+            /** Id Evento Caso */
+            id_evento_caso: number;
+            /** Tipo Eno Id */
+            tipo_eno_id?: number | null;
+            /** Tipo Eno Nombre */
+            tipo_eno_nombre?: string | null;
+            /**
+             * Grupos Eno Nombres
+             * @description Nombres de grupos ENO (puede pertenecer a múltiples)
+             */
+            grupos_eno_nombres?: string[];
+            /** Fecha Minima Caso */
+            fecha_minima_caso?: string | null;
+            /** Fecha Inicio Sintomas */
+            fecha_inicio_sintomas?: string | null;
+            /** Fecha Apertura */
+            fecha_apertura?: string | null;
+            /** Clasificacion Estrategia */
+            clasificacion_estrategia?: string | null;
+            /** Clasificacion Manual */
+            clasificacion_manual?: string | null;
+            /** Clasificacion Algoritmo */
+            clasificacion_algoritmo?: string | null;
+            /** Semana Epidemiologica Apertura */
+            semana_epidemiologica_apertura?: number | null;
+            /** Anio Epidemiologico Apertura */
+            anio_epidemiologico_apertura?: number | null;
+            /**
+             * Es Sintomatico
+             * @default false
+             */
+            es_sintomatico: boolean;
+            /**
+             * Requiere Revision
+             * @default false
+             */
+            requiere_revision: boolean;
+            domicilio?: components["schemas"]["app__api__v1__personas__get_detail__DomicilioGeograficoInfo"] | null;
+            /**
+             * Sintomas
+             * @default []
+             */
+            sintomas: components["schemas"]["app__api__v1__personas__get_detail__SintomaInfo"][];
+            /**
+             * Muestras
+             * @default []
+             */
+            muestras: components["schemas"]["app__api__v1__personas__get_detail__MuestraInfo"][];
+            /**
+             * Estudios
+             * @default []
+             */
+            estudios: components["schemas"]["app__api__v1__personas__get_detail__EstudioInfo"][];
+            /**
+             * Diagnosticos
+             * @default []
+             */
+            diagnosticos: components["schemas"]["app__api__v1__personas__get_detail__DiagnosticoInfo"][];
+            /**
+             * Tratamientos
+             * @default []
+             */
+            tratamientos: components["schemas"]["app__api__v1__personas__get_detail__TratamientoInfo"][];
+            /**
+             * Internaciones
+             * @default []
+             */
+            internaciones: components["schemas"]["app__api__v1__personas__get_detail__InternacionInfo"][];
+            /**
+             * Vacunas
+             * @default []
+             */
+            vacunas: components["schemas"]["app__api__v1__personas__get_detail__VacunaInfo"][];
+        };
+        /**
+         * CasoEpidemiologicoDetailResponse
+         * @description Respuesta detallada de un evento (EVENT-CENTERED)
+         */
+        CasoEpidemiologicoDetailResponse: {
+            /**
+             * Id
+             * @description ID del evento
+             */
+            id: number;
+            /**
+             * Id Evento Caso
+             * @description ID del caso
+             */
+            id_evento_caso: number;
+            /**
+             * Tipo Eno Id
+             * @description ID del tipo ENO
+             */
+            tipo_eno_id: number;
+            /**
+             * Tipo Eno Nombre
+             * @description Nombre del tipo ENO
+             */
+            tipo_eno_nombre?: string | null;
+            /**
+             * Tipo Eno Descripcion
+             * @description Descripción del tipo ENO
+             */
+            tipo_eno_descripcion?: string | null;
+            /**
+             * Enfermedad
+             * @description Enfermedad relacionada
+             */
+            enfermedad?: string | null;
+            /**
+             * Fecha Minima Caso
+             * Format: date
+             * @description Fecha mínima del evento
+             */
+            fecha_minima_caso: string;
+            /**
+             * Fecha Inicio Sintomas
+             * @description Fecha de inicio de síntomas
+             */
+            fecha_inicio_sintomas?: string | null;
+            /**
+             * Fecha Apertura Caso
+             * @description Fecha de apertura del caso
+             */
+            fecha_apertura_caso?: string | null;
+            /**
+             * Fecha Primera Consulta
+             * @description Fecha de primera consulta
+             */
+            fecha_primera_consulta?: string | null;
+            /**
+             * Fecha Notificacion
+             * @description Fecha de notificación
+             */
+            fecha_notificacion?: string | null;
+            /**
+             * Fecha Diagnostico
+             * @description Fecha de diagnóstico
+             */
+            fecha_diagnostico?: string | null;
+            /**
+             * Fecha Investigacion
+             * @description Fecha de investigación
+             */
+            fecha_investigacion?: string | null;
+            /**
+             * Semana Epidemiologica Apertura
+             * @description Semana epidemiológica de apertura
+             */
+            semana_epidemiologica_apertura?: number | null;
+            /**
+             * Anio Epidemiologico Apertura
+             * @description Año epidemiológico de apertura
+             */
+            anio_epidemiologico_apertura?: number | null;
+            /**
+             * Semana Epidemiologica Sintomas
+             * @description Semana epidemiológica de síntomas
+             */
+            semana_epidemiologica_sintomas?: number | null;
+            /** @description Clasificación estratégica del evento */
+            clasificacion_estrategia?: components["schemas"]["TipoClasificacion"] | null;
+            /**
+             * Confidence Score
+             * @description Score de confianza
+             */
+            confidence_score?: number | null;
+            /**
+             * Metadata Clasificacion
+             * @description Metadata de clasificación
+             */
+            metadata_clasificacion?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Metadata Extraida
+             * @description Metadata extraída
+             */
+            metadata_extraida?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Id Estrategia Aplicada
+             * @description ID de la estrategia que se aplicó para clasificar
+             */
+            id_estrategia_aplicada?: number | null;
+            /**
+             * Estrategia Nombre
+             * @description Nombre de la estrategia aplicada
+             */
+            estrategia_nombre?: string | null;
+            /**
+             * Trazabilidad Clasificacion
+             * @description Trazabilidad completa: reglas evaluadas, condiciones cumplidas, razón de clasificación
+             */
+            trazabilidad_clasificacion?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Tipo Sujeto
+             * @description Tipo de sujeto
+             */
+            tipo_sujeto: string;
+            /** @description Información del ciudadano */
+            ciudadano?: components["schemas"]["CiudadanoInfo"] | null;
+            /** @description Información del animal */
+            animal?: components["schemas"]["AnimalInfo"] | null;
+            /** @description Snapshot geográfico del domicilio al momento del evento */
+            domicilio_geografico?: components["schemas"]["app__api__v1__eventos__get_detail__DomicilioGeograficoInfo"] | null;
+            /** @description Establecimiento de consulta */
+            establecimiento_consulta?: components["schemas"]["EstablecimientoInfo"] | null;
+            /** @description Establecimiento que notificó */
+            establecimiento_notificacion?: components["schemas"]["EstablecimientoInfo"] | null;
+            /** @description Establecimiento de carga */
+            establecimiento_carga?: components["schemas"]["EstablecimientoInfo"] | null;
+            /**
+             * Es Caso Sintomatico
+             * @description Si es sintomático
+             */
+            es_caso_sintomatico?: boolean | null;
+            /**
+             * Requiere Revision Especie
+             * @description Si requiere revisión
+             */
+            requiere_revision_especie?: boolean | null;
+            /**
+             * Observaciones Texto
+             * @description Observaciones
+             */
+            observaciones_texto?: string | null;
+            /**
+             * Id Origen
+             * @description ID del sistema origen
+             */
+            id_origen?: string | null;
+            /**
+             * Datos Originales Csv
+             * @description Datos originales del CSV
+             */
+            datos_originales_csv?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Sintomas
+             * @description Síntomas del evento
+             */
+            sintomas?: components["schemas"]["app__api__v1__eventos__get_detail__SintomaInfo"][];
+            /**
+             * Muestras
+             * @description Muestras del evento
+             */
+            muestras?: components["schemas"]["app__api__v1__eventos__get_detail__MuestraInfo"][];
+            /**
+             * Diagnosticos
+             * @description Diagnósticos del evento
+             */
+            diagnosticos?: components["schemas"]["app__api__v1__eventos__get_detail__DiagnosticoInfo"][];
+            /**
+             * Tratamientos
+             * @description Tratamientos del evento
+             */
+            tratamientos?: components["schemas"]["app__api__v1__eventos__get_detail__TratamientoInfo"][];
+            /**
+             * Internaciones
+             * @description Internaciones del evento
+             */
+            internaciones?: components["schemas"]["app__api__v1__eventos__get_detail__InternacionInfo"][];
+            /**
+             * Investigaciones
+             * @description Investigaciones del evento
+             */
+            investigaciones?: components["schemas"]["InvestigacionInfo"][];
+            /**
+             * Contactos
+             * @description Contactos del evento
+             */
+            contactos?: components["schemas"]["ContactoInfo"][];
+            /**
+             * Ambitos Concurrencia
+             * @description Ámbitos de concurrencia
+             */
+            ambitos_concurrencia?: components["schemas"]["AmbitoConcurrenciaInfo"][];
+            /**
+             * Antecedentes
+             * @description Antecedentes epidemiológicos
+             */
+            antecedentes?: components["schemas"]["AntecedenteInfo"][];
+            /**
+             * Vacunas
+             * @description Vacunas relacionadas
+             */
+            vacunas?: components["schemas"]["app__api__v1__eventos__get_detail__VacunaInfo"][];
+            /**
+             * Created At
+             * @description Fecha de creación
+             */
+            created_at?: unknown | null;
+            /**
+             * Updated At
+             * @description Fecha de actualización
+             */
+            updated_at?: unknown | null;
+            /**
+             * Total Sintomas
+             * @description Total de síntomas
+             * @default 0
+             */
+            total_sintomas: number;
+            /**
+             * Total Muestras
+             * @description Total de muestras
+             * @default 0
+             */
+            total_muestras: number;
+            /**
+             * Total Diagnosticos
+             * @description Total de diagnósticos
+             * @default 0
+             */
+            total_diagnosticos: number;
+            /**
+             * Total Tratamientos
+             * @description Total de tratamientos
+             * @default 0
+             */
+            total_tratamientos: number;
+            /**
+             * Total Internaciones
+             * @description Total de internaciones
+             * @default 0
+             */
+            total_internaciones: number;
+            /**
+             * Total Investigaciones
+             * @description Total de investigaciones
+             * @default 0
+             */
+            total_investigaciones: number;
+        };
+        /**
+         * CasoEpidemiologicoDetailsResponse
+         * @description Response con detalles completos de un evento para el dialog
+         */
+        CasoEpidemiologicoDetailsResponse: {
+            /** @description Información del tipo de evento */
+            tipo_eno: components["schemas"]["EnfermedadBasic"];
+            /** @description Información del grupo epidemiológico */
+            grupo_eno: components["schemas"]["GrupoDeEnfermedadesBasic"];
+            /** @description Resumen del cambio */
+            resumen: components["schemas"]["ResumenCasoEpidemiologico"];
+            /**
+             * Trend Semanal
+             * @description Serie temporal por semana
+             */
+            trend_semanal: components["schemas"]["TrendSemanal"][];
+        };
+        /**
+         * CasoEpidemiologicoDisponible
+         * @description CasoEpidemiologico disponible para selección en boletines
+         */
+        CasoEpidemiologicoDisponible: {
+            /** Id */
+            id: number;
+            /** Codigo */
+            codigo: string;
+            /** Nombre */
+            nombre: string;
+            /**
+             * Tipo
+             * @enum {string}
+             */
+            tipo: "tipo_eno" | "grupo_de_enfermedades";
+        };
+        /**
+         * CasoEpidemiologicoListItem
+         * @description Item individual en la lista de eventos
+         */
+        CasoEpidemiologicoListItem: {
+            /**
+             * Id
+             * @description ID del evento
+             */
+            id: number;
+            /**
+             * Id Evento Caso
+             * @description ID único del caso
+             */
+            id_evento_caso: number;
+            /**
+             * Tipo Eno Id
+             * @description ID del tipo ENO
+             */
+            tipo_eno_id: number;
+            /**
+             * Tipo Eno Nombre
+             * @description Nombre del tipo ENO
+             */
+            tipo_eno_nombre?: string | null;
+            /**
+             * Id Domicilio
+             * @description ID del domicilio asociado al evento
+             */
+            id_domicilio?: number | null;
+            /**
+             * Fecha Minima Caso
+             * @description Fecha del evento
+             */
+            fecha_minima_caso?: string | null;
+            /**
+             * Fecha Inicio Sintomas
+             * @description Fecha de inicio de síntomas
+             */
+            fecha_inicio_sintomas?: string | null;
+            /** @description Clasificación estratégica del evento */
+            clasificacion_estrategia?: components["schemas"]["TipoClasificacion"] | null;
+            /**
+             * Confidence Score
+             * @description Score de confianza
+             */
+            confidence_score?: number | null;
+            /**
+             * Semana Epidemiologica Apertura
+             * @description Semana epidemiológica de apertura del caso
+             */
+            semana_epidemiologica_apertura?: number | null;
+            /**
+             * Anio Epidemiologico Apertura
+             * @description Año epidemiológico de apertura del caso
+             */
+            anio_epidemiologico_apertura?: number | null;
+            /**
+             * Tipo Sujeto
+             * @description Tipo de sujeto: humano/animal/desconocido
+             */
+            tipo_sujeto: string;
+            /**
+             * Nombre Sujeto
+             * @description Nombre del sujeto
+             */
+            nombre_sujeto?: string | null;
+            /**
+             * Documento Sujeto
+             * @description Documento del sujeto
+             */
+            documento_sujeto?: string | null;
+            /**
+             * Edad
+             * @description Edad en años
+             */
+            edad?: number | null;
+            /**
+             * Sexo
+             * @description Sexo del sujeto
+             */
+            sexo?: string | null;
+            /**
+             * Provincia
+             * @description Provincia de residencia
+             */
+            provincia?: string | null;
+            /**
+             * Localidad
+             * @description Localidad de residencia
+             */
+            localidad?: string | null;
+            /**
+             * Es Caso Sintomatico
+             * @description Si presenta síntomas
+             */
+            es_caso_sintomatico?: boolean | null;
+            /**
+             * Requiere Revision Especie
+             * @description Si requiere revisión
+             */
+            requiere_revision_especie?: boolean | null;
+            /**
+             * Con Resultado Mortal
+             * @description Si tuvo resultado mortal
+             */
+            con_resultado_mortal?: boolean | null;
+            /**
+             * Cantidad Sintomas
+             * @description Cantidad de síntomas registrados
+             * @default 0
+             */
+            cantidad_sintomas: number;
+            /**
+             * Cantidad Muestras
+             * @description Cantidad de muestras tomadas
+             * @default 0
+             */
+            cantidad_muestras: number;
+            /**
+             * Cantidad Diagnosticos
+             * @description Cantidad de diagnósticos
+             * @default 0
+             */
+            cantidad_diagnosticos: number;
+        };
+        /**
+         * CasoEpidemiologicoListResponse
+         * @description Respuesta completa del listado de eventos
+         */
+        CasoEpidemiologicoListResponse: {
+            /**
+             * Data
+             * @description Lista de eventos
+             */
+            data: components["schemas"]["CasoEpidemiologicoListItem"][];
+            pagination: components["schemas"]["app__api__v1__eventos__list__PaginationInfo"];
+            /** @description Estadísticas agregadas */
+            stats: components["schemas"]["app__api__v1__eventos__list__CasoEpidemiologicoStats"];
+            /**
+             * Filters Applied
+             * @description Filtros aplicados
+             */
+            filters_applied: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * CasoEpidemiologicoSeleccionado
+         * @description CasoEpidemiologico seleccionado para incluir en el boletín
+         */
+        CasoEpidemiologicoSeleccionado: {
+            /**
+             * Tipo Eno Id
+             * @description ID del tipo de evento
+             */
+            tipo_eno_id: number;
+            /**
+             * Incluir Charts
+             * @description Incluir charts del evento
+             * @default true
+             */
+            incluir_charts: boolean;
+            /**
+             * Snippets Custom
+             * @description Códigos de snippets custom adicionales
+             */
+            snippets_custom?: string[] | null;
+        };
+        /**
+         * CasoEpidemiologicoSortBy
+         * @enum {string}
+         */
+        CasoEpidemiologicoSortBy: "fecha_desc" | "fecha_asc" | "id_desc" | "id_asc" | "tipo_eno";
+        /**
+         * CasoEpidemiologicoTimelineItem
+         * @description Item del timeline de un evento
+         */
+        CasoEpidemiologicoTimelineItem: {
+            /**
+             * Fecha
+             * Format: date
+             * @description Fecha del evento
+             */
+            fecha: string;
+            /**
+             * Tipo
+             * @description Tipo de evento
+             */
+            tipo: string;
+            /**
+             * Descripcion
+             * @description Descripción del evento
+             */
+            descripcion: string;
+            /**
+             * Detalles
+             * @description Detalles adicionales
+             */
+            detalles?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /**
+         * CasoEpidemiologicoTimelineResponse
+         * @description Respuesta del timeline de un evento
+         */
+        CasoEpidemiologicoTimelineResponse: {
+            /**
+             * Items
+             * @description Items del timeline
+             */
+            items: components["schemas"]["CasoEpidemiologicoTimelineItem"][];
+            /**
+             * Total
+             * @description Total de items
+             */
+            total: number;
+        };
+        /**
          * CasosMetrics
          * @description Métricas de casos confirmados
          */
@@ -2984,95 +3800,6 @@ export interface components {
             tipo_visualizacion: string;
             /** Funcion Procesamiento */
             funcion_procesamiento: string;
-        };
-        /**
-         * ChartError
-         * @description Error estructurado para charts que no pueden generarse
-         */
-        ChartError: {
-            /** Code */
-            code: string;
-            /** Title */
-            title: string;
-            /** Message */
-            message: string;
-            /** Details */
-            details?: {
-                [key: string]: unknown;
-            } | null;
-            /** Suggestion */
-            suggestion?: string | null;
-        };
-        /**
-         * ChartFilters
-         * @description Filtros aplicados al chart (para reproducibilidad)
-         */
-        ChartFilters: {
-            /** Grupo Eno Ids */
-            grupo_eno_ids?: number[] | null;
-            /** Tipo Eno Ids */
-            tipo_eno_ids?: number[] | null;
-            /** Clasificacion */
-            clasificacion?: string[] | null;
-            /** Provincia Id */
-            provincia_id?: number[] | null;
-            /** Fecha Desde */
-            fecha_desde?: string | null;
-            /** Fecha Hasta */
-            fecha_hasta?: string | null;
-            /** Edad Min */
-            edad_min?: number | null;
-            /** Edad Max */
-            edad_max?: number | null;
-            /** Tipo Sujeto */
-            tipo_sujeto?: ("humano" | "animal") | null;
-            /** Anio */
-            anio?: number | null;
-            /** Semana Desde */
-            semana_desde?: number | null;
-            /** Semana Hasta */
-            semana_hasta?: number | null;
-            /**
-             * Agrupacion Temporal
-             * @default semana
-             */
-            agrupacion_temporal: ("semana" | "mes" | "anio") | null;
-            /**
-             * Comparar Anio Anterior
-             * @default false
-             */
-            comparar_anio_anterior: boolean | null;
-            /**
-             * Comparar Periodo Anterior
-             * @default false
-             */
-            comparar_periodo_anterior: boolean | null;
-            /** Extra */
-            extra?: {
-                [key: string]: unknown;
-            } | null;
-        };
-        /**
-         * ChartSpecRequest
-         * @description Request para obtener spec de un chart
-         */
-        ChartSpecRequest: {
-            /** Chart Code */
-            chart_code: string;
-            filters: components["schemas"]["ChartFilters"];
-            /** Config */
-            config?: {
-                [key: string]: unknown;
-            } | null;
-        };
-        /**
-         * ChartSpecResponse
-         * @description Response con el spec generado
-         */
-        ChartSpecResponse: {
-            spec: components["schemas"]["UniversalChartSpec"];
-            /** Generated At */
-            generated_at: string;
         };
         /**
          * ChartsDisponiblesResponse
@@ -3284,6 +4011,207 @@ export interface components {
          */
         ComparisonType: "ROLLING" | "YEAR_OVER_YEAR" | "BOTH";
         /**
+         * ConfiguracionGraficoArea
+         * @description Configuración específica para area charts
+         */
+        ConfiguracionGraficoArea: {
+            /** Height */
+            height?: number | null;
+            /** Width */
+            width?: number | null;
+            /**
+             * Showlegend
+             * @default true
+             */
+            showLegend: boolean | null;
+            /**
+             * Showgrid
+             * @default true
+             */
+            showGrid: boolean | null;
+            /** Colors */
+            colors?: string[] | null;
+            /**
+             * Stacked
+             * @default false
+             */
+            stacked: boolean | null;
+            /**
+             * Fillopacity
+             * @default 0.6
+             */
+            fillOpacity: number | null;
+        };
+        /**
+         * ConfiguracionGraficoBarra
+         * @description Configuración específica para bar charts
+         */
+        ConfiguracionGraficoBarra: {
+            /** Height */
+            height?: number | null;
+            /** Width */
+            width?: number | null;
+            /**
+             * Showlegend
+             * @default true
+             */
+            showLegend: boolean | null;
+            /**
+             * Showgrid
+             * @default true
+             */
+            showGrid: boolean | null;
+            /** Colors */
+            colors?: string[] | null;
+            /**
+             * Stacked
+             * @default false
+             */
+            stacked: boolean | null;
+            /**
+             * Horizontal
+             * @default false
+             */
+            horizontal: boolean | null;
+        };
+        /**
+         * ConfiguracionGraficoLinea
+         * @description Configuración específica para line charts
+         */
+        ConfiguracionGraficoLinea: {
+            /** Height */
+            height?: number | null;
+            /** Width */
+            width?: number | null;
+            /**
+             * Showlegend
+             * @default true
+             */
+            showLegend: boolean | null;
+            /**
+             * Showgrid
+             * @default true
+             */
+            showGrid: boolean | null;
+            /** Colors */
+            colors?: string[] | null;
+            /**
+             * Showpoints
+             * @default true
+             */
+            showPoints: boolean | null;
+            /**
+             * Curved
+             * @default false
+             */
+            curved: boolean | null;
+        };
+        /**
+         * ConfiguracionGraficoMapa
+         * @description Configuración específica para map charts
+         */
+        ConfiguracionGraficoMapa: {
+            /** Height */
+            height?: number | null;
+            /** Width */
+            width?: number | null;
+            /**
+             * Showlegend
+             * @default true
+             */
+            showLegend: boolean | null;
+            /**
+             * Showgrid
+             * @default true
+             */
+            showGrid: boolean | null;
+            /** Colors */
+            colors?: string[] | null;
+            /**
+             * Escala Color
+             * @default sequential
+             */
+            escala_color: ("sequential" | "diverging") | null;
+            /**
+             * Provincia
+             * @default chubut
+             */
+            provincia: "chubut" | null;
+        };
+        /**
+         * ConfiguracionGraficoPiramide
+         * @description Configuración específica para pyramid charts
+         */
+        ConfiguracionGraficoPiramide: {
+            /** Height */
+            height?: number | null;
+            /** Width */
+            width?: number | null;
+            /**
+             * Showlegend
+             * @default true
+             */
+            showLegend: boolean | null;
+            /**
+             * Showgrid
+             * @default true
+             */
+            showGrid: boolean | null;
+            /** Colors */
+            colors?: string[] | null;
+            /**
+             * Mostrar Etiquetas Ejes
+             * @default true
+             */
+            mostrar_etiquetas_ejes: boolean | null;
+        };
+        /**
+         * ConfiguracionGraficoTorta
+         * @description Configuración específica para pie charts
+         */
+        ConfiguracionGraficoTorta: {
+            /** Height */
+            height?: number | null;
+            /** Width */
+            width?: number | null;
+            /**
+             * Showlegend
+             * @default true
+             */
+            showLegend: boolean | null;
+            /**
+             * Showgrid
+             * @default true
+             */
+            showGrid: boolean | null;
+            /** Colors */
+            colors?: string[] | null;
+            /**
+             * Showpercentages
+             * @default true
+             */
+            showPercentages: boolean | null;
+            /**
+             * Innerradius
+             * @default 0
+             */
+            innerRadius: number | null;
+        };
+        /**
+         * ConjuntoDatos
+         * @description Dataset para charts line/bar/area/pie
+         */
+        ConjuntoDatos: {
+            /** Label */
+            label?: string | null;
+            /** Data */
+            data: number[];
+            /** Color */
+            color?: string | null;
+            /** Type */
+            type?: ("area" | "line") | null;
+        };
+        /**
          * ContactoInfo
          * @description Información de contactos
          */
@@ -3398,35 +4326,22 @@ export interface components {
             razon?: string | null;
         };
         /**
-         * CreateDynamicBlockRequest
-         * @description Request para crear un nuevo bloque dinámico
-         */
-        CreateDynamicBlockRequest: {
-            /**
-             * Block
-             * @description Configuración del bloque a crear
-             */
-            block: {
-                [key: string]: unknown;
-            };
-        };
-        /**
          * DashboardChartsResponse
-         * @description Response model para charts del dashboard usando UniversalChartSpec
+         * @description Response model para charts del dashboard usando EspecificacionGraficoUniversal
          */
         DashboardChartsResponse: {
             /**
              * Charts
-             * @description Lista de charts como UniversalChartSpec
+             * @description Lista de charts como EspecificacionGraficoUniversal
              */
-            charts: components["schemas"]["UniversalChartSpec"][];
+            charts: components["schemas"]["EspecificacionGraficoUniversal"][];
             /**
              * Total
              * @description Total de charts aplicables
              */
             total: number;
             /** @description Filtros que se aplicaron */
-            filtros_aplicados: components["schemas"]["ChartFilters"];
+            filtros_aplicados: components["schemas"]["FiltrosGrafico"];
         };
         /**
          * DashboardResumenResponse
@@ -3435,27 +4350,13 @@ export interface components {
         DashboardResumenResponse: {
             tabla_resumen: components["schemas"]["TablaResumen"];
             /** Eventos Mas Tipicos */
-            eventos_mas_tipicos: components["schemas"]["app__api__v1__dashboard__get_resumen__EventoStats"][];
+            eventos_mas_tipicos: components["schemas"]["app__api__v1__dashboard__get_resumen__CasoEpidemiologicoStats"][];
             /** Grupos Mas Tipicos */
             grupos_mas_tipicos: components["schemas"]["GrupoStats"][];
             /** Piramide Poblacional */
             piramide_poblacional: components["schemas"]["PiramidePoblacional"][];
             /** Territorios Afectados */
             territorios_afectados: components["schemas"]["TerritorioAfectado"][];
-        };
-        /**
-         * Dataset
-         * @description Dataset para charts line/bar/area/pie
-         */
-        Dataset: {
-            /** Label */
-            label?: string | null;
-            /** Data */
-            data: number[];
-            /** Color */
-            color?: string | null;
-            /** Type */
-            type?: ("area" | "line") | null;
         };
         /**
          * DateRangeResponse
@@ -3474,6 +4375,137 @@ export interface components {
             fecha_maxima: string;
             /** Total Eventos */
             total_eventos: number;
+        };
+        /**
+         * DatosDepartamentoMapa
+         * @description Datos de departamento para mapa
+         */
+        DatosDepartamentoMapa: {
+            /** Codigo Indec */
+            codigo_indec: number;
+            /** Nombre */
+            nombre: string;
+            /** Zona Ugd */
+            zona_ugd: string;
+            /** Poblacion */
+            poblacion: number;
+            /** Casos */
+            casos: number;
+            /** Tasa Incidencia */
+            tasa_incidencia: number;
+        };
+        /**
+         * DatosGraficoArea
+         * @description Wrapper con discriminador para area chart data
+         */
+        DatosGraficoArea: {
+            /**
+             * Type
+             * @default area
+             * @constant
+             */
+            type: "area";
+            data: components["schemas"]["DatosGraficoBase"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            tipo: "area";
+        };
+        /**
+         * DatosGraficoBarra
+         * @description Wrapper con discriminador para bar chart data
+         */
+        DatosGraficoBarra: {
+            /**
+             * Type
+             * @default bar
+             * @constant
+             */
+            type: "bar";
+            data: components["schemas"]["DatosGraficoBase"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            tipo: "bar";
+        };
+        /**
+         * DatosGraficoBase
+         * @description Datos para line, bar, area, pie charts
+         */
+        DatosGraficoBase: {
+            /** Labels */
+            labels: string[];
+            /** Datasets */
+            datasets: components["schemas"]["ConjuntoDatos"][];
+            /** Metadata */
+            metadata?: components["schemas"]["MetadataSemana"][] | null;
+        };
+        /**
+         * DatosGraficoLinea
+         * @description Wrapper con discriminador para line chart data
+         */
+        DatosGraficoLinea: {
+            /**
+             * Type
+             * @default line
+             * @constant
+             */
+            type: "line";
+            data: components["schemas"]["DatosGraficoBase"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            tipo: "line";
+        };
+        /**
+         * DatosGraficoMapa
+         * @description Datos para mapa de Chubut
+         */
+        DatosGraficoMapa: {
+            /** Departamentos */
+            departamentos: components["schemas"]["DatosDepartamentoMapa"][];
+            /** Total Casos */
+            total_casos: number;
+        };
+        /**
+         * DatosGraficoPiramide
+         * @description Wrapper con discriminador para pyramid chart data
+         */
+        DatosGraficoPiramide: {
+            /**
+             * Type
+             * @default d3_pyramid
+             * @constant
+             */
+            type: "d3_pyramid";
+            /** Data */
+            data: components["schemas"]["PuntoDatosPiramide"][];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            tipo: "d3_pyramid";
+        };
+        /**
+         * DatosGraficoTorta
+         * @description Wrapper con discriminador para pie chart data
+         */
+        DatosGraficoTorta: {
+            /**
+             * Type
+             * @default pie
+             * @constant
+             */
+            type: "pie";
+            data: components["schemas"]["DatosGraficoBase"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            tipo: "pie";
         };
         /**
          * DomicilioDetalleResponse
@@ -3771,6 +4803,65 @@ export interface components {
             total_pages: number;
         };
         /**
+         * EnfermedadBasic
+         * @description Información básica de un tipo de evento
+         */
+        EnfermedadBasic: {
+            /** Id */
+            id: number;
+            /** Nombre */
+            nombre: string;
+            /** Codigo */
+            codigo?: string | null;
+        };
+        /** EnfermedadInfo */
+        EnfermedadInfo: {
+            /**
+             * Id
+             * @description ID del tipo ENO
+             */
+            id: number;
+            /**
+             * Nombre
+             * @description Nombre del tipo ENO
+             */
+            nombre: string;
+            /**
+             * Descripcion
+             * @description Descripción del tipo
+             */
+            descripcion?: string | null;
+            /**
+             * Codigo
+             * @description Código del tipo
+             */
+            codigo?: string | null;
+            /**
+             * Grupos
+             * @description Lista de grupos a los que pertenece este tipo
+             */
+            grupos?: components["schemas"]["GrupoInfo"][];
+            /**
+             * Total Casos
+             * @description Total de casos registrados
+             * @default 0
+             */
+            total_casos: number;
+        };
+        /** EnfermedadSimple */
+        EnfermedadSimple: {
+            /**
+             * Id
+             * @description ID del tipo ENO
+             */
+            id: number;
+            /**
+             * Nombre
+             * @description Nombre del tipo ENO
+             */
+            nombre: string;
+        };
+        /**
          * ErrorDetail
          * @description Detalle de un error específico.
          */
@@ -3792,6 +4883,24 @@ export interface components {
             field?: string | null;
         };
         /**
+         * ErrorGrafico
+         * @description Error estructurado para charts que no pueden generarse
+         */
+        ErrorGrafico: {
+            /** Code */
+            code: string;
+            /** Title */
+            title: string;
+            /** Message */
+            message: string;
+            /** Details */
+            details?: {
+                [key: string]: unknown;
+            } | null;
+            /** Suggestion */
+            suggestion?: string | null;
+        };
+        /**
          * ErrorResponse
          * @description Respuesta de error estándar.
          *
@@ -3811,6 +4920,60 @@ export interface components {
              * @description ID único para tracking
              */
             request_id?: string | null;
+        };
+        /**
+         * EspecificacionGraficoUniversal
+         * @description Especificación universal de chart
+         *     Puede ser usada tanto por frontend como backend
+         * @example {
+         *       "configuracion": {
+         *         "alto": 400,
+         *         "mostrar_leyenda": true
+         *       },
+         *       "datos": {
+         *         "conjuntos_datos": [
+         *           {
+         *             "datos": [
+         *               10,
+         *               15,
+         *               12
+         *             ],
+         *             "etiqueta": "Confirmados"
+         *           }
+         *         ],
+         *         "etiquetas": [
+         *           "SE 1",
+         *           "SE 2",
+         *           "SE 3"
+         *         ]
+         *       },
+         *       "id": "chart_001",
+         *       "tipo": "line",
+         *       "titulo": "Casos por Semana Epidemiológica"
+         *     }
+         */
+        EspecificacionGraficoUniversal: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Description */
+            description?: string | null;
+            /** Codigo */
+            codigo?: string | null;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "line" | "bar" | "area" | "pie" | "d3_pyramid" | "mapa";
+            /** Data */
+            data: components["schemas"]["DatosGraficoLinea"] | components["schemas"]["DatosGraficoBarra"] | components["schemas"]["DatosGraficoArea"] | components["schemas"]["DatosGraficoTorta"] | components["schemas"]["DatosGraficoPiramide"] | components["schemas"]["WrapperDatosGraficoMapa"];
+            /** Config */
+            config: components["schemas"]["WrapperConfiguracionGraficoLinea"] | components["schemas"]["WrapperConfiguracionGraficoBarra"] | components["schemas"]["WrapperConfiguracionGraficoArea"] | components["schemas"]["WrapperConfiguracionGraficoTorta"] | components["schemas"]["WrapperConfiguracionGraficoPiramide"] | components["schemas"]["WrapperConfiguracionGraficoMapa"];
+            filtros?: components["schemas"]["FiltrosGrafico"] | null;
+            error?: components["schemas"]["ErrorGrafico"] | null;
+            /** Generated At */
+            generated_at?: string | null;
         };
         /**
          * EstablecimientoDetalleResponse
@@ -4003,37 +5166,37 @@ export interface components {
             total_eventos: number;
             /**
              * Eventos Consulta
-             * @description Eventos donde fue consulta
+             * @description CasoEpidemiologicos donde fue consulta
              * @default 0
              */
             eventos_consulta: number;
             /**
              * Eventos Notificacion
-             * @description Eventos donde fue notificación
+             * @description CasoEpidemiologicos donde fue notificación
              * @default 0
              */
             eventos_notificacion: number;
             /**
              * Eventos Carga
-             * @description Eventos donde fue carga
+             * @description CasoEpidemiologicos donde fue carga
              * @default 0
              */
             eventos_carga: number;
             /**
              * Eventos Muestra
-             * @description Eventos con muestras
+             * @description CasoEpidemiologicos con muestras
              * @default 0
              */
             eventos_muestra: number;
             /**
              * Eventos Diagnostico
-             * @description Eventos con diagnósticos
+             * @description CasoEpidemiologicos con diagnósticos
              * @default 0
              */
             eventos_diagnostico: number;
             /**
              * Eventos Tratamiento
-             * @description Eventos con tratamientos
+             * @description CasoEpidemiologicos con tratamientos
              * @default 0
              */
             eventos_tratamiento: number;
@@ -4188,20 +5351,20 @@ export interface components {
          */
         EstadoGeocodificacion: "PENDIENTE" | "EN_COLA" | "PROCESANDO" | "GEOCODIFICADO" | "FALLO_TEMPORAL" | "FALLO_PERMANENTE" | "NO_GEOCODIFICABLE" | "DESHABILITADO";
         /**
-         * EventStrategyCreate
+         * EstrategiaClasificacionCreate
          * @description Request DTO para crear estrategia.
          */
-        EventStrategyCreate: {
+        EstrategiaClasificacionCreate: {
             /**
              * Name
              * @description Nombre de la estrategia
              */
             name: string;
             /**
-             * Tipo Eno Id
+             * Id Enfermedad
              * @description ID del tipo de evento epidemiológico
              */
-            tipo_eno_id: number;
+            id_enfermedad: number;
             /**
              * Active
              * @description Si la estrategia está activa
@@ -4251,20 +5414,20 @@ export interface components {
             metadata_extractors: components["schemas"]["FilterConditionRequest"][];
         };
         /**
-         * EventStrategyResponse
+         * EstrategiaClasificacionResponse
          * @description Response DTO para estrategias.
          */
-        EventStrategyResponse: {
+        EstrategiaClasificacionResponse: {
             /**
              * Name
              * @description Nombre de la estrategia
              */
             name: string;
             /**
-             * Tipo Eno Id
+             * Id Enfermedad
              * @description ID del tipo de evento epidemiológico
              */
-            tipo_eno_id: number;
+            id_enfermedad: number;
             /**
              * Active
              * @description Si la estrategia está activa
@@ -4306,10 +5469,10 @@ export interface components {
              */
             id: number;
             /**
-             * Tipo Eno Name
+             * Tipo Enfermedad Name
              * @description Nombre del tipo de evento
              */
-            tipo_eno_name?: string | null;
+            tipo_enfermedad_name?: string | null;
             /**
              * Status
              * @description Estado de la estrategia
@@ -4352,10 +5515,10 @@ export interface components {
             classification_rules_count?: number | null;
         };
         /**
-         * EventStrategyUpdate
+         * EstrategiaClasificacionUpdate
          * @description Request DTO para actualizar estrategia.
          */
-        EventStrategyUpdate: {
+        EstrategiaClasificacionUpdate: {
             /**
              * Name
              * @description Nombre de la estrategia
@@ -4403,722 +5566,6 @@ export interface components {
              * @description Extractores de metadata
              */
             metadata_extractors?: components["schemas"]["FilterConditionRequest"][] | null;
-        };
-        /**
-         * EventoCambio
-         * @description Evento con su cambio entre dos períodos
-         */
-        EventoCambio: {
-            /**
-             * Tipo Eno Id
-             * @description ID del tipo de evento
-             */
-            tipo_eno_id: number;
-            /**
-             * Tipo Eno Nombre
-             * @description Nombre del evento
-             */
-            tipo_eno_nombre: string;
-            /**
-             * Grupo Eno Id
-             * @description ID del grupo epidemiológico
-             */
-            grupo_eno_id: number;
-            /**
-             * Grupo Eno Nombre
-             * @description Nombre del grupo
-             */
-            grupo_eno_nombre: string;
-            /**
-             * Casos Actuales
-             * @description Casos en período actual
-             */
-            casos_actuales: number;
-            /**
-             * Casos Anteriores
-             * @description Casos en período anterior
-             */
-            casos_anteriores: number;
-            /**
-             * Diferencia Absoluta
-             * @description Diferencia absoluta de casos
-             */
-            diferencia_absoluta: number;
-            /**
-             * Diferencia Porcentual
-             * @description % de cambio
-             */
-            diferencia_porcentual: number;
-            /**
-             * Tasa Incidencia Actual
-             * @description Tasa por 100k habitantes en período actual
-             */
-            tasa_incidencia_actual?: number | null;
-            /**
-             * Tasa Incidencia Anterior
-             * @description Tasa por 100k habitantes en período anterior
-             */
-            tasa_incidencia_anterior?: number | null;
-        };
-        /**
-         * EventoCambioConCategoria
-         * @description Evento con cambio y su categoría automática
-         */
-        EventoCambioConCategoria: {
-            /**
-             * Tipo Eno Id
-             * @description ID del tipo de evento
-             */
-            tipo_eno_id: number;
-            /**
-             * Tipo Eno Nombre
-             * @description Nombre del evento
-             */
-            tipo_eno_nombre: string;
-            /**
-             * Grupo Eno Id
-             * @description ID del grupo epidemiológico
-             */
-            grupo_eno_id: number;
-            /**
-             * Grupo Eno Nombre
-             * @description Nombre del grupo
-             */
-            grupo_eno_nombre: string;
-            /**
-             * Casos Actuales
-             * @description Casos en período actual
-             */
-            casos_actuales: number;
-            /**
-             * Casos Anteriores
-             * @description Casos en período anterior
-             */
-            casos_anteriores: number;
-            /**
-             * Diferencia Absoluta
-             * @description Diferencia absoluta de casos
-             */
-            diferencia_absoluta: number;
-            /**
-             * Diferencia Porcentual
-             * @description % de cambio
-             */
-            diferencia_porcentual: number;
-            /**
-             * Tasa Incidencia Actual
-             * @description Tasa por 100k habitantes en período actual
-             */
-            tasa_incidencia_actual?: number | null;
-            /**
-             * Tasa Incidencia Anterior
-             * @description Tasa por 100k habitantes en período anterior
-             */
-            tasa_incidencia_anterior?: number | null;
-            /**
-             * Categoria
-             * @description Categoría: 'crecimiento' o 'decrecimiento'
-             */
-            categoria: string;
-        };
-        /**
-         * EventoCompleto
-         * @description Evento completo con toda su información
-         */
-        EventoCompleto: {
-            /** Id */
-            id: number;
-            /** Id Evento Caso */
-            id_evento_caso: number;
-            /** Tipo Eno Id */
-            tipo_eno_id?: number | null;
-            /** Tipo Eno Nombre */
-            tipo_eno_nombre?: string | null;
-            /**
-             * Grupos Eno Nombres
-             * @description Nombres de grupos ENO (puede pertenecer a múltiples)
-             */
-            grupos_eno_nombres?: string[];
-            /** Fecha Minima Evento */
-            fecha_minima_evento?: string | null;
-            /** Fecha Inicio Sintomas */
-            fecha_inicio_sintomas?: string | null;
-            /** Fecha Apertura */
-            fecha_apertura?: string | null;
-            /** Clasificacion Estrategia */
-            clasificacion_estrategia?: string | null;
-            /** Clasificacion Manual */
-            clasificacion_manual?: string | null;
-            /** Clasificacion Algoritmo */
-            clasificacion_algoritmo?: string | null;
-            /** Semana Epidemiologica Apertura */
-            semana_epidemiologica_apertura?: number | null;
-            /** Anio Epidemiologico Apertura */
-            anio_epidemiologico_apertura?: number | null;
-            /**
-             * Es Sintomatico
-             * @default false
-             */
-            es_sintomatico: boolean;
-            /**
-             * Requiere Revision
-             * @default false
-             */
-            requiere_revision: boolean;
-            domicilio?: components["schemas"]["app__api__v1__personas__get_detail__DomicilioGeograficoInfo"] | null;
-            /**
-             * Sintomas
-             * @default []
-             */
-            sintomas: components["schemas"]["app__api__v1__personas__get_detail__SintomaInfo"][];
-            /**
-             * Muestras
-             * @default []
-             */
-            muestras: components["schemas"]["app__api__v1__personas__get_detail__MuestraInfo"][];
-            /**
-             * Estudios
-             * @default []
-             */
-            estudios: components["schemas"]["app__api__v1__personas__get_detail__EstudioInfo"][];
-            /**
-             * Diagnosticos
-             * @default []
-             */
-            diagnosticos: components["schemas"]["app__api__v1__personas__get_detail__DiagnosticoInfo"][];
-            /**
-             * Tratamientos
-             * @default []
-             */
-            tratamientos: components["schemas"]["app__api__v1__personas__get_detail__TratamientoInfo"][];
-            /**
-             * Internaciones
-             * @default []
-             */
-            internaciones: components["schemas"]["app__api__v1__personas__get_detail__InternacionInfo"][];
-            /**
-             * Vacunas
-             * @default []
-             */
-            vacunas: components["schemas"]["app__api__v1__personas__get_detail__VacunaInfo"][];
-        };
-        /**
-         * EventoDetailResponse
-         * @description Respuesta detallada de un evento (EVENT-CENTERED)
-         */
-        EventoDetailResponse: {
-            /**
-             * Id
-             * @description ID del evento
-             */
-            id: number;
-            /**
-             * Id Evento Caso
-             * @description ID del caso
-             */
-            id_evento_caso: number;
-            /**
-             * Tipo Eno Id
-             * @description ID del tipo ENO
-             */
-            tipo_eno_id: number;
-            /**
-             * Tipo Eno Nombre
-             * @description Nombre del tipo ENO
-             */
-            tipo_eno_nombre?: string | null;
-            /**
-             * Tipo Eno Descripcion
-             * @description Descripción del tipo ENO
-             */
-            tipo_eno_descripcion?: string | null;
-            /**
-             * Enfermedad
-             * @description Enfermedad relacionada
-             */
-            enfermedad?: string | null;
-            /**
-             * Fecha Minima Evento
-             * Format: date
-             * @description Fecha mínima del evento
-             */
-            fecha_minima_evento: string;
-            /**
-             * Fecha Inicio Sintomas
-             * @description Fecha de inicio de síntomas
-             */
-            fecha_inicio_sintomas?: string | null;
-            /**
-             * Fecha Apertura Caso
-             * @description Fecha de apertura del caso
-             */
-            fecha_apertura_caso?: string | null;
-            /**
-             * Fecha Primera Consulta
-             * @description Fecha de primera consulta
-             */
-            fecha_primera_consulta?: string | null;
-            /**
-             * Fecha Notificacion
-             * @description Fecha de notificación
-             */
-            fecha_notificacion?: string | null;
-            /**
-             * Fecha Diagnostico
-             * @description Fecha de diagnóstico
-             */
-            fecha_diagnostico?: string | null;
-            /**
-             * Fecha Investigacion
-             * @description Fecha de investigación
-             */
-            fecha_investigacion?: string | null;
-            /**
-             * Semana Epidemiologica Apertura
-             * @description Semana epidemiológica de apertura
-             */
-            semana_epidemiologica_apertura?: number | null;
-            /**
-             * Anio Epidemiologico Apertura
-             * @description Año epidemiológico de apertura
-             */
-            anio_epidemiologico_apertura?: number | null;
-            /**
-             * Semana Epidemiologica Sintomas
-             * @description Semana epidemiológica de síntomas
-             */
-            semana_epidemiologica_sintomas?: number | null;
-            /** @description Clasificación estratégica del evento */
-            clasificacion_estrategia?: components["schemas"]["TipoClasificacion"] | null;
-            /**
-             * Confidence Score
-             * @description Score de confianza
-             */
-            confidence_score?: number | null;
-            /**
-             * Metadata Clasificacion
-             * @description Metadata de clasificación
-             */
-            metadata_clasificacion?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Metadata Extraida
-             * @description Metadata extraída
-             */
-            metadata_extraida?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Id Estrategia Aplicada
-             * @description ID de la estrategia que se aplicó para clasificar
-             */
-            id_estrategia_aplicada?: number | null;
-            /**
-             * Estrategia Nombre
-             * @description Nombre de la estrategia aplicada
-             */
-            estrategia_nombre?: string | null;
-            /**
-             * Trazabilidad Clasificacion
-             * @description Trazabilidad completa: reglas evaluadas, condiciones cumplidas, razón de clasificación
-             */
-            trazabilidad_clasificacion?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Tipo Sujeto
-             * @description Tipo de sujeto
-             */
-            tipo_sujeto: string;
-            /** @description Información del ciudadano */
-            ciudadano?: components["schemas"]["CiudadanoInfo"] | null;
-            /** @description Información del animal */
-            animal?: components["schemas"]["AnimalInfo"] | null;
-            /** @description Snapshot geográfico del domicilio al momento del evento */
-            domicilio_geografico?: components["schemas"]["app__api__v1__eventos__get_detail__DomicilioGeograficoInfo"] | null;
-            /** @description Establecimiento de consulta */
-            establecimiento_consulta?: components["schemas"]["EstablecimientoInfo"] | null;
-            /** @description Establecimiento que notificó */
-            establecimiento_notificacion?: components["schemas"]["EstablecimientoInfo"] | null;
-            /** @description Establecimiento de carga */
-            establecimiento_carga?: components["schemas"]["EstablecimientoInfo"] | null;
-            /**
-             * Es Caso Sintomatico
-             * @description Si es sintomático
-             */
-            es_caso_sintomatico?: boolean | null;
-            /**
-             * Requiere Revision Especie
-             * @description Si requiere revisión
-             */
-            requiere_revision_especie?: boolean | null;
-            /**
-             * Observaciones Texto
-             * @description Observaciones
-             */
-            observaciones_texto?: string | null;
-            /**
-             * Id Origen
-             * @description ID del sistema origen
-             */
-            id_origen?: string | null;
-            /**
-             * Datos Originales Csv
-             * @description Datos originales del CSV
-             */
-            datos_originales_csv?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Sintomas
-             * @description Síntomas del evento
-             */
-            sintomas?: components["schemas"]["app__api__v1__eventos__get_detail__SintomaInfo"][];
-            /**
-             * Muestras
-             * @description Muestras del evento
-             */
-            muestras?: components["schemas"]["app__api__v1__eventos__get_detail__MuestraInfo"][];
-            /**
-             * Diagnosticos
-             * @description Diagnósticos del evento
-             */
-            diagnosticos?: components["schemas"]["app__api__v1__eventos__get_detail__DiagnosticoInfo"][];
-            /**
-             * Tratamientos
-             * @description Tratamientos del evento
-             */
-            tratamientos?: components["schemas"]["app__api__v1__eventos__get_detail__TratamientoInfo"][];
-            /**
-             * Internaciones
-             * @description Internaciones del evento
-             */
-            internaciones?: components["schemas"]["app__api__v1__eventos__get_detail__InternacionInfo"][];
-            /**
-             * Investigaciones
-             * @description Investigaciones del evento
-             */
-            investigaciones?: components["schemas"]["InvestigacionInfo"][];
-            /**
-             * Contactos
-             * @description Contactos del evento
-             */
-            contactos?: components["schemas"]["ContactoInfo"][];
-            /**
-             * Ambitos Concurrencia
-             * @description Ámbitos de concurrencia
-             */
-            ambitos_concurrencia?: components["schemas"]["AmbitoConcurrenciaInfo"][];
-            /**
-             * Antecedentes
-             * @description Antecedentes epidemiológicos
-             */
-            antecedentes?: components["schemas"]["AntecedenteInfo"][];
-            /**
-             * Vacunas
-             * @description Vacunas relacionadas
-             */
-            vacunas?: components["schemas"]["app__api__v1__eventos__get_detail__VacunaInfo"][];
-            /**
-             * Created At
-             * @description Fecha de creación
-             */
-            created_at?: unknown | null;
-            /**
-             * Updated At
-             * @description Fecha de actualización
-             */
-            updated_at?: unknown | null;
-            /**
-             * Total Sintomas
-             * @description Total de síntomas
-             * @default 0
-             */
-            total_sintomas: number;
-            /**
-             * Total Muestras
-             * @description Total de muestras
-             * @default 0
-             */
-            total_muestras: number;
-            /**
-             * Total Diagnosticos
-             * @description Total de diagnósticos
-             * @default 0
-             */
-            total_diagnosticos: number;
-            /**
-             * Total Tratamientos
-             * @description Total de tratamientos
-             * @default 0
-             */
-            total_tratamientos: number;
-            /**
-             * Total Internaciones
-             * @description Total de internaciones
-             * @default 0
-             */
-            total_internaciones: number;
-            /**
-             * Total Investigaciones
-             * @description Total de investigaciones
-             * @default 0
-             */
-            total_investigaciones: number;
-        };
-        /**
-         * EventoDetailsResponse
-         * @description Response con detalles completos de un evento para el dialog
-         */
-        EventoDetailsResponse: {
-            /** @description Información del tipo de evento */
-            tipo_eno: components["schemas"]["TipoEnoBasic"];
-            /** @description Información del grupo epidemiológico */
-            grupo_eno: components["schemas"]["GrupoEnoBasic"];
-            /** @description Resumen del cambio */
-            resumen: components["schemas"]["ResumenEvento"];
-            /**
-             * Trend Semanal
-             * @description Serie temporal por semana
-             */
-            trend_semanal: components["schemas"]["TrendSemanal"][];
-        };
-        /**
-         * EventoDisponible
-         * @description Evento disponible para selección en boletines
-         */
-        EventoDisponible: {
-            /** Id */
-            id: number;
-            /** Codigo */
-            codigo: string;
-            /** Nombre */
-            nombre: string;
-            /**
-             * Tipo
-             * @enum {string}
-             */
-            tipo: "tipo_eno" | "grupo_eno";
-        };
-        /**
-         * EventoListItem
-         * @description Item individual en la lista de eventos
-         */
-        EventoListItem: {
-            /**
-             * Id
-             * @description ID del evento
-             */
-            id: number;
-            /**
-             * Id Evento Caso
-             * @description ID único del caso
-             */
-            id_evento_caso: number;
-            /**
-             * Tipo Eno Id
-             * @description ID del tipo ENO
-             */
-            tipo_eno_id: number;
-            /**
-             * Tipo Eno Nombre
-             * @description Nombre del tipo ENO
-             */
-            tipo_eno_nombre?: string | null;
-            /**
-             * Id Domicilio
-             * @description ID del domicilio asociado al evento
-             */
-            id_domicilio?: number | null;
-            /**
-             * Fecha Minima Evento
-             * @description Fecha del evento
-             */
-            fecha_minima_evento?: string | null;
-            /**
-             * Fecha Inicio Sintomas
-             * @description Fecha de inicio de síntomas
-             */
-            fecha_inicio_sintomas?: string | null;
-            /** @description Clasificación estratégica del evento */
-            clasificacion_estrategia?: components["schemas"]["TipoClasificacion"] | null;
-            /**
-             * Confidence Score
-             * @description Score de confianza
-             */
-            confidence_score?: number | null;
-            /**
-             * Semana Epidemiologica Apertura
-             * @description Semana epidemiológica de apertura del caso
-             */
-            semana_epidemiologica_apertura?: number | null;
-            /**
-             * Anio Epidemiologico Apertura
-             * @description Año epidemiológico de apertura del caso
-             */
-            anio_epidemiologico_apertura?: number | null;
-            /**
-             * Tipo Sujeto
-             * @description Tipo de sujeto: humano/animal/desconocido
-             */
-            tipo_sujeto: string;
-            /**
-             * Nombre Sujeto
-             * @description Nombre del sujeto
-             */
-            nombre_sujeto?: string | null;
-            /**
-             * Documento Sujeto
-             * @description Documento del sujeto
-             */
-            documento_sujeto?: string | null;
-            /**
-             * Edad
-             * @description Edad en años
-             */
-            edad?: number | null;
-            /**
-             * Sexo
-             * @description Sexo del sujeto
-             */
-            sexo?: string | null;
-            /**
-             * Provincia
-             * @description Provincia de residencia
-             */
-            provincia?: string | null;
-            /**
-             * Localidad
-             * @description Localidad de residencia
-             */
-            localidad?: string | null;
-            /**
-             * Es Caso Sintomatico
-             * @description Si presenta síntomas
-             */
-            es_caso_sintomatico?: boolean | null;
-            /**
-             * Requiere Revision Especie
-             * @description Si requiere revisión
-             */
-            requiere_revision_especie?: boolean | null;
-            /**
-             * Con Resultado Mortal
-             * @description Si tuvo resultado mortal
-             */
-            con_resultado_mortal?: boolean | null;
-            /**
-             * Cantidad Sintomas
-             * @description Cantidad de síntomas registrados
-             * @default 0
-             */
-            cantidad_sintomas: number;
-            /**
-             * Cantidad Muestras
-             * @description Cantidad de muestras tomadas
-             * @default 0
-             */
-            cantidad_muestras: number;
-            /**
-             * Cantidad Diagnosticos
-             * @description Cantidad de diagnósticos
-             * @default 0
-             */
-            cantidad_diagnosticos: number;
-        };
-        /**
-         * EventoListResponse
-         * @description Respuesta completa del listado de eventos
-         */
-        EventoListResponse: {
-            /**
-             * Data
-             * @description Lista de eventos
-             */
-            data: components["schemas"]["EventoListItem"][];
-            pagination: components["schemas"]["PaginationInfo"];
-            /** @description Estadísticas agregadas */
-            stats: components["schemas"]["app__api__v1__eventos__list__EventoStats"];
-            /**
-             * Filters Applied
-             * @description Filtros aplicados
-             */
-            filters_applied: {
-                [key: string]: unknown;
-            };
-        };
-        /**
-         * EventoSeleccionado
-         * @description Evento seleccionado para incluir en el boletín
-         */
-        EventoSeleccionado: {
-            /**
-             * Tipo Eno Id
-             * @description ID del tipo de evento
-             */
-            tipo_eno_id: number;
-            /**
-             * Incluir Charts
-             * @description Incluir charts del evento
-             * @default true
-             */
-            incluir_charts: boolean;
-            /**
-             * Snippets Custom
-             * @description Códigos de snippets custom adicionales
-             */
-            snippets_custom?: string[] | null;
-        };
-        /**
-         * EventoSortBy
-         * @enum {string}
-         */
-        EventoSortBy: "fecha_desc" | "fecha_asc" | "id_desc" | "id_asc" | "tipo_eno";
-        /**
-         * EventoTimelineItem
-         * @description Item del timeline de un evento
-         */
-        EventoTimelineItem: {
-            /**
-             * Fecha
-             * Format: date
-             * @description Fecha del evento
-             */
-            fecha: string;
-            /**
-             * Tipo
-             * @description Tipo de evento
-             */
-            tipo: string;
-            /**
-             * Descripcion
-             * @description Descripción del evento
-             */
-            descripcion: string;
-            /**
-             * Detalles
-             * @description Detalles adicionales
-             */
-            detalles?: {
-                [key: string]: unknown;
-            } | null;
-        };
-        /**
-         * EventoTimelineResponse
-         * @description Respuesta del timeline de un evento
-         */
-        EventoTimelineResponse: {
-            /**
-             * Items
-             * @description Items del timeline
-             */
-            items: components["schemas"]["EventoTimelineItem"][];
-            /**
-             * Total
-             * @description Total de items
-             */
-            total: number;
         };
         /**
          * FilterCombination
@@ -5254,6 +5701,55 @@ export interface components {
             updated_at?: string | null;
         };
         /**
+         * FiltrosGrafico
+         * @description Filtros aplicados al chart (para reproducibilidad)
+         */
+        FiltrosGrafico: {
+            /** Ids Grupo Eno */
+            ids_grupo_eno?: number[] | null;
+            /** Ids Tipo Eno */
+            ids_tipo_eno?: number[] | null;
+            /** Clasificacion */
+            clasificacion?: string[] | null;
+            /** Id Provincia */
+            id_provincia?: number[] | null;
+            /** Fecha Desde */
+            fecha_desde?: string | null;
+            /** Fecha Hasta */
+            fecha_hasta?: string | null;
+            /** Edad Min */
+            edad_min?: number | null;
+            /** Edad Max */
+            edad_max?: number | null;
+            /** Tipo Sujeto */
+            tipo_sujeto?: ("humano" | "animal") | null;
+            /** Anio */
+            anio?: number | null;
+            /** Semana Desde */
+            semana_desde?: number | null;
+            /** Semana Hasta */
+            semana_hasta?: number | null;
+            /**
+             * Agrupacion Temporal
+             * @default semana
+             */
+            agrupacion_temporal: ("semana" | "mes" | "anio") | null;
+            /**
+             * Comparar Anio Anterior
+             * @default false
+             */
+            comparar_anio_anterior: boolean | null;
+            /**
+             * Comparar Periodo Anterior
+             * @default false
+             */
+            comparar_periodo_anterior: boolean | null;
+            /** Extra */
+            extra?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /**
          * GenerateDraftRequest
          * @description Request para generar borrador de boletín automático
          */
@@ -5276,9 +5772,9 @@ export interface components {
             num_semanas: number;
             /**
              * Eventos Seleccionados
-             * @description Eventos a incluir en el boletín
+             * @description CasoEpidemiologicos a incluir en el boletín
              */
-            eventos_seleccionados: components["schemas"]["EventoSeleccionado"][];
+            eventos_seleccionados: components["schemas"]["CasoEpidemiologicoSeleccionado"][];
             /**
              * Titulo Custom
              * @description Título personalizado (opcional)
@@ -5302,69 +5798,11 @@ export interface components {
             content: string;
             /** @description Metadatos del boletín */
             metadata: components["schemas"]["BoletinMetadata"];
-        };
-        /**
-         * GenericDataConfig
-         * @description Configuración de datos genérica para otros widgets
-         */
-        GenericDataConfig: {
             /**
-             * Source
-             * @description Fuente de datos
-             * @enum {string}
+             * Warnings
+             * @description Advertencias de validación
              */
-            source: "manual" | "query";
-            /**
-             * Query Id
-             * @description ID de la query si source=query
-             */
-            query_id?: string | null;
-            /**
-             * Query Params
-             * @description Parámetros de la query
-             */
-            query_params?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Manual Data
-             * @description Datos manuales
-             */
-            manual_data?: {
-                [key: string]: unknown;
-            } | null;
-        };
-        /**
-         * GenericWidget
-         * @description Widget genérico (table, chart, etc)
-         */
-        GenericWidget: {
-            /**
-             * Id
-             * @description ID único del widget
-             */
-            id: string;
-            /**
-             * @description Tipo de widget (enum property replaced by openapi-typescript)
-             * @enum {string}
-             */
-            type: "bar" | "corridor" | "divider" | "image" | "line" | "map" | "pagebreak" | "pie" | "pyramid" | "table" | "text";
-            /** @description Posición en el grid */
-            position: components["schemas"]["WidgetPosition"];
-            /** @description Configuración de datos */
-            data_config: components["schemas"]["GenericDataConfig"];
-            /** @description Configuración visual */
-            visual_config: components["schemas"]["WidgetVisualConfig"];
-            /**
-             * Title
-             * @description Título del widget
-             */
-            title?: string | null;
-            /**
-             * Description
-             * @description Descripción del widget
-             */
-            description?: string | null;
+            warnings?: string[] | null;
         };
         /**
          * GeocodingStatsResponse
@@ -5415,37 +5853,10 @@ export interface components {
             };
         };
         /**
-         * GlobalFilters
-         * @description Filtros globales del boletín
-         */
-        GlobalFilters: {
-            /**
-             * Temporal
-             * @description Filtros temporales
-             */
-            temporal?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Geografico
-             * @description Filtros geográficos
-             */
-            geografico?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Demografico
-             * @description Filtros demográficos
-             */
-            demografico?: {
-                [key: string]: unknown;
-            } | null;
-        };
-        /**
-         * GrupoEnoBasic
+         * GrupoDeEnfermedadesBasic
          * @description Información básica de un grupo epidemiológico
          */
-        GrupoEnoBasic: {
+        GrupoDeEnfermedadesBasic: {
             /** Id */
             id: number;
             /** Nombre */
@@ -5453,8 +5864,8 @@ export interface components {
             /** Descripcion */
             descripcion?: string | null;
         };
-        /** GrupoEnoInfo */
-        GrupoEnoInfo: {
+        /** GrupoDeEnfermedadesInfo */
+        GrupoDeEnfermedadesInfo: {
             /**
              * Id
              * @description ID del grupo ENO
@@ -5467,19 +5878,19 @@ export interface components {
             nombre: string;
             /**
              * Descripcion
-             * @description Descripción del grupo
+             * @description Descripcion del grupo
              */
             descripcion?: string | null;
             /**
              * Codigo
-             * @description Código del grupo
+             * @description Codigo del grupo
              */
             codigo?: string | null;
             /**
              * Eventos
-             * @description Eventos (tipos ENO) que pertenecen a este grupo
+             * @description ENOs que pertenecen a este grupo
              */
-            eventos?: components["schemas"]["TipoEnoSimple"][];
+            eventos?: components["schemas"]["EnfermedadSimple"][];
         };
         /**
          * GrupoInfo
@@ -5601,7 +6012,7 @@ export interface components {
         };
         /**
          * JobStatus
-         * @description Estados posibles de un trabajo de procesamiento.
+         * @description Estados posibles de un trabajo.
          * @enum {string}
          */
         JobStatus: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "FAILED" | "CANCELLED";
@@ -5672,331 +6083,6 @@ export interface components {
             } | null;
         };
         /**
-         * KPIComparisonData
-         * @description Datos de comparación para KPI
-         */
-        KPIComparisonData: {
-            /**
-             * Value
-             * @description Valor de la comparación (%)
-             */
-            value: number;
-            /**
-             * Trend
-             * @description Tendencia
-             * @enum {string}
-             */
-            trend: "up" | "down" | "neutral";
-        };
-        /**
-         * KPIDataConfig
-         * @description Configuración de datos para widget KPI
-         */
-        "KPIDataConfig-Input": {
-            /**
-             * Source
-             * @description Fuente de datos
-             * @enum {string}
-             */
-            source: "manual" | "query";
-            /**
-             * Query Id
-             * @description ID de la query si source=query
-             */
-            query_id?: string | null;
-            /**
-             * Query Params
-             * @description Parámetros de la query
-             */
-            query_params?: {
-                [key: string]: unknown;
-            } | null;
-            /** @description Datos manuales para KPI */
-            manual_data?: components["schemas"]["KPIManualData"] | null;
-        };
-        /**
-         * KPIDataConfig
-         * @description Configuración de datos para widget KPI
-         */
-        "KPIDataConfig-Output": {
-            /**
-             * Source
-             * @description Fuente de datos
-             * @enum {string}
-             */
-            source: "manual" | "query";
-            /**
-             * Query Id
-             * @description ID de la query si source=query
-             */
-            query_id?: string | null;
-            /**
-             * Query Params
-             * @description Parámetros de la query
-             */
-            query_params?: {
-                [key: string]: unknown;
-            } | null;
-            /** @description Datos manuales para KPI */
-            manual_data?: components["schemas"]["KPIManualData"] | null;
-        };
-        /**
-         * KPIManualData
-         * @description Datos manuales para widget KPI
-         */
-        KPIManualData: {
-            /**
-             * Value
-             * @description Valor principal del KPI
-             */
-            value: number;
-            /**
-             * Label
-             * @description Etiqueta del KPI
-             */
-            label?: string | null;
-            /** @description Datos de comparación */
-            comparison?: components["schemas"]["KPIComparisonData"] | null;
-        };
-        /**
-         * KPIWidget
-         * @description Widget de KPI
-         */
-        "KPIWidget-Input": {
-            /**
-             * Id
-             * @description ID único del widget
-             */
-            id: string;
-            /**
-             * @description Tipo de widget (enum property replaced by openapi-typescript)
-             * @enum {string}
-             */
-            type: "kpi";
-            /** @description Posición en el grid */
-            position: components["schemas"]["WidgetPosition"];
-            /** @description Configuración de datos para KPI */
-            data_config: components["schemas"]["KPIDataConfig-Input"];
-            /** @description Configuración visual */
-            visual_config: components["schemas"]["WidgetVisualConfig"];
-            /**
-             * Title
-             * @description Título del widget
-             */
-            title?: string | null;
-            /**
-             * Description
-             * @description Descripción del widget
-             */
-            description?: string | null;
-        };
-        /**
-         * KPIWidget
-         * @description Widget de KPI
-         */
-        "KPIWidget-Output": {
-            /**
-             * Id
-             * @description ID único del widget
-             */
-            id: string;
-            /**
-             * @description Tipo de widget (enum property replaced by openapi-typescript)
-             * @enum {string}
-             */
-            type: "kpi";
-            /** @description Posición en el grid */
-            position: components["schemas"]["WidgetPosition"];
-            /** @description Configuración de datos para KPI */
-            data_config: components["schemas"]["KPIDataConfig-Output"];
-            /** @description Configuración visual */
-            visual_config: components["schemas"]["WidgetVisualConfig"];
-            /**
-             * Title
-             * @description Título del widget
-             */
-            title?: string | null;
-            /**
-             * Description
-             * @description Descripción del widget
-             */
-            description?: string | null;
-        };
-        /**
-         * LayoutConfig
-         * @description Configuración del layout del boletín
-         */
-        LayoutConfig: {
-            /**
-             * Type
-             * @description Tipo de layout
-             * @default grid
-             * @constant
-             */
-            type: "grid";
-            /**
-             * Columns
-             * @description Número de columnas
-             * @default 12
-             */
-            columns: number;
-            /**
-             * Row Height
-             * @description Alto de fila en pixels
-             * @default 40
-             */
-            row_height: number;
-            /**
-             * Margin
-             * @description Margen [horizontal, vertical]
-             * @default [
-             *       10,
-             *       10
-             *     ]
-             */
-            margin: number[];
-        };
-        /**
-         * LineChartConfig
-         * @description Configuración específica para line charts
-         */
-        LineChartConfig: {
-            /** Height */
-            height?: number | null;
-            /** Width */
-            width?: number | null;
-            /**
-             * Showlegend
-             * @default true
-             */
-            showLegend: boolean | null;
-            /**
-             * Showgrid
-             * @default true
-             */
-            showGrid: boolean | null;
-            /** Colors */
-            colors?: string[] | null;
-            /**
-             * Showpoints
-             * @default true
-             */
-            showPoints: boolean | null;
-            /**
-             * Curved
-             * @default false
-             */
-            curved: boolean | null;
-        };
-        /**
-         * LineChartConfigWrapper
-         * @description Wrapper con discriminador para line chart config
-         */
-        LineChartConfigWrapper: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "line";
-            config: components["schemas"]["LineChartConfig"];
-        };
-        /**
-         * LineChartData
-         * @description Wrapper con discriminador para line chart data
-         */
-        LineChartData: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "line";
-            data: components["schemas"]["BaseChartData"];
-        };
-        /**
-         * MapChartConfig
-         * @description Configuración específica para map charts
-         */
-        MapChartConfig: {
-            /** Height */
-            height?: number | null;
-            /** Width */
-            width?: number | null;
-            /**
-             * Showlegend
-             * @default true
-             */
-            showLegend: boolean | null;
-            /**
-             * Showgrid
-             * @default true
-             */
-            showGrid: boolean | null;
-            /** Colors */
-            colors?: string[] | null;
-            /**
-             * Colorscale
-             * @default sequential
-             */
-            colorScale: ("sequential" | "diverging") | null;
-            /**
-             * Province
-             * @default chubut
-             */
-            province: "chubut" | null;
-        };
-        /**
-         * MapChartConfigWrapper
-         * @description Wrapper con discriminador para map chart config
-         */
-        MapChartConfigWrapper: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "mapa";
-            config: components["schemas"]["MapChartConfig"];
-        };
-        /**
-         * MapChartData
-         * @description Datos para mapa de Chubut
-         */
-        MapChartData: {
-            /** Departamentos */
-            departamentos: components["schemas"]["MapDepartmentData"][];
-            /** Total Casos */
-            total_casos: number;
-        };
-        /**
-         * MapChartDataWrapper
-         * @description Wrapper con discriminador para map chart data
-         */
-        MapChartDataWrapper: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "mapa";
-            data: components["schemas"]["MapChartData"];
-        };
-        /**
-         * MapDepartmentData
-         * @description Datos de departamento para mapa
-         */
-        MapDepartmentData: {
-            /** Codigo Indec */
-            codigo_indec: number;
-            /** Nombre */
-            nombre: string;
-            /** Zona Ugd */
-            zona_ugd: string;
-            /** Poblacion */
-            poblacion: number;
-            /** Casos */
-            casos: number;
-            /** Tasa Incidencia */
-            tasa_incidencia: number;
-        };
-        /**
          * MapeoInfo
          * @description Información de un mapeo existente.
          */
@@ -6008,7 +6094,7 @@ export interface components {
             /** Codigo Snvs */
             codigo_snvs: string | null;
             /** Id Establecimiento Ign */
-            id_establecimiento_ign: number;
+            id_establecimiento_ign: number | null;
             /** Nombre Ign */
             nombre_ign: string;
             /** Codigo Refes */
@@ -6051,6 +6137,161 @@ export interface components {
             page_size: number;
         };
         /**
+         * MetadataSemana
+         * @description Metadata de semana epidemiológica
+         */
+        MetadataSemana: {
+            /** Year */
+            year: number;
+            /** Week */
+            week: number;
+            /** Start Date */
+            start_date: string;
+            /** End Date */
+            end_date: string;
+        };
+        /**
+         * MetricDataRow
+         * @description Fila de datos de métrica con todas las dimensiones posibles.
+         *
+         *     Los campos que vienen en cada response dependen de las dimensiones
+         *     solicitadas. El campo 'columns' en MetricQueryResponse indica
+         *     qué campos están presentes.
+         */
+        MetricDataRow: {
+            /** Valor */
+            valor?: number | null;
+            /** Valor Actual */
+            valor_actual?: number | null;
+            /** Valor Anterior */
+            valor_anterior?: number | null;
+            /** Semana Epidemiologica */
+            semana_epidemiologica?: number | null;
+            /** Anio Epidemiologico */
+            anio_epidemiologico?: number | null;
+            /** Provincia */
+            provincia?: string | null;
+            /** Departamento */
+            departamento?: string | null;
+            /** Establecimiento */
+            establecimiento?: string | null;
+            /** Grupo Etario */
+            grupo_etario?: string | null;
+            /** Sexo */
+            sexo?: string | null;
+            /** Tipo Evento */
+            tipo_evento?: string | null;
+            /** Agente Etiologico */
+            agente_etiologico?: string | null;
+            /** Agrupacion */
+            agrupacion?: string | null;
+            /** Tecnica */
+            tecnica?: string | null;
+            /** Zona Exito */
+            zona_exito?: number | null;
+            /** Zona Seguridad */
+            zona_seguridad?: number | null;
+            /** Zona Alerta */
+            zona_alerta?: number | null;
+            /** Zona Brote */
+            zona_brote?: number | null;
+            /** Corredor Valido */
+            corredor_valido?: boolean | null;
+            /** Delta Porcentaje */
+            delta_porcentaje?: number | null;
+            /** Tendencia */
+            tendencia?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * MetricFilters
+         * @description Filtros unificados para queries de métricas.
+         */
+        MetricFilters: {
+            /** @description Período a consultar */
+            periodo: components["schemas"]["PeriodoFilter"];
+            /**
+             * Evento Id
+             * @description ID de tipo de evento (single)
+             */
+            evento_id?: number | null;
+            /**
+             * Evento Ids
+             * @description IDs de tipos de evento (multi-select)
+             */
+            evento_ids?: number[] | null;
+            /**
+             * Evento Nombre
+             * @description Nombre parcial de evento
+             */
+            evento_nombre?: string | null;
+            /**
+             * Grupo Id
+             * @description ID de grupo ENO (single)
+             */
+            grupo_id?: number | null;
+            /**
+             * Grupo Ids
+             * @description IDs de grupos ENO (multi-select)
+             */
+            grupo_ids?: number[] | null;
+            /**
+             * Agente Id
+             * @description ID de agente etiológico (single)
+             */
+            agente_id?: number | null;
+            /**
+             * Agente Ids
+             * @description IDs de agentes etiológicos (multi-select)
+             */
+            agente_ids?: number[] | null;
+            /**
+             * Agente Nombre
+             * @description Nombre parcial de agente
+             */
+            agente_nombre?: string | null;
+            /**
+             * Agrupacion Slug
+             * @description Slug de agrupación de agentes (ej: 'influenza-a'). Resuelve a múltiples agente_ids.
+             */
+            agrupacion_slug?: string | null;
+            /**
+             * Provincia Id
+             * @description ID INDEC de provincia
+             */
+            provincia_id?: number | null;
+            /**
+             * Provincia Nombre
+             * @description Nombre de provincia
+             */
+            provincia_nombre?: string | null;
+            /**
+             * Departamento Id
+             * @description ID INDEC de departamento
+             */
+            departamento_id?: number | null;
+            /**
+             * Establecimiento Id
+             * @description ID de establecimiento
+             */
+            establecimiento_id?: number | null;
+        };
+        /**
+         * MetricInfoResponse
+         * @description Información de métricas disponibles.
+         */
+        MetricInfoResponse: {
+            /** Metrics */
+            metrics: {
+                [key: string]: unknown;
+            }[];
+            /** Dimensions */
+            dimensions: {
+                [key: string]: unknown;
+            }[];
+        };
+        /**
          * MetricItem
          * @description Item de métrica para preview
          */
@@ -6065,6 +6306,64 @@ export interface components {
             trend_value?: number | null;
             /** Alert */
             alert?: boolean | null;
+        };
+        /**
+         * MetricQueryMetadata
+         * @description Metadata de respuesta de query.
+         */
+        MetricQueryMetadata: {
+            /** Metric */
+            metric: string;
+            /** Metric Label */
+            metric_label?: string | null;
+            /** Dimensions */
+            dimensions: string[];
+            /** Total Rows */
+            total_rows: number;
+            /** Source */
+            source?: string | null;
+            /** Compute */
+            compute?: string | null;
+            /** Warnings */
+            warnings?: string[] | null;
+        };
+        /**
+         * MetricQueryRequest
+         * @description Request para query de métricas.
+         */
+        MetricQueryRequest: {
+            /**
+             * Metric
+             * @description Código de la métrica (ej: casos_clinicos)
+             */
+            metric: string;
+            /**
+             * Dimensions
+             * @description Dimensiones para agrupar (ej: [SEMANA_EPIDEMIOLOGICA, TIPO_EVENTO])
+             * @default []
+             */
+            dimensions: string[];
+            /** @description Filtros a aplicar */
+            filters: components["schemas"]["MetricFilters"];
+            /**
+             * Compute
+             * @description Cálculo post-query: 'corredor_endemico'
+             */
+            compute?: string | null;
+        };
+        /**
+         * MetricQueryResponse
+         * @description Response de query de métricas.
+         */
+        MetricQueryResponse: {
+            /**
+             * Columns
+             * @description Lista de campos presentes en cada fila de data
+             */
+            columns: string[];
+            /** Data */
+            data: components["schemas"]["MetricDataRow"][];
+            metadata: components["schemas"]["MetricQueryMetadata"];
         };
         /**
          * MetricValue
@@ -6119,13 +6418,13 @@ export interface components {
                 [key: string]: string | null;
             } | null;
         };
-        /** PaginatedResponse[EventStrategyResponse] */
-        PaginatedResponse_EventStrategyResponse_: {
+        /** PaginatedResponse[EnfermedadInfo] */
+        PaginatedResponse_EnfermedadInfo_: {
             /**
              * Data
              * @description Lista de elementos
              */
-            data: components["schemas"]["EventStrategyResponse"][];
+            data: components["schemas"]["EnfermedadInfo"][];
             /** @description Información de paginación con tipos específicos */
             meta: components["schemas"]["PaginationMeta"];
             /**
@@ -6141,13 +6440,13 @@ export interface components {
                 [key: string]: string | null;
             } | null;
         };
-        /** PaginatedResponse[GrupoEnoInfo] */
-        PaginatedResponse_GrupoEnoInfo_: {
+        /** PaginatedResponse[EstrategiaClasificacionResponse] */
+        PaginatedResponse_EstrategiaClasificacionResponse_: {
             /**
              * Data
              * @description Lista de elementos
              */
-            data: components["schemas"]["GrupoEnoInfo"][];
+            data: components["schemas"]["EstrategiaClasificacionResponse"][];
             /** @description Información de paginación con tipos específicos */
             meta: components["schemas"]["PaginationMeta"];
             /**
@@ -6163,13 +6462,13 @@ export interface components {
                 [key: string]: string | null;
             } | null;
         };
-        /** PaginatedResponse[TipoEnoInfo] */
-        PaginatedResponse_TipoEnoInfo_: {
+        /** PaginatedResponse[GrupoDeEnfermedadesInfo] */
+        PaginatedResponse_GrupoDeEnfermedadesInfo_: {
             /**
              * Data
              * @description Lista de elementos
              */
-            data: components["schemas"]["TipoEnoInfo"][];
+            data: components["schemas"]["GrupoDeEnfermedadesInfo"][];
             /** @description Información de paginación con tipos específicos */
             meta: components["schemas"]["PaginationMeta"];
             /**
@@ -6184,42 +6483,6 @@ export interface components {
             links?: {
                 [key: string]: string | null;
             } | null;
-        };
-        /**
-         * PaginationInfo
-         * @description Información de paginación
-         */
-        PaginationInfo: {
-            /**
-             * Page
-             * @description Página actual
-             */
-            page: number;
-            /**
-             * Page Size
-             * @description Tamaño de página
-             */
-            page_size: number;
-            /**
-             * Total
-             * @description Total de registros
-             */
-            total: number;
-            /**
-             * Total Pages
-             * @description Total de páginas
-             */
-            total_pages: number;
-            /**
-             * Has Next
-             * @description Si hay página siguiente
-             */
-            has_next: boolean;
-            /**
-             * Has Prev
-             * @description Si hay página anterior
-             */
-            has_prev: boolean;
         };
         /**
          * PaginationMeta
@@ -6349,6 +6612,32 @@ export interface components {
             fecha_fin: string;
         };
         /**
+         * PeriodoFilter
+         * @description Filtro de período temporal unificado. Soporta rangos que cruzan años.
+         */
+        PeriodoFilter: {
+            /**
+             * Anio Desde
+             * @description Año de inicio
+             */
+            anio_desde: number;
+            /**
+             * Semana Desde
+             * @description Semana de inicio (1-53)
+             */
+            semana_desde: number;
+            /**
+             * Anio Hasta
+             * @description Año de fin
+             */
+            anio_hasta: number;
+            /**
+             * Semana Hasta
+             * @description Semana de fin (1-53)
+             */
+            semana_hasta: number;
+        };
+        /**
          * PersonaDetailResponse
          * @description Respuesta detallada de una persona (PERSON-CENTERED)
          */
@@ -6408,7 +6697,7 @@ export interface components {
              * Eventos
              * @description Lista completa de eventos
              */
-            eventos?: components["schemas"]["EventoCompleto"][];
+            eventos?: components["schemas"]["CasoEpidemiologicoCompleto"][];
             /**
              * Tipos Eventos Unicos
              * @description Cantidad de tipos de eventos diferentes
@@ -6492,25 +6781,25 @@ export interface components {
             total_eventos: number;
             /**
              * Eventos Confirmados
-             * @description Eventos confirmados
+             * @description CasoEpidemiologicos confirmados
              * @default 0
              */
             eventos_confirmados: number;
             /**
              * Eventos Sospechosos
-             * @description Eventos sospechosos
+             * @description CasoEpidemiologicos sospechosos
              * @default 0
              */
             eventos_sospechosos: number;
             /**
              * Eventos Probables
-             * @description Eventos probables
+             * @description CasoEpidemiologicos probables
              * @default 0
              */
             eventos_probables: number;
             /**
              * Eventos Descartados
-             * @description Eventos descartados
+             * @description CasoEpidemiologicos descartados
              * @default 0
              */
             eventos_descartados: number;
@@ -6551,7 +6840,7 @@ export interface components {
              * @description Lista de personas
              */
             data: components["schemas"]["PersonaListItem"][];
-            pagination: components["schemas"]["PaginationInfo"];
+            pagination: components["schemas"]["app__api__v1__eventos__list__PaginationInfo"];
             /** @description Estadísticas agregadas sobre todos los resultados */
             stats: components["schemas"]["AggregatedStats"];
             /**
@@ -6680,62 +6969,6 @@ export interface components {
             total_eventos: number;
         };
         /**
-         * PieChartConfig
-         * @description Configuración específica para pie charts
-         */
-        PieChartConfig: {
-            /** Height */
-            height?: number | null;
-            /** Width */
-            width?: number | null;
-            /**
-             * Showlegend
-             * @default true
-             */
-            showLegend: boolean | null;
-            /**
-             * Showgrid
-             * @default true
-             */
-            showGrid: boolean | null;
-            /** Colors */
-            colors?: string[] | null;
-            /**
-             * Showpercentages
-             * @default true
-             */
-            showPercentages: boolean | null;
-            /**
-             * Innerradius
-             * @default 0
-             */
-            innerRadius: number | null;
-        };
-        /**
-         * PieChartConfigWrapper
-         * @description Wrapper con discriminador para pie chart config
-         */
-        PieChartConfigWrapper: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "pie";
-            config: components["schemas"]["PieChartConfig"];
-        };
-        /**
-         * PieChartData
-         * @description Wrapper con discriminador para pie chart data
-         */
-        PieChartData: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "pie";
-            data: components["schemas"]["BaseChartData"];
-        };
-        /**
          * PiramidePoblacional
          * @description Datos para pirámide poblacional
          */
@@ -6749,77 +6982,30 @@ export interface components {
         };
         /**
          * ProcessFromPreviewRequest
-         * @description Request to process a previously uploaded file.
+         * @description Request para procesar un archivo previamente subido.
          */
         ProcessFromPreviewRequest: {
             /**
              * Upload Id
-             * @description Upload ID from preview endpoint
+             * @description ID de subida del endpoint de preview
              */
             upload_id: string;
             /**
              * Sheet Name
-             * @description Name of sheet to process
+             * @description Nombre de la hoja a procesar
              */
             sheet_name: string;
+            /**
+             * File Type
+             * @description Tipo de archivo detectado (NOMINAL, CLI_P26, etc.)
+             */
+            file_type: string;
         };
         /**
-         * PyramidChartConfig
-         * @description Configuración específica para pyramid charts
-         */
-        PyramidChartConfig: {
-            /** Height */
-            height?: number | null;
-            /** Width */
-            width?: number | null;
-            /**
-             * Showlegend
-             * @default true
-             */
-            showLegend: boolean | null;
-            /**
-             * Showgrid
-             * @default true
-             */
-            showGrid: boolean | null;
-            /** Colors */
-            colors?: string[] | null;
-            /**
-             * Showaxislabels
-             * @default true
-             */
-            showAxisLabels: boolean | null;
-        };
-        /**
-         * PyramidChartConfigWrapper
-         * @description Wrapper con discriminador para pyramid chart config
-         */
-        PyramidChartConfigWrapper: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "d3_pyramid";
-            config: components["schemas"]["PyramidChartConfig"];
-        };
-        /**
-         * PyramidChartData
-         * @description Wrapper con discriminador para pyramid chart data
-         */
-        PyramidChartData: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "d3_pyramid";
-            /** Data */
-            data: components["schemas"]["PyramidDataPoint"][];
-        };
-        /**
-         * PyramidDataPoint
+         * PuntoDatosPiramide
          * @description Punto de datos para pirámide poblacional
          */
-        PyramidDataPoint: {
+        PuntoDatosPiramide: {
             /** Age Group */
             age_group: string;
             /** Male */
@@ -6828,12 +7014,33 @@ export interface components {
             female: number;
         };
         /**
+         * RangoTemporalInfo
+         * @description Información legible sobre el rango temporal de un bloque
+         */
+        RangoTemporalInfo: {
+            /**
+             * Codigo
+             * @description Código del rango (anio_completo, ultimas_6_semanas, etc)
+             */
+            codigo: string;
+            /**
+             * Descripcion
+             * @description Descripción legible del rango
+             */
+            descripcion: string;
+            /**
+             * Ejemplo
+             * @description Ejemplo concreto para la semana de referencia
+             */
+            ejemplo: string;
+        };
+        /**
          * RefreshToken
          * @description Refresh token request
          */
         RefreshToken: {
-            /** Refresh Token */
-            refresh_token: string;
+            /** Token Refresco */
+            token_refresco: string;
         };
         /**
          * ReportFiltersRequest
@@ -6882,10 +7089,19 @@ export interface components {
             format: string;
         };
         /**
-         * ResumenEvento
+         * RespuestaSpecGrafico
+         * @description Response con el spec generado
+         */
+        RespuestaSpecGrafico: {
+            spec: components["schemas"]["EspecificacionGraficoUniversal"];
+            /** Generado En */
+            generado_en: string;
+        };
+        /**
+         * ResumenCasoEpidemiologico
          * @description Resumen del evento para el dialog de detalles
          */
-        ResumenEvento: {
+        ResumenCasoEpidemiologico: {
             /**
              * Casos Actuales
              * @description Casos en período actual
@@ -6908,6 +7124,50 @@ export interface components {
             diferencia_absoluta: number;
         };
         /**
+         * SeccionConfigResponse
+         * @description Configuración de una sección para el frontend
+         */
+        SeccionConfigResponse: {
+            /** Id */
+            id: number;
+            /** Slug */
+            slug: string;
+            /** Titulo */
+            titulo: string;
+            /** Descripcion */
+            descripcion?: string | null;
+            /** Orden */
+            orden: number;
+            /**
+             * Bloques
+             * @description Bloques de la sección
+             */
+            bloques?: components["schemas"]["BloqueConfigResponse"][];
+        };
+        /**
+         * SeccionesConfigResponse
+         * @description Respuesta con todas las secciones y sus bloques configurados
+         */
+        SeccionesConfigResponse: {
+            /** Secciones */
+            secciones: components["schemas"]["SeccionConfigResponse"][];
+            /**
+             * Semana Referencia
+             * @description Semana epidemiológica de referencia
+             */
+            semana_referencia: number;
+            /**
+             * Anio Referencia
+             * @description Año de referencia
+             */
+            anio_referencia: number;
+            /**
+             * Total Bloques
+             * @description Total de bloques activos
+             */
+            total_bloques: number;
+        };
+        /**
          * SectionPreviewResponse
          * @description Response de preview de sección
          */
@@ -6920,7 +7180,7 @@ export interface components {
              * Evento Tipo
              * @enum {string}
              */
-            evento_tipo: "tipo_eno" | "grupo_eno";
+            evento_tipo: "tipo_eno" | "grupo_de_enfermedades";
             /** Summary */
             summary?: string | null;
             /** Metrics */
@@ -6938,25 +7198,25 @@ export interface components {
         SessionInfo: {
             /** Id */
             id: number;
-            /** Ip Address */
-            ip_address: string | null;
-            /** User Agent */
-            user_agent: string | null;
+            /** Direccion Ip */
+            direccion_ip: string | null;
+            /** Agente Usuario */
+            agente_usuario: string | null;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
             /**
-             * Last Activity
+             * Ultima Actividad
              * Format: date-time
              */
-            last_activity: string;
+            ultima_actividad: string;
             /**
-             * Is Current
+             * Es Actual
              * @default false
              */
-            is_current: boolean;
+            es_actual: boolean;
         };
         /**
          * SignedUrlResponse
@@ -6973,6 +7233,19 @@ export interface components {
              * @description Timestamp de expiración
              */
             expires_at: number;
+        };
+        /**
+         * SolicitudSpecGrafico
+         * @description Request para obtener spec de un chart
+         */
+        SolicitudSpecGrafico: {
+            /** Codigo Grafico */
+            codigo_grafico: string;
+            filtros: components["schemas"]["FiltrosGrafico"];
+            /** Configuracion */
+            configuracion?: {
+                [key: string]: unknown;
+            } | null;
         };
         /**
          * StrategyTestRequest
@@ -7116,6 +7389,54 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /** SuccessResponse[CasoEpidemiologicoDetailResponse] */
+        SuccessResponse_CasoEpidemiologicoDetailResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["CasoEpidemiologicoDetailResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[CasoEpidemiologicoDetailsResponse] */
+        SuccessResponse_CasoEpidemiologicoDetailsResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["CasoEpidemiologicoDetailsResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[CasoEpidemiologicoListResponse] */
+        SuccessResponse_CasoEpidemiologicoListResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["CasoEpidemiologicoListResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[CasoEpidemiologicoTimelineResponse] */
+        SuccessResponse_CasoEpidemiologicoTimelineResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["CasoEpidemiologicoTimelineResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
         /** SuccessResponse[ChartsDisponiblesResponse] */
         SuccessResponse_ChartsDisponiblesResponse_: {
             /** @description Datos de la respuesta */
@@ -7248,58 +7569,10 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
-        /** SuccessResponse[EventStrategyResponse] */
-        SuccessResponse_EventStrategyResponse_: {
+        /** SuccessResponse[EstrategiaClasificacionResponse] */
+        SuccessResponse_EstrategiaClasificacionResponse_: {
             /** @description Datos de la respuesta */
-            data: components["schemas"]["EventStrategyResponse"];
-            /**
-             * Meta
-             * @description Metadata opcional (paginación, etc)
-             */
-            meta?: {
-                [key: string]: unknown;
-            } | null;
-        };
-        /** SuccessResponse[EventoDetailResponse] */
-        SuccessResponse_EventoDetailResponse_: {
-            /** @description Datos de la respuesta */
-            data: components["schemas"]["EventoDetailResponse"];
-            /**
-             * Meta
-             * @description Metadata opcional (paginación, etc)
-             */
-            meta?: {
-                [key: string]: unknown;
-            } | null;
-        };
-        /** SuccessResponse[EventoDetailsResponse] */
-        SuccessResponse_EventoDetailsResponse_: {
-            /** @description Datos de la respuesta */
-            data: components["schemas"]["EventoDetailsResponse"];
-            /**
-             * Meta
-             * @description Metadata opcional (paginación, etc)
-             */
-            meta?: {
-                [key: string]: unknown;
-            } | null;
-        };
-        /** SuccessResponse[EventoListResponse] */
-        SuccessResponse_EventoListResponse_: {
-            /** @description Datos de la respuesta */
-            data: components["schemas"]["EventoListResponse"];
-            /**
-             * Meta
-             * @description Metadata opcional (paginación, etc)
-             */
-            meta?: {
-                [key: string]: unknown;
-            } | null;
-        };
-        /** SuccessResponse[EventoTimelineResponse] */
-        SuccessResponse_EventoTimelineResponse_: {
-            /** @description Datos de la respuesta */
-            data: components["schemas"]["EventoTimelineResponse"];
+            data: components["schemas"]["EstrategiaClasificacionResponse"];
             /**
              * Meta
              * @description Metadata opcional (paginación, etc)
@@ -7404,13 +7677,13 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
-        /** SuccessResponse[List[EventoDisponible]] */
-        SuccessResponse_List_EventoDisponible__: {
+        /** SuccessResponse[List[CasoEpidemiologicoDisponible]] */
+        SuccessResponse_List_CasoEpidemiologicoDisponible__: {
             /**
              * Data
              * @description Datos de la respuesta
              */
-            data: components["schemas"]["EventoDisponible"][];
+            data: components["schemas"]["CasoEpidemiologicoDisponible"][];
             /**
              * Meta
              * @description Metadata opcional (paginación, etc)
@@ -7459,6 +7732,18 @@ export interface components {
         SuccessResponse_PersonaTimelineResponse_: {
             /** @description Datos de la respuesta */
             data: components["schemas"]["PersonaTimelineResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[SeccionesConfigResponse] */
+        SuccessResponse_SeccionesConfigResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["SeccionesConfigResponse"];
             /**
              * Meta
              * @description Metadata opcional (paginación, etc)
@@ -7698,66 +7983,7 @@ export interface components {
          * @description Clasificaciones estándar de eventos epidemiológicos
          * @enum {string}
          */
-        TipoClasificacion: "CONFIRMADOS" | "SOSPECHOSOS" | "PROBABLES" | "EN_ESTUDIO" | "NEGATIVOS" | "DESCARTADOS" | "NOTIFICADOS" | "CON_RESULTADO_MORTAL" | "SIN_RESULTADO_MORTAL" | "REQUIERE_REVISION";
-        /**
-         * TipoEnoBasic
-         * @description Información básica de un tipo de evento
-         */
-        TipoEnoBasic: {
-            /** Id */
-            id: number;
-            /** Nombre */
-            nombre: string;
-            /** Codigo */
-            codigo?: string | null;
-        };
-        /** TipoEnoInfo */
-        TipoEnoInfo: {
-            /**
-             * Id
-             * @description ID del tipo ENO
-             */
-            id: number;
-            /**
-             * Nombre
-             * @description Nombre del tipo ENO
-             */
-            nombre: string;
-            /**
-             * Descripcion
-             * @description Descripción del tipo
-             */
-            descripcion?: string | null;
-            /**
-             * Codigo
-             * @description Código del tipo
-             */
-            codigo?: string | null;
-            /**
-             * Grupos
-             * @description Lista de grupos a los que pertenece este tipo
-             */
-            grupos?: components["schemas"]["GrupoInfo"][];
-            /**
-             * Total Casos
-             * @description Total de casos registrados
-             * @default 0
-             */
-            total_casos: number;
-        };
-        /** TipoEnoSimple */
-        TipoEnoSimple: {
-            /**
-             * Id
-             * @description ID del tipo ENO
-             */
-            id: number;
-            /**
-             * Nombre
-             * @description Nombre del tipo ENO
-             */
-            nombre: string;
-        };
+        TipoClasificacion: "CONFIRMADOS" | "SOSPECHOSOS" | "PROBABLES" | "EN_ESTUDIO" | "NEGATIVOS" | "DESCARTADOS" | "NOTIFICADOS" | "CON_RESULTADO_MORTAL" | "SIN_RESULTADO_MORTAL" | "REQUIERE_REVISION" | "TODOS";
         /**
          * TipoFiltro
          * @description Tipos de filtros soportados para clasificación
@@ -7769,18 +7995,18 @@ export interface components {
          * @description JWT Token response with user info
          */
         Token: {
-            /** Access Token */
-            access_token: string;
+            /** Token Acceso */
+            token_acceso: string;
             /**
              * Token Type
              * @default bearer
              */
             token_type: string;
-            /** Expires In */
-            expires_in: number;
-            /** Refresh Token */
-            refresh_token?: string | null;
-            user?: components["schemas"]["TokenUser"] | null;
+            /** Expira En */
+            expira_en: number;
+            /** Token Refresco */
+            token_refresco?: string | null;
+            usuario?: components["schemas"]["TokenUser"] | null;
         };
         /**
          * TokenUser
@@ -7795,7 +8021,7 @@ export interface components {
             nombre: string;
             /** Apellido */
             apellido: string;
-            role: components["schemas"]["UserRole"];
+            rol: components["schemas"]["UserRole"];
         };
         /**
          * TopChangesByGroupResponse
@@ -7810,12 +8036,12 @@ export interface components {
              * Top Crecimiento
              * @description Top 10 eventos con mayor crecimiento
              */
-            top_crecimiento: components["schemas"]["EventoCambio"][];
+            top_crecimiento: components["schemas"]["CasoEpidemiologicoCambio"][];
             /**
              * Top Decrecimiento
              * @description Top 10 eventos con mayor decrecimiento
              */
-            top_decrecimiento: components["schemas"]["EventoCambio"][];
+            top_decrecimiento: components["schemas"]["CasoEpidemiologicoCambio"][];
         };
         /**
          * TopWinnerLoser
@@ -7934,86 +8160,6 @@ export interface components {
             estimated_batches?: number | null;
         };
         /**
-         * UniversalChartSpec
-         * @description Especificación universal de chart
-         *     Puede ser usada tanto por frontend como backend
-         * @example {
-         *       "config": {
-         *         "height": 400,
-         *         "showLegend": true
-         *       },
-         *       "data": {
-         *         "datasets": [
-         *           {
-         *             "data": [
-         *               10,
-         *               15,
-         *               12
-         *             ],
-         *             "label": "Confirmados"
-         *           }
-         *         ],
-         *         "labels": [
-         *           "SE 1",
-         *           "SE 2",
-         *           "SE 3"
-         *         ]
-         *       },
-         *       "id": "chart_001",
-         *       "title": "Casos por Semana Epidemiológica",
-         *       "type": "line"
-         *     }
-         */
-        UniversalChartSpec: {
-            /** Id */
-            id: string;
-            /** Title */
-            title: string;
-            /** Description */
-            description?: string | null;
-            /** Codigo */
-            codigo?: string | null;
-            /**
-             * Type
-             * @enum {string}
-             */
-            type: "line" | "bar" | "area" | "pie" | "d3_pyramid" | "mapa";
-            /** Data */
-            data: components["schemas"]["LineChartData"] | components["schemas"]["BarChartData"] | components["schemas"]["AreaChartData"] | components["schemas"]["PieChartData"] | components["schemas"]["PyramidChartData"] | components["schemas"]["MapChartDataWrapper"];
-            /** Config */
-            config: components["schemas"]["LineChartConfigWrapper"] | components["schemas"]["BarChartConfigWrapper"] | components["schemas"]["AreaChartConfigWrapper"] | components["schemas"]["PieChartConfigWrapper"] | components["schemas"]["PyramidChartConfigWrapper"] | components["schemas"]["MapChartConfigWrapper"];
-            filters?: components["schemas"]["ChartFilters"] | null;
-            error?: components["schemas"]["ChartError"] | null;
-            /** Generated At */
-            generated_at?: string | null;
-        };
-        /**
-         * UpdateDynamicBlockRequest
-         * @description Request para actualizar un bloque específico
-         */
-        UpdateDynamicBlockRequest: {
-            /**
-             * Block
-             * @description Nueva configuración del bloque
-             */
-            block: {
-                [key: string]: unknown;
-            };
-        };
-        /**
-         * UpdateDynamicBlocksRequest
-         * @description Request para actualizar array completo de bloques (reordenar)
-         */
-        UpdateDynamicBlocksRequest: {
-            /**
-             * Blocks
-             * @description Array completo de bloques dinámicos
-             */
-            blocks: {
-                [key: string]: unknown;
-            }[];
-        };
-        /**
          * UpdateEventSectionTemplateRequest
          * @description Request para actualizar template de sección de evento
          */
@@ -8052,10 +8198,10 @@ export interface components {
          * @description Schema for changing password
          */
         UserChangePassword: {
-            /** Current Password */
-            current_password: string;
-            /** New Password */
-            new_password: string;
+            /** Contrasena Actual */
+            contrasena_actual: string;
+            /** Nueva Contrasena */
+            nueva_contrasena: string;
         };
         /**
          * UserCreate
@@ -8071,10 +8217,10 @@ export interface components {
             nombre: string;
             /** Apellido */
             apellido: string;
-            /** Password */
-            password: string;
+            /** Contrasena */
+            contrasena: string;
             /** @default EPIDEMIOLOGO */
-            role: components["schemas"]["UserRole"];
+            rol: components["schemas"]["UserRole"];
         };
         /**
          * UserLogin
@@ -8086,13 +8232,13 @@ export interface components {
              * Format: email
              */
             email: string;
-            /** Password */
-            password: string;
+            /** Contrasena */
+            contrasena: string;
             /**
-             * Remember Me
+             * Recordarme
              * @default false
              */
-            remember_me: boolean;
+            recordarme: boolean;
         };
         /**
          * UserResponse
@@ -8110,17 +8256,17 @@ export interface components {
             apellido: string;
             /** Id */
             id: number;
-            role: components["schemas"]["UserRole"];
-            status: components["schemas"]["UserStatus"];
-            /** Is Email Verified */
-            is_email_verified: boolean;
+            rol: components["schemas"]["UserRole"];
+            estado: components["schemas"]["UserStatus"];
+            /** Es Email Verificado */
+            es_email_verificado: boolean;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
-            /** Last Login */
-            last_login?: string | null;
+            /** Ultimo Login */
+            ultimo_login?: string | null;
         };
         /**
          * UserRole
@@ -8145,8 +8291,8 @@ export interface components {
             nombre?: string | null;
             /** Apellido */
             apellido?: string | null;
-            role?: components["schemas"]["UserRole"] | null;
-            status?: components["schemas"]["UserStatus"] | null;
+            rol?: components["schemas"]["UserRole"] | null;
+            estado?: components["schemas"]["UserStatus"] | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -8207,75 +8353,136 @@ export interface components {
             generated_at: number;
         };
         /**
-         * WeekMetadata
-         * @description Metadata de semana epidemiológica
+         * WrapperConfiguracionGraficoArea
+         * @description Wrapper con discriminador para area chart config
          */
-        WeekMetadata: {
-            /** Year */
-            year: number;
-            /** Week */
-            week: number;
-            /** Start Date */
-            start_date: string;
-            /** End Date */
-            end_date: string;
+        WrapperConfiguracionGraficoArea: {
+            /**
+             * Type
+             * @default area
+             * @constant
+             */
+            type: "area";
+            config: components["schemas"]["ConfiguracionGraficoArea"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            tipo: "area";
         };
         /**
-         * WidgetPosition
-         * @description Posición del widget en el grid
+         * WrapperConfiguracionGraficoBarra
+         * @description Wrapper con discriminador para bar chart config
          */
-        WidgetPosition: {
+        WrapperConfiguracionGraficoBarra: {
             /**
-             * X
-             * @description Posición X en el grid (columnas)
+             * Type
+             * @default bar
+             * @constant
              */
-            x: number;
+            type: "bar";
+            config: components["schemas"]["ConfiguracionGraficoBarra"];
             /**
-             * Y
-             * @description Posición Y en el grid (filas)
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
              */
-            y: number;
-            /**
-             * W
-             * @description Ancho en columnas (1-12)
-             */
-            w: number;
-            /**
-             * H
-             * @description Alto en filas
-             */
-            h: number;
+            tipo: "bar";
         };
         /**
-         * WidgetVisualConfig
-         * @description Configuración visual del widget
+         * WrapperConfiguracionGraficoLinea
+         * @description Wrapper con discriminador para line chart config
          */
-        WidgetVisualConfig: {
+        WrapperConfiguracionGraficoLinea: {
             /**
-             * Show Title
-             * @description Mostrar título
-             * @default true
+             * Type
+             * @default line
+             * @constant
              */
-            show_title: boolean;
+            type: "line";
+            config: components["schemas"]["ConfiguracionGraficoLinea"];
             /**
-             * Show Description
-             * @description Mostrar descripción
-             * @default false
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
              */
-            show_description: boolean;
-            /**
-             * Config
-             * @description Configuración específica del tipo
-             */
-            config?: {
-                [key: string]: unknown;
-            } | null;
+            tipo: "line";
         };
         /**
-         * EventoStats
+         * WrapperConfiguracionGraficoMapa
+         * @description Wrapper con discriminador para map chart config
+         */
+        WrapperConfiguracionGraficoMapa: {
+            /**
+             * Type
+             * @default mapa
+             * @constant
+             */
+            type: "mapa";
+            config: components["schemas"]["ConfiguracionGraficoMapa"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            tipo: "mapa";
+        };
+        /**
+         * WrapperConfiguracionGraficoPiramide
+         * @description Wrapper con discriminador para pyramid chart config
+         */
+        WrapperConfiguracionGraficoPiramide: {
+            /**
+             * Type
+             * @default d3_pyramid
+             * @constant
+             */
+            type: "d3_pyramid";
+            config: components["schemas"]["ConfiguracionGraficoPiramide"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            tipo: "d3_pyramid";
+        };
+        /**
+         * WrapperConfiguracionGraficoTorta
+         * @description Wrapper con discriminador para pie chart config
+         */
+        WrapperConfiguracionGraficoTorta: {
+            /**
+             * Type
+             * @default pie
+             * @constant
+             */
+            type: "pie";
+            config: components["schemas"]["ConfiguracionGraficoTorta"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            tipo: "pie";
+        };
+        /**
+         * WrapperDatosGraficoMapa
+         * @description Wrapper con discriminador para map chart data
+         */
+        WrapperDatosGraficoMapa: {
+            /**
+             * Type
+             * @default mapa
+             * @constant
+             */
+            type: "mapa";
+            data: components["schemas"]["DatosGraficoMapa"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            tipo: "mapa";
+        };
+        /**
+         * CasoEpidemiologicoStats
          * @description Estadísticas de eventos más típicos
          */
-        app__api__v1__dashboard__get_resumen__EventoStats: {
+        app__api__v1__dashboard__get_resumen__CasoEpidemiologicoStats: {
             /** Tipo Eno */
             tipo_eno: string;
             /** Codigo Tipo */
@@ -8561,10 +8768,10 @@ export interface components {
             dosis_total?: number | null;
         };
         /**
-         * EventoStats
+         * CasoEpidemiologicoStats
          * @description Estadísticas agregadas de eventos
          */
-        app__api__v1__eventos__list__EventoStats: {
+        app__api__v1__eventos__list__CasoEpidemiologicoStats: {
             /**
              * Total
              * @description Total de eventos
@@ -8572,52 +8779,88 @@ export interface components {
             total: number;
             /**
              * Confirmados
-             * @description Eventos confirmados
+             * @description CasoEpidemiologicos confirmados
              * @default 0
              */
             confirmados: number;
             /**
              * Sospechosos
-             * @description Eventos sospechosos
+             * @description CasoEpidemiologicos sospechosos
              * @default 0
              */
             sospechosos: number;
             /**
              * Probables
-             * @description Eventos probables
+             * @description CasoEpidemiologicos probables
              * @default 0
              */
             probables: number;
             /**
              * Descartados
-             * @description Eventos descartados
+             * @description CasoEpidemiologicos descartados
              * @default 0
              */
             descartados: number;
             /**
              * Negativos
-             * @description Eventos negativos
+             * @description CasoEpidemiologicos negativos
              * @default 0
              */
             negativos: number;
             /**
              * En Estudio
-             * @description Eventos en estudio
+             * @description CasoEpidemiologicos en estudio
              * @default 0
              */
             en_estudio: number;
             /**
              * Requiere Revision
-             * @description Eventos que requieren revisión
+             * @description CasoEpidemiologicos que requieren revisión
              * @default 0
              */
             requiere_revision: number;
             /**
              * Sin Clasificar
-             * @description Eventos sin clasificar
+             * @description CasoEpidemiologicos sin clasificar
              * @default 0
              */
             sin_clasificar: number;
+        };
+        /**
+         * PaginationInfo
+         * @description Información de paginación
+         */
+        app__api__v1__eventos__list__PaginationInfo: {
+            /**
+             * Page
+             * @description Página actual
+             */
+            page: number;
+            /**
+             * Page Size
+             * @description Tamaño de página
+             */
+            page_size: number;
+            /**
+             * Total
+             * @description Total de registros
+             */
+            total: number;
+            /**
+             * Total Pages
+             * @description Total de páginas
+             */
+            total_pages: number;
+            /**
+             * Has Next
+             * @description Si hay página siguiente
+             */
+            has_next: boolean;
+            /**
+             * Has Prev
+             * @description Si hay página anterior
+             */
+            has_prev: boolean;
         };
         /**
          * DiagnosticoInfo
@@ -9241,7 +9484,7 @@ export interface operations {
             };
         };
     };
-    get_job_status_api_v1_uploads_jobs__job_id__status_get: {
+    get_job_status_endpoint_api_v1_uploads_jobs__job_id__status_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -9281,7 +9524,7 @@ export interface operations {
             };
         };
     };
-    cancel_job_api_v1_uploads_jobs__job_id__delete: {
+    cancel_job_endpoint_api_v1_uploads_jobs__job_id__delete: {
         parameters: {
             query?: never;
             header?: never;
@@ -9722,61 +9965,6 @@ export interface operations {
             };
         };
     };
-    get_establecimiento_detalle_api_v1_establecimientos__id_establecimiento__get: {
-        parameters: {
-            query?: {
-                /** @description Filtrar eventos desde esta fecha */
-                fecha_desde?: string | null;
-                /** @description Filtrar eventos hasta esta fecha */
-                fecha_hasta?: string | null;
-            };
-            header?: never;
-            path: {
-                /** @description ID del establecimiento */
-                id_establecimiento: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SuccessResponse_EstablecimientoDetalleResponse_"];
-                };
-            };
-            /** @description Establecimiento no encontrado */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description Error interno del servidor */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
     get_establecimientos_sin_mapear_api_v1_establecimientos_sin_mapear_get: {
         parameters: {
             query?: {
@@ -10083,6 +10271,61 @@ export interface operations {
             };
         };
     };
+    get_establecimiento_detalle_api_v1_establecimientos__id_establecimiento__get: {
+        parameters: {
+            query?: {
+                /** @description Filtrar eventos desde esta fecha */
+                fecha_desde?: string | null;
+                /** @description Filtrar eventos hasta esta fecha */
+                fecha_hasta?: string | null;
+            };
+            header?: never;
+            path: {
+                /** @description ID del establecimiento */
+                id_establecimiento: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_EstablecimientoDetalleResponse_"];
+                };
+            };
+            /** @description Establecimiento no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno del servidor */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_strategies_api_v1_estrategias__get: {
         parameters: {
             query?: {
@@ -10103,7 +10346,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaginatedResponse_EventStrategyResponse_"];
+                    "application/json": components["schemas"]["PaginatedResponse_EstrategiaClasificacionResponse_"];
                 };
             };
             /** @description Validation Error */
@@ -10135,7 +10378,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["EventStrategyCreate"];
+                "application/json": components["schemas"]["EstrategiaClasificacionCreate"];
             };
         };
         responses: {
@@ -10145,7 +10388,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SuccessResponse_EventStrategyResponse_"];
+                    "application/json": components["schemas"]["SuccessResponse_EstrategiaClasificacionResponse_"];
                 };
             };
             /** @description Datos inválidos */
@@ -10203,7 +10446,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SuccessResponse_EventStrategyResponse_"];
+                    "application/json": components["schemas"]["SuccessResponse_EstrategiaClasificacionResponse_"];
                 };
             };
             /** @description Estrategia no encontrada */
@@ -10246,7 +10489,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["EventStrategyUpdate"];
+                "application/json": components["schemas"]["EstrategiaClasificacionUpdate"];
             };
         };
         responses: {
@@ -10256,7 +10499,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SuccessResponse_EventStrategyResponse_"];
+                    "application/json": components["schemas"]["SuccessResponse_EstrategiaClasificacionResponse_"];
                 };
             };
             /** @description Datos inválidos */
@@ -10381,7 +10624,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SuccessResponse_EventStrategyResponse_"];
+                    "application/json": components["schemas"]["SuccessResponse_EstrategiaClasificacionResponse_"];
                 };
             };
             /** @description Estrategia no encontrada */
@@ -10560,7 +10803,7 @@ export interface operations {
                 edad_min?: number | null;
                 /** @description Edad máxima */
                 edad_max?: number | null;
-                sort_by?: components["schemas"]["EventoSortBy"];
+                sort_by?: components["schemas"]["CasoEpidemiologicoSortBy"];
             };
             header?: never;
             path?: never;
@@ -10574,7 +10817,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SuccessResponse_EventoListResponse_"];
+                    "application/json": components["schemas"]["SuccessResponse_CasoEpidemiologicoListResponse_"];
                 };
             };
             /** @description Validation Error */
@@ -10607,9 +10850,9 @@ export interface operations {
                 /** @description Filtrar por localidad */
                 id_localidad_indec?: number | null;
                 /** @description Filtrar por grupo ENO */
-                id_grupo_eno?: number | null;
+                id_grupo?: number | null;
                 /** @description Filtrar por tipo ENO */
-                id_tipo_eno?: number | null;
+                id_enfermedad?: number | null;
                 /** @description Filtrar eventos hasta esta fecha */
                 fecha_hasta?: string | null;
                 /** @description Máximo de domicilios a retornar */
@@ -10770,10 +11013,10 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SuccessResponse_EventoDetailResponse_"];
+                    "application/json": components["schemas"]["SuccessResponse_CasoEpidemiologicoDetailResponse_"];
                 };
             };
-            /** @description Evento no encontrado */
+            /** @description CasoEpidemiologico no encontrado */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -10819,10 +11062,10 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SuccessResponse_EventoTimelineResponse_"];
+                    "application/json": components["schemas"]["SuccessResponse_CasoEpidemiologicoTimelineResponse_"];
                 };
             };
-            /** @description Evento no encontrado */
+            /** @description CasoEpidemiologico no encontrado */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -11048,7 +11291,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaginatedResponse_TipoEnoInfo_"];
+                    "application/json": components["schemas"]["PaginatedResponse_EnfermedadInfo_"];
                 };
             };
             /** @description Validation Error */
@@ -11074,9 +11317,9 @@ export interface operations {
     list_grupos_eno_api_v1_gruposEno__get: {
         parameters: {
             query?: {
-                /** @description Número de página */
+                /** @description Numero de pagina */
                 page?: number;
-                /** @description Elementos por página */
+                /** @description Elementos por pagina */
                 per_page?: number;
                 /** @description Filtrar por nombre */
                 nombre?: string | null;
@@ -11093,7 +11336,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaginatedResponse_GrupoEnoInfo_"];
+                    "application/json": components["schemas"]["PaginatedResponse_GrupoDeEnfermedadesInfo_"];
                 };
             };
             /** @description Validation Error */
@@ -11223,7 +11466,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ChartSpecRequest"];
+                "application/json": components["schemas"]["SolicitudSpecGrafico"];
             };
         };
         responses: {
@@ -11233,7 +11476,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChartSpecResponse"];
+                    "application/json": components["schemas"]["RespuestaSpecGrafico"];
                 };
             };
             /** @description Validation Error */
@@ -11729,10 +11972,10 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SuccessResponse_EventoDetailsResponse_"];
+                    "application/json": components["schemas"]["SuccessResponse_CasoEpidemiologicoDetailsResponse_"];
                 };
             };
-            /** @description Evento no encontrado */
+            /** @description CasoEpidemiologico no encontrado */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -12646,268 +12889,10 @@ export interface operations {
             };
         };
     };
-    update_dynamic_blocks_api_v1_boletines_config_dynamic_blocks_put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateDynamicBlocksRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SuccessResponse_BoletinTemplateConfigResponse_"];
-                };
-            };
-            /** @description Datos inválidos */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Sin permisos (requiere admin) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Configuración no encontrada */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description Error interno */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    create_dynamic_block_api_v1_boletines_config_dynamic_blocks_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateDynamicBlockRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SuccessResponse_BoletinTemplateConfigResponse_"];
-                };
-            };
-            /** @description Bloque con ID duplicado o datos inválidos */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Sin permisos (requiere admin) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Configuración no encontrada */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description Error interno */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    update_dynamic_block_api_v1_boletines_config_dynamic_blocks__block_id__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                block_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateDynamicBlockRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SuccessResponse_BoletinTemplateConfigResponse_"];
-                };
-            };
-            /** @description Sin permisos (requiere admin) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Configuración o bloque no encontrado */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description Error interno */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    delete_dynamic_block_api_v1_boletines_config_dynamic_blocks__block_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                block_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SuccessResponse_BoletinTemplateConfigResponse_"];
-                };
-            };
-            /** @description Sin permisos (requiere admin) */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Configuración o bloque no encontrado */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description Error interno */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
     preview_evento_api_v1_boletines_preview_evento_get: {
         parameters: {
             query: {
-                /** @description Código del TipoEno o GrupoEno */
+                /** @description Código del Enfermedad o GrupoDeEnfermedades */
                 codigo: string;
                 /** @description Semana epidemiológica */
                 semana: number;
@@ -12931,7 +12916,7 @@ export interface operations {
                     "application/json": components["schemas"]["SuccessResponse_SectionPreviewResponse_"];
                 };
             };
-            /** @description Evento no encontrado */
+            /** @description CasoEpidemiologico no encontrado */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -12975,7 +12960,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SuccessResponse_List_EventoDisponible__"];
+                    "application/json": components["schemas"]["SuccessResponse_List_CasoEpidemiologicoDisponible__"];
                 };
             };
             /** @description Error interno */
@@ -13018,6 +13003,49 @@ export interface operations {
             };
         };
     };
+    get_secciones_config_api_v1_boletines_secciones_config_get: {
+        parameters: {
+            query?: {
+                /** @description Semana epidemiológica de referencia (default: semana actual) */
+                semana?: number | null;
+                /** @description Año de referencia (default: año actual) */
+                anio?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_SeccionesConfigResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     get_provincias_geojson_api_v1_geografia_provincias_geojson_get: {
         parameters: {
             query?: never;
@@ -13044,7 +13072,7 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description Filtrar por grupo ENO */
-                id_grupo_eno?: number | null;
+                id_grupo?: number | null;
             };
             header?: never;
             path?: never;
@@ -13114,7 +13142,7 @@ export interface operations {
                 /** @description Filtrar por provincia */
                 id_provincia_indec?: number | null;
                 /** @description Filtrar por grupo ENO */
-                id_grupo_eno?: number | null;
+                id_grupo?: number | null;
             };
             header?: never;
             path?: never;
@@ -13224,6 +13252,209 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_agrupaciones_api_v1_agrupaciones__get: {
+        parameters: {
+            query?: {
+                categoria?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgrupacionesListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_agrupacion_api_v1_agrupaciones__slug__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgrupacionDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_agrupacion_agente_ids_api_v1_agrupaciones__slug__agente_ids_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_schema_api_v1_metricas_schema_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    get_cube_detail_api_v1_metricas_schema__cube_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cube_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_available_metrics_api_v1_metricas_disponibles_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetricInfoResponse"];
+                };
+            };
+        };
+    };
+    query_metric_api_v1_metricas_query_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MetricQueryRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetricQueryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

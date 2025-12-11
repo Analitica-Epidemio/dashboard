@@ -15,10 +15,9 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
 
 
-async def truncate_all_tables():
+async def truncate_all_tables() -> None:
     """Trunca todas las tablas de la base de datos."""
 
     # Obtener la URL de la base de datos
@@ -31,10 +30,9 @@ async def truncate_all_tables():
 
     # Crear engine asíncrono
     engine = create_async_engine(database_url, echo=False)
-    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
     try:
-        async with async_session() as session:
+        async with AsyncSession(engine, expire_on_commit=False) as session:
             print("📋 Obteniendo lista de tablas...")
 
             # Obtener todas las tablas del esquema público
@@ -60,7 +58,7 @@ async def truncate_all_tables():
             # Truncar cada tabla
             for table in tables:
                 # Ignorar la tabla de migraciones de Alembic
-                if table == 'alembic_version':
+                if table == "alembic_version":
                     print(f"   ⏭️  Saltando {table} (tabla de migraciones)")
                     continue
 
@@ -88,7 +86,7 @@ async def truncate_all_tables():
         await engine.dispose()
 
 
-def main():
+def main() -> None:
     """Función principal."""
     try:
         asyncio.run(truncate_all_tables())
@@ -98,6 +96,7 @@ def main():
     except Exception as e:
         print(f"❌ Error: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

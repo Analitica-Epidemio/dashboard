@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 async def create_user(
     user_data: UserCreate,
     current_user: User = Depends(require_superadmin),
-    auth_service: AuthService = Depends(get_auth_service)
+    auth_service: AuthService = Depends(get_auth_service),
 ) -> UserResponse:
     """
     Create a new user (Superadmin only - for UI administration)
@@ -28,6 +28,6 @@ async def create_user(
     - **password**: Strong password (min 8 chars, must include uppercase, lowercase, digit, special char)
     - **role**: User role (superadmin, epidemiologo)
     """
-    user = await auth_service.create_user(user_data)
+    user = await auth_service.crear_usuario(user_data)
     logger.info(f"Superadmin {current_user.email} created user {user.email}")
-    return user
+    return UserResponse.model_validate(user)

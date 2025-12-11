@@ -3,7 +3,8 @@
 from pathlib import Path
 from typing import List
 
-from pydantic_settings import BaseSettings
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -27,14 +28,14 @@ class Settings(BaseSettings):
     # CONFIGURACIÓN DE BASE DE DATOS
     # =============================================================================
     # IMPORTANTE: Usar credenciales fuertes en producción
-    DATABASE_URL: str
+    DATABASE_URL: str = Field(...)
 
     # =============================================================================
     # CONFIGURACIÓN DE SEGURIDAD
     # =============================================================================
     # CRÍTICO: Esta clave debe ser generada con: openssl rand -hex 32
     # NUNCA usar un valor por defecto en producción
-    SECRET_KEY: str  # Sin valor por defecto - DEBE estar en .env
+    SECRET_KEY: str = Field(...)  # Sin valor por defecto - DEBE estar en .env
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 horas
     ALLOWED_HOSTS: str = "localhost,127.0.0.1,0.0.0.0"
 
@@ -116,10 +117,11 @@ class Settings(BaseSettings):
         """Retorna el directorio base del proyecto."""
         return Path(__file__).resolve().parent.parent
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
-        extra = "ignore"  # Ignorar variables de entorno extra (ej: DB_NAME, DB_USER, etc.)
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive=True,
+        extra="ignore",  # Ignorar variables de entorno extra (ej: DB_NAME, DB_USER, etc.)
+    )
 
 
 settings = Settings()

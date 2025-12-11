@@ -15,7 +15,7 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        refresh_token: token.refreshToken,
+        token_refresco: token.refreshToken,
       }),
     });
 
@@ -27,8 +27,8 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
 
     return {
       ...token,
-      accessToken: refreshedTokens.access_token,
-      refreshToken: refreshedTokens.refresh_token ?? token.refreshToken,
+      accessToken: refreshedTokens.token_acceso,
+      refreshToken: refreshedTokens.token_refresco ?? token.refreshToken,
       accessTokenExpires: Date.now() + 24 * 60 * 60 * 1000, // 24 horas
     };
   } catch (error) {
@@ -62,7 +62,7 @@ export const authOptions: NextAuthOptions = {
             },
             body: JSON.stringify({
               email: credentials.email,
-              password: credentials.password,
+              contrasena: credentials.password,
             }),
           });
 
@@ -74,7 +74,7 @@ export const authOptions: NextAuthOptions = {
 
           // Parse JWT to extract user info
           const tokenPayload = JSON.parse(
-            Buffer.from(data.access_token.split('.')[1], 'base64').toString()
+            Buffer.from(data.token_acceso.split('.')[1], 'base64').toString()
           );
 
           return {
@@ -82,8 +82,8 @@ export const authOptions: NextAuthOptions = {
             email: tokenPayload.email,
             name: tokenPayload.email, // We don't have name in token, use email temporarily
             role: tokenPayload.role,
-            accessToken: data.access_token,
-            refreshToken: data.refresh_token,
+            accessToken: data.token_acceso,
+            refreshToken: data.token_refresco,
             accessTokenExpires: Date.now() + 24 * 60 * 60 * 1000, // 24 horas
           };
         } catch {

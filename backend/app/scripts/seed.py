@@ -50,15 +50,20 @@ O desde Make:
 
 TIEMPO ESTIMADO: 5-8 minutos
 """
+
 import os
 import sys
 from pathlib import Path
 
+from dotenv import load_dotenv
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import Session
+
 # Agregar el directorio raíz al path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import Session
+# Cargar variables de entorno desde .env
+load_dotenv()
 
 
 def truncate_tables():
@@ -82,14 +87,31 @@ def truncate_tables():
                 "TRUNCATE establecimiento, localidad, departamento, provincia RESTART IDENTITY CASCADE"
             )
         )
-        # Tablas de agentes etiológicos
-        conn.execute(
-            text(
-                "TRUNCATE agente_extraccion_config, agente_etiologico RESTART IDENTITY CASCADE"
-            )
-        )
+
         conn.commit()
         print("✅ Tablas truncadas (geografía, establecimientos, agentes)")
+
+
+def preguntar_superadmin_dev() -> bool:
+    """
+    Pregunta al usuario si quiere crear el superadmin de desarrollo.
+    Retorna True si el usuario confirma, False en caso contrario.
+    """
+    print("\n" + "=" * 70)
+    print("🔐 SUPERADMIN DE DESARROLLO")
+    print("=" * 70)
+    print("\n⚠️  ADVERTENCIA: Esto creará un superadmin con credenciales inseguras:")
+    print("   Email: admin@admin.com")
+    print("   Password: admin")
+    print("\n   Solo usar en desarrollo local. En producción usar: make superadmin")
+
+    try:
+        respuesta = input("\n¿Crear superadmin de desarrollo? [y/N]: ").strip().lower()
+        return respuesta in ["y", "yes", "si", "sí"]
+    except EOFError:
+        # No hay stdin (ej: pipe), omitir
+        print("  ⏭️  Omitido (no hay terminal interactiva)")
+        return False
 
 
 def main():
@@ -104,9 +126,11 @@ def main():
     print("  🦠 Grupos/Tipos ENO y Agentes Etiológicos")
     print("  🎯 Estrategias epidemiológicas")
     print("  📈 Configuración de gráficos y boletines")
-    print("  🔐 Usuario superadmin (admin@admin.com)")
     print("\n⏱️  Tiempo estimado: 8-12 minutos (incluye descargas WFS)")
     print("=" * 70)
+
+    # Preguntar al inicio si crear superadmin de desarrollo
+    crear_superadmin = preguntar_superadmin_dev()
 
     DATABASE_URL = os.getenv(
         "DATABASE_URL",
@@ -131,7 +155,7 @@ def main():
             seed_provincias_desde_georef,
         )
 
-        with engine.connect() as conn:
+        with engine.begin() as conn:
             prov_count = seed_provincias_desde_georef(conn)
             dept_count = seed_departamentos_desde_georef(conn)
             loc_count = seed_localidades_desde_georef(conn, max_localidades=5000)
@@ -146,12 +170,13 @@ def main():
                 seed_geometrias_provincias,
             )
 
-            with engine.connect() as conn:
+            with engine.begin() as conn:
                 seed_geometrias_provincias(conn)
                 seed_geometrias_departamentos(conn)
         except Exception as e:
             print(f"⚠️  Error cargando geometrías: {e}")
             import traceback
+
             traceback.print_exc()
 
         # Paso 2: Población del Censo 2022
@@ -183,7 +208,7 @@ def main():
         try:
             from app.scripts.seeds.seed_establecimientos_refes import seed_refes
 
-            with engine.connect() as conn:
+            with engine.begin() as conn:
                 estab_count = seed_refes(conn)
         except Exception as e:
             print(f"⚠️  Error descargando REFES (omitiendo): {e}")
@@ -246,7 +271,9 @@ def main():
             )
 
             # Crear engine dedicado para este seed (evita problemas de event loop)
-            async_db_url = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
+            async_db_url = DATABASE_URL.replace(
+                "postgresql://", "postgresql+asyncpg://"
+            )
             temp_engine = create_async_engine(async_db_url)
 
             async def seed_agentes_async():
@@ -258,6 +285,30 @@ def main():
             print("✅ Agentes etiológicos cargados")
         except Exception as e:
             print(f"⚠️  Error cargando agentes etiológicos: {e}")
+            import traceback
+
+            traceback.print_exc()
+
+        # Paso 4.7: Agrupaciones de Agentes (para charts agrupados)
+        print("\n" + "=" * 70)
+        print("PASO 4.7/10: AGRUPACIONES DE AGENTES")
+        print("=" * 70)
+        try:
+            from app.domains.catalogos.agentes.seed_agrupaciones import (
+                seed_agrupaciones,
+            )
+
+            with Session(engine) as session:
+                stats = seed_agrupaciones(session)  # type: ignore[arg-type]
+                print(f"✅ Agrupaciones creadas: {stats['agrupaciones_creadas']}")
+                print(f"   Actualizadas: {stats['agrupaciones_actualizadas']}")
+                print(f"   Agentes vinculados: {stats['agentes_vinculados']}")
+                if stats["agentes_no_encontrados"]:
+                    print(
+                        f"   ⚠️ Agentes no encontrados: {len(stats['agentes_no_encontrados'])}"
+                    )
+        except Exception as e:
+            print(f"⚠️  Error cargando agrupaciones: {e}")
             import traceback
 
             traceback.print_exc()
@@ -299,22 +350,10 @@ def main():
         print("PASO 7/10: CONFIGURACIÓN DE BOLETINES")
         print("=" * 70)
         try:
-            import asyncio
-
-            from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-
             from app.domains.boletines.seeds import seed_boletin_template_config
 
-            # Crear engine dedicado para este seed (evita problemas de event loop)
-            async_db_url = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
-            temp_engine = create_async_engine(async_db_url)
-
-            async def seed_boletin_async():
-                async with AsyncSession(temp_engine) as session:
-                    await seed_boletin_template_config(session)
-                await temp_engine.dispose()
-
-            asyncio.run(seed_boletin_async())
+            with Session(engine) as session:
+                seed_boletin_template_config(session)
             print("✅ Configuración de boletines cargada")
         except Exception as e:
             print(f"⚠️  Error cargando configuración de boletines: {e}")
@@ -322,20 +361,27 @@ def main():
 
             traceback.print_exc()
 
-        # Paso 8: Usuarios
+        # Paso 8: Usuarios (solo si el usuario confirmó al inicio)
         print("\n" + "=" * 70)
         print("PASO 8/10: USUARIOS")
         print("=" * 70)
-        try:
-            from app.scripts.seeds.seed_users import seed_superadmin
+        superadmin_creado = False
+        if crear_superadmin:
+            try:
+                from app.scripts.seeds.seed_users import seed_superadmin
 
-            with Session(engine) as session:
-                seed_superadmin(session)
-        except Exception as e:
-            print(f"⚠️  Error creando usuarios: {e}")
-            import traceback
+                with Session(engine) as session:
+                    seed_superadmin(session, force=True)
+                    superadmin_creado = True
+            except Exception as e:
+                print(f"⚠️  Error creando usuarios: {e}")
+                import traceback
 
-            traceback.print_exc()
+                traceback.print_exc()
+        else:
+            print(
+                "  ⏭️  Superadmin de desarrollo omitido (usar 'make superadmin' para crear uno seguro)"
+            )
 
         # Resumen
         print("\n" + "=" * 70)
@@ -351,7 +397,10 @@ def main():
         print("  ✅ Estrategias epidemiológicas")
         print("  ✅ Configuración de gráficos")
         print("  ✅ Configuración de boletines (template)")
-        print("  ✅ Usuario superadmin (admin@admin.com)")
+        if superadmin_creado:
+            print("  ✅ Usuario superadmin (admin@admin.com / admin)")
+        else:
+            print("  ⏭️  Superadmin omitido (usar 'make superadmin')")
         print("=" * 70)
 
     except Exception as e:

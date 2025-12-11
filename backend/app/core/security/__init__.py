@@ -20,14 +20,14 @@ from .signed_url_auth import verify_signed_url_headers
 rbac = RoleBasedAccessControl()
 
 __all__ = [
-    'RoleBasedAccessControl',
-    'RequireSuperadmin',
-    'RequireAnyRole',
-    'RequireActiveUser',
-    'RequireRoles',
-    'RequireAuthOrSignedUrl',
-    'verify_signed_url_headers',
-    'rbac',
-    'PermissionChecker',
-    'PermissionContext'
+    "RoleBasedAccessControl",
+    "RequireSuperadmin",
+    "RequireAnyRole",
+    "RequireActiveUser",
+    "RequireRoles",
+    "RequireAuthOrSignedUrl",
+    "verify_signed_url_headers",
+    "rbac",
+    "PermissionChecker",
+    "PermissionContext",
 ]

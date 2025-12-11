@@ -268,7 +268,7 @@ export function useProvinciasConEventos(filters?: {
     {
       params: {
         query: {
-          ...(filters?.id_grupo_eno && { id_grupo_eno: filters.id_grupo_eno }),
+          ...(filters?.id_grupo_eno && { id_grupo: filters.id_grupo_eno }),
         },
       },
     }

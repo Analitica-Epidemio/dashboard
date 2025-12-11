@@ -58,74 +58,8 @@ export function useUpdateStaticContent() {
   return $api.useMutation('put', '/api/v1/boletines/config/static-content');
 }
 
-/**
- * Update complete array of dynamic blocks (for reordering)
- *
- * @returns Mutation for updating blocks array
- *
- * @example
- * ```tsx
- * const updateMutation = useUpdateDynamicBlocks();
- * await updateMutation.mutateAsync({
- *   body: { blocks: [...] }
- * });
- * ```
- */
-export function useUpdateDynamicBlocks() {
-  return $api.useMutation('put', '/api/v1/boletines/config/dynamic-blocks');
-}
-
-/**
- * Create a new dynamic block
- *
- * @returns Mutation for creating a block
- *
- * @example
- * ```tsx
- * const createMutation = useCreateDynamicBlock();
- * await createMutation.mutateAsync({
- *   body: { block: { id: "new_block", query_type: "top_enos", render_type: "table" } }
- * });
- * ```
- */
-export function useCreateDynamicBlock() {
-  return $api.useMutation('post', '/api/v1/boletines/config/dynamic-blocks');
-}
-
-/**
- * Update a specific dynamic block by ID
- *
- * @returns Mutation for updating a block
- *
- * @example
- * ```tsx
- * const updateMutation = useUpdateDynamicBlock();
- * await updateMutation.mutateAsync({
- *   params: { path: { block_id: "my_block" } },
- *   body: { block: {...} }
- * });
- * ```
- */
-export function useUpdateDynamicBlock() {
-  return $api.useMutation('put', '/api/v1/boletines/config/dynamic-blocks/{block_id}');
-}
-
-/**
- * Delete a dynamic block by ID
- *
- * @returns Mutation for deleting a block
- *
- * @example
- * ```tsx
- * const deleteMutation = useDeleteDynamicBlock();
- * await deleteMutation.mutateAsync({
- *   params: { path: { block_id: "my_block" } }
- * });
- * ```
- */
-export function useDeleteDynamicBlock() {
-  return $api.useMutation('delete', '/api/v1/boletines/config/dynamic-blocks/{block_id}');
-}
+// NOTE: Dynamic blocks endpoints removed - now using BoletinSeccion/BoletinBloque
+// database models managed via BloqueQueryAdapter. See backend/app/domains/boletines/
 
 /**
  * Update unified boletin template (content + embedded dynamic blocks)
@@ -177,7 +111,7 @@ export function useUpdateEventSectionTemplate() {
  * ```
  */
 export function useChartsDisponibles() {
-  return $api.useQuery('get', '/api/v1/charts/disponibles');
+  return $api.useQuery('get', '/api/v1/boletines/charts-disponibles');
 }
 
 // ============================================================================

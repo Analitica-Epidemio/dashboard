@@ -7,10 +7,14 @@ from typing import List
 from fastapi import APIRouter
 
 from app.api.v1.boletines import config, instances_crud, preview, templates_crud
+from app.api.v1.boletines.charts_disponibles import (
+    ChartsDisponiblesResponse,
+    get_charts_disponibles,
+)
 from app.api.v1.boletines.generate_draft import generate_draft
 from app.api.v1.boletines.preview import (
     AgenteDisponible,
-    EventoDisponible,
+    CasoEpidemiologicoDisponible,
     SectionPreviewResponse,
 )
 from app.api.v1.boletines.schemas import (
@@ -18,7 +22,9 @@ from app.api.v1.boletines.schemas import (
     BoletinTemplateConfigResponse,
     BoletinTemplateResponse,
     GenerateDraftResponse,
+    SeccionesConfigResponse,
 )
+from app.api.v1.boletines.secciones_config import get_secciones_config
 from app.core.schemas.response import ErrorResponse, SuccessResponse
 
 router = APIRouter(prefix="/boletines", tags=["Boletines"])
@@ -264,68 +270,6 @@ router.add_api_route(
     },
 )
 
-router.add_api_route(
-    "/config/dynamic-blocks",
-    config.update_dynamic_blocks,
-    methods=["PUT"],
-    response_model=SuccessResponse[BoletinTemplateConfigResponse],
-    name="update_dynamic_blocks",
-    summary="Actualizar array completo de bloques dinámicos",
-    description="Reemplaza el array completo de bloques (útil para reordenar)",
-    responses={
-        404: {"model": ErrorResponse, "description": "Configuración no encontrada"},
-        400: {"model": ErrorResponse, "description": "Datos inválidos"},
-        403: {"model": ErrorResponse, "description": "Sin permisos (requiere admin)"},
-        500: {"model": ErrorResponse, "description": "Error interno"},
-    },
-)
-
-router.add_api_route(
-    "/config/dynamic-blocks",
-    config.create_dynamic_block,
-    methods=["POST"],
-    response_model=SuccessResponse[BoletinTemplateConfigResponse],
-    name="create_dynamic_block",
-    summary="Agregar un nuevo bloque dinámico",
-    description="Agrega un bloque al final del array de bloques dinámicos",
-    responses={
-        404: {"model": ErrorResponse, "description": "Configuración no encontrada"},
-        400: {"model": ErrorResponse, "description": "Bloque con ID duplicado o datos inválidos"},
-        403: {"model": ErrorResponse, "description": "Sin permisos (requiere admin)"},
-        500: {"model": ErrorResponse, "description": "Error interno"},
-    },
-)
-
-router.add_api_route(
-    "/config/dynamic-blocks/{block_id}",
-    config.update_dynamic_block,
-    methods=["PUT"],
-    response_model=SuccessResponse[BoletinTemplateConfigResponse],
-    name="update_dynamic_block",
-    summary="Actualizar un bloque dinámico específico",
-    description="Actualiza la configuración de un bloque existente por su ID",
-    responses={
-        404: {"model": ErrorResponse, "description": "Configuración o bloque no encontrado"},
-        403: {"model": ErrorResponse, "description": "Sin permisos (requiere admin)"},
-        500: {"model": ErrorResponse, "description": "Error interno"},
-    },
-)
-
-router.add_api_route(
-    "/config/dynamic-blocks/{block_id}",
-    config.delete_dynamic_block,
-    methods=["DELETE"],
-    response_model=SuccessResponse[BoletinTemplateConfigResponse],
-    name="delete_dynamic_block",
-    summary="Eliminar un bloque dinámico",
-    description="Elimina un bloque del array de bloques dinámicos por su ID",
-    responses={
-        404: {"model": ErrorResponse, "description": "Configuración o bloque no encontrado"},
-        403: {"model": ErrorResponse, "description": "Sin permisos (requiere admin)"},
-        500: {"model": ErrorResponse, "description": "Error interno"},
-    },
-)
-
 
 # ============================================================================
 # Preview Endpoints (for section data preview in the generator UI)
@@ -338,9 +282,12 @@ router.add_api_route(
     response_model=SuccessResponse[SectionPreviewResponse],
     name="preview_evento",
     summary="Preview genérico de datos para cualquier evento",
-    description="Recibe el código de un TipoEno o GrupoEno y genera un resumen de datos",
+    description="Recibe el código de un Enfermedad o GrupoDeEnfermedades y genera un resumen de datos",
     responses={
-        404: {"model": ErrorResponse, "description": "Evento no encontrado"},
+        404: {
+            "model": ErrorResponse,
+            "description": "CasoEpidemiologico no encontrado",
+        },
         500: {"model": ErrorResponse, "description": "Error interno"},
     },
 )
@@ -349,10 +296,10 @@ router.add_api_route(
     "/preview/eventos-disponibles",
     preview.list_available_eventos,
     methods=["GET"],
-    response_model=SuccessResponse[List[EventoDisponible]],
+    response_model=SuccessResponse[List[CasoEpidemiologicoDisponible]],
     name="list_available_eventos",
     summary="Listar eventos disponibles para preview",
-    description="Retorna todos los TipoEno y GrupoEno con código para usar en el selector",
+    description="Retorna todos los Enfermedad y GrupoDeEnfermedades con código para usar en el selector",
     responses={
         500: {"model": ErrorResponse, "description": "Error interno"},
     },
@@ -366,6 +313,52 @@ router.add_api_route(
     name="list_available_agentes",
     summary="Listar agentes etiológicos disponibles",
     description="Retorna todos los agentes etiológicos activos para usar en selectores de bloques dinámicos",
+    responses={
+        500: {"model": ErrorResponse, "description": "Error interno"},
+    },
+)
+
+
+# ============================================================================
+# Secciones y Bloques Configuration Endpoints
+# ============================================================================
+
+router.add_api_route(
+    "/secciones-config",
+    get_secciones_config,
+    methods=["GET"],
+    response_model=SuccessResponse[SeccionesConfigResponse],
+    name="get_secciones_config",
+    summary="Obtener configuración de secciones y bloques",
+    description="""
+    Retorna la configuración de todas las secciones y bloques activos del boletín.
+
+    Incluye información detallada sobre:
+    - Qué métricas se consultan
+    - Qué rangos temporales se usan (con ejemplos concretos)
+    - Tipo de visualización de cada bloque
+
+    Usar los parámetros `semana` y `anio` para ver ejemplos de rangos
+    para una semana de referencia específica.
+    """,
+    responses={
+        500: {"model": ErrorResponse, "description": "Error interno"},
+    },
+)
+
+
+# ============================================================================
+# Charts Disponibles (migrado de api/v1/charts)
+# ============================================================================
+
+router.add_api_route(
+    "/charts-disponibles",
+    get_charts_disponibles,
+    methods=["GET"],
+    response_model=SuccessResponse[ChartsDisponiblesResponse],
+    name="get_charts_disponibles",
+    summary="Obtener charts disponibles para boletines",
+    description="Retorna lista de charts que pueden insertarse en boletines",
     responses={
         500: {"model": ErrorResponse, "description": "Error interno"},
     },

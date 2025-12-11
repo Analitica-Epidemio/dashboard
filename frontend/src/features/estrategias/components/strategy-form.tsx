@@ -27,7 +27,7 @@ import type { EventStrategy } from '@/features/estrategias/api'
 
 type Strategy = EventStrategy
 
-type FilterType = 
+type FilterType =
   | 'campo_igual'
   | 'campo_en_lista'
   | 'campo_contiene'
@@ -63,7 +63,7 @@ interface StrategyFormProps {
   onSuccess?: (message: string) => void
 }
 
-const FILTER_TYPES: Array<{value: FilterType, label: string, description: string}> = [
+const FILTER_TYPES: Array<{ value: FilterType, label: string, description: string }> = [
   { value: 'campo_igual', label: 'Campo Igual', description: 'El campo debe ser igual a un valor específico' },
   { value: 'campo_en_lista', label: 'Campo en Lista', description: 'El campo debe estar en una lista de valores' },
   { value: 'campo_contiene', label: 'Campo Contiene', description: 'El campo debe contener un texto específico' },
@@ -76,7 +76,7 @@ const FILTER_TYPES: Array<{value: FilterType, label: string, description: string
 
 const CLASSIFICATIONS = [
   'confirmados',
-  'sospechosos', 
+  'sospechosos',
   'probables',
   'en_estudio',
   'negativos',
@@ -89,7 +89,7 @@ const CLASSIFICATIONS = [
 export function StrategyForm({ strategy, onClose }: StrategyFormProps) {
   const [formData, setFormData] = useState({
     name: strategy?.name || '',
-    tipo_eno_id: strategy?.tipo_eno_id || '',
+    tipo_eno_id: strategy?.id_enfermedad || '',
     active: strategy?.active || false,
     confidence_threshold: strategy?.confidence_threshold || 0.5,
     description: strategy?.description || '',
@@ -139,7 +139,7 @@ export function StrategyForm({ strategy, onClose }: StrategyFormProps) {
       logical_operator: 'AND',
       order: rules[ruleIndex].filters.length
     }
-    
+
     const newRules = [...rules]
     newRules[ruleIndex].filters.push(newFilter)
     setRules(newRules)
@@ -147,9 +147,9 @@ export function StrategyForm({ strategy, onClose }: StrategyFormProps) {
 
   const updateFilter = (ruleIndex: number, filterIndex: number, updates: Partial<FilterCondition>) => {
     const newRules = [...rules]
-    newRules[ruleIndex].filters[filterIndex] = { 
-      ...newRules[ruleIndex].filters[filterIndex], 
-      ...updates 
+    newRules[ruleIndex].filters[filterIndex] = {
+      ...newRules[ruleIndex].filters[filterIndex],
+      ...updates
     }
     setRules(newRules)
   }
@@ -162,11 +162,11 @@ export function StrategyForm({ strategy, onClose }: StrategyFormProps) {
 
   const validateForm = () => {
     const newErrors: string[] = []
-    
+
     if (!formData.name.trim()) {
       newErrors.push('El nombre es requerido')
     }
-    
+
     if (!formData.tipo_eno_id) {
       newErrors.push('El ID del tipo de evento es requerido')
     }
@@ -179,16 +179,16 @@ export function StrategyForm({ strategy, onClose }: StrategyFormProps) {
       if (!rule.classification) {
         newErrors.push(`Regla ${ruleIndex + 1}: Debe seleccionar una clasificación`)
       }
-      
+
       rule.filters.forEach((filter, filterIndex) => {
         if (!filter.field_name.trim()) {
           newErrors.push(`Regla ${ruleIndex + 1}, Filtro ${filterIndex + 1}: El nombre del campo es requerido`)
         }
-        
+
         if ((filter.filter_type === 'campo_igual' || filter.filter_type === 'campo_contiene') && !filter.value?.trim()) {
           newErrors.push(`Regla ${ruleIndex + 1}, Filtro ${filterIndex + 1}: El valor es requerido`)
         }
-        
+
         if (filter.filter_type === 'campo_en_lista' && (!filter.values || filter.values.length === 0)) {
           newErrors.push(`Regla ${ruleIndex + 1}, Filtro ${filterIndex + 1}: Debe proporcionar al menos un valor`)
         }
@@ -201,7 +201,7 @@ export function StrategyForm({ strategy, onClose }: StrategyFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!validateForm()) {
       return
     }
@@ -378,7 +378,7 @@ export function StrategyForm({ strategy, onClose }: StrategyFormProps) {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label>Prioridad</Label>
                   <Input
@@ -410,7 +410,7 @@ export function StrategyForm({ strategy, onClose }: StrategyFormProps) {
                   />
                   <Label>Activa</Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
                   <Switch
                     checked={rule.auto_approve}
@@ -447,13 +447,13 @@ export function StrategyForm({ strategy, onClose }: StrategyFormProps) {
                         <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
                         <Label className="text-xs">Tipo de Filtro</Label>
                         <Select
                           value={filter.filter_type}
-                          onValueChange={(value: FilterType) => 
+                          onValueChange={(value: FilterType) =>
                             updateFilter(ruleIndex, filterIndex, { filter_type: value })
                           }
                         >
@@ -469,7 +469,7 @@ export function StrategyForm({ strategy, onClose }: StrategyFormProps) {
                           </SelectContent>
                         </Select>
                       </div>
-                      
+
                       <div className="space-y-1">
                         <Label className="text-xs">Campo</Label>
                         <Input
@@ -499,8 +499,8 @@ export function StrategyForm({ strategy, onClose }: StrategyFormProps) {
                         <Textarea
                           className="h-16"
                           value={filter.values?.join(', ') || ''}
-                          onChange={(e) => updateFilter(ruleIndex, filterIndex, { 
-                            values: e.target.value.split(',').map(v => v.trim()).filter(v => v) 
+                          onChange={(e) => updateFilter(ruleIndex, filterIndex, {
+                            values: e.target.value.split(',').map(v => v.trim()).filter(v => v)
                           })}
                           placeholder="ej: Caso confirmado, Caso probable"
                         />
@@ -512,7 +512,7 @@ export function StrategyForm({ strategy, onClose }: StrategyFormProps) {
                         <Label className="text-xs">Operador Lógico</Label>
                         <Select
                           value={filter.logical_operator}
-                          onValueChange={(value: 'AND' | 'OR') => 
+                          onValueChange={(value: 'AND' | 'OR') =>
                             updateFilter(ruleIndex, filterIndex, { logical_operator: value })
                           }
                         >
@@ -525,7 +525,7 @@ export function StrategyForm({ strategy, onClose }: StrategyFormProps) {
                           </SelectContent>
                         </Select>
                       </div>
-                      
+
                       <div className="space-y-1">
                         <Label className="text-xs">Orden</Label>
                         <Input

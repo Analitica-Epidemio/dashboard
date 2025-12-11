@@ -62,8 +62,6 @@ export function GroupSelector({
     hasMore,
     isLoading,
     loadMore,
-    error: infiniteError,
-    isError,
   }: UseInfiniteGroupsResult = useInfiniteGroups(search);
 
   // Enable infinite scrolling when user starts searching
@@ -80,11 +78,6 @@ export function GroupSelector({
   const displayGroups: Group[] = shouldUseInfinite
     ? infiniteGroups  // Can be [] during loading or when no results
     : fallbackGroups;
-
-  const loading: boolean = shouldUseInfinite
-    ? isLoading
-    : Boolean(fallbackLoading);
-  const error: QueryError = shouldUseInfinite && isError ? infiniteError : fallbackError;
 
   // Convert groups to combobox options
   // IMPORTANT: Memoize to prevent unnecessary re-renders of InfiniteCombobox
