@@ -19,19 +19,35 @@ export default withAuth(
   function middleware(req) {
     const token = req.nextauth.token;
 
+    // DEBUG: Log middleware execution
+    console.log('🛡️ [Middleware]', {
+      path: req.nextUrl.pathname,
+      hasToken: !!token,
+      tokenError: token?.error,
+      tokenEmail: token?.email,
+    });
+
     // Si el token tiene error (ej: usuario eliminado, token inválido), redirigir a login
     if (token?.error) {
+      console.log('🛡️ [Middleware] Token has error, redirecting to login:', token.error);
       const loginUrl = new URL('/login', req.url);
       return NextResponse.redirect(loginUrl);
     }
 
+    console.log('🛡️ [Middleware] Access granted to:', req.nextUrl.pathname);
     return NextResponse.next();
   },
   {
     callbacks: {
-      authorized: ({ token }) => {
-        // Permitir acceso solo si hay token Y no tiene errores
-        return !!token && !token.error;
+      authorized: ({ token, req }) => {
+        const isAuthorized = !!token && !token.error;
+        console.log('🛡️ [Middleware:authorized]', {
+          path: req.nextUrl.pathname,
+          hasToken: !!token,
+          tokenError: token?.error,
+          isAuthorized,
+        });
+        return isAuthorized;
       },
     },
     pages: {

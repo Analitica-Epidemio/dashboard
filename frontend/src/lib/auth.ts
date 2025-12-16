@@ -46,7 +46,12 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
   }
 }
 
+// DEBUG: Log serverApiHost on startup
+console.log('🔧 [Auth Config] serverApiHost:', serverApiHost);
+
 export const authOptions: NextAuthOptions = {
+  // DEBUG: Enable NextAuth debug mode (temporarily enabled for debugging)
+  debug: true,
   providers: [
     CredentialsProvider({
       name: 'credentials',
@@ -55,11 +60,15 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
+        console.log('🔐 [Auth:authorize] Starting authorization...');
+
         if (!credentials?.email || !credentials?.password) {
+          console.log('🔐 [Auth:authorize] Missing credentials');
           return null;
         }
 
         try {
+          console.log('🔐 [Auth:authorize] Calling API:', `${serverApiHost}/api/v1/auth/login`);
           const response = await fetch(`${serverApiHost}/api/v1/auth/login`, {
             method: 'POST',
             headers: {
@@ -71,16 +80,22 @@ export const authOptions: NextAuthOptions = {
             }),
           });
 
+          console.log('🔐 [Auth:authorize] API response status:', response.status);
+
           if (!response.ok) {
+            console.log('🔐 [Auth:authorize] API returned error');
             return null;
           }
 
           const data = await response.json();
+          console.log('🔐 [Auth:authorize] Login successful, parsing token...');
 
           // Parse JWT to extract user info
           const tokenPayload = JSON.parse(
             Buffer.from(data.token_acceso.split('.')[1], 'base64').toString()
           );
+
+          console.log('🔐 [Auth:authorize] User authenticated:', tokenPayload.email);
 
           return {
             id: tokenPayload.sub.toString(),
@@ -91,7 +106,8 @@ export const authOptions: NextAuthOptions = {
             refreshToken: data.token_refresco,
             accessTokenExpires: Date.now() + 24 * 60 * 60 * 1000, // 24 horas
           };
-        } catch {
+        } catch (error) {
+          console.error('🔐 [Auth:authorize] Error:', error);
           return null;
         }
       },
@@ -99,8 +115,11 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async jwt({ token, user, trigger }) {
+      console.log('🎫 [Auth:jwt] Callback triggered:', { trigger, hasUser: !!user, tokenEmail: token?.email });
+
       // Initial sign in
       if (user) {
+        console.log('🎫 [Auth:jwt] Initial sign in, setting token data');
         token.accessToken = user.accessToken;
         token.refreshToken = user.refreshToken;
         token.role = user.role;
@@ -154,15 +173,23 @@ export const authOptions: NextAuthOptions = {
       return refreshAccessToken(token);
     },
     async session({ session, token }) {
+      console.log('📦 [Auth:session] Building session:', {
+        userEmail: session?.user?.email,
+        hasAccessToken: !!token.accessToken,
+        tokenError: token.error,
+      });
+
       session.accessToken = token.accessToken as string;
       session.refreshToken = token.refreshToken as string;
       session.user.role = token.role as string;
 
       // Pass error to client side to handle forced re-login
       if (token.error) {
+        console.log('📦 [Auth:session] Token has error, passing to session:', token.error);
         session.error = token.error as string;
       }
 
+      console.log('📦 [Auth:session] Session built successfully');
       return session;
     },
   },
