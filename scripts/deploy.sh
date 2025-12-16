@@ -112,24 +112,36 @@ set -e
 cd $REMOTE_DIR
 
 echo ""
-echo "1/7 Bajando cambios del repositorio..."
+echo "1/8 Bajando cambios del repositorio..."
 git pull --ff-only
 
 echo ""
-echo "2/7 Construyendo nuevas imagenes (esto puede tardar unos minutos)..."
+echo "2/8 Verificando espacio en disco..."
+FREE_SPACE=\$(df / | awk 'NR==2 {print \$4}')
+if [ "\$FREE_SPACE" -lt 5000000 ]; then
+    echo "    Poco espacio (<5GB), limpiando cache antiguo..."
+    # Mantener 2GB de cache mas reciente, eliminar el resto
+    sudo docker builder prune -f --keep-storage 2GB 2>/dev/null || true
+    sudo docker image prune -f 2>/dev/null || true
+else
+    echo "    Espacio suficiente (\$((\$FREE_SPACE/1024/1024))GB libres)"
+fi
+
+echo ""
+echo "3/8 Construyendo nuevas imagenes (esto puede tardar unos minutos)..."
 sudo docker compose -f compose.prod.yaml build api frontend
 
 echo ""
-echo "3/7 Verificando infraestructura (DB, Redis)..."
+echo "4/8 Verificando infraestructura (DB, Redis)..."
 sudo docker compose -f compose.prod.infra.yaml -p ${APP_NAME}_infra up -d --no-recreate
 sleep 2
 
 echo ""
-echo "4/7 Levantando aplicacion ($target)..."
+echo "5/8 Levantando aplicacion ($target)..."
 sudo docker compose -f compose.prod.yaml -p ${APP_NAME}_$target up -d
 
 echo ""
-echo "5/7 Verificando que la aplicacion responda..."
+echo "6/8 Verificando que la aplicacion responda..."
 for i in {1..20}; do
     if curl -sf http://localhost:$api_port/health > /dev/null; then
         echo "    OK - La aplicacion responde correctamente"
@@ -141,23 +153,23 @@ done
 curl -sf http://localhost:$api_port/health > /dev/null || { echo "ERROR: La aplicacion no responde"; exit 1; }
 
 echo ""
-echo "6/7 Aplicando migraciones de base de datos..."
+echo "7/8 Aplicando migraciones de base de datos..."
 sudo docker compose -f compose.prod.yaml -p ${APP_NAME}_$target exec -T api alembic upgrade head || true
 
 echo ""
-echo "7/7 Cambiando trafico a la nueva version ($target)..."
+echo "8/8 Cambiando trafico a la nueva version ($target)..."
 sudo sed -i "s/localhost:300[0-9]/localhost:$frontend_port/g; s/localhost:800[0-9]/localhost:$api_port/g" /etc/nginx/sites-enabled/${APP_NAME}.conf
 sudo nginx -t && sudo nginx -s reload
 echo "$target" > $REMOTE_DIR/active_env
 echo "    Ambiente activo guardado: $target"
 
 echo ""
-echo "8/8 Apagando version anterior ($active)..."
+echo "Apagando version anterior ($active)..."
 sudo docker compose -f compose.prod.yaml -p ${APP_NAME}_$active stop 2>/dev/null || true
 
 echo ""
-echo "Limpiando imagenes viejas..."
-docker image prune -f > /dev/null
+echo "Limpiando imagenes no usadas..."
+sudo docker image prune -f > /dev/null
 EOF
 
     ok "Deploy completado - Ambiente activo: $target"
