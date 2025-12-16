@@ -3,13 +3,18 @@ import type { JWT } from 'next-auth/jwt';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { env } from '@/env';
 
+// URL para llamadas server-side (NextAuth corre en el servidor)
+// En Docker: usa API_HOST_INTERNAL (http://api:8000) para red interna
+// En local: usa NEXT_PUBLIC_API_HOST como fallback
+const serverApiHost = env.API_HOST_INTERNAL ?? env.NEXT_PUBLIC_API_HOST;
+
 /**
  * Refresca el access token usando el refresh token
  * Se llama automáticamente cuando el access token expira
  */
 async function refreshAccessToken(token: JWT): Promise<JWT> {
   try {
-    const response = await fetch(`${env.NEXT_PUBLIC_API_HOST}/api/v1/auth/refresh`, {
+    const response = await fetch(`${serverApiHost}/api/v1/auth/refresh`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -55,7 +60,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          const response = await fetch(`${env.NEXT_PUBLIC_API_HOST}/api/v1/auth/login`, {
+          const response = await fetch(`${serverApiHost}/api/v1/auth/login`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -115,7 +120,7 @@ export const authOptions: NextAuthOptions = {
         try {
           // Call /auth/me to validate the token is still valid
           // NOTE: Can't use apiClient here as it would create circular dependency
-          const response = await fetch(`${env.NEXT_PUBLIC_API_HOST}/api/v1/auth/me`, {
+          const response = await fetch(`${serverApiHost}/api/v1/auth/me`, {
             method: 'GET',
             headers: {
               'Authorization': `Bearer ${token.accessToken}`,

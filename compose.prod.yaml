@@ -28,18 +28,23 @@ services:
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-${SECRET_KEY}}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-${FRONTEND_URL}}
       NODE_ENV: production
+      # URL interna para llamadas server-side (NextAuth -> API)
+      # Usa nombre explicito para evitar ambiguedad en blue-green deployment
+      API_HOST_INTERNAL: http://${APP_NAME:-epidemiologia}_${ENV_COLOR:-prod}_api:8000
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000"]
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 30s
 
   api:
     build:
       context: ./backend
       dockerfile: Dockerfile
     image: ${APP_NAME:-epidemiologia}-api:${ENV_COLOR:-prod}
+    container_name: ${APP_NAME:-epidemiologia}_${ENV_COLOR:-prod}_api
     ports:
       - "127.0.0.1:${API_PORT:-8000}:8000"
     environment:
@@ -57,10 +62,11 @@ services:
       - logs:/app/logs
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 30s
 
   celery_worker:
     image: ${APP_NAME:-epidemiologia}-api:${ENV_COLOR:-prod}

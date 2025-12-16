@@ -8,6 +8,10 @@ export const env = createEnv({
    */
   server: {
     SECRET_KEY: z.string().min(1),
+    // URL interna para llamadas server-side (NextAuth, SSR)
+    // En Docker: http://api:8000 (red interna)
+    // En local: no se define, usa NEXT_PUBLIC_API_HOST como fallback
+    API_HOST_INTERNAL: z.string().url().optional(),
   },
 
   /**
@@ -30,6 +34,7 @@ export const env = createEnv({
     NEXT_PUBLIC_API_HOST: process.env.NEXT_PUBLIC_API_HOST,
     NEXT_PUBLIC_APP_ENV: process.env.NEXT_PUBLIC_APP_ENV,
     SECRET_KEY: process.env.SECRET_KEY,
+    API_HOST_INTERNAL: process.env.API_HOST_INTERNAL,
   },
 
   /**

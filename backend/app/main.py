@@ -265,8 +265,8 @@ async def root() -> Dict[str, Any]:
 
 
 @app.get("/health", include_in_schema=False)
-async def health_check() -> Dict[str, Any]:
-    """Health check para monitoreo"""
+async def health_check(response: Response) -> Dict[str, Any]:
+    """Health check para monitoreo. Devuelve HTTP 503 si unhealthy."""
     from sqlalchemy import text
 
     from app.core.database import engine
@@ -279,8 +279,13 @@ async def health_check() -> Dict[str, Any]:
         logger.error(f"Error en health check de BD: {e}")
         db_status = "unhealthy"
 
+    is_healthy = db_status == "healthy"
+
+    if not is_healthy:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+
     return {
-        "status": "healthy" if db_status == "healthy" else "unhealthy",
+        "status": "healthy" if is_healthy else "unhealthy",
         "timestamp": time.time(),
         "services": {
             "database": db_status,
