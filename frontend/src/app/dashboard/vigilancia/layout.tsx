@@ -1,16 +1,15 @@
-import "../globals.css";
 import type { Metadata } from "next";
-import { Providers } from "../providers";
+import { Providers } from "../../providers";
 
 export const metadata: Metadata = {
-    title: "Vigilancia | Epidemiología",
-    description: "Sistema de Vigilancia Epidemiológica",
+  title: "Vigilancia | Epidemiología",
+  description: "Sistema de Vigilancia Epidemiológica",
 };
 
 export default function VigilanciaLayout({
-    children,
+  children,
 }: {
-    children: React.ReactNode;
+  children: React.ReactNode;
 }) {
-    return <Providers>{children}</Providers>;
+  return <Providers>{children}</Providers>;
 }

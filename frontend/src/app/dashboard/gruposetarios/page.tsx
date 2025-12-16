@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-
 import { useEffect, useState } from "react";
 
 export default function GruposEtariosPage() {
@@ -23,47 +21,32 @@ export default function GruposEtariosPage() {
       console.error(err);
     }
   };
-  
-    const comparar = (h: number, u1: string, r2: number, d: string) => {
-        if (u1 == "dias"){
-            const v1 = math.round(h/30.4);
-	}
-        if (u1 == "años"){
-            const v1 = h*12;
-	}
-        if (u1 == "meses"){
-            const v1 = h;
-	}
-        if (u2 == "dias"){
-            const v2 = math.round(d/30.4);
-	}
-        if (u2 == "años"){
-            const v2 = d*12;
-	}
-        if (u1 == "meses"){
-            const v2 = d;
-	}
-        if (v1 == v2){
-            return 0;
-	}
-        if (v1 > v2){
-            return 1;
-	}
-        return -1;
-    } 
-  
-    const validar = () => {
-        for(var _i = 0; _i < rangos.length; _i++){
-            switch (comparar(rangos[i].hasta, rangos[i].unidad, rangos[i+1].desde, rangos[i+1].unidad)){
-                case 0:
-                    break;
-                case 1:
-                    return 1;
-                case -1:
-                    return -1;
-        }
-        return 0;
+
+  // Convierte un valor a meses para comparar rangos
+  const aMeses = (valor: number, unidad: string): number => {
+    if (unidad === "dias" || unidad === "días") return Math.round(valor / 30.4);
+    if (unidad === "años") return valor * 12;
+    return valor; // meses
+  };
+
+  // Compara dos valores de rango. Retorna 0 si iguales, 1 si h > d, -1 si h < d
+  const comparar = (h: number, u1: string, d: number, u2: string): number => {
+    const v1 = aMeses(h, u1);
+    const v2 = aMeses(d, u2);
+    if (v1 === v2) return 0;
+    if (v1 > v2) return 1;
+    return -1;
+  };
+
+  const validar = (): number => {
+    for (let i = 0; i < rangos.length - 1; i++) {
+      const hasta = parseFloat(String(rangos[i].hasta)) || 0;
+      const desde = rangos[i + 1].desde;
+      const cmp = comparar(hasta, rangos[i].unidad, desde, rangos[i + 1].unidad);
+      if (cmp !== 0) return cmp;
     }
+    return 0;
+  };
 
   useEffect(() => {
     cargar();
@@ -109,13 +92,13 @@ export default function GruposEtariosPage() {
     }
   };
 
-  const actualizarRango = (index: number, field: string, value: any) => {
+  const actualizarRango = (index: number, field: "desde" | "hasta" | "unidad", value: string | number) => {
     const nuevos = [...rangos];
-    nuevos[index][field] = value;
+    (nuevos[index] as Record<string, string | number>)[field] = value;
 
     // si se cambia "hasta", actualizar el "desde" del siguiente
     if (field === "hasta" && nuevos[index + 1]) {
-      nuevos[index + 1].desde = parseFloat(value) || 0;
+      nuevos[index + 1].desde = parseFloat(String(value)) || 0;
     }
     setRangos(nuevos);
   };
