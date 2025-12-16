@@ -1,14 +1,8 @@
 """initial
 
-<<<<<<<< HEAD:backend/alembic/versions/e0c9cbabbf3c_initial.py
-Revision ID: e0c9cbabbf3c
-Revises: 
-Create Date: 2025-12-04 13:39:12.566254
-========
 Revision ID: 71fc65dfbf1b
 Revises: 
 Create Date: 2025-12-09 23:24:27.202300
->>>>>>>> b36b2d831c819eb6fb8885d50bee59186d259dca:backend/alembic/versions/71fc65dfbf1b_initial.py
 
 """
 from typing import Sequence, Union
