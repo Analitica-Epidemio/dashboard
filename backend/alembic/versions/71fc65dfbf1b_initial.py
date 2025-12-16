@@ -15,7 +15,6 @@ import geoalchemy2  # Required for Geometry types
 
 # revision identifiers, used by Alembic.
 revision: str = '71fc65dfbf1b'
-b36b2d831c819eb6fb8885d50bee59186d259dca:backend/alembic/versions/71fc65dfbf1b_initial.py
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
