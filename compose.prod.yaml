@@ -28,6 +28,8 @@ services:
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-${SECRET_KEY}}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-${FRONTEND_URL}}
       NODE_ENV: production
+      # Confiar en headers del proxy (nginx) para NextAuth
+      AUTH_TRUST_HOST: "true"
       # URL interna para llamadas server-side (NextAuth -> API)
       # Usa nombre explicito para evitar ambiguedad en blue-green deployment
       API_HOST_INTERNAL: http://${APP_NAME:-epidemiologia}_${ENV_COLOR:-prod}_api:8000
