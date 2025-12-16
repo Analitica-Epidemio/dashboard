@@ -184,6 +184,4 @@ export const authOptions: NextAuthOptions = {
       },
     },
   },
-  // Confiar en el host del request (necesario para proxies/Docker)
-  trustHost: true,
 };
