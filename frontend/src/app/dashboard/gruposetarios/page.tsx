@@ -2,8 +2,21 @@
 
 import { useEffect, useState } from "react";
 
+interface Rango {
+  desde: number;
+  hasta: string | number | null;
+  unidad: string;
+}
+
+interface ConfigGrupoEtario {
+  id: number;
+  nombre: string;
+  descripcion: string;
+  rangos: Rango[];
+}
+
 export default function GruposEtariosPage() {
-  const [configs, setConfigs] = useState<any[]>([]);
+  const [configs, setConfigs] = useState<ConfigGrupoEtario[]>([]);
   const [nombre, setNombre] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [rangos, setRangos] = useState([{ desde: 0, hasta: "", unidad: "años" }]);
@@ -50,6 +63,7 @@ export default function GruposEtariosPage() {
 
   useEffect(() => {
     cargar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const crear = async (e: React.FormEvent) => {
@@ -224,7 +238,7 @@ function unidadesPermitidas(desde: number, unidad: string) {
                 <h3 className="font-semibold">{c.nombre}</h3>
                 <p className="text-sm text-gray-500">{c.descripcion}</p>
                 <ul className="mt-2 text-sm text-gray-700">
-                  {c.rangos.map((r: any, i: number) => (
+                  {c.rangos.map((r: Rango, i: number) => (
                     <li key={i}>
                       {r.desde} – {r.hasta ?? "+"} {r.unidad}
                     </li>
