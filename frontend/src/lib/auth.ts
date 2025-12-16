@@ -200,15 +200,6 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt',
     maxAge: 7 * 24 * 60 * 60, // 7 days (matches refresh token expiry)
   },
-  cookies: {
-    sessionToken: {
-      name: 'next-auth.session-token',
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: process.env.NODE_ENV === 'production',
-      },
-    },
-  },
+  // Usar configuración de cookies por defecto de NextAuth
+  // En HTTPS producción, usará automáticamente __Secure- prefix
 };
