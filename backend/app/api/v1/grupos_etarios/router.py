@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from app.core.schemas.response import SuccessResponse
+from app.core.schemas.response import SuccessResponse, ErrorResponse
 from .schemas import (
     ConfiguracionRangosCreate,
     ConfiguracionRangosOut,
