@@ -82,6 +82,12 @@ services:
       - logs:/app/logs
     restart: unless-stopped
     command: ["celery", "-A", "app.core.celery_app:celery_app", "worker", "--loglevel=warning", "--concurrency=2", "--queues=default,file_processing,geocoding,maintenance"]
+    healthcheck:
+      test: ["CMD", "celery", "-A", "app.core.celery_app:celery_app", "inspect", "ping", "-d", "celery@$$HOSTNAME"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+      start_period: 60s
 
 volumes:
   uploads:
