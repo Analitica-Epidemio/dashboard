@@ -30,15 +30,34 @@ def load_file(file_path: Path, sheet_name: Optional[str] = None) -> pl.DataFrame
     # Leer archivo - UNA SOLA MANERA
     if file_path.suffix.lower() == ".csv":
         logger.info("⚡ Leyendo CSV con Polars...")
-        df_polars = pl.read_csv(
-            file_path,
-            encoding="latin1",  # SNVS siempre usa Latin-1 (ISO-8859-1)
-            null_values=["", " ", "  "],
-            try_parse_dates=True,
-            infer_schema_length=10000,
-            truncate_ragged_lines=True,  # CSV del SNVS tienen filas irregulares
-            quote_char='"',  # Manejar campos con comas dentro de comillas
-        )
+
+        # Detectar encoding y BOM
+        # Primero intentamos utf-8-sig que maneja BOM automáticamente
+        # Si falla, probamos latin1 (común en archivos SNVS)
+        encodings_to_try = ["utf-8-sig", "utf-8", "latin1"]
+        last_error = None
+
+        for encoding in encodings_to_try:
+            try:
+                logger.info(f"  Intentando encoding: {encoding}")
+                df_polars = pl.read_csv(
+                    file_path,
+                    encoding=encoding,
+                    null_values=["", " ", "  ", "\ufeff"],  # Incluir BOM como null
+                    try_parse_dates=True,
+                    infer_schema_length=10000,
+                    truncate_ragged_lines=True,  # CSV del SNVS tienen filas irregulares
+                    quote_char='"',  # Manejar campos con comas dentro de comillas
+                )
+                logger.info(f"  ✅ Encoding {encoding} funcionó")
+                break
+            except Exception as e:
+                last_error = e
+                logger.warning(f"  ⚠️ Encoding {encoding} falló: {str(e)[:100]}")
+                continue
+        else:
+            # Si ninguno funcionó, lanzar el último error
+            raise last_error
     elif file_path.suffix.lower() in [".xlsx", ".xls"]:
         logger.info("⚡ Leyendo Excel con Polars...")
 
