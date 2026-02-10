@@ -33,6 +33,19 @@ interface MiniCorredorProps {
   className?: string;
 }
 
+/**
+ * Pre-compute stacked zone deltas so each Area represents only its band height.
+ * Recharts stacks them bottom-up: exito → seguridad → alerta → brote.
+ */
+interface StackedData {
+  semana: number;
+  casos: number;
+  exitoBand: number;
+  seguridadBand: number;
+  alertaBand: number;
+  broteBand: number;
+}
+
 export function MiniCorredor({
   data,
   currentWeek,
@@ -40,12 +53,37 @@ export function MiniCorredor({
   height = 40,
   className,
 }: MiniCorredorProps) {
-  // Calculate max value for Y axis
-  const maxY = useMemo(() => {
-    if (!data.length) return 100;
-    const maxCasos = Math.max(...data.map((d) => d.casos || 0));
-    const maxAlerta = Math.max(...data.map((d) => d.alertaMax || 0));
-    return Math.max(maxCasos, maxAlerta) * 1.1;
+  const { stackedData, maxY } = useMemo(() => {
+    if (!data.length) return { stackedData: [] as StackedData[], maxY: 100 };
+
+    let computedMaxY = 0;
+    const stacked = data.map((d) => {
+      const exitoBand = Math.max(0, d.exitoMax);
+      const seguridadBand = Math.max(0, d.seguridadMax - d.exitoMax);
+      const alertaBand = Math.max(0, d.alertaMax - d.seguridadMax);
+      // Brote band extends from alertaMax to the chart ceiling
+      const top = Math.max(d.casos || 0, d.alertaMax || 0);
+      if (top > computedMaxY) computedMaxY = top;
+
+      return {
+        semana: d.semana,
+        casos: d.casos,
+        exitoBand,
+        seguridadBand,
+        alertaBand,
+        broteBand: 0, // will be set after we know maxY
+      };
+    });
+
+    computedMaxY = computedMaxY * 1.1;
+
+    // Set brote band now that we know the ceiling
+    for (const row of stacked) {
+      const alertaTop = row.exitoBand + row.seguridadBand + row.alertaBand;
+      row.broteBand = Math.max(0, computedMaxY - alertaTop);
+    }
+
+    return { stackedData: stacked, maxY: computedMaxY };
   }, [data]);
 
   if (!data.length) {
@@ -63,11 +101,10 @@ export function MiniCorredor({
     <div className={cn("rounded overflow-hidden", className)} style={{ width, height }}>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart
-          data={data}
+          data={stackedData}
           margin={{ top: 2, right: 2, left: 2, bottom: 2 }}
         >
           <defs>
-            {/* Zone gradients */}
             <linearGradient id="miniZonaExito" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#22c55e" stopOpacity={0.4} />
               <stop offset="100%" stopColor="#22c55e" stopOpacity={0.1} />
@@ -89,43 +126,37 @@ export function MiniCorredor({
           <XAxis dataKey="semana" hide />
           <YAxis domain={[0, maxY]} hide />
 
-          {/* Brote zone (above alerta) */}
+          {/* Stacked zones bottom-up: éxito → seguridad → alerta → brote */}
           <Area
-            dataKey="alertaMax"
+            dataKey="exitoBand"
+            type="monotone"
+            stackId="zones"
+            fill="url(#miniZonaExito)"
+            stroke="none"
+          />
+          <Area
+            dataKey="seguridadBand"
+            type="monotone"
+            stackId="zones"
+            fill="url(#miniZonaSeguridad)"
+            stroke="none"
+          />
+          <Area
+            dataKey="alertaBand"
+            type="monotone"
+            stackId="zones"
+            fill="url(#miniZonaAlerta)"
+            stroke="none"
+          />
+          <Area
+            dataKey="broteBand"
             type="monotone"
             stackId="zones"
             fill="url(#miniZonaBrote)"
             stroke="none"
-            baseValue={maxY}
           />
 
-          {/* Alerta zone */}
-          <Area
-            dataKey="alertaMax"
-            type="monotone"
-            fill="url(#miniZonaAlerta)"
-            stroke="none"
-            baseValue={(d: MiniCorredorData) => d.seguridadMax}
-          />
-
-          {/* Seguridad zone */}
-          <Area
-            dataKey="seguridadMax"
-            type="monotone"
-            fill="url(#miniZonaSeguridad)"
-            stroke="none"
-            baseValue={(d: MiniCorredorData) => d.exitoMax}
-          />
-
-          {/* Éxito zone */}
-          <Area
-            dataKey="exitoMax"
-            type="monotone"
-            fill="url(#miniZonaExito)"
-            stroke="none"
-          />
-
-          {/* Cases line */}
+          {/* Cases line (not stacked) */}
           <Line
             dataKey="casos"
             type="monotone"
@@ -135,7 +166,6 @@ export function MiniCorredor({
             activeDot={false}
           />
 
-          {/* Current week marker */}
           {currentWeek && (
             <ReferenceLine
               x={currentWeek}
