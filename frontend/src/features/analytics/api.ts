@@ -161,12 +161,26 @@ export function useCalculateChanges() {
 }
 
 /**
- * Generate draft bulletin
+ * Generate draft bulletin (saves to DB)
  */
 export function useGenerateDraft() {
   return useMutation({
     mutationFn: async (request: GenerateDraftRequest) => {
       const response = await apiClient.POST('/api/v1/boletines/generate-draft', {
+        body: request,
+      });
+      return response.data;
+    },
+  });
+}
+
+/**
+ * Preview draft bulletin (does NOT save to DB)
+ */
+export function usePreviewDraft() {
+  return useMutation({
+    mutationFn: async (request: GenerateDraftRequest) => {
+      const response = await apiClient.POST('/api/v1/boletines/preview-draft', {
         body: request,
       });
       return response.data;

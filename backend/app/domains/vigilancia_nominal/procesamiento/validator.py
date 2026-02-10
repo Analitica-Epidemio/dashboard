@@ -265,12 +265,15 @@ class OptimizedDataValidator:
                 )
 
         # 2. Verificar rangos críticos de edad solamente
+        # Las columnas NUMERIC se leen como Utf8 desde el CSV (ver POLARS_SCHEMA_OVERRIDES),
+        # por eso se castean a Int64 antes de comparar.
         cols_edad = ["EDAD_ACTUAL", "EDAD_DIAGNOSTICO"]
         for col in cols_edad:
             if col in df.columns:
+                col_expr = pl.col(col).cast(pl.Int64, strict=False)
                 conteo_invalido = df.filter(
-                    (pl.col(col) < VALIDATION_LIMITS["min_age"])
-                    | (pl.col(col) > VALIDATION_LIMITS["max_age"])
+                    (col_expr < VALIDATION_LIMITS["min_age"])
+                    | (col_expr > VALIDATION_LIMITS["max_age"])
                 ).height
 
                 if conteo_invalido > 0:

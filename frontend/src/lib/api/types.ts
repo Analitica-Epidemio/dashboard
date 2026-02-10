@@ -458,121 +458,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/dashboard/resumen": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Dashboard Resumen
-         * @description Obtiene estadísticas resumen del dashboard:
-         *     - Tabla resumen con totales
-         *     - CasoEpidemiologicos más típicos
-         *     - Grupos más típicos
-         *     - Pirámide poblacional
-         *     - Territorios afectados (jerárquico)
-         */
-        get: operations["get_dashboard_resumen_api_v1_dashboard_resumen_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/mapa/topojson": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Topojson Data
-         * @description Servir datos TopoJSON optimizados para mapas interactivos.
-         *
-         *     Optimizaciones aplicadas:
-         *     - Compresión gzip: reduce ~89% del tamaño (3.9MB → ~400KB)
-         *     - Cuantización: reduce ~30-50% adicional sin impacto visual
-         *     - Caché HTTP: agresivo con ETag y Cache-Control
-         *     - Lazy loading: cargar solo el nivel geográfico necesario
-         *
-         *     ## Ejemplos de uso:
-         *     - `/api/v1/dashboard/mapa/topojson?nivel=departamentos` - Todos los departamentos
-         *     - `/api/v1/dashboard/mapa/topojson?nivel=buenos_aires` - Solo Buenos Aires
-         *     - `/api/v1/dashboard/mapa/topojson?nivel=departamentos&compress=false` - Sin comprimir
-         */
-        get: operations["get_topojson_data_api_v1_dashboard_mapa_topojson_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/mapa/topojson/info": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Topojson Info
-         * @description Obtener información sobre archivos TopoJSON disponibles y estadísticas de compresión.
-         *
-         *     Útil para debugging y optimización.
-         */
-        get: operations["get_topojson_info_api_v1_dashboard_mapa_topojson_info_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/mapa/departamentos-mapping": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Departamentos Mapping
-         * @description Obtener mapeo de todos los departamentos con IDs INDEC.
-         *
-         *     Este mapeo es usado por el frontend para:
-         *     - Matchear features de TopoJSON con datos de la API
-         *     - Agregar IDs INDEC a features geográficas
-         *     - Colorear departamentos en el mapa según eventos
-         *
-         *     Format de retorno:
-         *     {
-         *       "PROVINCIA_DEPARTAMENTO": {
-         *         "provincia": "string",
-         *         "departamento": "string",
-         *         "id_provincia_indec": number,
-         *         "id_departamento_indec": number
-         *       }
-         *     }
-         *
-         *     Se carga desde el archivo JSON pre-generado que está sincronizado con el TopoJSON.
-         */
-        get: operations["get_departamentos_mapping_api_v1_dashboard_mapa_departamentos_mapping_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/domicilios": {
         parameters: {
             query?: never;
@@ -1226,27 +1111,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/charts/disponibles": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Charts Disponibles
-         * @description Obtiene lista de charts disponibles desde BD
-         *     Usado por el selector de charts en el editor de boletines
-         */
-        get: operations["get_charts_disponibles_api_v1_charts_disponibles_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/charts/indicadores": {
         parameters: {
             query?: never;
@@ -1733,6 +1597,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/boletines/instances/{instance_id}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Duplicar instancia de boletín
+         * @description Crea una copia de una instancia existente con el mismo contenido y parámetros
+         */
+        post: operations["duplicate_boletin_instance_api_v1_boletines_instances__instance_id__duplicate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/boletines/generate-draft": {
         parameters: {
             query?: never;
@@ -1747,6 +1631,26 @@ export interface paths {
          * @description Genera un boletín epidemiológico automático usando datos de analytics y snippets
          */
         post: operations["generate_draft_boletin_api_v1_boletines_generate_draft_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/boletines/preview-draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Previsualizar borrador de boletín sin guardar en DB
+         * @description Genera el contenido del boletín para previsualización sin crear una instancia en la base de datos
+         */
+        post: operations["preview_draft_boletin_api_v1_boletines_preview_draft_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1893,6 +1797,26 @@ export interface paths {
          *         para una semana de referencia específica.
          */
         get: operations["get_secciones_config_api_v1_boletines_secciones_config_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/boletines/charts-disponibles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Obtener charts disponibles para boletines
+         * @description Retorna lista de charts que pueden insertarse en boletines
+         */
+        get: operations["get_charts_disponibles_api_v1_boletines_charts_disponibles_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2771,6 +2695,16 @@ export interface components {
             template_id: number | null;
             /** Name */
             name: string;
+            /** Semana Epidemiologica */
+            semana_epidemiologica: number | null;
+            /** Anio Epidemiologico */
+            anio_epidemiologico: number | null;
+            /** Fecha Inicio */
+            fecha_inicio: string | null;
+            /** Fecha Fin */
+            fecha_fin: string | null;
+            /** Num Semanas */
+            num_semanas: number | null;
             /** Parameters */
             parameters: {
                 [key: string]: unknown;
@@ -3681,9 +3615,9 @@ export interface components {
              * @description Lista de eventos
              */
             data: components["schemas"]["CasoEpidemiologicoListItem"][];
-            pagination: components["schemas"]["app__api__v1__eventos__list__PaginationInfo"];
+            pagination: components["schemas"]["app__api__v1__personas__list__PaginationInfo"];
             /** @description Estadísticas agregadas */
-            stats: components["schemas"]["app__api__v1__eventos__list__CasoEpidemiologicoStats"];
+            stats: components["schemas"]["CasoEpidemiologicoStats"];
             /**
              * Filters Applied
              * @description Filtros aplicados
@@ -3719,6 +3653,65 @@ export interface components {
          * @enum {string}
          */
         CasoEpidemiologicoSortBy: "fecha_desc" | "fecha_asc" | "id_desc" | "id_asc" | "tipo_eno";
+        /**
+         * CasoEpidemiologicoStats
+         * @description Estadísticas agregadas de eventos
+         */
+        CasoEpidemiologicoStats: {
+            /**
+             * Total
+             * @description Total de eventos
+             */
+            total: number;
+            /**
+             * Confirmados
+             * @description CasoEpidemiologicos confirmados
+             * @default 0
+             */
+            confirmados: number;
+            /**
+             * Sospechosos
+             * @description CasoEpidemiologicos sospechosos
+             * @default 0
+             */
+            sospechosos: number;
+            /**
+             * Probables
+             * @description CasoEpidemiologicos probables
+             * @default 0
+             */
+            probables: number;
+            /**
+             * Descartados
+             * @description CasoEpidemiologicos descartados
+             * @default 0
+             */
+            descartados: number;
+            /**
+             * Negativos
+             * @description CasoEpidemiologicos negativos
+             * @default 0
+             */
+            negativos: number;
+            /**
+             * En Estudio
+             * @description CasoEpidemiologicos en estudio
+             * @default 0
+             */
+            en_estudio: number;
+            /**
+             * Requiere Revision
+             * @description CasoEpidemiologicos que requieren revisión
+             * @default 0
+             */
+            requiere_revision: number;
+            /**
+             * Sin Clasificar
+             * @description CasoEpidemiologicos sin clasificar
+             * @default 0
+             */
+            sin_clasificar: number;
+        };
         /**
          * CasoEpidemiologicoTimelineItem
          * @description Item del timeline de un evento
@@ -4342,21 +4335,6 @@ export interface components {
             total: number;
             /** @description Filtros que se aplicaron */
             filtros_aplicados: components["schemas"]["FiltrosGrafico"];
-        };
-        /**
-         * DashboardResumenResponse
-         * @description Response del dashboard resumen
-         */
-        DashboardResumenResponse: {
-            tabla_resumen: components["schemas"]["TablaResumen"];
-            /** Eventos Mas Tipicos */
-            eventos_mas_tipicos: components["schemas"]["app__api__v1__dashboard__get_resumen__CasoEpidemiologicoStats"][];
-            /** Grupos Mas Tipicos */
-            grupos_mas_tipicos: components["schemas"]["GrupoStats"][];
-            /** Piramide Poblacional */
-            piramide_poblacional: components["schemas"]["PiramidePoblacional"][];
-            /** Territorios Afectados */
-            territorios_afectados: components["schemas"]["TerritorioAfectado"][];
         };
         /**
          * DateRangeResponse
@@ -5902,22 +5880,6 @@ export interface components {
             /** Nombre */
             nombre: string;
         };
-        /**
-         * GrupoStats
-         * @description Estadísticas de grupos más típicos
-         */
-        GrupoStats: {
-            /** Grupo Eno */
-            grupo_eno: string;
-            /** Codigo Grupo */
-            codigo_grupo: string | null;
-            /** Total */
-            total: number;
-            /** Tipos */
-            tipos: {
-                [key: string]: unknown;
-            }[];
-        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -6840,7 +6802,7 @@ export interface components {
              * @description Lista de personas
              */
             data: components["schemas"]["PersonaListItem"][];
-            pagination: components["schemas"]["app__api__v1__eventos__list__PaginationInfo"];
+            pagination: components["schemas"]["app__api__v1__personas__list__PaginationInfo"];
             /** @description Estadísticas agregadas sobre todos los resultados */
             stats: components["schemas"]["AggregatedStats"];
             /**
@@ -6969,16 +6931,22 @@ export interface components {
             total_eventos: number;
         };
         /**
-         * PiramidePoblacional
-         * @description Datos para pirámide poblacional
+         * PreviewDraftResponse
+         * @description Response al previsualizar borrador de boletín (sin guardar en DB)
          */
-        PiramidePoblacional: {
-            /** Age */
-            age: string;
-            /** Sex */
-            sex: string;
-            /** Value */
-            value: number;
+        PreviewDraftResponse: {
+            /**
+             * Content
+             * @description Contenido TipTap JSON generado
+             */
+            content: string;
+            /** @description Metadatos del boletín */
+            metadata: components["schemas"]["BoletinMetadata"];
+            /**
+             * Warnings
+             * @description Advertencias de validación
+             */
+            warnings?: string[] | null;
         };
         /**
          * ProcessFromPreviewRequest
@@ -7461,18 +7429,6 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
-        /** SuccessResponse[DashboardResumenResponse] */
-        SuccessResponse_DashboardResumenResponse_: {
-            /** @description Datos de la respuesta */
-            data: components["schemas"]["DashboardResumenResponse"];
-            /**
-             * Meta
-             * @description Metadata opcional (paginación, etc)
-             */
-            meta?: {
-                [key: string]: unknown;
-            } | null;
-        };
         /** SuccessResponse[DateRangeResponse] */
         SuccessResponse_DateRangeResponse_: {
             /** @description Datos de la respuesta */
@@ -7740,6 +7696,18 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /** SuccessResponse[PreviewDraftResponse] */
+        SuccessResponse_PreviewDraftResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["PreviewDraftResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
         /** SuccessResponse[SeccionesConfigResponse] */
         SuccessResponse_SeccionesConfigResponse_: {
             /** @description Datos de la respuesta */
@@ -7872,44 +7840,6 @@ export interface components {
             departamento_match: boolean;
             /** Localidad Match */
             localidad_match: boolean;
-        };
-        /**
-         * TablaResumen
-         * @description Tabla resumen con datos clave
-         */
-        TablaResumen: {
-            /** Total Eventos */
-            total_eventos: number;
-            /** Total Confirmados */
-            total_confirmados: number;
-            /** Total Sospechosos */
-            total_sospechosos: number;
-            /** Total Negativos */
-            total_negativos: number;
-            /** Total Personas Afectadas */
-            total_personas_afectadas: number;
-            /** Fecha Primer Evento */
-            fecha_primer_evento: string | null;
-            /** Fecha Ultimo Evento */
-            fecha_ultimo_evento: string | null;
-        };
-        /**
-         * TerritorioAfectado
-         * @description Provincia/Departamento/Localidad afectada
-         */
-        TerritorioAfectado: {
-            /** Nivel */
-            nivel: string;
-            /** Nombre */
-            nombre: string;
-            /** Codigo Indec */
-            codigo_indec: number | null;
-            /** Total Eventos */
-            total_eventos: number;
-            /** Hijos */
-            hijos?: {
-                [key: string]: unknown;
-            }[] | null;
         };
         /**
          * TimelineItem
@@ -8479,22 +8409,6 @@ export interface components {
             tipo: "mapa";
         };
         /**
-         * CasoEpidemiologicoStats
-         * @description Estadísticas de eventos más típicos
-         */
-        app__api__v1__dashboard__get_resumen__CasoEpidemiologicoStats: {
-            /** Tipo Eno */
-            tipo_eno: string;
-            /** Codigo Tipo */
-            codigo_tipo: string | null;
-            /** Total */
-            total: number;
-            /** Clasificaciones */
-            clasificaciones: {
-                [key: string]: number;
-            };
-        };
-        /**
          * DiagnosticoInfo
          * @description Información de diagnóstico
          */
@@ -8768,101 +8682,6 @@ export interface components {
             dosis_total?: number | null;
         };
         /**
-         * CasoEpidemiologicoStats
-         * @description Estadísticas agregadas de eventos
-         */
-        app__api__v1__eventos__list__CasoEpidemiologicoStats: {
-            /**
-             * Total
-             * @description Total de eventos
-             */
-            total: number;
-            /**
-             * Confirmados
-             * @description CasoEpidemiologicos confirmados
-             * @default 0
-             */
-            confirmados: number;
-            /**
-             * Sospechosos
-             * @description CasoEpidemiologicos sospechosos
-             * @default 0
-             */
-            sospechosos: number;
-            /**
-             * Probables
-             * @description CasoEpidemiologicos probables
-             * @default 0
-             */
-            probables: number;
-            /**
-             * Descartados
-             * @description CasoEpidemiologicos descartados
-             * @default 0
-             */
-            descartados: number;
-            /**
-             * Negativos
-             * @description CasoEpidemiologicos negativos
-             * @default 0
-             */
-            negativos: number;
-            /**
-             * En Estudio
-             * @description CasoEpidemiologicos en estudio
-             * @default 0
-             */
-            en_estudio: number;
-            /**
-             * Requiere Revision
-             * @description CasoEpidemiologicos que requieren revisión
-             * @default 0
-             */
-            requiere_revision: number;
-            /**
-             * Sin Clasificar
-             * @description CasoEpidemiologicos sin clasificar
-             * @default 0
-             */
-            sin_clasificar: number;
-        };
-        /**
-         * PaginationInfo
-         * @description Información de paginación
-         */
-        app__api__v1__eventos__list__PaginationInfo: {
-            /**
-             * Page
-             * @description Página actual
-             */
-            page: number;
-            /**
-             * Page Size
-             * @description Tamaño de página
-             */
-            page_size: number;
-            /**
-             * Total
-             * @description Total de registros
-             */
-            total: number;
-            /**
-             * Total Pages
-             * @description Total de páginas
-             */
-            total_pages: number;
-            /**
-             * Has Next
-             * @description Si hay página siguiente
-             */
-            has_next: boolean;
-            /**
-             * Has Prev
-             * @description Si hay página anterior
-             */
-            has_prev: boolean;
-        };
-        /**
          * DiagnosticoInfo
          * @description Información de un diagnóstico
          */
@@ -8986,6 +8805,42 @@ export interface components {
             dosis?: number | null;
             /** Fecha Aplicacion */
             fecha_aplicacion?: string | null;
+        };
+        /**
+         * PaginationInfo
+         * @description Información de paginación
+         */
+        app__api__v1__personas__list__PaginationInfo: {
+            /**
+             * Page
+             * @description Página actual
+             */
+            page: number;
+            /**
+             * Page Size
+             * @description Tamaño de página
+             */
+            page_size: number;
+            /**
+             * Total
+             * @description Total de registros
+             */
+            total: number;
+            /**
+             * Total Pages
+             * @description Total de páginas
+             */
+            total_pages: number;
+            /**
+             * Has Next
+             * @description Si hay página siguiente
+             */
+            has_next: boolean;
+            /**
+             * Has Prev
+             * @description Si hay página anterior
+             */
+            has_prev: boolean;
         };
     };
     responses: never;
@@ -9713,130 +9568,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GeocodingStatsResponse"];
-                };
-            };
-        };
-    };
-    get_dashboard_resumen_api_v1_dashboard_resumen_get: {
-        parameters: {
-            query?: {
-                /** @description Fecha desde */
-                fecha_desde?: string | null;
-                /** @description Fecha hasta */
-                fecha_hasta?: string | null;
-                /** @description Filtrar por grupo ENO */
-                grupo_id?: number | null;
-                /** @description Filtrar por tipo ENO */
-                tipo_eno_id?: number | null;
-                /** @description Filtrar por clasificación */
-                clasificacion?: string | null;
-                /** @description Filtrar por provincia INDEC */
-                provincia_id?: number | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SuccessResponse_DashboardResumenResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_topojson_data_api_v1_dashboard_mapa_topojson_get: {
-        parameters: {
-            query: {
-                /** @description Nivel geográfico: 'departamentos' (default), o nombre de provincia en minúsculas */
-                nivel: string;
-                /** @description Aplicar compresión gzip */
-                compress?: boolean;
-                /** @description Cuantizar coordenadas para reducir tamaño */
-                quantize?: boolean;
-                /** @description Decimal places for coordinate precision (4 = ~11m accuracy for Argentina) */
-                quantize_decimals?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Optimized TopoJSON geospatial data with compression and quantization */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_topojson_info_api_v1_dashboard_mapa_topojson_info_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Information about available TopoJSON files and compression ratios */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-        };
-    };
-    get_departamentos_mapping_api_v1_dashboard_mapa_departamentos_mapping_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Mapping of departamentos to INDEC IDs for TopoJSON feature matching */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
                 };
             };
         };
@@ -11401,26 +11132,6 @@ export interface operations {
             };
         };
     };
-    get_charts_disponibles_api_v1_charts_disponibles_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SuccessResponse_ChartsDisponiblesResponse_"];
-                };
-            };
-        };
-    };
     get_indicadores_api_v1_charts_indicadores_get: {
         parameters: {
             query?: {
@@ -12680,6 +12391,64 @@ export interface operations {
             };
         };
     };
+    duplicate_boletin_instance_api_v1_boletines_instances__instance_id__duplicate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                instance_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_BoletinInstanceResponse_"];
+                };
+            };
+            /** @description Sin permisos */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Instancia no encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     generate_draft_boletin_api_v1_boletines_generate_draft_post: {
         parameters: {
             query?: never;
@@ -12700,6 +12469,57 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SuccessResponse_GenerateDraftResponse_"];
+                };
+            };
+            /** @description Datos inválidos */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    preview_draft_boletin_api_v1_boletines_preview_draft_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GenerateDraftRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_PreviewDraftResponse_"];
                 };
             };
             /** @description Datos inválidos */
@@ -13033,6 +12853,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_charts_disponibles_api_v1_boletines_charts_disponibles_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_ChartsDisponiblesResponse_"];
                 };
             };
             /** @description Error interno */

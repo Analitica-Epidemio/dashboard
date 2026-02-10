@@ -10,6 +10,7 @@ from enum import Enum
 from typing import Any
 
 import pandas as pd
+import polars as pl
 
 # === TIPOS DE DATOS ===
 
@@ -365,6 +366,28 @@ def validate_dataframe(df: pd.DataFrame) -> dict[str, Any]:
     }
 
 
+def get_polars_schema_overrides() -> dict[str, pl.DataType]:
+    """
+    Genera schema_overrides para pl.read_csv().
+
+    Estrategia:
+    - NUMERIC → pl.Utf8: CSVs del SNVS tienen celdas vacías en columnas
+      numéricas que rompen la inferencia de Polars. El pipeline convierte
+      con pl_safe_int() donde necesita.
+    - DATE → NO se incluye: dejar que try_parse_dates=True los detecte
+      nativamente como pl.Date (más eficiente que parsear strings después).
+    - TEXT/CATEGORICAL/BOOLEAN → pl.Utf8: ya son strings naturalmente.
+
+    Solo genera overrides para columnas NUMERIC (las únicas que causan
+    problemas con la inferencia de tipos de Polars).
+    """
+    overrides: dict[str, pl.DataType] = {}
+    for col in _get_all_columns():
+        if col.type == ColumnType.NUMERIC:
+            overrides[col.name] = pl.Utf8
+    return overrides
+
+
 # === CONSTANTES DE COMPATIBILIDAD (para código existente) ===
 
 ALL_COLUMNS = get_column_names()
@@ -374,3 +397,4 @@ NUMERIC_COLUMNS = get_columns_by_type(ColumnType.NUMERIC)
 BOOLEAN_COLUMNS = get_columns_by_type(ColumnType.BOOLEAN)
 CATEGORICAL_COLUMNS = get_columns_by_type(ColumnType.CATEGORICAL)
 TEXT_COLUMNS = get_columns_by_type(ColumnType.TEXT)
+POLARS_SCHEMA_OVERRIDES = get_polars_schema_overrides()

@@ -102,11 +102,11 @@ export function PeriodSelector({
   };
 
   const formatDateRange = () => {
-    if (!fechaDesde) return "Seleccionar período";
+    if (!fechaDesde || isNaN(fechaDesde.getTime())) return "Seleccionar período";
 
     if (selectedPreset !== "custom") {
       const preset = presets.find((p) => p.value === selectedPreset);
-      if (preset && fechaHasta) {
+      if (preset && fechaHasta && !isNaN(fechaHasta.getTime())) {
         return `${preset.label} (${format(fechaDesde, "d MMM", {
           locale: es,
         })} - ${format(fechaHasta, "d MMM yyyy", { locale: es })})`;
@@ -114,7 +114,7 @@ export function PeriodSelector({
       return "Período personalizado";
     }
 
-    if (!fechaHasta) {
+    if (!fechaHasta || isNaN(fechaHasta.getTime())) {
       return format(fechaDesde, "dd MMM yyyy", { locale: es });
     }
 

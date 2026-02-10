@@ -2,7 +2,7 @@
 Schemas Pydantic para el sistema de boletines
 """
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
@@ -96,6 +96,11 @@ class BoletinInstanceResponse(BaseModel):
     id: int
     template_id: Optional[int]
     name: str
+    semana_epidemiologica: Optional[int]
+    anio_epidemiologico: Optional[int]
+    fecha_inicio: Optional[date]
+    fecha_fin: Optional[date]
+    num_semanas: Optional[int]
     parameters: Dict[str, Any]
     content: Optional[str]
     pdf_path: Optional[str]
@@ -222,6 +227,16 @@ class GenerateDraftResponse(BaseModel):
         ..., description="ID de la instancia de boletín creada"
     )
     content: str = Field(..., description="Contenido HTML generado (TipTap compatible)")
+    metadata: BoletinMetadata = Field(..., description="Metadatos del boletín")
+    warnings: Optional[List[str]] = Field(
+        None, description="Advertencias de validación"
+    )
+
+
+class PreviewDraftResponse(BaseModel):
+    """Response al previsualizar borrador de boletín (sin guardar en DB)"""
+
+    content: str = Field(..., description="Contenido TipTap JSON generado")
     metadata: BoletinMetadata = Field(..., description="Metadatos del boletín")
     warnings: Optional[List[str]] = Field(
         None, description="Advertencias de validación"

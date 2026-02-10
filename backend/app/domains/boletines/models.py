@@ -207,6 +207,30 @@ class BoletinInstance(BaseModel, table=True):
         description="ID de la plantilla usada (None para boletines generados automáticamente)",
     )
 
+    # Período epidemiológico (columnas first-class para queries directas)
+    semana_epidemiologica: Optional[int] = Field(
+        default=None,
+        index=True,
+        description="Semana epidemiológica del boletín",
+    )
+    anio_epidemiologico: Optional[int] = Field(
+        default=None,
+        index=True,
+        description="Año epidemiológico del boletín",
+    )
+    fecha_inicio: Optional[date] = Field(
+        default=None,
+        description="Fecha inicio del período analizado",
+    )
+    fecha_fin: Optional[date] = Field(
+        default=None,
+        description="Fecha fin del período analizado",
+    )
+    num_semanas: Optional[int] = Field(
+        default=None,
+        description="Número de semanas comparadas (ventana de análisis)",
+    )
+
     # Parámetros usados para generar el boletín (JSON)
     # { "periodo": "2024-W40", "departamento": "Rawson", "filtros_aplicados": {...} }
     parameters: Dict[str, Any] = Field(

@@ -170,11 +170,12 @@ class MainProcessor:
             }
         )
 
-        # Join con el DataFrame principal
-        # Usar left join para no perder registros sin evento
+        # Usar la columna pre-convertida a Int64 (creada en _preprocesar_dataframe).
+        # IDEVENTOCASO se lee como Utf8 desde CSV (schema_overrides) y se convierte
+        # a Int64 en _preprocesar_dataframe con pl_safe_int().
         df_con_evento = df.join(
             df_mapeo,
-            left_on=Columns.IDEVENTOCASO.name,
+            left_on="id_evento_caso_int",
             right_on="id_evento_caso_original",
             how="left",
         )

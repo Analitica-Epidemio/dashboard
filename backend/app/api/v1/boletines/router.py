@@ -11,7 +11,7 @@ from app.api.v1.boletines.charts_disponibles import (
     ChartsDisponiblesResponse,
     get_charts_disponibles,
 )
-from app.api.v1.boletines.generate_draft import generate_draft
+from app.api.v1.boletines.generate_draft import generate_draft, preview_draft
 from app.api.v1.boletines.preview import (
     AgenteDisponible,
     CasoEpidemiologicoDisponible,
@@ -22,6 +22,7 @@ from app.api.v1.boletines.schemas import (
     BoletinTemplateConfigResponse,
     BoletinTemplateResponse,
     GenerateDraftResponse,
+    PreviewDraftResponse,
     SeccionesConfigResponse,
 )
 from app.api.v1.boletines.secciones_config import get_secciones_config
@@ -202,6 +203,21 @@ router.add_api_route(
     },
 )
 
+router.add_api_route(
+    "/instances/{instance_id}/duplicate",
+    instances_crud.duplicate_instance,
+    methods=["POST"],
+    response_model=SuccessResponse[BoletinInstanceResponse],
+    name="duplicate_boletin_instance",
+    summary="Duplicar instancia de boletín",
+    description="Crea una copia de una instancia existente con el mismo contenido y parámetros",
+    responses={
+        404: {"model": ErrorResponse, "description": "Instancia no encontrada"},
+        403: {"model": ErrorResponse, "description": "Sin permisos"},
+        500: {"model": ErrorResponse, "description": "Error interno"},
+    },
+)
+
 
 # ============================================================================
 # New automatic generation endpoint
@@ -215,6 +231,20 @@ router.add_api_route(
     name="generate_draft_boletin",
     summary="Generar borrador de boletín automático basado en analytics",
     description="Genera un boletín epidemiológico automático usando datos de analytics y snippets",
+    responses={
+        400: {"model": ErrorResponse, "description": "Datos inválidos"},
+        500: {"model": ErrorResponse, "description": "Error interno"},
+    },
+)
+
+router.add_api_route(
+    "/preview-draft",
+    preview_draft,
+    methods=["POST"],
+    response_model=SuccessResponse[PreviewDraftResponse],
+    name="preview_draft_boletin",
+    summary="Previsualizar borrador de boletín sin guardar en DB",
+    description="Genera el contenido del boletín para previsualización sin crear una instancia en la base de datos",
     responses={
         400: {"model": ErrorResponse, "description": "Datos inválidos"},
         500: {"model": ErrorResponse, "description": "Error interno"},

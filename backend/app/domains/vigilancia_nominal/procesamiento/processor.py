@@ -18,6 +18,7 @@ from app.core.csv_reader import load_file
 from .bulk import MainProcessor as MainBulkProcessor
 from .classifier import EventClassifier
 from .config import ProcessingContext
+from .config.columns import POLARS_SCHEMA_OVERRIDES
 from .validator import OptimizedDataValidator
 
 logger = logging.getLogger(__name__)
@@ -65,7 +66,7 @@ class SimpleEpidemiologicalProcessor:
         try:
             # 1. Cargar archivo (5% del trabajo)
             self._actualizar_progreso(5, "Cargando archivo")
-            df_datos = load_file(ruta_archivo, nombre_hoja)
+            df_datos = load_file(ruta_archivo, nombre_hoja, schema_overrides=POLARS_SCHEMA_OVERRIDES)
 
             # 2. Validar estructura (10% del trabajo)
             self._actualizar_progreso(10, "Validando estructura de columnas")

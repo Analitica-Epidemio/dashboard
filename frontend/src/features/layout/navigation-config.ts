@@ -3,7 +3,6 @@ import {
   IconFileUpload,
   IconSettings,
   IconFileText,
-  IconTrendingUp,
   IconBuildingHospital,
   IconBook,
   IconDatabase,
@@ -94,10 +93,17 @@ export const navigationConfig = {
       type: "link",
     },
     {
-      id: "analytics",
-      title: "Analytics",
-      icon: IconTrendingUp,
+      id: "boletines",
+      title: "Boletines",
+      icon: IconBook,
       url: "/dashboard/analytics",
+      type: "link",
+    },
+    {
+      id: "boletines-historial",
+      title: "Historial",
+      icon: IconFileText,
+      url: "/dashboard/boletines",
       type: "link",
     },
     {
@@ -105,13 +111,6 @@ export const navigationConfig = {
       title: "Reportes",
       icon: IconFileText,
       url: "/dashboard/reportes",
-      type: "link",
-    },
-    {
-      id: "boletines",
-      title: "Boletines",
-      icon: IconBook,
-      url: "/dashboard/boletines",
       type: "link",
     },
 

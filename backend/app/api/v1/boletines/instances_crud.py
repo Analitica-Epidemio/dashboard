@@ -199,6 +199,53 @@ async def update_instance_content(
     return SuccessResponse(data=BoletinInstanceResponse.model_validate(instance))
 
 
+async def duplicate_instance(
+    instance_id: int,
+    db: AsyncSession = Depends(get_async_session),
+    current_user: Optional[User] = RequireAuthOrSignedUrl,
+) -> SuccessResponse[BoletinInstanceResponse]:
+    """
+    Duplicar una instancia de boletín existente.
+    Crea una copia con el mismo contenido y parámetros.
+    """
+    from datetime import datetime
+
+    stmt = select(BoletinInstance).where(col(BoletinInstance.id) == instance_id)
+    result = await db.execute(stmt)
+    original = result.scalar_one_or_none()
+
+    if not original:
+        raise HTTPException(status_code=404, detail="Instancia no encontrada")
+
+    # Verificar permisos - puede duplicar si es el dueño o admin
+    if not current_user or (
+        original.generated_by != current_user.id
+        and not getattr(current_user, "is_admin", False)
+    ):
+        raise HTTPException(
+            status_code=403, detail="No tiene permisos para duplicar esta instancia"
+        )
+
+    # Crear nueva instancia con los mismos datos
+    new_instance = BoletinInstance(
+        template_id=original.template_id,
+        name=f"{original.name} (copia)",
+        parameters=original.parameters,
+        content=original.content,
+        generated_by=current_user.id if current_user else None,
+    )
+
+    db.add(new_instance)
+    await db.commit()
+    await db.refresh(new_instance)
+
+    logger.info(
+        f"Instancia duplicada: {new_instance.name} (ID: {new_instance.id}) desde ID: {instance_id}"
+    )
+
+    return SuccessResponse(data=BoletinInstanceResponse.model_validate(new_instance))
+
+
 async def generate_instance_pdf(
     instance_id: int,
     db: AsyncSession = Depends(get_async_session),

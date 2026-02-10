@@ -19,6 +19,7 @@ from app.api.v1.boletines.schemas import (
     BoletinMetadata,
     GenerateDraftRequest,
     GenerateDraftResponse,
+    PreviewDraftResponse,
 )
 from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
@@ -130,6 +131,74 @@ async def generate_draft(
         logger.error(f"Error generando borrador: {e}", exc_info=True)
         raise HTTPException(
             status_code=500, detail=f"Error al generar borrador: {str(e)}"
+        )
+
+
+async def preview_draft(
+    request: GenerateDraftRequest,
+    db: AsyncSession = Depends(get_async_session),
+    current_user: Optional[User] = RequireAuthOrSignedUrl,
+) -> SuccessResponse[PreviewDraftResponse]:
+    """
+    Genera una vista previa del boletín SIN guardar en la base de datos.
+
+    Mismo proceso que generate_draft pero omite el paso de guardado.
+    Útil para previsualizar el contenido antes de decidir si crearlo.
+    """
+
+    logger.info(
+        f"Preview de borrador - SE {request.semana}/{request.anio}, "
+        f"{len(request.eventos_seleccionados)} eventos"
+    )
+
+    try:
+        # 1. Cargar secciones y bloques activos desde DB
+        secciones = await get_secciones_activas(db)
+        if not secciones:
+            logger.warning("No hay secciones configuradas, generando boletín básico")
+
+        # 2. Construir contexto Jinja2
+        context = build_context(request)
+
+        # 3. Generar contenido desde secciones y bloques
+        final_content, validation_warnings = await generate_content_from_secciones(
+            db=db,
+            secciones=secciones,
+            request=request,
+            context=context,
+        )
+
+        # 4. Preparar metadata (sin guardar en DB)
+        metadata = BoletinMetadata(
+            periodo_analisis={
+                "semana_inicio": context["semana_inicio"],
+                "semana_fin": context["semana"],
+                "anio": context["anio"],
+                "fecha_inicio": context["fecha_inicio"],
+                "fecha_fin": context["fecha_fin"],
+                "num_semanas": request.num_semanas,
+            },
+            eventos_incluidos=[
+                {"tipo_eno_id": e.tipo_eno_id, "incluir_charts": e.incluir_charts}
+                for e in request.eventos_seleccionados
+            ],
+            fecha_generacion=datetime.now(timezone.utc),
+        )
+
+        logger.info("✓ Preview generado exitosamente (sin guardar en DB)")
+
+        return SuccessResponse(
+            data=PreviewDraftResponse(
+                content=json.dumps(final_content),
+                metadata=metadata,
+                warnings=validation_warnings,
+            )
+        )
+
+    except Exception as e:
+        logger.error(f"Error generando preview: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500, detail=f"Error al generar preview: {str(e)}"
         )
 
 
@@ -1047,8 +1116,11 @@ async def generate_content_from_secciones(
 
                     # Agregar contenido del bloque según tipo de visualización
                     if resultado.series and len(resultado.series) > 0:
-                        # Renderizar datos como tabla simple por ahora
-                        content_nodes.extend(_render_resultado_como_tiptap(resultado))
+                        content_nodes.extend(_render_resultado_como_tiptap(
+                            resultado,
+                            fecha_inicio=context.get("fecha_inicio", ""),
+                            fecha_fin=context.get("fecha_fin", ""),
+                        ))
                     else:
                         content_nodes.append(
                             {
@@ -1086,6 +1158,53 @@ async def generate_content_from_secciones(
             # Espacio después de la sección
             content_nodes.append({"type": "paragraph", "content": []})
 
+        # ════════════════════════════════════════════════════════════════
+        # Secciones dinámicas por evento seleccionado
+        # ════════════════════════════════════════════════════════════════
+        eventos_seleccionados = context.get("eventos_seleccionados", [])
+        if eventos_seleccionados:
+            logger.info(
+                f"📋 Generando secciones para {len(eventos_seleccionados)} eventos seleccionados"
+            )
+
+            content_nodes.append(
+                {
+                    "type": "heading",
+                    "attrs": {"level": 2},
+                    "content": [{"type": "text", "text": "Eventos Seleccionados"}],
+                }
+            )
+
+            for evento_sel in eventos_seleccionados:
+                tipo_eno_id = evento_sel.tipo_eno_id
+                try:
+                    evento_nodes = _generate_evento_section(
+                        sync_session=sync_session,
+                        metric_service=adapter.metric_service,
+                        tipo_eno_id=tipo_eno_id,
+                        contexto=bloque_contexto,
+                        fecha_inicio=context.get("fecha_inicio", ""),
+                        fecha_fin=context.get("fecha_fin", ""),
+                    )
+                    content_nodes.extend(evento_nodes)
+                except Exception as e:
+                    logger.error(
+                        f"  ❌ Error generando sección para evento {tipo_eno_id}: {e}",
+                        exc_info=True,
+                    )
+                    warnings.append(f"Error en evento {tipo_eno_id}: {str(e)}")
+                    content_nodes.append(
+                        {
+                            "type": "paragraph",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": f"⚠️ Error generando sección para evento {tipo_eno_id}: {str(e)}",
+                                }
+                            ],
+                        }
+                    )
+
     finally:
         sync_session.close()
         sync_engine.dispose()
@@ -1094,7 +1213,12 @@ async def generate_content_from_secciones(
     return {"type": "doc", "content": content_nodes}, warnings
 
 
-def _render_resultado_como_tiptap(resultado: Any) -> list[dict[str, Any]]:
+def _render_resultado_como_tiptap(
+    resultado: Any,
+    fecha_inicio: str = "",
+    fecha_fin: str = "",
+    evento_ids: list[int] | None = None,
+) -> list[dict[str, Any]]:
     """
     Renderiza un BloqueResultado como nodos TipTap.
 
@@ -1114,13 +1238,23 @@ def _render_resultado_como_tiptap(resultado: Any) -> list[dict[str, Any]]:
 
     if tipo_viz in chart_types:
         # Renderizar como dynamicChart
-        return _render_chart_resultado(resultado)
+        return _render_chart_resultado(
+            resultado,
+            fecha_inicio=fecha_inicio,
+            fecha_fin=fecha_fin,
+            evento_ids=evento_ids,
+        )
     else:
         # Renderizar como tabla
         return _render_table_resultado(resultado)
 
 
-def _render_chart_resultado(resultado: Any) -> list[dict[str, Any]]:
+def _render_chart_resultado(
+    resultado: Any,
+    fecha_inicio: str = "",
+    fecha_fin: str = "",
+    evento_ids: list[int] | None = None,
+) -> list[dict[str, Any]]:
     """
     Renderiza un BloqueResultado como nodo dynamicChart con UniversalChartSpec embebido.
 
@@ -1273,6 +1407,9 @@ def _render_chart_resultado(resultado: Any) -> list[dict[str, Any]]:
             "chartCode": resultado.slug,
             "title": resultado.titulo,
             "height": resultado.config_visual.get("height", 350),
+            "fechaDesde": fecha_inicio,
+            "fechaHasta": fecha_fin,
+            "eventoIds": ",".join(str(eid) for eid in evento_ids) if evento_ids else "",
             "spec": spec,
         },
     }
@@ -1393,6 +1530,215 @@ def _render_table_resultado(resultado: Any) -> list[dict[str, Any]]:
                             ],
                         }
                     )
+
+    return nodes
+
+
+def _generate_evento_section(
+    sync_session: "Session",
+    metric_service: "MetricService",
+    tipo_eno_id: int,
+    contexto: "BoletinContexto",
+    fecha_inicio: str = "",
+    fecha_fin: str = "",
+) -> list[dict[str, Any]]:
+    """
+    Genera una sección TipTap para un evento seleccionado.
+
+    Los IDs vienen de Enfermedad o GrupoDeEnfermedades (vigilancia nominal),
+    NO de TipoCasoEpidemiologicoPasivo (vigilancia agregada).
+
+    Incluye:
+    - Heading con nombre del evento
+    - Curva epidemiológica (casos por semana) como dynamicChart con spec embebido
+    """
+    from sqlalchemy import func
+    from sqlmodel import col, select
+
+    from app.domains.vigilancia_nominal.models.caso import (
+        CasoEpidemiologico,
+        CasoGrupoEnfermedad,
+    )
+    from app.domains.vigilancia_nominal.models.enfermedad import (
+        Enfermedad,
+        GrupoDeEnfermedades,
+    )
+
+    nodes: list[dict[str, Any]] = []
+
+    # 1. Buscar info del evento: primero en Enfermedad, luego en GrupoDeEnfermedades
+    evento_nombre = None
+    evento_slug = None
+    evento_tipo = None
+
+    stmt = select(Enfermedad).where(col(Enfermedad.id) == tipo_eno_id)
+    enfermedad = sync_session.execute(stmt).scalars().first()
+
+    if enfermedad:
+        evento_nombre = enfermedad.nombre
+        evento_slug = enfermedad.slug or f"enfermedad-{tipo_eno_id}"
+        evento_tipo = "tipo_eno"
+    else:
+        stmt = select(GrupoDeEnfermedades).where(
+            col(GrupoDeEnfermedades.id) == tipo_eno_id
+        )
+        grupo = sync_session.execute(stmt).scalars().first()
+        if grupo:
+            evento_nombre = grupo.nombre
+            evento_slug = grupo.slug or f"grupo-{tipo_eno_id}"
+            evento_tipo = "grupo_de_enfermedades"
+
+    if not evento_nombre:
+        logger.warning(f"  ⚠️ Evento ID={tipo_eno_id} no encontrado en Enfermedad ni GrupoDeEnfermedades")
+        nodes.append(
+            {
+                "type": "paragraph",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": f"⚠️ Evento ID {tipo_eno_id} no encontrado",
+                    }
+                ],
+            }
+        )
+        return nodes
+
+    logger.info(f"  📊 Generando sección para: {evento_nombre} (ID: {tipo_eno_id}, tipo: {evento_tipo})")
+
+    # 2. Heading del evento
+    nodes.append(
+        {
+            "type": "heading",
+            "attrs": {"level": 3},
+            "content": [{"type": "text", "text": evento_nombre}],
+        }
+    )
+
+    # 3. Curva epidemiológica: casos por semana (query directa a CasoEpidemiologico)
+    try:
+        # Calcular fechas del período (SE 1 hasta SE actual del año)
+        from app.api.v1.analytics.period_utils import get_epi_week_dates
+
+        fecha_inicio_periodo, _ = get_epi_week_dates(1, contexto.anio_actual)
+        _, fecha_fin_periodo = get_epi_week_dates(
+            contexto.semana_actual, contexto.anio_actual
+        )
+
+        # Construir query según tipo de evento
+        if evento_tipo == "tipo_eno":
+            stmt = (
+                select(
+                    col(CasoEpidemiologico.fecha_minima_caso_semana_epi),
+                    func.count(col(CasoEpidemiologico.id)).label("casos"),
+                )
+                .where(
+                    col(CasoEpidemiologico.id_enfermedad) == tipo_eno_id,
+                    col(CasoEpidemiologico.fecha_minima_caso) >= fecha_inicio_periodo,
+                    col(CasoEpidemiologico.fecha_minima_caso) <= fecha_fin_periodo,
+                )
+                .group_by(col(CasoEpidemiologico.fecha_minima_caso_semana_epi))
+                .order_by(col(CasoEpidemiologico.fecha_minima_caso_semana_epi))
+            )
+        else:
+            # GrupoDeEnfermedades: JOIN con CasoGrupoEnfermedad
+            stmt = (
+                select(
+                    col(CasoEpidemiologico.fecha_minima_caso_semana_epi),
+                    func.count(col(CasoEpidemiologico.id)).label("casos"),
+                )
+                .join(
+                    CasoGrupoEnfermedad,
+                    col(CasoEpidemiologico.id) == col(CasoGrupoEnfermedad.id_caso),
+                )
+                .where(
+                    col(CasoGrupoEnfermedad.id_grupo) == tipo_eno_id,
+                    col(CasoEpidemiologico.fecha_minima_caso) >= fecha_inicio_periodo,
+                    col(CasoEpidemiologico.fecha_minima_caso) <= fecha_fin_periodo,
+                )
+                .group_by(col(CasoEpidemiologico.fecha_minima_caso_semana_epi))
+                .order_by(col(CasoEpidemiologico.fecha_minima_caso_semana_epi))
+            )
+
+        result = sync_session.execute(stmt)
+        rows = result.all()
+        logger.info(f"    Curva epidemiológica: {len(rows)} semanas de datos")
+
+        if rows:
+            labels = [f"SE {row.fecha_minima_caso_semana_epi}" for row in rows]
+            values = [row.casos for row in rows]
+
+            spec = {
+                "id": f"curva-{evento_slug}",
+                "title": f"Casos por semana epidemiológica - {evento_nombre}",
+                "type": "bar",
+                "data": {
+                    "type": "bar",
+                    "data": {
+                        "labels": labels,
+                        "datasets": [
+                            {
+                                "label": evento_nombre,
+                                "data": values,
+                                "color": "#2196F3",
+                            }
+                        ],
+                    },
+                },
+                "config": {
+                    "type": "bar",
+                    "config": {
+                        "height": 300,
+                        "showLegend": False,
+                        "showGrid": True,
+                        "stacked": False,
+                    },
+                },
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+            }
+
+            chart_node = {
+                "type": "dynamicChart",
+                "attrs": {
+                    "chartCode": f"curva-{evento_slug}",
+                    "title": f"Casos por semana epidemiológica - {evento_nombre}",
+                    "height": 300,
+                    "fechaDesde": fecha_inicio,
+                    "fechaHasta": fecha_fin,
+                    "eventoIds": str(tipo_eno_id),
+                    "spec": spec,
+                },
+            }
+            nodes.append(chart_node)
+        else:
+            nodes.append(
+                {
+                    "type": "paragraph",
+                    "content": [
+                        {
+                            "type": "text",
+                            "marks": [{"type": "italic"}],
+                            "text": f"Sin datos de notificación para {evento_nombre} en el período.",
+                        }
+                    ],
+                }
+            )
+
+    except Exception as e:
+        logger.error(f"    ❌ Error generando curva para {evento_nombre}: {e}", exc_info=True)
+        nodes.append(
+            {
+                "type": "paragraph",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": f"⚠️ Error al generar gráfico: {str(e)}",
+                    }
+                ],
+            }
+        )
+
+    # Espacio después de la sección del evento
+    nodes.append({"type": "paragraph", "content": []})
 
     return nodes
 
@@ -2333,6 +2679,12 @@ async def save_boletin_instance(
     boletin = BoletinInstance(
         name=titulo,
         template_id=None,  # None para boletines generados automáticamente
+        # Período como columnas first-class
+        semana_epidemiologica=request.semana,
+        anio_epidemiologico=request.anio,
+        fecha_inicio=context["fecha_inicio_obj"],
+        fecha_fin=context["fecha_fin_obj"],
+        num_semanas=request.num_semanas,
         parameters={
             "semana": request.semana,
             "anio": request.anio,
