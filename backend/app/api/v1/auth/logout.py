@@ -19,10 +19,9 @@ logger = logging.getLogger(__name__)
 async def logout(
     token_data: TokenData = Depends(get_current_user_token),
     auth_service: AuthService = Depends(get_auth_service),
-) -> dict[str, str]:
+) -> None:
     """
     Logout current session
     """
     if token_data.id_sesion:
         await auth_service.cerrar_sesion_usuario(token_data.id_sesion)
-    return {"message": "Logged out successfully"}

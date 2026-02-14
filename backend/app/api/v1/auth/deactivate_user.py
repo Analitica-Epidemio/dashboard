@@ -18,7 +18,7 @@ async def deactivate_user(
     user_id: int,
     current_user: User = Depends(require_superadmin),
     auth_service: AuthService = Depends(get_auth_service),
-) -> dict[str, str]:
+) -> None:
     """
     Deactivate user (Superadmin only)
 
@@ -33,4 +33,3 @@ async def deactivate_user(
     logger.info(
         f"Superadmin {current_user.email} deactivated user {updated_user.email}"
     )
-    return {"message": "User deactivated"}

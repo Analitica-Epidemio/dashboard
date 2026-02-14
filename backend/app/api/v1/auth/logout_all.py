@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 async def logout_all_sessions(
     current_user: User = Depends(get_current_user),
     auth_service: AuthService = Depends(get_auth_service),
-) -> dict[str, str]:
+) -> None:
     """
     Logout from all sessions
     """
@@ -28,4 +28,3 @@ async def logout_all_sessions(
 
     await auth_service.cerrar_todas_sesiones(current_user.id)
     logger.info(f"User {current_user.email} logged out from all sessions")
-    return {"message": "Logged out from all sessions"}

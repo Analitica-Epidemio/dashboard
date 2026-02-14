@@ -155,6 +155,44 @@ class ChartRenderer:
         # Si es un color nombrado o formato desconocido, intentar retornar tal cual
         return color
 
+    def _renderizar_sin_datos(
+        self, titulo: str, dpi: int, ancho: float = 8.0, alto: float = 5.0
+    ) -> bytes:
+        """Renderiza un placeholder cuando no hay datos disponibles."""
+        fig, ax = plt.subplots(figsize=(ancho, alto), dpi=dpi)
+        ax.text(
+            0.5,
+            0.5,
+            "No hay datos disponibles para el período seleccionado",
+            ha="center",
+            va="center",
+            fontsize=12,
+            color="#6B7280",
+            transform=ax.transAxes,
+            style="italic",
+            bbox={
+                "boxstyle": "round,pad=1",
+                "facecolor": "#F9FAFB",
+                "edgecolor": "#E5E7EB",
+                "linewidth": 2,
+            },
+        )
+        ax.set_title(titulo, fontsize=15, fontweight="600", color="#1F2937", pad=15)
+        ax.axis("off")
+
+        buf = io.BytesIO()
+        fig.savefig(
+            buf,
+            format="png",
+            dpi=dpi,
+            bbox_inches="tight",
+            facecolor="white",
+            edgecolor="none",
+        )
+        plt.close(fig)
+        buf.seek(0)
+        return buf.read()
+
     def _renderizar_grafico_linea(
         self, spec: EspecificacionGraficoUniversal, dpi: int
     ) -> bytes:
@@ -162,6 +200,13 @@ class ChartRenderer:
         datos = spec.datos
         if not isinstance(datos, DatosGraficoLinea):
             raise ValueError("Data type mismatch for line chart")
+
+        # Check empty data
+        if not datos.datos.etiquetas or not any(
+            len(ds.datos) > 0 and any(v is not None and v != 0 for v in ds.datos)
+            for ds in datos.datos.conjuntos_datos
+        ):
+            return self._renderizar_sin_datos(spec.titulo, dpi)
 
         # Obtener config
         config = (
@@ -234,6 +279,13 @@ class ChartRenderer:
         datos = spec.datos
         if not isinstance(datos, DatosGraficoBarra):
             raise ValueError("Data type mismatch for bar chart")
+
+        # Check empty data
+        if not datos.datos.etiquetas or not any(
+            len(ds.datos) > 0 and any(v is not None and v != 0 for v in ds.datos)
+            for ds in datos.datos.conjuntos_datos
+        ):
+            return self._renderizar_sin_datos(spec.titulo, dpi)
 
         config = (
             spec.configuracion.configuracion
@@ -326,21 +378,8 @@ class ChartRenderer:
         if not isinstance(datos, DatosGraficoArea):
             raise ValueError("Data type mismatch for area chart")
 
-        config = (
-            spec.configuracion.configuracion
-            if hasattr(spec.configuracion, "configuracion")
-            else {}
-        )
-        alto_val = self._get_config_value(config, "alto")
-        alto = alto_val / 100 if alto_val else 5
-        # Aspect ratio 16:9 para evitar estiramiento
-        ancho = alto * 1.6
-
-        fig, ax = plt.subplots(figsize=(ancho, alto), dpi=dpi)
-
-        # Verificar si hay datos
-        num_labels = len(datos.datos.etiquetas)
-        has_data = num_labels > 0 and any(
+        # Verificar si hay datos (area chart puede tener formato mixto con parsedValue)
+        has_data = len(datos.datos.etiquetas) > 0 and any(
             len(ds.datos) > 0
             and any(
                 v is not None and v != 0
@@ -352,47 +391,20 @@ class ChartRenderer:
         )
 
         if not has_data:
-            # Mostrar mensaje de "No hay datos disponibles" con border
-            ax.text(
-                0.5,
-                0.5,
-                "No hay datos disponibles para el período seleccionado",
-                ha="center",
-                va="center",
-                fontsize=12,
-                color="#6B7280",
-                transform=ax.transAxes,
-                style="italic",
-                bbox={
-                    "boxstyle": "round,pad=1",
-                    "facecolor": "#F9FAFB",
-                    "edgecolor": "#E5E7EB",
-                    "linewidth": 2,
-                },
-            )
-            ax.set_title(
-                spec.titulo, fontsize=15, fontweight="600", color="#1F2937", pad=15
-            )
-            ax.axis("off")
+            return self._renderizar_sin_datos(spec.titulo, dpi)
 
-            # Agregar border alrededor de la figura
-            for spine in ax.spines.values():
-                spine.set_visible(True)
-                spine.set_edgecolor("#E5E7EB")
-                spine.set_linewidth(2)
+        config = (
+            spec.configuracion.configuracion
+            if hasattr(spec.configuracion, "configuracion")
+            else {}
+        )
+        alto_val = self._get_config_value(config, "alto")
+        alto = alto_val / 100 if alto_val else 5
+        # Aspect ratio 16:9 + extra height for legend below
+        ancho = alto * 1.6
+        alto_con_leyenda = alto + 1.2
 
-            buf = io.BytesIO()
-            fig.savefig(
-                buf,
-                format="png",
-                dpi=dpi,
-                bbox_inches="tight",
-                facecolor="white",
-                edgecolor="#E5E7EB",
-            )
-            plt.close(fig)
-            buf.seek(0)
-            return buf.read()
+        fig, ax = plt.subplots(figsize=(ancho, alto_con_leyenda), dpi=dpi)
 
         # Extraer valores numéricos de datos (manejar formato mixto)
         def extract_values(dataset_data: list[Any]) -> list[float]:
@@ -487,11 +499,11 @@ class ChartRenderer:
             ax.set_xlabel("Semana Epidemiológica", fontsize=10, color="#374151")
             ax.set_ylabel("Casos", fontsize=10, color="#374151")
 
-        # Leyenda moderna
+        # Leyenda debajo del gráfico para no solapar con la línea de datos
         if self._get_config_value(config, "mostrar_leyenda"):
             legend = ax.legend(
-                loc="upper left",
-                bbox_to_anchor=(0, 1),
+                loc="upper center",
+                bbox_to_anchor=(0.5, -0.25),
                 frameon=True,
                 fancybox=True,
                 shadow=False,
@@ -530,6 +542,12 @@ class ChartRenderer:
         datos = spec.datos
         if not isinstance(datos, DatosGraficoTorta):
             raise ValueError("Data type mismatch for pie chart")
+
+        # Check empty data
+        if not datos.datos.etiquetas or not datos.datos.conjuntos_datos or not any(
+            v is not None and v != 0 for v in datos.datos.conjuntos_datos[0].datos
+        ):
+            return self._renderizar_sin_datos(spec.titulo, dpi)
 
         config = (
             spec.configuracion.configuracion
@@ -615,6 +633,12 @@ class ChartRenderer:
         datos = spec.datos
         if not isinstance(datos, DatosGraficoPiramide):
             raise ValueError("Data type mismatch for pyramid chart")
+
+        # Check empty data
+        if not datos.datos or not any(
+            p.masculino != 0 or p.femenino != 0 for p in datos.datos
+        ):
+            return self._renderizar_sin_datos(spec.titulo, dpi)
 
         config = (
             spec.configuracion.configuracion
