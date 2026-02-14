@@ -45,7 +45,7 @@ class ProcessFromPreviewRequest(BaseModel):
 
 async def process_file_from_preview(
     request: ProcessFromPreviewRequest, current_user: User = Depends(RequireAnyRole())
-):
+) -> SuccessResponse[AsyncJobResponse]:
     """
     Procesar un archivo que fue previamente subido y previsualizado.
 

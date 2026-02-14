@@ -17,6 +17,9 @@ USAGE:
   manager.upsert_comorbilidades(df)
 """
 
+import logging
+from typing import TYPE_CHECKING
+
 import polars as pl
 
 from ..shared import BulkOperationResult
@@ -24,6 +27,9 @@ from .comorbilidades import ComorbilidadesProcessor
 from .domicilios import DomiciliosProcessor
 from .processor import CiudadanosProcessor
 from .viajes import ViajesProcessor
+
+if TYPE_CHECKING:
+    from ...config import ProcessingContext
 
 
 class CiudadanosManager:
@@ -33,7 +39,7 @@ class CiudadanosManager:
     Combines processors for citizens, addresses, trips, and comorbidities.
     """
 
-    def __init__(self, context, logger):
+    def __init__(self, context: "ProcessingContext", logger: logging.Logger) -> None:
         self.context = context
         self.logger = logger
 

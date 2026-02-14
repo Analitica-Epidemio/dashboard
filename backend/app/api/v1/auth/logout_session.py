@@ -17,7 +17,7 @@ async def logout_session(
     session_id: int,
     current_user: User = Depends(get_current_user),
     auth_service: AuthService = Depends(get_auth_service),
-):
+) -> dict[str, str]:
     """
     Logout specific session
     """

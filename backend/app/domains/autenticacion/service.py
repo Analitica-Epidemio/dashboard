@@ -11,7 +11,7 @@ from sqlalchemy import and_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col
 
-from .models import User, UserLogin, UserSession, UserStatus
+from .models import User, UserLogin, UserRole, UserSession, UserStatus
 from .schemas import SessionInfo, Token, UserCreate, UserUpdate
 from .schemas import UserLogin as UserLoginSchema
 from .security import (
@@ -403,7 +403,7 @@ class AuthService:
         user_email: str,
         user_nombre: str,
         user_apellido: str,
-        user_role,
+        user_role: UserRole,
         sesion: UserSession,
     ) -> Token:
         """Create JWT tokens using extracted data (avoids accessing expired user object)"""

@@ -27,7 +27,7 @@ async def export_eventos(
     formato: str = Query("csv", description="Formato de exportación (csv/excel)"),
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(RequireAnyRole()),
-):
+) -> StreamingResponse:
     """
     Exporta eventos filtrados a CSV o Excel.
 

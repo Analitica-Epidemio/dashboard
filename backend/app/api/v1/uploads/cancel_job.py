@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 async def cancel_job_endpoint(
     job_id: str, current_user: User = Depends(RequireAnyRole())
-):
+) -> JSONResponse:
     """Cancel a running processing job."""
     try:
         cancelled = await job_service.cancelar_job(job_id)

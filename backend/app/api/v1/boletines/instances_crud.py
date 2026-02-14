@@ -5,6 +5,7 @@ CRUD operations para instancias de boletines (boletines generados)
 import logging
 
 from fastapi import Depends, HTTPException, Query
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -247,7 +248,7 @@ async def generate_instance_pdf(
     instance_id: int,
     db: AsyncSession = Depends(get_async_session),
     current_user: User | None = RequireAuthOrSignedUrl,
-):
+) -> FileResponse:
     """
     Generar PDF de una instancia de boletín y retornarlo como descarga.
     """
@@ -351,7 +352,7 @@ async def generate_instance_docx(
     instance_id: int,
     db: AsyncSession = Depends(get_async_session),
     current_user: User | None = RequireAuthOrSignedUrl,
-):
+) -> FileResponse:
     """
     Generar DOCX de una instancia de boletín y retornarlo como descarga.
     """

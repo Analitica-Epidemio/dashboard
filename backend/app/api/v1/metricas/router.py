@@ -5,7 +5,7 @@ Provee acceso unificado al Metric Service para dashboards,
 boletines y BI explorer.
 """
 
-from typing import Any
+from typing import Any, Self
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, model_validator
@@ -45,7 +45,7 @@ class PeriodoFilter(BaseModel):
     semana_hasta: int = Field(..., description="Semana de fin (1-53)", ge=1, le=53)
 
     @model_validator(mode="after")
-    def validar_rango(self):
+    def validar_rango(self) -> Self:
         """Valida que el rango sea coherente (inicio <= fin)."""
         if self.anio_desde > self.anio_hasta:
             raise ValueError("anio_desde debe ser menor o igual a anio_hasta")

@@ -6,7 +6,9 @@ Cada builder DEBE implementar get_dimension_column() con su propio mapeo.
 """
 
 from abc import ABC, abstractmethod
+from typing import Any
 
+from sqlalchemy import ColumnElement, Select
 from sqlalchemy.orm import Session
 
 from app.domains.metricas.criteria.base import Criterion
@@ -47,7 +49,7 @@ class MetricQueryBuilder(ABC):
         self._order_by_dims: bool = False
 
     @abstractmethod
-    def build_base_query(self, metric: MetricDefinition):
+    def build_base_query(self, metric: MetricDefinition) -> Select:
         """
         Retorna la query base con todos los JOINs necesarios.
 
@@ -55,7 +57,7 @@ class MetricQueryBuilder(ABC):
         """
 
     @abstractmethod
-    def get_dimension_column(self, dim_code: DimensionCode):
+    def get_dimension_column(self, dim_code: DimensionCode) -> ColumnElement[Any]:
         """
         Mapea un DimensionCode a la columna SQL correspondiente.
 
@@ -70,7 +72,7 @@ class MetricQueryBuilder(ABC):
                 }[dim_code]
         """
 
-    def get_dimension_order_column(self, dim_code: DimensionCode):
+    def get_dimension_order_column(self, dim_code: DimensionCode) -> ColumnElement[Any]:
         """
         Columna para ORDER BY (por defecto, igual que la columna de dimensión).
 

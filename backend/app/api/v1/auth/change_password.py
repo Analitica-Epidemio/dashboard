@@ -18,7 +18,7 @@ async def change_password(
     password_data: UserChangePassword,
     current_user: User = Depends(get_current_user),
     auth_service: AuthService = Depends(get_auth_service),
-):
+) -> dict[str, str]:
     """
     Change current user's password
 

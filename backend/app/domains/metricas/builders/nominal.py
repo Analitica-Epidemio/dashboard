@@ -4,7 +4,9 @@ Builder para métricas de vigilancia nominal.
 Construye queries sobre CasoEpidemiologico con los JOINs necesarios.
 """
 
-from sqlalchemy import and_, case, func
+from typing import Any
+
+from sqlalchemy import Case, ColumnElement, Select, and_, case, func
 from sqlmodel import col, select
 
 from app.domains.metricas.criteria.base import AndCriteria, Criterion, OrCriteria
@@ -33,7 +35,7 @@ from app.domains.vigilancia_nominal.models.sujetos import Ciudadano
 from .base import MetricQueryBuilder
 
 
-def _build_age_group_expression():
+def _build_age_group_expression() -> Case[Any]:
     """Expresión SQL CASE para calcular grupo etario."""
     age_in_years = func.extract(
         "year",
@@ -56,7 +58,7 @@ def _build_age_group_expression():
     )
 
 
-def _build_age_group_order_expression():
+def _build_age_group_order_expression() -> Case[Any]:
     """Expresión para ordenar los grupos etarios."""
     age_in_years = func.extract(
         "year",
@@ -91,20 +93,20 @@ class NominalQueryBuilder(MetricQueryBuilder):
     Nota: Implementa Lazy Joins para optimizar performance.
     """
 
-    def get_dimension_column(self, dim_code: DimensionCode):
+    def get_dimension_column(self, dim_code: DimensionCode) -> ColumnElement[Any]:
         """Mapeo de dimensiones a columnas SQL."""
         if dim_code == DimensionCode.GRUPO_ETARIO:
             return _build_age_group_expression()
         return {
-            DimensionCode.SEMANA_EPIDEMIOLOGICA: CasoEpidemiologico.fecha_minima_caso_semana_epi,
-            DimensionCode.ANIO_EPIDEMIOLOGICO: CasoEpidemiologico.fecha_minima_caso_anio_epi,
-            DimensionCode.TIPO_EVENTO: Enfermedad.nombre,
-            DimensionCode.SEXO: Ciudadano.sexo_biologico,
-            DimensionCode.PROVINCIA: Provincia.nombre,
-            DimensionCode.DEPARTAMENTO: Departamento.nombre,
+            DimensionCode.SEMANA_EPIDEMIOLOGICA: col(CasoEpidemiologico.fecha_minima_caso_semana_epi),
+            DimensionCode.ANIO_EPIDEMIOLOGICO: col(CasoEpidemiologico.fecha_minima_caso_anio_epi),
+            DimensionCode.TIPO_EVENTO: col(Enfermedad.nombre),
+            DimensionCode.SEXO: col(Ciudadano.sexo_biologico),
+            DimensionCode.PROVINCIA: col(Provincia.nombre),
+            DimensionCode.DEPARTAMENTO: col(Departamento.nombre),
         }[dim_code]
 
-    def get_dimension_order_column(self, dim_code: DimensionCode):
+    def get_dimension_order_column(self, dim_code: DimensionCode) -> ColumnElement[Any]:
         """Columna de orden (GRUPO_ETARIO usa expresión especial)."""
         if dim_code == DimensionCode.GRUPO_ETARIO:
             return _build_age_group_order_expression()
@@ -134,7 +136,7 @@ class NominalQueryBuilder(MetricQueryBuilder):
 
         return deps
 
-    def _check_criteria_recursive(self, criterion: Criterion, deps: dict):
+    def _check_criteria_recursive(self, criterion: Criterion, deps: dict) -> None:
         """Recorre recursivamente los criterios para detectar dependencias."""
         if isinstance(criterion, (AndCriteria, OrCriteria)):
             for c in criterion.criteria:
@@ -146,7 +148,7 @@ class NominalQueryBuilder(MetricQueryBuilder):
         elif isinstance(criterion, EstablecimientoCriterion):
             deps["establecimiento"] = True
 
-    def build_base_query(self, metric: MetricDefinition):
+    def build_base_query(self, metric: MetricDefinition) -> Select:
         """Query base con JOINs condicionales (Lazy Joins)."""
         deps = self._analyze_dependencies()
         query = select(CasoEpidemiologico)
@@ -196,7 +198,7 @@ class NominalQueryBuilder(MetricQueryBuilder):
 
         return query
 
-    def _transform_criterion_expression(self, criterion: Criterion):
+    def _transform_criterion_expression(self, criterion: Criterion) -> ColumnElement[Any] | None:
         """Traduce criterios temporales a columnas de CasoEpidemiologico."""
         from sqlalchemy import or_
 

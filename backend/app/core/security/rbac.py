@@ -3,9 +3,13 @@ Security utilities and RBAC decorators
 Modern role-based access control following 2025 best practices
 """
 
+from __future__ import annotations
+
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Coroutine
 from functools import wraps
+from types import TracebackType
+from typing import Any, Self
 
 from fastapi import Depends, HTTPException, status
 
@@ -22,7 +26,7 @@ class RoleBasedAccessControl:
     """
 
     @staticmethod
-    def require_roles(*allowed_roles: UserRole):
+    def require_roles(*allowed_roles: UserRole) -> Callable[[Callable], Callable]:
         """
         Decorator factory for role-based access control
         Usage: @RoleBasedAccessControl.require_roles(UserRole.SUPERADMIN)
@@ -30,7 +34,7 @@ class RoleBasedAccessControl:
 
         def decorator(func: Callable) -> Callable:
             @wraps(func)
-            async def wrapper(*args, **kwargs):
+            async def wrapper(*args: Any, **kwargs: Any) -> Any:
                 # Extract current_user from kwargs (injected by FastAPI)
                 current_user = kwargs.get("current_user")
                 if not current_user:
@@ -72,7 +76,7 @@ class RoleBasedAccessControl:
         """Decorator to ensure user is active"""
 
         @wraps(func)
-        async def wrapper(*args, **kwargs):
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
             current_user = kwargs.get("current_user")
             if not current_user:
                 raise HTTPException(
@@ -95,7 +99,7 @@ class RoleBasedAccessControl:
 
 
 # Dependency factories for common use cases (modern approach)
-def RequireSuperadmin():
+def RequireSuperadmin() -> Callable[..., Coroutine[Any, Any, User]]:
     """Dependency factory for superadmin-only endpoints"""
 
     async def _require_superadmin(
@@ -111,7 +115,7 @@ def RequireSuperadmin():
     return _require_superadmin
 
 
-def RequireAnyRole():
+def RequireAnyRole() -> Callable[..., Coroutine[Any, Any, User]]:
     """Dependency factory for any authenticated user"""
 
     async def _require_any_role(current_user: User = Depends(get_current_user)) -> User:
@@ -124,7 +128,7 @@ def RequireAnyRole():
     return _require_any_role
 
 
-def RequireActiveUser():
+def RequireActiveUser() -> Callable[..., Coroutine[Any, Any, User]]:
     """Dependency factory for active users only"""
 
     async def _require_active_user(
@@ -140,7 +144,7 @@ def RequireActiveUser():
     return _require_active_user
 
 
-def RequireRoles(*roles: UserRole):
+def RequireRoles(*roles: UserRole) -> Callable[..., Coroutine[Any, Any, User]]:
     """Dependency factory for specific roles"""
 
     async def _require_roles(current_user: User = Depends(get_current_user)) -> User:
@@ -215,10 +219,15 @@ class PermissionContext:
     def __enter__(self):
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         pass
 
-    def require_superadmin(self):
+    def require_superadmin(self) -> Self:
         """Require superadmin role"""
         PermissionChecker.ensure_permission(
             self.current_user.rol == UserRole.SUPERADMIN,
@@ -226,7 +235,7 @@ class PermissionContext:
         )
         return self
 
-    def require_any_role(self):
+    def require_any_role(self) -> Self:
         """Require any valid role"""
         PermissionChecker.ensure_permission(
             self.current_user.rol in [UserRole.SUPERADMIN, UserRole.EPIDEMIOLOGO],
@@ -234,7 +243,7 @@ class PermissionContext:
         )
         return self
 
-    def require_active_user(self):
+    def require_active_user(self) -> Self:
         """Require active user status"""
         PermissionChecker.ensure_permission(
             self.current_user.estado == UserStatus.ACTIVE,
@@ -242,7 +251,7 @@ class PermissionContext:
         )
         return self
 
-    def require_permission(self, condition: bool, message: str | None = None):
+    def require_permission(self, condition: bool, message: str | None = None) -> Self:
         """Require custom permission condition"""
         if message is None:
             message = f"Permission denied for {self.action}"

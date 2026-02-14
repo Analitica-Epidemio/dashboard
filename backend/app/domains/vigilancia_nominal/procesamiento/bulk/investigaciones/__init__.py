@@ -6,15 +6,21 @@ Unified manager for:
 - Contactos y notificaciones
 """
 
+import logging
+from typing import TYPE_CHECKING
+
 import polars as pl
 
 from ..shared import BulkOperationResult
+
+if TYPE_CHECKING:
+    from ...config import ProcessingContext
 
 
 class InvestigacionesProcessor:
     """Unified manager for all investigation-related bulk operations."""
 
-    def __init__(self, context, logger):
+    def __init__(self, context: "ProcessingContext", logger: logging.Logger) -> None:
         from .contactos import ContactosProcessor
         from .investigaciones_eventos import InvestigacionesCasoEpidemiologicosProcessor
 

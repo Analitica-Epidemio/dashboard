@@ -17,9 +17,15 @@ USAGE:
   processor.upsert_internaciones_eventos(df)
 """
 
+import logging
+from typing import TYPE_CHECKING
+
 import polars as pl
 
 from ..shared import BulkOperationResult
+
+if TYPE_CHECKING:
+    from ...config import ProcessingContext
 
 
 class DiagnosticosProcessor:
@@ -27,7 +33,7 @@ class DiagnosticosProcessor:
     Unified manager for all diagnostic-related bulk operations.
     """
 
-    def __init__(self, context, logger):
+    def __init__(self, context: "ProcessingContext", logger: logging.Logger) -> None:
         self.context = context
         self.logger = logger
 

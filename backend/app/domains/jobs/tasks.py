@@ -13,6 +13,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from celery import Task
 from sqlmodel import and_, col, select
 
 import app.domains.vigilancia_agregada.procesamiento
@@ -51,7 +52,7 @@ def convert_numpy_types(obj: Any) -> Any:
 
 
 @file_processing_task(name="app.domains.jobs.tasks.execute_job")
-def execute_job(self, job_id: str) -> dict[str, Any]:
+def execute_job(self: Task, job_id: str) -> dict[str, Any]:
     """
     Task genérica que ejecuta un job usando el processor del registry.
     """
@@ -83,7 +84,7 @@ def execute_job(self, job_id: str) -> dict[str, Any]:
 
             ruta_archivo_obj = Path(ruta_archivo)
 
-            def update_progress(percentage: int, message: str):
+            def update_progress(percentage: int, message: str) -> None:
                 try:
                     if job is not None:
                         job.update_progress(percentage, message)

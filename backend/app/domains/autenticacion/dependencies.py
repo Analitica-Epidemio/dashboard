@@ -2,8 +2,12 @@
 Authentication dependencies for FastAPI
 """
 
+from __future__ import annotations
+
 import logging
+from collections.abc import Callable, Coroutine
 from datetime import UTC
+from typing import Any
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -145,13 +149,13 @@ async def get_current_active_user(
     return current_user
 
 
-def require_roles(allowed_roles: list[UserRole]):
+def require_roles(allowed_roles: list[UserRole]) -> Callable[..., Coroutine[Any, Any, User]]:
     """
     Dependency factory for role-based access control
     Usage: @router.get("/admin", dependencies=[Depends(require_roles([UserRole.ADMIN]))])
     """
 
-    async def check_user_role(current_user: User = Depends(get_current_user)):
+    async def check_user_role(current_user: User = Depends(get_current_user)) -> User:
         if current_user.rol not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

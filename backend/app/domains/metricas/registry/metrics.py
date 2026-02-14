@@ -64,7 +64,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-from sqlalchemy import func
+from sqlalchemy import ColumnElement, func
 from sqlmodel import SQLModel
 
 # Imports de modelos
@@ -132,7 +132,7 @@ class MetricDefinition:
     format_pattern: str = "0,0"
     suffix: str = ""
 
-    def get_aggregation_expr(self):
+    def get_aggregation_expr(self) -> ColumnElement[Any] | None:
         """
         Genera la expresión SQLAlchemy para agregación.
         Usa referencias directas al modelo.

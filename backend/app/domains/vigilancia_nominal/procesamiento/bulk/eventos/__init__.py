@@ -18,9 +18,15 @@ USAGE:
   manager.upsert_agentes_eventos(df, evento_mapping)
 """
 
+import logging
+from typing import TYPE_CHECKING
+
 import polars as pl
 
 from ..shared import BulkOperationResult
+
+if TYPE_CHECKING:
+    from ...config import ProcessingContext
 
 
 class CasoEpidemiologicosManager:
@@ -30,7 +36,7 @@ class CasoEpidemiologicosManager:
     Combines processors for events, symptoms, backgrounds, and places.
     """
 
-    def __init__(self, context, logger):
+    def __init__(self, context: "ProcessingContext", logger: logging.Logger) -> None:
         self.context = context
         self.logger = logger
 

@@ -14,8 +14,12 @@ OPTIMIZACIONES ARQUITECTURALES:
 import contextlib
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import TYPE_CHECKING
 
 import polars as pl
+
+if TYPE_CHECKING:
+    from ..config import ProcessingContext
 from sqlalchemy import inspect, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import col
@@ -48,7 +52,7 @@ class MainProcessor:
     4. Todo lo demás (requiere eventos)
     """
 
-    def __init__(self, context, logger: logging.Logger):
+    def __init__(self, context: "ProcessingContext", logger: logging.Logger) -> None:
         self.context = context
         self.logger = logger
 
@@ -182,7 +186,7 @@ class MainProcessor:
 
         return df_con_evento
 
-    def _actualizar_progreso_operacion(self, nombre_operacion: str):
+    def _actualizar_progreso_operacion(self, nombre_operacion: str) -> None:
         """Actualiza progreso después de cada operación."""
         self.operaciones_completadas += 1
         porcentaje = int((self.operaciones_completadas / self.total_operaciones) * 100)

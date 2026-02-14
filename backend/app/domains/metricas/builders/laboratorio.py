@@ -4,6 +4,9 @@ Builder para métricas de laboratorio (LAB_P26).
 Construye queries sobre ConteoEstudiosLab con los JOINs necesarios.
 """
 
+from typing import Any
+
+from sqlalchemy import ColumnElement, Select
 from sqlmodel import col, select
 
 from app.domains.catalogos.agentes.models import AgenteEtiologico
@@ -33,24 +36,24 @@ class LaboratorioQueryBuilder(MetricQueryBuilder):
     - Geografía (establecimiento -> localidad -> departamento -> provincia)
     """
 
-    def get_dimension_column(self, dim_code: DimensionCode):
+    def get_dimension_column(self, dim_code: DimensionCode) -> ColumnElement[Any]:
         """Mapeo de dimensiones a columnas SQL."""
         return {
-            DimensionCode.SEMANA_EPIDEMIOLOGICA: NotificacionSemanal.semana,
-            DimensionCode.ANIO_EPIDEMIOLOGICO: NotificacionSemanal.anio,
-            DimensionCode.AGENTE_ETIOLOGICO: AgenteEtiologico.nombre,
-            DimensionCode.GRUPO_ETARIO: RangoEtario.nombre,
-            DimensionCode.PROVINCIA: Provincia.nombre,
-            DimensionCode.DEPARTAMENTO: Departamento.nombre,
+            DimensionCode.SEMANA_EPIDEMIOLOGICA: col(NotificacionSemanal.semana),
+            DimensionCode.ANIO_EPIDEMIOLOGICO: col(NotificacionSemanal.anio),
+            DimensionCode.AGENTE_ETIOLOGICO: col(AgenteEtiologico.nombre),
+            DimensionCode.GRUPO_ETARIO: col(RangoEtario.nombre),
+            DimensionCode.PROVINCIA: col(Provincia.nombre),
+            DimensionCode.DEPARTAMENTO: col(Departamento.nombre),
         }[dim_code]
 
-    def get_dimension_order_column(self, dim_code: DimensionCode):
+    def get_dimension_order_column(self, dim_code: DimensionCode) -> ColumnElement[Any]:
         """Columna de orden (GRUPO_ETARIO usa RangoEtario.orden)."""
         if dim_code == DimensionCode.GRUPO_ETARIO:
-            return RangoEtario.orden
+            return col(RangoEtario.orden)
         return self.get_dimension_column(dim_code)
 
-    def build_base_query(self, metric: MetricDefinition):
+    def build_base_query(self, metric: MetricDefinition) -> Select:
         """Query base con todos los JOINs necesarios."""
         return (
             select(ConteoEstudiosLab)

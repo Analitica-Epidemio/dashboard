@@ -69,6 +69,7 @@ select = [
     "RUF",    # ruff-specific rules
     "PERF",   # perflint
     "FA",     # flake8-future-annotations
+    "ANN",    # flake8-annotations (tipos estrictos)
 ]
 ignore = [
     "E501",   # line too long (manejado por formatter)
@@ -77,10 +78,14 @@ ignore = [
     "RUF002", # ambiguous unicode in docstring
     "RUF003", # ambiguous unicode in comment
     "UP040",  # non-pep695-type-alias (TypeAlias todavía es válido en 3.11)
+    "ANN204", # missing-return-type-special-method (omitir -> None en __init__ es convención)
+    "ANN401", # any-type (Any es legítimo para JSON data, SQLAlchemy generics, etc.)
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "alembic/*" = ["UP", "E", "F", "I"]
+"app/scripts/*" = ["ANN"]  # scripts de seed/CLI no requieren tipos estrictos
+"app/commands/*" = ["ANN"]  # comandos CLI no requieren tipos estrictos
 
 [build-system]
 requires = ["hatchling"]
@@ -108,6 +113,8 @@ exclude = ["alembic", "tests", "data"]
 # SQLAlchemy/SQLModel genera muchos falsos positivos por metaprogramming
 possibly-unresolved-reference = "warn"
 unresolved-attribute = "warn"
+# Mapped[T] es ColumnElement[T] en runtime pero ty no entiende la herencia
+invalid-return-type = "warn"
 # deprecated: session.execute() es la forma correcta para queries multi-columna
 # aunque SQLModel lo marca deprecated a favor de exec() que no soporta tuplas
 deprecated = "ignore"

@@ -157,7 +157,7 @@ class SimpleEpidemiologicalProcessor:
         """
 
         # Crear callback wrapper que mapea progreso interno (0-100) a rango 25-95
-        def callback_progreso_wrapper(porcentaje_interno: int, mensaje: str):
+        def callback_progreso_wrapper(porcentaje_interno: int, mensaje: str) -> None:
             # Mapear 0-100 interno → 25-95 externo
             porcentaje_mapeado = 25 + int((porcentaje_interno / 100) * 70)
             self._actualizar_progreso(porcentaje_mapeado, mensaje)

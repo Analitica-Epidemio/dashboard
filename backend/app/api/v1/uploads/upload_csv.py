@@ -24,7 +24,7 @@ async def upload_csv_async(
     original_filename: str = Form(..., description="Nombre del archivo Excel original"),
     sheet_name: str = Form(..., description="Nombre de la hoja convertida"),
     current_user: User = Depends(RequireAnyRole()),
-):
+) -> JSONResponse:
     """
     Procesamiento asíncrono de CSV con Celery.
 

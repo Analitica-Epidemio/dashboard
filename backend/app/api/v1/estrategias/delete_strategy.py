@@ -23,7 +23,7 @@ async def delete_strategy(
     force: bool = False,
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(RequireSuperadmin()),
-):
+) -> JSONResponse:
     """
     Eliminar estrategia.
 

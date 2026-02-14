@@ -188,7 +188,7 @@ class ServerSidePDFGenerator:
         }
         """
 
-    def _setup_custom_styles(self):
+    def _setup_custom_styles(self) -> None:
         """Crear estilos personalizados"""
         self.styles.add(
             ParagraphStyle(

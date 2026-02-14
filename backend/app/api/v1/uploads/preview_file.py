@@ -207,7 +207,7 @@ def get_total_row_count(file_path: Path, sheet_name: str | None = None) -> int:
 async def preview_uploaded_file(
     file: UploadFile = File(..., description="Archivo Excel o CSV epidemiológico"),
     current_user: User = Depends(RequireAnyRole()),
-):
+) -> SuccessResponse[FilePreviewResponse]:
     """
     Preview uploaded file - OPTIMIZED VERSION.
 
