@@ -86,5 +86,5 @@ async def trigger_geocoding(
         logger.error(f"Error triggeando geocodificación: {e}")
         raise HTTPException(
             status_code=500,
-            detail=f"Error al encolar tarea de geocodificación: {str(e)}",
-        )
+            detail=f"Error al encolar tarea de geocodificación: {e!s}",
+        ) from e

@@ -47,16 +47,16 @@ from .salud import SaludManager
 from .shared import BulkOperationResult, BulkProcessorBase
 
 __all__ = [
-    # Main entry point
-    "MainProcessor",
+    "BulkOperationResult",
     # Shared utilities
     "BulkProcessorBase",
-    "BulkOperationResult",
+    "CasoEpidemiologicosManager",
     # Domain managers and processors (rarely used directly)
     "CiudadanosManager",
     "DiagnosticosProcessor",
     "EstablecimientosProcessor",
-    "CasoEpidemiologicosManager",
     "InvestigacionesProcessor",
+    # Main entry point
+    "MainProcessor",
     "SaludManager",
 ]

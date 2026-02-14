@@ -11,9 +11,9 @@ OPTIMIZACIONES ARQUITECTURALES:
 - Ejecución paralela de operaciones independientes (ThreadPoolExecutor)
 """
 
+import contextlib
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Dict, Tuple
 
 import polars as pl
 from sqlalchemy import inspect, select, text
@@ -100,11 +100,11 @@ class MainProcessor:
             Columns.FECHA_ALTA_MEDICA.name,
         ]
 
-        for nombre_col in columnas_fecha:
-            if nombre_col in df.columns:
-                conversiones.append(
-                    pl_safe_date(nombre_col).alias(f"{nombre_col}_date")
-                )
+        conversiones.extend(
+            pl_safe_date(nombre_col).alias(f"{nombre_col}_date")
+            for nombre_col in columnas_fecha
+            if nombre_col in df.columns
+        )
 
         # Aplicar conversiones si hay alguna
         if conversiones:
@@ -114,7 +114,7 @@ class MainProcessor:
 
     def _preparar_vistas_filtradas(
         self, df: pl.DataFrame
-    ) -> Tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame]:
+    ) -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame]:
         """
         Crea vistas pre-filtradas del DataFrame por dominio.
 
@@ -144,7 +144,7 @@ class MainProcessor:
         return df_ciudadanos, df_eventos, df
 
     def _agregar_mapeo_evento_a_df(
-        self, df: pl.DataFrame, mapeo_eventos: Dict[int, int]
+        self, df: pl.DataFrame, mapeo_eventos: dict[int, int]
     ) -> pl.DataFrame:
         """
         Agrega columna id_evento al DataFrame mediante JOIN.
@@ -190,7 +190,7 @@ class MainProcessor:
         if self.context.progress_callback:
             self.context.progress_callback(porcentaje, f"Guardando {nombre_operacion}")
 
-    def procesar_todo(self, df: pl.DataFrame) -> Dict[str, BulkOperationResult]:
+    def procesar_todo(self, df: pl.DataFrame) -> dict[str, BulkOperationResult]:
         """
         Procesar todos los datos en el orden correcto con Polars puro + optimizaciones arquitecturales.
 
@@ -230,7 +230,7 @@ class MainProcessor:
             # ===== OPTIMIZACIÓN 2: PRE-FILTRADO =====
             # Crear vistas filtradas por dominio UNA SOLA VEZ
             self.logger.info("Creando vistas filtradas por dominio...")
-            df_ciudadanos, df_eventos, df_completo = self._preparar_vistas_filtradas(df)
+            df_ciudadanos, df_eventos, _df_completo = self._preparar_vistas_filtradas(df)
 
             # 1. ESTABLECIMIENTOS - Independientes, crean el catálogo
             mapeo_establecimientos = (
@@ -445,11 +445,9 @@ class MainProcessor:
         finally:
             # SIEMPRE restaurar FK checks, incluso si hay error
             self.logger.info("🔄 Restaurando FK checks...")
-            try:
-                # Si la transacción está en estado de error, hacer rollback primero
+            # Si la transacción está en estado de error, hacer rollback primero
+            with contextlib.suppress(Exception):
                 self.context.session.rollback()
-            except Exception:
-                pass  # Ignorar si no hay transacción activa
             try:
                 self.context.session.execute(
                     text("SET session_replication_role = DEFAULT")
@@ -460,7 +458,7 @@ class MainProcessor:
                     f"No se pudo restaurar session_replication_role: {e}"
                 )
 
-    def _loguear_resumen(self, resultados: Dict[str, BulkOperationResult]) -> None:
+    def _loguear_resumen(self, resultados: dict[str, BulkOperationResult]) -> None:
         """Log a summary of all bulk operations."""
         total_insertados = sum(r.inserted_count for r in resultados.values())
         total_errores = sum(len(r.errors) for r in resultados.values())

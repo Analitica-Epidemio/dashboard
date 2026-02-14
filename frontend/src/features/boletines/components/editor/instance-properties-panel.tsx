@@ -394,7 +394,7 @@ function ImageProperties({ editor, attrs }: { editor: Editor; attrs?: Record<str
           <Label className="text-xs text-muted-foreground mb-2 block">Texto alternativo</Label>
           <Input
             value={alt}
-            onChange={(e) => {
+            onChange={() => {
               // Would need to update the node attributes
               // This requires access to the node position
             }}

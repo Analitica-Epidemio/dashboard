@@ -172,12 +172,12 @@ async def process_file_from_preview(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Hoja '{nombre_hoja}' no encontrada en el archivo",
-        )
+        ) from None
 
     except Exception as e:
-        logger.error(f"❌ Error procesando archivo: {str(e)}", exc_info=True)
+        logger.error(f"❌ Error procesando archivo: {e!s}", exc_info=True)
         # Mantener archivo para reintentos - se limpia automáticamente
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error procesando archivo: {str(e)}",
-        )
+            detail=f"Error procesando archivo: {e!s}",
+        ) from e

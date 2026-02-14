@@ -216,10 +216,10 @@ class EstablecimientosProcessor(BulkProcessorBase):
         establecimientos_df = pl.concat(establecimientos_dfs).unique()
 
         # Convertir a set de tuplas - UNA SOLA conversión
-        establecimientos_set = set(
+        establecimientos_set = {
             (row["id_snvs_limpio"], row["nombre_limpio"], row["id_loc_int"])
             for row in establecimientos_df.iter_rows(named=True)
-        )
+        }
 
         return establecimientos_set
 

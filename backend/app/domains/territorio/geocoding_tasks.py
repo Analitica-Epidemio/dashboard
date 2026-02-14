@@ -29,7 +29,7 @@ Mejora de rendimiento:
 
 import logging
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any
 
 from sqlalchemy import select
 from sqlmodel import Session, col
@@ -54,7 +54,7 @@ logger = logging.getLogger(__name__)
 )
 def geocode_pending_domicilios(
     self: Any, batch_size: int = 500, max_attempts: int = 3
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Geocodifica un batch de domicilios pendientes.
 

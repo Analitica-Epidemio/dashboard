@@ -18,8 +18,6 @@ USAGE:
   manager.upsert_agentes_eventos(df, evento_mapping)
 """
 
-from typing import Dict
-
 import polars as pl
 
 from ..shared import BulkOperationResult
@@ -52,13 +50,13 @@ class CasoEpidemiologicosManager:
 
     # Delegate methods to sub-processors
     def upsert_eventos(
-        self, df: pl.DataFrame, establecimiento_mapping: Dict
-    ) -> Dict[int, int]:
+        self, df: pl.DataFrame, establecimiento_mapping: dict
+    ) -> dict[int, int]:
         """Bulk upsert events."""
         return self.eventos.upsert_eventos(df, establecimiento_mapping)
 
     def upsert_sintomas_eventos(
-        self, df: pl.DataFrame, sintoma_mapping: Dict[str, int]
+        self, df: pl.DataFrame, sintoma_mapping: dict[str, int]
     ) -> BulkOperationResult:
         """Bulk upsert event symptoms."""
         return self.sintomas.upsert_sintomas_eventos(df, sintoma_mapping)
@@ -74,7 +72,7 @@ class CasoEpidemiologicosManager:
         return self.ambitos.upsert_ambitos_concurrencia(df)
 
     def upsert_agentes_eventos(
-        self, df: pl.DataFrame, evento_mapping: Dict[int, int]
+        self, df: pl.DataFrame, evento_mapping: dict[int, int]
     ) -> BulkOperationResult:
         """
         Bulk upsert etiological agents detected in events.
@@ -85,7 +83,7 @@ class CasoEpidemiologicosManager:
         return self.agentes.upsert_agentes_eventos(df, evento_mapping)
 
     # Helper methods exposed publicly
-    def _get_or_create_sintomas(self, df: pl.DataFrame) -> Dict[str, int]:
+    def _get_or_create_sintomas(self, df: pl.DataFrame) -> dict[str, int]:
         """Get or create symptom catalog entries."""
         return self.sintomas._get_or_create_sintomas(df)
 

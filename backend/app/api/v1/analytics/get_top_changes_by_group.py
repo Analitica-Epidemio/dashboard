@@ -4,7 +4,6 @@ Optimizado con CTEs y window functions para evitar N+1 queries
 """
 
 import logging
-from typing import Optional
 
 from fastapi import Depends, Query
 from sqlalchemy import text
@@ -34,7 +33,7 @@ async def get_top_changes_by_group(
     ),
     limit: int = Query(10, description="Top N eventos por grupo", ge=1, le=50),
     db: AsyncSession = Depends(get_async_session),
-    current_user: Optional[User] = RequireAuthOrSignedUrl,
+    current_user: User | None = RequireAuthOrSignedUrl,
 ) -> SuccessResponse[TopChangesByGroupResponse]:
     """
     Endpoint optimizado para obtener top cambios por grupo epidemiológico.

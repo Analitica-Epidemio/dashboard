@@ -6,7 +6,6 @@ duplicados en múltiples archivos.
 """
 
 from enum import Enum
-from typing import Dict, List, Set
 
 from app.core.constants import SexoBiologico, TipoDocumento
 
@@ -24,30 +23,30 @@ from .columns import (
 )
 
 __all__ = [
+    "ALERT_THRESHOLDS",
+    "BATCH_SIZES",
+    "BOOLEAN_COLUMNS",
     "BOOLEAN_COLUMNS_LIST",
+    "BOOLEAN_MAPPING",
+    "DATE_COLUMNS",
     "DATE_COLUMNS_LIST",
+    "DOCUMENTO_MAPPING",
+    "INTEGER_COLUMNS",
+    "LOG_FIELDS",
+    "METADATA_EXTRACTION_TYPES",
+    "NULL_VALUES",
+    "NUMERIC_COLUMNS",
     "NUMERIC_COLUMNS_LIST",
+    "PERFORMANCE_CONFIG",
+    "PROVINCIA_MAPPING",
+    "REQUIRED_COLUMNS",
+    "SEXO_MAPPING",
+    "STRING_COLUMNS",
+    "TEXT_COLUMNS",
+    "UPPERCASE_COLUMNS",
+    "VALIDATION_LIMITS",
     "ProcessingStage",
     "ProcessingStatus",
-    "BATCH_SIZES",
-    "PERFORMANCE_CONFIG",
-    "UPPERCASE_COLUMNS",
-    "DOCUMENTO_MAPPING",
-    "SEXO_MAPPING",
-    "PROVINCIA_MAPPING",
-    "VALIDATION_LIMITS",
-    "ALERT_THRESHOLDS",
-    "METADATA_EXTRACTION_TYPES",
-    "LOG_FIELDS",
-    "BOOLEAN_COLUMNS",
-    "DATE_COLUMNS",
-    "INTEGER_COLUMNS",
-    "NUMERIC_COLUMNS",
-    "STRING_COLUMNS",
-    "REQUIRED_COLUMNS",
-    "TEXT_COLUMNS",
-    "BOOLEAN_MAPPING",
-    "NULL_VALUES",
 ]
 
 
@@ -96,7 +95,7 @@ PERFORMANCE_CONFIG = {
 # para mantener sincronización con el frontend y proveer type checking
 
 # Columnas que requieren normalización de mayúsculas
-UPPERCASE_COLUMNS: List[str] = [
+UPPERCASE_COLUMNS: list[str] = [
     Columns.EVENTO.name,
     Columns.CLASIFICACION_MANUAL.name,
     Columns.SEXO.name,
@@ -107,7 +106,7 @@ UPPERCASE_COLUMNS: List[str] = [
 
 # === MAPEOS DE NORMALIZACIÓN ===
 # Mapeo de tipos de documento
-DOCUMENTO_MAPPING: Dict[str, TipoDocumento] = {
+DOCUMENTO_MAPPING: dict[str, TipoDocumento] = {
     "DNI": TipoDocumento.DNI,
     "D.N.I.": TipoDocumento.DNI,
     "D.N.I": TipoDocumento.DNI,
@@ -125,7 +124,7 @@ DOCUMENTO_MAPPING: Dict[str, TipoDocumento] = {
 }
 
 # Mapeo de sexo biológico
-SEXO_MAPPING: Dict[str, SexoBiologico] = {
+SEXO_MAPPING: dict[str, SexoBiologico] = {
     "MASCULINO": SexoBiologico.MASCULINO,
     "MASC": SexoBiologico.MASCULINO,
     "HOMBRE": SexoBiologico.MASCULINO,
@@ -142,7 +141,7 @@ SEXO_MAPPING: Dict[str, SexoBiologico] = {
 }
 
 # Mapeo de provincias normalizadas
-PROVINCIA_MAPPING: Dict[str, str] = {
+PROVINCIA_MAPPING: dict[str, str] = {
     "CABA": "CIUDAD AUTÓNOMA DE BUENOS AIRES",
     "C.A.B.A.": "CIUDAD AUTÓNOMA DE BUENOS AIRES",
     "CAPITAL FEDERAL": "CIUDAD AUTÓNOMA DE BUENOS AIRES",
@@ -180,7 +179,7 @@ ALERT_THRESHOLDS = {
 # === METADATA EXTRACTION ===
 
 # Tipos ENO que requieren extracción de metadata especial
-METADATA_EXTRACTION_TYPES: Set[str] = {
+METADATA_EXTRACTION_TYPES: set[str] = {
     "Rabia animal",
     "Lesiones graves por mordedura de perro",
 }
@@ -198,19 +197,19 @@ LOG_FIELDS = {
 # Using EpiColumns instead of hardcoded strings
 
 # Boolean columns for validation (using EpiColumns)
-BOOLEAN_COLUMNS: Set[str] = set(BOOLEAN_COLUMNS_LIST)
+BOOLEAN_COLUMNS: set[str] = set(BOOLEAN_COLUMNS_LIST)
 
 # Date columns for validation (using EpiColumns)
-DATE_COLUMNS: Set[str] = set(DATE_COLUMNS_LIST)
+DATE_COLUMNS: set[str] = set(DATE_COLUMNS_LIST)
 
 # Integer columns for validation (using EpiColumns)
-INTEGER_COLUMNS: Set[str] = set(NUMERIC_COLUMNS_LIST)
+INTEGER_COLUMNS: set[str] = set(NUMERIC_COLUMNS_LIST)
 
 # Numeric columns for validation (using EpiColumns)
-NUMERIC_COLUMNS: Set[str] = set(NUMERIC_COLUMNS_LIST)
+NUMERIC_COLUMNS: set[str] = set(NUMERIC_COLUMNS_LIST)
 
 # String columns that require cleaning (using EpiColumns)
-STRING_COLUMNS: Set[str] = {
+STRING_COLUMNS: set[str] = {
     Columns.NOMBRE.name,
     Columns.APELLIDO.name,
     Columns.NRO_DOC.name,
@@ -226,14 +225,14 @@ STRING_COLUMNS: Set[str] = {
 }
 
 # Required columns that must be present (using EpiColumns)
-REQUIRED_COLUMNS: Set[str] = {
+REQUIRED_COLUMNS: set[str] = {
     Columns.IDEVENTOCASO.name,
     Columns.EVENTO.name,
     Columns.CODIGO_CIUDADANO.name,
 }
 
 # Text column processing (using EpiColumns)
-TEXT_COLUMNS: Set[str] = STRING_COLUMNS.union(
+TEXT_COLUMNS: set[str] = STRING_COLUMNS.union(
     {
         Columns.OBSERVACIONES.name,
         Columns.ANTECEDENTE_EPIDEMIOLOGICO.name,
@@ -252,7 +251,7 @@ TEXT_COLUMNS: Set[str] = STRING_COLUMNS.union(
 )
 
 # Boolean value mapping (keeping existing mapping - these are data values, not column names)
-BOOLEAN_MAPPING: Dict[str, bool] = {
+BOOLEAN_MAPPING: dict[str, bool] = {
     "SI": True,
     "SÍ": True,
     "S": True,
@@ -269,7 +268,7 @@ BOOLEAN_MAPPING: Dict[str, bool] = {
 }
 
 # NULL values that should be treated as None (keeping existing - these are data values, not column names)
-NULL_VALUES: Set[str] = {
+NULL_VALUES: set[str] = {
     "",
     " ",
     "  ",

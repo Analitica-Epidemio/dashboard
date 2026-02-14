@@ -3,7 +3,6 @@ CRUD operations para templates de boletines
 """
 
 import logging
-from typing import List, Optional
 
 from fastapi import Depends, HTTPException, Query
 from sqlalchemy import select
@@ -27,7 +26,7 @@ logger = logging.getLogger(__name__)
 async def create_template(
     template_data: BoletinTemplateCreate,
     db: AsyncSession = Depends(get_async_session),
-    current_user: Optional[User] = RequireAuthOrSignedUrl,
+    current_user: User | None = RequireAuthOrSignedUrl,
 ) -> SuccessResponse[BoletinTemplateResponse]:
     """
     Crear un nuevo template de boletín.
@@ -52,14 +51,14 @@ async def create_template(
 
 
 async def list_templates(
-    category: Optional[str] = Query(None, description="Filtrar por categoría"),
-    is_public: Optional[bool] = Query(None, description="Filtrar por público/privado"),
-    search: Optional[str] = Query(None, description="Buscar por nombre o descripción"),
+    category: str | None = Query(None, description="Filtrar por categoría"),
+    is_public: bool | None = Query(None, description="Filtrar por público/privado"),
+    search: str | None = Query(None, description="Buscar por nombre o descripción"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_async_session),
-    current_user: Optional[User] = RequireAuthOrSignedUrl,
-) -> SuccessResponse[List[BoletinTemplateResponse]]:
+    current_user: User | None = RequireAuthOrSignedUrl,
+) -> SuccessResponse[list[BoletinTemplateResponse]]:
     """
     Listar templates de boletines con filtros opcionales.
     """
@@ -100,7 +99,7 @@ async def list_templates(
 async def get_template(
     template_id: int,
     db: AsyncSession = Depends(get_async_session),
-    current_user: Optional[User] = RequireAuthOrSignedUrl,
+    current_user: User | None = RequireAuthOrSignedUrl,
 ) -> SuccessResponse[BoletinTemplateResponse]:
     """
     Obtener un template específico por ID.
@@ -113,14 +112,13 @@ async def get_template(
         raise HTTPException(status_code=404, detail="Template no encontrado")
 
     # Verificar permisos (solo si no es público y no es el creador)
-    if not template.is_public:
-        if not current_user or (
-            template.created_by != current_user.id
-            and not getattr(current_user, "is_admin", False)
-        ):
-            raise HTTPException(
-                status_code=403, detail="No tiene permisos para ver este template"
-            )
+    if not template.is_public and (not current_user or (
+        template.created_by != current_user.id
+        and not getattr(current_user, "is_admin", False)
+    )):
+        raise HTTPException(
+            status_code=403, detail="No tiene permisos para ver este template"
+        )
 
     return SuccessResponse(data=BoletinTemplateResponse.model_validate(template))
 
@@ -129,7 +127,7 @@ async def update_template(
     template_id: int,
     template_data: BoletinTemplateUpdate,
     db: AsyncSession = Depends(get_async_session),
-    current_user: Optional[User] = RequireAuthOrSignedUrl,
+    current_user: User | None = RequireAuthOrSignedUrl,
 ) -> SuccessResponse[BoletinTemplateResponse]:
     """
     Actualizar un template existente.
@@ -176,7 +174,7 @@ async def update_template(
 async def delete_template(
     template_id: int,
     db: AsyncSession = Depends(get_async_session),
-    current_user: Optional[User] = RequireAuthOrSignedUrl,
+    current_user: User | None = RequireAuthOrSignedUrl,
 ) -> SuccessResponse[dict]:
     """
     Eliminar un template.
@@ -214,7 +212,7 @@ async def duplicate_template(
     template_id: int,
     new_name: str = Query(..., description="Nombre para el template duplicado"),
     db: AsyncSession = Depends(get_async_session),
-    current_user: Optional[User] = RequireAuthOrSignedUrl,
+    current_user: User | None = RequireAuthOrSignedUrl,
 ) -> SuccessResponse[BoletinTemplateResponse]:
     """
     Duplicar un template existente.
@@ -228,14 +226,13 @@ async def duplicate_template(
         raise HTTPException(status_code=404, detail="Template no encontrado")
 
     # Verificar permisos de lectura
-    if not original.is_public:
-        if not current_user or (
-            original.created_by != current_user.id
-            and not getattr(current_user, "is_admin", False)
-        ):
-            raise HTTPException(
-                status_code=403, detail="No tiene permisos para duplicar este template"
-            )
+    if not original.is_public and (not current_user or (
+        original.created_by != current_user.id
+        and not getattr(current_user, "is_admin", False)
+    )):
+        raise HTTPException(
+            status_code=403, detail="No tiene permisos para duplicar este template"
+        )
 
     # Crear copia
     duplicate = BoletinTemplate(

@@ -3,12 +3,11 @@ Utilidades para cálculos epidemiológicos
 """
 
 from datetime import date, timedelta
-from typing import Dict, Optional, Tuple
 
 
 def calcular_semana_epidemiologica(
-    fecha: Optional[date],
-) -> Tuple[Optional[int], Optional[int]]:
+    fecha: date | None,
+) -> tuple[int | None, int | None]:
     """
     Calcula la semana epidemiológica y el año epidemiológico para una fecha dada.
 
@@ -84,8 +83,8 @@ def calcular_semana_epidemiologica(
 
 
 def calcular_edad(
-    fecha_nacimiento: Optional[date], fecha_evento: date
-) -> Optional[int]:
+    fecha_nacimiento: date | None, fecha_evento: date
+) -> int | None:
     """
     Calcula la edad en años completos entre fecha de nacimiento y fecha del evento.
 
@@ -111,7 +110,7 @@ def calcular_edad(
     return edad if edad >= 0 else None
 
 
-def obtener_fechas_semana_epidemiologica(year: int, week: int) -> Tuple[date, date]:
+def obtener_fechas_semana_epidemiologica(year: int, week: int) -> tuple[date, date]:
     """
     Obtiene las fechas de inicio (domingo) y fin (sábado) para una semana epidemiológica dada.
 
@@ -144,7 +143,7 @@ def obtener_fechas_semana_epidemiologica(year: int, week: int) -> Tuple[date, da
 
 def generar_metadata_semanas(
     semana_inicio: int, año_inicio: int, semana_fin: int, año_fin: int
-) -> list[Dict]:
+) -> list[dict]:
     """
     Genera metadata para un rango de semanas epidemiológicas.
 

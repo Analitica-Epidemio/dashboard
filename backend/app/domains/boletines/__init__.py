@@ -15,16 +15,16 @@ from app.domains.boletines.models import (
 )
 
 __all__ = [
+    "BoletinBloque",
+    "BoletinInstance",
+    "BoletinSeccion",
+    "BoletinSnippet",
+    # Modelos
+    "BoletinTemplate",
+    "BoletinTemplateConfig",
+    "CapacidadHospitalaria",
     # Constantes
     "TipoBloque",
     "TipoVisualizacion",
-    # Modelos
-    "BoletinTemplate",
-    "BoletinInstance",
-    "BoletinTemplateConfig",
-    "BoletinSnippet",
-    "CapacidadHospitalaria",
     "VirusRespiratorio",
-    "BoletinSeccion",
-    "BoletinBloque",
 ]

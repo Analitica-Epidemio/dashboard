@@ -5,7 +5,6 @@ MIGRADO 100% a EspecificacionGraficoUniversal con datos REALES
 
 import logging
 from datetime import date
-from typing import List, Optional
 
 from fastapi import Depends, Query
 from pydantic import BaseModel, Field
@@ -17,7 +16,11 @@ from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAuthOrSignedUrl
 from app.domains.autenticacion.models import User
-from app.domains.charts.schemas import EspecificacionGraficoUniversal, FiltrosGrafico
+from app.domains.charts.schemas import (
+    CodigoGrafico,
+    EspecificacionGraficoUniversal,
+    FiltrosGrafico,
+)
 from app.domains.charts.services.spec_generator import ChartSpecGenerator
 from app.domains.dashboard.conditions import ChartConditionResolver
 from app.domains.dashboard.models import DashboardChart
@@ -28,7 +31,7 @@ logger = logging.getLogger(__name__)
 class DashboardChartsResponse(BaseModel):
     """Response model para charts del dashboard usando EspecificacionGraficoUniversal"""
 
-    charts: List[EspecificacionGraficoUniversal] = Field(
+    charts: list[EspecificacionGraficoUniversal] = Field(
         ..., description="Lista de charts como EspecificacionGraficoUniversal"
     )
     total: int = Field(..., description="Total de charts aplicables")
@@ -37,38 +40,38 @@ class DashboardChartsResponse(BaseModel):
     )
 
 
-# Mapeo de códigos de BD a códigos del generador
-CHART_CODE_MAPPING = {
-    "curva_epidemiologica": "casos_por_semana",
-    "corredor_endemico": "corredor_endemico",
-    "piramide_poblacional": "piramide_edad",
-    "mapa_geografico": "mapa_chubut",
-    "estacionalidad": "estacionalidad",
-    "casos_edad": "casos_edad",
-    "distribucion_clasificacion": "distribucion_clasificacion",
+# Mapeo de códigos de BD (funcion_procesamiento) → CodigoGrafico canónico
+CHART_CODE_MAPPING: dict[str, CodigoGrafico] = {
+    "curva_epidemiologica": CodigoGrafico.CASOS_POR_SEMANA,
+    "corredor_endemico": CodigoGrafico.CORREDOR_ENDEMICO,
+    "piramide_poblacional": CodigoGrafico.PIRAMIDE_EDAD,
+    "mapa_geografico": CodigoGrafico.MAPA_CHUBUT,
+    "estacionalidad": CodigoGrafico.ESTACIONALIDAD,
+    "casos_edad": CodigoGrafico.CASOS_EDAD,
+    "distribucion_clasificacion": CodigoGrafico.DISTRIBUCION_CLASIFICACION,
 }
 
 
 async def get_dashboard_charts(
-    grupo_id: Optional[int] = Query(None, description="ID del grupo seleccionado"),
-    tipo_eno_ids: Optional[List[int]] = Query(
+    grupo_id: int | None = Query(None, description="ID del grupo seleccionado"),
+    tipo_eno_ids: list[int] | None = Query(
         None, description="IDs de los eventos a filtrar"
     ),
-    fecha_desde: Optional[date] = Query(
+    fecha_desde: date | None = Query(
         None, description="Fecha desde (formato: YYYY-MM-DD)"
     ),
-    fecha_hasta: Optional[date] = Query(
+    fecha_hasta: date | None = Query(
         None, description="Fecha hasta (formato: YYYY-MM-DD)"
     ),
-    clasificaciones: Optional[List[str]] = Query(
+    clasificaciones: list[str] | None = Query(
         None, description="Filtrar por clasificaciones estratégicas"
     ),
-    provincia_id: Optional[int] = Query(
+    provincia_id: int | None = Query(
         None,
         description="Código INDEC de provincia (opcional, si no se envía muestra todas las provincias)",
     ),
     db: AsyncSession = Depends(get_async_session),
-    current_user: Optional[User] = RequireAuthOrSignedUrl,
+    current_user: User | None = RequireAuthOrSignedUrl,
 ) -> SuccessResponse[DashboardChartsResponse]:
     """
     Obtiene los charts aplicables como EspecificacionGraficoUniversal con datos REALES
@@ -81,11 +84,11 @@ async def get_dashboard_charts(
     """
 
     # Convertir filtros a FiltrosGrafico
-    fecha_desde_str: Optional[str] = None
+    fecha_desde_str: str | None = None
     if fecha_desde is not None:
         fecha_desde_str = fecha_desde.isoformat()
 
-    fecha_hasta_str: Optional[str] = None
+    fecha_hasta_str: str | None = None
     if fecha_hasta is not None:
         fecha_hasta_str = fecha_hasta.isoformat()
 

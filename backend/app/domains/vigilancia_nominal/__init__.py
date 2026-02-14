@@ -23,14 +23,14 @@ from app.domains.vigilancia_nominal.models import (
 )
 
 __all__ = [
-    # Enfermedades (ENO)
-    "Enfermedad",
-    "GrupoDeEnfermedades",
-    "EnfermedadGrupo",
     # Casos
     "CasoEpidemiologico",
     "CasoGrupoEnfermedad",
+    # Enfermedades (ENO)
+    "Enfermedad",
+    "EnfermedadGrupo",
+    "GravedadEnfermedad",
+    "GrupoDeEnfermedades",
     # Constants
     "ModalidadVigilancia",
-    "GravedadEnfermedad",
 ]

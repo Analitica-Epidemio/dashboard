@@ -3,7 +3,6 @@ Modelo simplificado para sistema de charts dinámicos
 Arquitectura simple sin sobre-ingeniería
 """
 
-from typing import Dict, Optional
 
 from sqlalchemy import JSON, Column, Text
 from sqlmodel import Field
@@ -24,7 +23,7 @@ class DashboardChart(BaseModel, table=True):
         max_length=50, unique=True, index=True, description="Código único del chart"
     )
     nombre: str = Field(max_length=100, description="Nombre del chart para mostrar")
-    descripcion: Optional[str] = Field(
+    descripcion: str | None = Field(
         None, sa_column=Column(Text), description="Descripción del chart"
     )
 
@@ -34,7 +33,7 @@ class DashboardChart(BaseModel, table=True):
     )
 
     # Condiciones para mostrar este chart
-    condiciones_display: Optional[Dict] = Field(
+    condiciones_display: dict | None = Field(
         None,
         sa_column=Column(JSON),
         description="Condiciones para mostrar el chart. Ej: {'grupo': ['DENGUE', 'IRA']}",
@@ -47,7 +46,7 @@ class DashboardChart(BaseModel, table=True):
     )
 
     # Configuración del chart
-    configuracion_chart: Optional[Dict] = Field(
+    configuracion_chart: dict | None = Field(
         None,
         sa_column=Column(JSON),
         description="Config específica del chart (colores, ejes, etc)",

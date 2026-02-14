@@ -4,8 +4,8 @@ Modern practices including password hashing, JWT tokens, rate limiting
 """
 
 import secrets
-from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import bcrypt
 from fastapi import HTTPException, status
@@ -107,15 +107,15 @@ class TokenSecurity:
 
     @staticmethod
     def crear_token_acceso(
-        datos: dict, delta_expiracion: Optional[timedelta] = None
+        datos: dict, delta_expiracion: timedelta | None = None
     ) -> str:
         """Create JWT access token"""
         a_codificar = datos.copy()
 
         if delta_expiracion:
-            expira = datetime.now(timezone.utc) + delta_expiracion
+            expira = datetime.now(UTC) + delta_expiracion
         else:
-            expira = datetime.now(timezone.utc) + timedelta(
+            expira = datetime.now(UTC) + timedelta(
                 minutes=SecurityConfig.ACCESS_TOKEN_EXPIRE_MINUTES
             )
 
@@ -129,7 +129,7 @@ class TokenSecurity:
     def crear_token_refresco(datos: dict) -> str:
         """Create JWT refresh token"""
         a_codificar = datos.copy()
-        expira = datetime.now(timezone.utc) + timedelta(
+        expira = datetime.now(UTC) + timedelta(
             days=SecurityConfig.REFRESH_TOKEN_EXPIRE_DAYS
         )
         a_codificar.update({"exp": expira, "type": "refresh"})
@@ -139,7 +139,7 @@ class TokenSecurity:
         return str(jwt_codificado)
 
     @staticmethod
-    def verificar_token(token: str, tipo_token: str = "access") -> Optional[TokenData]:
+    def verificar_token(token: str, tipo_token: str = "access") -> TokenData | None:
         """
         Verify and decode JWT token
         Returns TokenData if valid, None if invalid
@@ -171,10 +171,10 @@ class TokenSecurity:
                 logger.warning(f"Invalid user_id in token: {user_id_str}")
                 return None
 
-            email: Optional[str] = payload.get("email")
-            rol: Optional[str] = payload.get("role")
+            email: str | None = payload.get("email")
+            rol: str | None = payload.get("role")
             id_sesion_raw = payload.get("session_id")
-            id_sesion: Optional[int] = (
+            id_sesion: int | None = (
                 int(id_sesion_raw) if id_sesion_raw is not None else None
             )
 
@@ -184,10 +184,10 @@ class TokenSecurity:
             return token_data
 
         except JWTError as e:
-            logger.warning(f"JWT validation error: {str(e)}")
+            logger.warning(f"JWT validation error: {e!s}")
             return None
         except ValidationError as e:
-            logger.warning(f"Token data validation error: {str(e)}")
+            logger.warning(f"Token data validation error: {e!s}")
             return None
 
 
@@ -202,14 +202,14 @@ class SessionSecurity:
     @staticmethod
     def es_sesion_expirada(expiracion_sesion: datetime) -> bool:
         """Check if session is expired"""
-        return datetime.now(timezone.utc) > expiracion_sesion
+        return datetime.now(UTC) > expiracion_sesion
 
     @staticmethod
-    def obtener_expiracion_sesion(horas: Optional[int] = None) -> datetime:
+    def obtener_expiracion_sesion(horas: int | None = None) -> datetime:
         """Get session expiry time"""
         if horas is None:
             horas = SecurityConfig.SESSION_EXPIRE_HOURS
-        return datetime.now(timezone.utc) + timedelta(hours=horas)
+        return datetime.now(UTC) + timedelta(hours=horas)
 
 
 class SecurityTokens:
@@ -255,7 +255,7 @@ class RateLimiter:
 
     @classmethod
     def esta_limitado(
-        cls, identificador: str, max_intentos: Optional[int] = None
+        cls, identificador: str, max_intentos: int | None = None
     ) -> bool:
         """Check if identifier is rate limited"""
         if max_intentos is None:

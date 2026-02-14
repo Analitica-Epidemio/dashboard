@@ -25,21 +25,21 @@ from .parametros_epidemiologicos import (
 )
 
 __all__ = [
-    # Áreas programáticas
-    "TRELEW",
-    "NORTE",
-    "SUR",
-    "ESQUEL",
-    "AREAS_PROGRAMATICAS",
-    "AP_TRELEW",
-    "AP_NORTE",
-    "AP_SUR",
-    "AP_ESQUEL",
-    "AP_DEPARTAMENTOS",
-    "POBLACION_AREAS",
+    "AJUSTE_100_HAB",
     # Parámetros
     "AJUSTE_HAB",
-    "AJUSTE_100_HAB",
+    "AP_DEPARTAMENTOS",
+    "AP_ESQUEL",
+    "AP_NORTE",
+    "AP_SUR",
+    "AP_TRELEW",
+    "AREAS_PROGRAMATICAS",
+    "ESQUEL",
     "GRUPOS_ETARIOS",
+    "NORTE",
+    "POBLACION_AREAS",
     "SIN_DATO",
+    "SUR",
+    # Áreas programáticas
+    "TRELEW",
 ]

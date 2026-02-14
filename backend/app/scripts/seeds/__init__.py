@@ -11,4 +11,4 @@ Cada módulo en esta carpeta contiene seeds específicos:
 from app.scripts.seeds.charts import main as seed_charts
 from app.scripts.seeds.strategies import main as seed_strategies
 
-__all__ = ["seed_strategies", "seed_charts"]
+__all__ = ["seed_charts", "seed_strategies"]

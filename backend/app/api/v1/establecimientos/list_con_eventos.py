@@ -3,7 +3,6 @@ Endpoint para listar establecimientos con conteo de eventos relacionados.
 Similar al listado de domicilios.
 """
 
-from typing import List, Optional
 
 from fastapi import Depends, Query
 from pydantic import BaseModel, Field
@@ -27,20 +26,20 @@ class EstablecimientoListItem(BaseModel):
 
     id: int = Field(..., description="ID del establecimiento")
     nombre: str = Field(..., description="Nombre del establecimiento")
-    codigo_refes: Optional[str] = Field(None, description="Código REFES")
-    codigo_snvs: Optional[str] = Field(None, description="Código SNVS")
-    source: Optional[str] = Field(None, description="Fuente del dato (IGN, SNVS)")
+    codigo_refes: str | None = Field(None, description="Código REFES")
+    codigo_snvs: str | None = Field(None, description="Código SNVS")
+    source: str | None = Field(None, description="Fuente del dato (IGN, SNVS)")
 
     # Ubicación
-    localidad_nombre: Optional[str] = Field(None, description="Nombre de la localidad")
-    departamento_nombre: Optional[str] = Field(
+    localidad_nombre: str | None = Field(None, description="Nombre de la localidad")
+    departamento_nombre: str | None = Field(
         None, description="Nombre del departamento"
     )
-    provincia_nombre: Optional[str] = Field(None, description="Nombre de la provincia")
+    provincia_nombre: str | None = Field(None, description="Nombre de la provincia")
 
     # Coordenadas
-    latitud: Optional[float] = Field(None, description="Latitud")
-    longitud: Optional[float] = Field(None, description="Longitud")
+    latitud: float | None = Field(None, description="Latitud")
+    longitud: float | None = Field(None, description="Longitud")
 
     # Conteo de eventos
     total_eventos: int = Field(0, description="Total de eventos relacionados")
@@ -63,7 +62,7 @@ class EstablecimientoListItem(BaseModel):
 class EstablecimientosListResponse(BaseModel):
     """Respuesta con lista paginada de establecimientos"""
 
-    items: List[EstablecimientoListItem] = Field(default_factory=list)
+    items: list[EstablecimientoListItem] = Field(default_factory=list)
     total: int = Field(..., description="Total de establecimientos")
     page: int = Field(..., description="Página actual")
     page_size: int = Field(..., description="Tamaño de página")
@@ -77,8 +76,8 @@ async def list_establecimientos_con_eventos(
         "eventos_desc",
         description="Ordenar por: eventos_desc, eventos_asc, nombre_asc, source_asc",
     ),
-    source: Optional[str] = Query(None, description="Filtrar por fuente (IGN, SNVS)"),
-    tiene_eventos: Optional[bool] = Query(
+    source: str | None = Query(None, description="Filtrar por fuente (IGN, SNVS)"),
+    tiene_eventos: bool | None = Query(
         None, description="Filtrar solo con eventos (true) o sin eventos (false)"
     ),
     session: Session = Depends(get_session),

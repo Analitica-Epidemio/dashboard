@@ -3,7 +3,7 @@ Resolucion de condiciones para mostrar charts segun codigos estables
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,7 +29,7 @@ class ChartConditionResolver:
         self._tipo_cache = {}
 
     async def debe_mostrar_grafico(
-        self, config_grafico: DashboardChart, filtros: Dict[str, Any]
+        self, config_grafico: DashboardChart, filtros: dict[str, Any]
     ) -> bool:
         """
         Determina si un chart debe mostrarse según las condiciones y filtros
@@ -80,7 +80,7 @@ class ChartConditionResolver:
         return True
 
     async def _grupo_coincide_codigos(
-        self, grupo_id: Optional[int], codigos_permitidos: list
+        self, grupo_id: int | None, codigos_permitidos: list
     ) -> bool:
         """
         Verifica si el grupo_id coincide con alguno de los códigos permitidos
@@ -108,7 +108,7 @@ class ChartConditionResolver:
         return grupo_codigo in codigos_permitidos
 
     async def _tipo_coincide_codigos(
-        self, tipo_id: Optional[int], codigos_permitidos: list
+        self, tipo_id: int | None, codigos_permitidos: list
     ) -> bool:
         """
         Verifica si el tipo_id coincide con alguno de los códigos permitidos
@@ -134,7 +134,7 @@ class ChartConditionResolver:
         return tipo_codigo in codigos_permitidos
 
     async def obtener_graficos_aplicables(
-        self, filtros: Dict[str, Any], todos_los_graficos: list[DashboardChart]
+        self, filtros: dict[str, Any], todos_los_graficos: list[DashboardChart]
     ) -> list[DashboardChart]:
         """
         Filtra una lista de charts según las condiciones y filtros

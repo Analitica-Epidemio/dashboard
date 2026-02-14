@@ -63,8 +63,8 @@ async def update_strategy(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"💥 Error updating strategy {strategy_id}: {str(e)}")
+        logger.error(f"💥 Error updating strategy {strategy_id}: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error actualizando estrategia: {str(e)}",
-        )
+            detail=f"Error actualizando estrategia: {e!s}",
+        ) from e

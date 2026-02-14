@@ -7,7 +7,7 @@ from .validation import FileValidator, file_validator
 
 __all__ = [
     "FileValidator",
-    "file_validator",
     "TempFileStorage",
+    "file_validator",
     "temp_storage",
 ]

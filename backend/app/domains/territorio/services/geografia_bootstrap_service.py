@@ -13,8 +13,8 @@ OPTIMIZACIONES:
 """
 
 import logging
-from datetime import datetime, timezone
-from typing import Any, Dict, Set
+from datetime import UTC, datetime
+from typing import Any
 
 import polars as pl
 from sqlalchemy import inspect as sa_inspect
@@ -79,7 +79,7 @@ class GeografiaBootstrapService:
 
     # ===== EXTRACCIÓN DE IDs DESDE CSV =====
 
-    def _extraer_ids_provincia(self, df: pl.DataFrame) -> Set[int]:
+    def _extraer_ids_provincia(self, df: pl.DataFrame) -> set[int]:
         """Extrae todos los IDs de provincia únicos del CSV."""
         ids_provincia = set()
 
@@ -94,7 +94,7 @@ class GeografiaBootstrapService:
 
         return ids_provincia
 
-    def _extraer_mapeos_departamento(self, df: pl.DataFrame) -> Dict[int, int]:
+    def _extraer_mapeos_departamento(self, df: pl.DataFrame) -> dict[int, int]:
         """
         Extrae mapeo: departamento_id → provincia_id
 
@@ -103,7 +103,7 @@ class GeografiaBootstrapService:
         """
         mapeos = {}
 
-        for col_loc, col_dep, col_prov in GRUPOS_COLUMNAS_GEO:
+        for _col_loc, col_dep, col_prov in GRUPOS_COLUMNAS_GEO:
             if col_dep in df.columns and col_prov in df.columns:
                 # Obtener pares únicos (departamento, provincia)
                 pares = df.select([col_dep, col_prov]).drop_nulls().unique()
@@ -117,7 +117,7 @@ class GeografiaBootstrapService:
 
         return mapeos
 
-    def _extraer_mapeos_localidad(self, df: pl.DataFrame) -> Dict[int, int]:
+    def _extraer_mapeos_localidad(self, df: pl.DataFrame) -> dict[int, int]:
         """
         Extrae mapeo: localidad_id → departamento_id
 
@@ -140,7 +140,7 @@ class GeografiaBootstrapService:
 
         return mapeos
 
-    def _extraer_ids_localidad_viaje(self, df: pl.DataFrame) -> Set[int]:
+    def _extraer_ids_localidad_viaje(self, df: pl.DataFrame) -> set[int]:
         """
         Extrae IDs de localidades de viaje (sin departamento conocido).
 
@@ -150,11 +150,11 @@ class GeografiaBootstrapService:
             return set()
 
         ids = df["ID_LOC_INDEC_VIAJE"].drop_nulls().cast(pl.Int64).unique()
-        return set(int(x) for x in ids.to_list() if x is not None)
+        return {int(x) for x in ids.to_list() if x is not None}
 
     # ===== CREACIÓN DE ENTIDADES =====
 
-    def _asegurar_provincias_existen(self, ids_provincia: Set[int]) -> None:
+    def _asegurar_provincias_existen(self, ids_provincia: set[int]) -> None:
         """Crea provincias placeholder para IDs que no existen."""
         if not ids_provincia:
             return
@@ -170,8 +170,8 @@ class GeografiaBootstrapService:
             {
                 "id_provincia_indec": id_prov,
                 "nombre": f"Provincia INDEC {id_prov}",
-                "created_at": datetime.now(timezone.utc),
-                "updated_at": datetime.now(timezone.utc),
+                "created_at": datetime.now(UTC),
+                "updated_at": datetime.now(UTC),
             }
             for id_prov in ids_provincia
             if id_prov not in existentes
@@ -183,7 +183,7 @@ class GeografiaBootstrapService:
             self.session.execute(stmt.on_conflict_do_nothing())
             logger.info(f"Creadas {len(nuevas)} provincias placeholder")
 
-    def _asegurar_departamentos_existen(self, depto_a_prov: Dict[int, int]) -> None:
+    def _asegurar_departamentos_existen(self, depto_a_prov: dict[int, int]) -> None:
         """Crea departamentos placeholder con sus provincias asociadas."""
         if not depto_a_prov:
             return
@@ -200,8 +200,8 @@ class GeografiaBootstrapService:
                 "id_departamento_indec": id_dep,
                 "nombre": f"Departamento INDEC {id_dep}",
                 "id_provincia_indec": id_prov,
-                "created_at": datetime.now(timezone.utc),
-                "updated_at": datetime.now(timezone.utc),
+                "created_at": datetime.now(UTC),
+                "updated_at": datetime.now(UTC),
             }
             for id_dep, id_prov in depto_a_prov.items()
             if id_dep not in existentes
@@ -214,7 +214,7 @@ class GeografiaBootstrapService:
             logger.info(f"Creados {len(nuevos)} departamentos placeholder")
 
     def _asegurar_localidades_existen(
-        self, loc_a_depto: Dict[int, int], ids_loc_viaje: Set[int]
+        self, loc_a_depto: dict[int, int], ids_loc_viaje: set[int]
     ) -> None:
         """
         Crea localidades placeholder.
@@ -232,9 +232,7 @@ class GeografiaBootstrapService:
         stmt = select(
             col(Localidad.id_localidad_indec), col(Localidad.id_departamento_indec)
         ).where(col(Localidad.id_localidad_indec).in_(list(todas_localidades)))
-        existentes = {
-            id_loc: id_dep for id_loc, id_dep in self.session.execute(stmt).all()
-        }
+        existentes = {row[0]: row[1] for row in self.session.execute(stmt).all()}
 
         # Crear localidades faltantes
         nuevas = []
@@ -247,23 +245,23 @@ class GeografiaBootstrapService:
                         "id_localidad_indec": id_loc,
                         "nombre": f"Localidad INDEC {id_loc}",
                         "id_departamento_indec": dep_indec,
-                        "created_at": datetime.now(timezone.utc),
-                        "updated_at": datetime.now(timezone.utc),
+                        "created_at": datetime.now(UTC),
+                        "updated_at": datetime.now(UTC),
                     }
                 )
 
         # 2. Localidades de viaje sin departamento
-        for id_loc in ids_loc_viaje:
-            if id_loc not in existentes:
-                nuevas.append(
-                    {
-                        "id_localidad_indec": id_loc,
-                        "nombre": f"Localidad Viaje INDEC {id_loc}",
-                        "id_departamento_indec": None,
-                        "created_at": datetime.now(timezone.utc),
-                        "updated_at": datetime.now(timezone.utc),
-                    }
-                )
+        nuevas.extend(
+            {
+                "id_localidad_indec": id_loc,
+                "nombre": f"Localidad Viaje INDEC {id_loc}",
+                "id_departamento_indec": None,
+                "created_at": datetime.now(UTC),
+                "updated_at": datetime.now(UTC),
+            }
+            for id_loc in ids_loc_viaje
+            if id_loc not in existentes
+        )
 
         if nuevas:
             localidad_table = sa_inspect(Localidad).local_table

@@ -3,7 +3,8 @@
 import logging
 import time
 import traceback
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Request, Response, status
@@ -37,7 +38,7 @@ class ExceptionHandlerMiddleware(BaseHTTPMiddleware):
     """Middleware para manejo centralizado de excepciones."""
 
     def __init__(
-        self, app: ASGIApp, dispatch: Optional[DispatchFunction] = None
+        self, app: ASGIApp, dispatch: DispatchFunction | None = None
     ) -> None:
         super().__init__(app, dispatch)
 
@@ -148,7 +149,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """Middleware para logging de requests."""
 
     def __init__(
-        self, app: ASGIApp, dispatch: Optional[DispatchFunction] = None
+        self, app: ASGIApp, dispatch: DispatchFunction | None = None
     ) -> None:
         super().__init__(app, dispatch)
 
@@ -201,7 +202,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """
 
     def __init__(
-        self, app: ASGIApp, dispatch: Optional[DispatchFunction] = None
+        self, app: ASGIApp, dispatch: DispatchFunction | None = None
     ) -> None:
         super().__init__(app, dispatch)
 
@@ -252,7 +253,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
     """
 
     def __init__(
-        self, app: ASGIApp, dispatch: Optional[DispatchFunction] = None
+        self, app: ASGIApp, dispatch: DispatchFunction | None = None
     ) -> None:
         super().__init__(app, dispatch)
 

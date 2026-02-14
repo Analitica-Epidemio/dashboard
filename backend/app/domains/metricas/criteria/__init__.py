@@ -72,20 +72,20 @@ from .temporal import (
 )
 
 __all__ = [
-    # Base
-    "Criterion",
-    "AndCriteria",
-    "OrCriteria",
-    "EmptyCriterion",
-    # Temporales
-    "RangoPeriodoCriterion",
-    "AniosMultiplesCriterion",
-    # Evento
-    "TipoEventoCriterion",
     "AgenteCriterion",
     "AgrupacionAgentesCriterion",
+    "AndCriteria",
+    "AniosMultiplesCriterion",
+    # Base
+    "Criterion",
+    "DepartamentoCriterion",
+    "EmptyCriterion",
+    "EstablecimientoCriterion",
+    "OrCriteria",
     # Geográficos
     "ProvinciaCriterion",
-    "DepartamentoCriterion",
-    "EstablecimientoCriterion",
+    # Temporales
+    "RangoPeriodoCriterion",
+    # Evento
+    "TipoEventoCriterion",
 ]

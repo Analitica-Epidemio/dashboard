@@ -5,7 +5,6 @@ Almacena información geoespacial complementaria útil para análisis epidemiol�
 - Áreas urbanas (densidad poblacional)
 """
 
-from typing import Optional
 
 from geoalchemy2 import Geometry
 from sqlalchemy import Column, Index
@@ -25,23 +24,23 @@ class CapaHidrografia(BaseModel, table=True):
     __tablename__ = "capa_hidrografia"
 
     # Identificación
-    nombre: Optional[str] = Field(
+    nombre: str | None = Field(
         None, max_length=200, description="Nombre del curso de agua"
     )
-    tipo: Optional[str] = Field(
+    tipo: str | None = Field(
         None, max_length=50, description="Tipo: río, arroyo, canal, laguna, etc."
     )
 
     # Geometría - spatial_index=False para crear index explícito
     # Usa MULTILINESTRING porque los datos del IGN pueden tener múltiples segmentos
-    geometria: Optional[str] = Field(
+    geometria: str | None = Field(
         default=None,
         sa_column=Column(Geometry("MULTILINESTRING", srid=4326, spatial_index=False)),
         description="Geometría del curso de agua (MultiLineString en WGS84)",
     )
 
     # Metadatos
-    fuente: Optional[str] = Field(
+    fuente: str | None = Field(
         default="IGN", max_length=100, description="Fuente de los datos"
     )
 
@@ -63,30 +62,30 @@ class CapaAreaUrbana(BaseModel, table=True):
     __tablename__ = "capa_area_urbana"
 
     # Identificación
-    nombre: Optional[str] = Field(
+    nombre: str | None = Field(
         None, max_length=200, description="Nombre del área urbana"
     )
 
     # Relación geográfica
-    id_departamento_indec: Optional[int] = Field(
+    id_departamento_indec: int | None = Field(
         None, description="Código INDEC del departamento al que pertenece"
     )
 
     # Datos poblacionales
-    poblacion: Optional[int] = Field(
+    poblacion: int | None = Field(
         None, description="Población estimada del área urbana"
     )
 
     # Geometría - spatial_index=False para crear index explícito
     # Usa MULTIPOLYGON porque los datos del IGN pueden tener múltiples polígonos
-    geometria: Optional[str] = Field(
+    geometria: str | None = Field(
         default=None,
         sa_column=Column(Geometry("MULTIPOLYGON", srid=4326, spatial_index=False)),
         description="Geometría del área urbana (MultiPolygon en WGS84)",
     )
 
     # Metadatos
-    fuente: Optional[str] = Field(
+    fuente: str | None = Field(
         default="IGN", max_length=100, description="Fuente de los datos"
     )
 

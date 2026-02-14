@@ -49,29 +49,29 @@ class DiagnosticoCasoEpidemiologico(BaseModel, table=True):
     clasificacion_manual: str = Field(
         ..., max_length=150, description="Clasificación manual del diagnóstico"
     )
-    clasificacion_automatica: Optional[str] = Field(
+    clasificacion_automatica: str | None = Field(
         None, max_length=150, description="Clasificación automática"
     )
-    clasificacion_algoritmo: Optional[str] = Field(
+    clasificacion_algoritmo: str | None = Field(
         None, max_length=150, description="Algoritmo de clasificación"
     )
-    validacion: Optional[str] = Field(
+    validacion: str | None = Field(
         None,
         max_length=500,
         description="Estado de validación del diagnóstico",
     )
-    edad_diagnostico: Optional[int] = Field(
+    edad_diagnostico: int | None = Field(
         None, description="Edad al momento del diagnóstico"
     )
-    grupo_etario: Optional[str] = Field(
+    grupo_etario: str | None = Field(
         None, max_length=150, description="Grupo etario"
     )
-    diagnostico_referido: Optional[str] = Field(
+    diagnostico_referido: str | None = Field(
         None,
         max_length=150,
         description="Diagnóstico referido",
     )
-    fecha_diagnostico_referido: Optional[date] = Field(
+    fecha_diagnostico_referido: date | None = Field(
         None, description="Fecha del diagnóstico referido"
     )
 
@@ -79,7 +79,7 @@ class DiagnosticoCasoEpidemiologico(BaseModel, table=True):
     id_caso: int = Field(
         foreign_key="caso_epidemiologico.id", description="ID del caso"
     )
-    id_establecimiento_diagnostico: Optional[int] = Field(
+    id_establecimiento_diagnostico: int | None = Field(
         None,
         foreign_key="establecimiento.id",
         description="ID del establecimiento donde se realizó el diagnóstico",
@@ -111,23 +111,23 @@ class InternacionCasoEpidemiologico(BaseModel, table=True):
         {"extend_existing": True},
     )
 
-    fue_internado: Optional[bool] = Field(None, description="Fue internado")
-    fue_curado: Optional[bool] = Field(None, description="Fue curado")
-    requirio_cuidado_intensivo: Optional[bool] = Field(
+    fue_internado: bool | None = Field(None, description="Fue internado")
+    fue_curado: bool | None = Field(None, description="Fue curado")
+    requirio_cuidado_intensivo: bool | None = Field(
         None, description="Requirió cuidado intensivo"
     )
-    fecha_internacion: Optional[date] = Field(None, description="Fecha de internación")
-    fecha_cuidados_intensivos: Optional[date] = Field(
+    fecha_internacion: date | None = Field(None, description="Fecha de internación")
+    fecha_cuidados_intensivos: date | None = Field(
         None, description="Fecha de ingreso a cuidados intensivos"
     )
-    establecimiento_internacion: Optional[str] = Field(
+    establecimiento_internacion: str | None = Field(
         None,
         max_length=150,
         description="Establecimiento de internación (texto libre)",
     )
-    fecha_alta_medica: Optional[date] = Field(None, description="Fecha de alta médica")
-    es_fallecido: Optional[bool] = Field(None, description="Falleció")
-    fecha_fallecimiento: Optional[date] = Field(
+    fecha_alta_medica: date | None = Field(None, description="Fecha de alta médica")
+    es_fallecido: bool | None = Field(None, description="Falleció")
+    fecha_fallecimiento: date | None = Field(
         None, description="Fecha de fallecimiento"
     )
 
@@ -163,19 +163,19 @@ class TratamientoCasoEpidemiologico(BaseModel, table=True):
         {"extend_existing": True},
     )
 
-    establecimiento_tratamiento: Optional[str] = Field(
+    establecimiento_tratamiento: str | None = Field(
         None, max_length=150, description="Establecimiento de tratamiento (texto libre)"
     )
-    descripcion_tratamiento: Optional[str] = Field(
+    descripcion_tratamiento: str | None = Field(
         None, max_length=150, description="Descripción del tratamiento"
     )
-    fecha_inicio_tratamiento: Optional[date] = Field(
+    fecha_inicio_tratamiento: date | None = Field(
         None, description="Fecha de inicio del tratamiento"
     )
-    fecha_fin_tratamiento: Optional[date] = Field(
+    fecha_fin_tratamiento: date | None = Field(
         None, description="Fecha de fin del tratamiento"
     )
-    resultado_tratamiento: Optional[str] = Field(
+    resultado_tratamiento: str | None = Field(
         None, description="Resultado del tratamiento"
     )
 
@@ -183,7 +183,7 @@ class TratamientoCasoEpidemiologico(BaseModel, table=True):
     id_caso: int = Field(
         foreign_key="caso_epidemiologico.id", description="ID del caso"
     )
-    id_establecimiento_tratamiento: Optional[int] = Field(
+    id_establecimiento_tratamiento: int | None = Field(
         None,
         foreign_key="establecimiento.id",
         description="ID del establecimiento donde se realizó el tratamiento",
@@ -210,28 +210,28 @@ class InvestigacionCasoEpidemiologico(BaseModel, table=True):
     __tablename__ = "investigacion_caso_epidemiologico"
     __table_args__ = (UniqueConstraint("id_caso", name="uq_investigacion_caso"),)
 
-    es_usuario_centinela: Optional[bool] = Field(None, description="Usuario centinela")
-    es_evento_centinela: Optional[bool] = Field(None, description="Caso centinela")
-    id_usuario_registro: Optional[int] = Field(
+    es_usuario_centinela: bool | None = Field(None, description="Usuario centinela")
+    es_evento_centinela: bool | None = Field(None, description="Caso centinela")
+    id_usuario_registro: int | None = Field(
         None, description="ID del usuario que registró"
     )
-    participo_usuario_centinela: Optional[bool] = Field(
+    participo_usuario_centinela: bool | None = Field(
         None, description="Usuario centinela participó"
     )
-    id_usuario_centinela_participante: Optional[int] = Field(
+    id_usuario_centinela_participante: int | None = Field(
         None, description="ID del usuario centinela que participó"
     )
-    id_snvs_caso: Optional[int] = Field(None, description="ID SNVS del caso")
-    es_investigacion_terreno: Optional[bool] = Field(
+    id_snvs_caso: int | None = Field(None, description="ID SNVS del caso")
+    es_investigacion_terreno: bool | None = Field(
         None, description="Investigación en terreno"
     )
-    fecha_investigacion: Optional[date] = Field(
+    fecha_investigacion: date | None = Field(
         None, description="Fecha de la investigación"
     )
-    tipo_y_lugar_investigacion: Optional[str] = Field(
+    tipo_y_lugar_investigacion: str | None = Field(
         None, sa_type=Text, description="Tipo y lugar de investigación"
     )
-    origen_financiamiento: Optional[OrigenFinanciamiento] = Field(
+    origen_financiamiento: OrigenFinanciamiento | None = Field(
         None, description="Origen del financiamiento"
     )
 
@@ -260,22 +260,22 @@ class ContactosNotificacion(BaseModel, table=True):
     __tablename__ = "contactos_notificacion"
     __table_args__ = (UniqueConstraint("id_caso", name="uq_contactos_caso"),)
 
-    hubo_contacto_con_caso_confirmado: Optional[bool] = Field(
+    hubo_contacto_con_caso_confirmado: bool | None = Field(
         None, description="Contacto con caso confirmado"
     )
-    hubo_contacto_con_caso_sospechoso: Optional[bool] = Field(
+    hubo_contacto_con_caso_sospechoso: bool | None = Field(
         None, description="Contacto con caso sospechoso"
     )
-    contactos_relevados_contactos_detectados: Optional[str] = Field(
+    contactos_relevados_contactos_detectados: str | None = Field(
         None, max_length=32, description="Contactos relevados/detectados"
     )
-    cantidad_contactos_menores_un_anio: Optional[int] = Field(
+    cantidad_contactos_menores_un_anio: int | None = Field(
         None, ge=0, description="Contactos menores de 1 año"
     )
-    cantidad_contactos_vacunados: Optional[int] = Field(
+    cantidad_contactos_vacunados: int | None = Field(
         None, ge=0, description="Contactos vacunados"
     )
-    cantidad_contactos_embarazadas: Optional[int] = Field(
+    cantidad_contactos_embarazadas: int | None = Field(
         None, ge=0, description="Contactos embarazadas"
     )
 

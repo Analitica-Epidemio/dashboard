@@ -8,7 +8,7 @@ Soporta múltiples tipos de datos agregados.
 """
 
 import logging
-from typing import Literal, Optional
+from typing import Literal
 
 from fastapi import UploadFile
 
@@ -33,7 +33,7 @@ class AgregadaUploadHandler:
         archivo: UploadFile,
         nombre_archivo: str,
         tipo_dato: TipoDatoAgregada,
-        nombre_hoja: Optional[str] = None,
+        nombre_hoja: str | None = None,
         prioridad: JobPriority = JobPriority.NORMAL,
     ) -> Job:
         """

@@ -5,8 +5,8 @@ Usa Polars para máximo rendimiento y mínimo uso de memoria.
 """
 
 import logging
-from datetime import datetime, timezone
-from typing import Any, Dict, List, cast
+from datetime import UTC, datetime
+from typing import Any, cast
 
 import polars as pl
 
@@ -39,7 +39,7 @@ class OptimizedDataValidator:
 
     def __init__(self) -> None:
         """Inicializa el validador sin dependencias externas."""
-        self.reporte_validacion: Dict[str, Any] = {
+        self.reporte_validacion: dict[str, Any] = {
             "errores": [],
             "advertencias": [],
             "estadisticas": {},
@@ -96,7 +96,7 @@ class OptimizedDataValidator:
             )
 
             mensaje_error = f"Columnas críticas faltantes: {criticas_faltantes}"
-            cast(List[Dict[str, Any]], self.reporte_validacion["errores"]).append(
+            cast(list[dict[str, Any]], self.reporte_validacion["errores"]).append(
                 {
                     "tipo": "columnas_criticas_faltantes",
                     "columnas": criticas_faltantes,
@@ -109,7 +109,7 @@ class OptimizedDataValidator:
         # Verificar que no esté vacío
         if df.height == 0:
             mensaje_error = "DataFrame vacío"
-            cast(List[Dict[str, Any]], self.reporte_validacion["errores"]).append(
+            cast(list[dict[str, Any]], self.reporte_validacion["errores"]).append(
                 {"tipo": "dataframe_vacio", "severidad": "critica"}
             )
 
@@ -255,7 +255,7 @@ class OptimizedDataValidator:
             if conteo_duplicados:
                 duplicados = df.height - df[Columns.IDEVENTOCASO.name].n_unique()
                 cast(
-                    List[Dict[str, Any]], self.reporte_validacion["advertencias"]
+                    list[dict[str, Any]], self.reporte_validacion["advertencias"]
                 ).append(
                     {
                         "tipo": "ids_evento_duplicados",
@@ -278,7 +278,7 @@ class OptimizedDataValidator:
 
                 if conteo_invalido > 0:
                     cast(
-                        List[Dict[str, Any]], self.reporte_validacion["advertencias"]
+                        list[dict[str, Any]], self.reporte_validacion["advertencias"]
                     ).append(
                         {
                             "tipo": "edades_invalidas",
@@ -299,7 +299,7 @@ class OptimizedDataValidator:
 
                 if conteo_futuro > 0:
                     cast(
-                        List[Dict[str, Any]], self.reporte_validacion["advertencias"]
+                        list[dict[str, Any]], self.reporte_validacion["advertencias"]
                     ).append(
                         {
                             "tipo": "fechas_futuras",
@@ -318,10 +318,10 @@ class OptimizedDataValidator:
             "filas_removidas": conteo_original - conteo_final,
             "conteo_errores": len(self.reporte_validacion["errores"]),
             "conteo_advertencias": len(self.reporte_validacion["advertencias"]),
-            "tiempo_validacion": datetime.now(timezone.utc).isoformat(),
+            "tiempo_validacion": datetime.now(UTC).isoformat(),
         }
 
-    def obtener_reporte_validacion(self) -> Dict:
+    def obtener_reporte_validacion(self) -> dict:
         """Obtiene el reporte de validación completo."""
         return self.reporte_validacion
 

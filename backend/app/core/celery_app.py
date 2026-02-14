@@ -9,7 +9,7 @@ Arquitectura senior-level con:
 """
 
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from celery import Celery
 
@@ -135,8 +135,8 @@ def create_celery_app() -> Celery:
         redis_client.delete(test_key)
 
     except Exception as e:
-        logger.error(f"❌ Redis connection failed: {str(e)}")
-        logger.error(f"❌ Full error details: {type(e).__name__}: {str(e)}")
+        logger.error(f"❌ Redis connection failed: {e!s}")
+        logger.error(f"❌ Full error details: {type(e).__name__}: {e!s}")
         logger.warning("⚠️ Celery will not work properly without Redis!")
 
     logger.info("🎯 Celery configuration completed")
@@ -151,11 +151,11 @@ celery_app = create_celery_app()
 def file_processing_task(*args: Any, **kwargs: Any) -> Any:
     """Decorator para tasks de procesamiento de archivos."""
     return celery_app.task(
+        *args,
         bind=True,
         queue="file_processing",
         soft_time_limit=300,
         time_limit=600,
-        *args,
         **kwargs,
     )
 
@@ -163,18 +163,18 @@ def file_processing_task(*args: Any, **kwargs: Any) -> Any:
 def maintenance_task(*args: Any, **kwargs: Any) -> Any:
     """Decorator para tasks de mantenimiento."""
     return celery_app.task(
+        *args,
         bind=True,
         queue="maintenance",
         soft_time_limit=60,
         time_limit=120,
-        *args,
         **kwargs,
     )
 
 
 # Health check para monitoring
 @celery_app.task(name="app.core.celery_app.health_check")
-def health_check() -> Dict[str, str]:
+def health_check() -> dict[str, str]:
     """Task simple para verificar que Celery está funcionando."""
     return {"status": "healthy", "message": "Celery is running"}
 

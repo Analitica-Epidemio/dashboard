@@ -59,9 +59,10 @@ Estas tienen:
 El MetricService ejecuta primero las métricas base y luego aplica la fórmula.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Type
+from typing import Any
 
 from sqlalchemy import func
 from sqlmodel import SQLModel
@@ -112,7 +113,7 @@ class MetricDefinition:
     categoria: str = ""
 
     # Modelo principal
-    model: Type[SQLModel] = None  # type: ignore
+    model: type[SQLModel] = None  # type: ignore
 
     # Tipo de agregación
     aggregation: AggregationType = AggregationType.SUM

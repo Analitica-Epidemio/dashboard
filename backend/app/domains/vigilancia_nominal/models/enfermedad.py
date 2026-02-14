@@ -21,7 +21,7 @@ Ejemplos de enfermedades:
 - Sarampión, Rubéola
 """
 
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
 
 from sqlalchemy import CheckConstraint, Index, SmallInteger, UniqueConstraint
 from sqlalchemy.orm import Mapped
@@ -102,19 +102,19 @@ class GrupoDeEnfermedades(BaseModel, table=True):
         max_length=150,
         description="Nombre del grupo (ej: 'Arbovirosis', 'Zoonosis')",
     )
-    slug: Optional[str] = Field(
+    slug: str | None = Field(
         None,
         max_length=100,
         unique=True,
         index=True,
         description="Identificador único kebab-case para URLs y templates (ej: 'arbovirosis')",
     )
-    descripcion: Optional[str] = Field(
+    descripcion: str | None = Field(
         None,
         max_length=500,
         description="Descripción del grupo y qué enfermedades incluye",
     )
-    ventana_dias_visualizacion: Optional[int] = Field(
+    ventana_dias_visualizacion: int | None = Field(
         None,
         ge=1,
         le=365,
@@ -123,10 +123,10 @@ class GrupoDeEnfermedades(BaseModel, table=True):
     )
 
     # Relaciones
-    enfermedad_grupos: Mapped[List["EnfermedadGrupo"]] = Relationship(
+    enfermedad_grupos: Mapped[list["EnfermedadGrupo"]] = Relationship(
         back_populates="grupo"
     )
-    casos_en_grupo: Mapped[List["CasoGrupoEnfermedad"]] = Relationship(
+    casos_en_grupo: Mapped[list["CasoGrupoEnfermedad"]] = Relationship(
         back_populates="grupo"
     )
 
@@ -176,7 +176,7 @@ class Enfermedad(BaseModel, table=True):
         max_length=200,
         description="Nombre oficial de la enfermedad (ej: 'Dengue', 'Rabia humana')",
     )
-    slug: Optional[str] = Field(
+    slug: str | None = Field(
         None,
         max_length=100,
         unique=True,
@@ -185,28 +185,28 @@ class Enfermedad(BaseModel, table=True):
     )
 
     # Integración con SNVS
-    id_snvs: Optional[int] = Field(
+    id_snvs: int | None = Field(
         None,
         unique=True,
         index=True,
         description="ID de la enfermedad en el Sistema Nacional de Vigilancia de la Salud",
     )
 
-    descripcion: Optional[str] = Field(
+    descripcion: str | None = Field(
         None,
         max_length=500,
         description="Descripción clínica y epidemiológica de la enfermedad",
     )
 
     # Período de incubación (útil para análisis de brotes)
-    periodo_incubacion_min_dias: Optional[int] = Field(
+    periodo_incubacion_min_dias: int | None = Field(
         None,
         ge=0,
         le=365,
         sa_type=SmallInteger,
         description="Período de incubación mínimo en días (ej: 4 para Dengue)",
     )
-    periodo_incubacion_max_dias: Optional[int] = Field(
+    periodo_incubacion_max_dias: int | None = Field(
         None,
         ge=0,
         le=365,
@@ -214,22 +214,22 @@ class Enfermedad(BaseModel, table=True):
         description="Período de incubación máximo en días (ej: 10 para Dengue)",
     )
 
-    fuente_referencia: Optional[str] = Field(
+    fuente_referencia: str | None = Field(
         None,
         max_length=500,
         description="URL de fuente oficial (OMS, CDC, Ministerio de Salud)",
     )
 
     # Relaciones
-    enfermedad_grupos: Mapped[List["EnfermedadGrupo"]] = Relationship(
+    enfermedad_grupos: Mapped[list["EnfermedadGrupo"]] = Relationship(
         back_populates="enfermedad"
     )
-    casos: Mapped[List["CasoEpidemiologico"]] = Relationship(
+    casos: Mapped[list["CasoEpidemiologico"]] = Relationship(
         back_populates="enfermedad"
     )
 
     @property
-    def periodo_incubacion_promedio_dias(self) -> Optional[float]:
+    def periodo_incubacion_promedio_dias(self) -> float | None:
         """Calcula el promedio del período de incubación en días."""
         if self.periodo_incubacion_min_dias and self.periodo_incubacion_max_dias:
             return (

@@ -20,7 +20,7 @@ FUENTES DE REFERENCIA:
 - MSal Argentina: https://www.argentina.gob.ar/salud/epidemiologia
 """
 
-from typing import List, Optional, TypedDict
+from typing import TypedDict
 
 from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert
@@ -38,15 +38,15 @@ class EnoData(TypedDict):
     nombre: str
     slug: str
     descripcion: str
-    incubacion_min: Optional[int]
-    incubacion_max: Optional[int]
-    grupos: List[str]
+    incubacion_min: int | None
+    incubacion_max: int | None
+    grupos: list[str]
     fuente: str
 
 
 # Lista de tipos ENO con datos epidemiológicos
 # Cada entrada tiene: nombre, codigo, descripcion, incubacion_min, incubacion_max, grupos, fuente
-TIPOS_ENO: List[EnoData] = [
+TIPOS_ENO: list[EnoData] = [
     # =========================================================================
     # DENGUE Y ARBOVIROSIS
     # =========================================================================

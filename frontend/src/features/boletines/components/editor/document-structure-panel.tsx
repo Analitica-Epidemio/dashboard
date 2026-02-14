@@ -28,7 +28,6 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 
 type SelectedElementType = "none" | "chart" | "dynamicBlock" | "dynamicTable" | "image";
 
@@ -220,6 +219,7 @@ export function DocumentStructurePanel({ editor, className }: DocumentStructureP
     if (!editor) return [];
     const json = editor.getJSON();
     return buildDocumentTree(json);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor?.state.doc]);
 
   // Expand all by default

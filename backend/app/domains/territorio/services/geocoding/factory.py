@@ -5,7 +5,7 @@ Permite cambiar de proveedor via configuración.
 """
 
 import logging
-from typing import Any, Optional
+from typing import Any, ClassVar
 
 from .base import GeocodingAdapter
 from .google_maps_adapter import GoogleMapsAdapter
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class GeocodingFactory:
     """Factory para crear adapters de geocodificación."""
 
-    PROVIDERS = {
+    PROVIDERS: ClassVar[dict[str, type[GeocodingAdapter]]] = {
         "mapbox": MapboxAdapter,
         "google": GoogleMapsAdapter,
         # Fácil agregar más en el futuro:
@@ -28,7 +28,7 @@ class GeocodingFactory:
     def create_adapter(
         cls,
         provider: str = "mapbox",
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
         **kwargs: Any,
     ) -> GeocodingAdapter:
         """

@@ -25,10 +25,10 @@ register_processor("vigilancia_agregada", crear_procesador)
 
 __all__ = [
     "AgregadaProcessor",
-    "crear_procesador",
-    "FileTypeProcessor",
-    "ProcessingResult",
-    "CLIP26Processor",
     "CLIP26IntProcessor",
+    "CLIP26Processor",
+    "FileTypeProcessor",
     "LabP26Processor",
+    "ProcessingResult",
+    "crear_procesador",
 ]

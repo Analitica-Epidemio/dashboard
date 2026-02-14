@@ -13,7 +13,7 @@ Ejemplos de agentes:
 - Parásitos: Giardia, Cryptosporidium, Toxoplasma
 """
 
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Column, Index, Text
 from sqlmodel import Field, Relationship
@@ -98,7 +98,7 @@ class AgenteEtiologico(BaseModel, table=True):
     )
 
     # Integración con SNVS
-    id_snvs: Optional[int] = Field(
+    id_snvs: int | None = Field(
         None,
         index=True,
         description="ID del agente en el Sistema Nacional de Vigilancia de la Salud",
@@ -117,7 +117,7 @@ class AgenteEtiologico(BaseModel, table=True):
     )
 
     # Metadata
-    descripcion: Optional[str] = Field(
+    descripcion: str | None = Field(
         None,
         sa_column=Column(Text),
         description="Descripción del agente y su relevancia epidemiológica",
@@ -131,7 +131,7 @@ class AgenteEtiologico(BaseModel, table=True):
     )
 
     # Relación con agrupaciones (many-to-many)
-    agrupaciones: List["AgrupacionAgentes"] = Relationship(
+    agrupaciones: list["AgrupacionAgentes"] = Relationship(
         back_populates="agentes",
         link_model=AgrupacionAgenteLink,
     )

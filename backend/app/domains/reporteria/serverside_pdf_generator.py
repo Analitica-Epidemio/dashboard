@@ -7,8 +7,9 @@ Sin dependencias del frontend ni navegadores
 import asyncio
 import io
 import logging
+import os
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import A4
@@ -17,11 +18,59 @@ from reportlab.lib.units import inch
 from reportlab.platypus import Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domains.charts.schemas import FiltrosGrafico
+from app.domains.charts.schemas import CodigoGrafico, FiltrosGrafico
 from app.domains.charts.services.renderer import chart_renderer
 from app.domains.charts.services.spec_generator import ChartSpecGenerator
 
 logger = logging.getLogger(__name__)
+
+# ── Font registration ───────────────────────────────────────────────────────
+# En Docker, Geist se instala en /usr/share/fonts/truetype/geist/.
+# Fallback a Roboto (fonts-roboto) o Helvetica si no está disponible.
+
+_GEIST_FONT_DIR = "/usr/share/fonts/truetype/geist"
+_ROBOTO_FONT_DIR = "/usr/share/fonts/truetype/roboto"
+
+# Variantes que registramos: (archivo, peso CSS, estilo CSS)
+_FONT_VARIANTS = [
+    ("Regular", "normal", "normal"),
+    ("Bold", "bold", "normal"),
+    ("SemiBold", "600", "normal"),
+    ("Medium", "500", "normal"),
+    ("Light", "300", "normal"),
+]
+
+
+def _build_font_face_css() -> tuple[str, str]:
+    """
+    Genera @font-face CSS para la mejor fuente disponible.
+    Prioridad: Geist > Roboto > Helvetica (fallback).
+    """
+    for family, font_dir in [("Geist", _GEIST_FONT_DIR), ("Roboto", _ROBOTO_FONT_DIR)]:
+        if not os.path.isdir(font_dir):
+            continue
+        faces: list[str] = []
+        for variant, weight, style in _FONT_VARIANTS:
+            path = os.path.join(font_dir, f"{family}-{variant}.ttf")
+            if os.path.isfile(path):
+                faces.append(
+                    f"@font-face {{\n"
+                    f"  font-family: '{family}';\n"
+                    f"  src: url('file://{path}');\n"
+                    f"  font-weight: {weight};\n"
+                    f"  font-style: {style};\n"
+                    f"}}"
+                )
+        if faces:
+            logger.info("PDF font: '%s' (%d variantes)", family, len(faces))
+            return "\n".join(faces), family
+
+    logger.info("PDF font: sin fuentes custom, usando Helvetica")
+    return "", "Helvetica"
+
+
+# Se calcula una vez al importar el módulo
+_FONT_FACE_CSS, _FONT_FAMILY = _build_font_face_css()
 
 
 class ServerSidePDFGenerator:
@@ -33,23 +82,77 @@ class ServerSidePDFGenerator:
     def __init__(self):
         self.styles = getSampleStyleSheet()
         self._setup_custom_styles()
-        self._base_html_css = """
+        self._base_html_css = _FONT_FACE_CSS + """
         @page {
             size: A4;
             margin: 20mm;
         }
         body {
-            font-family: 'Helvetica', 'Arial', sans-serif;
-            color: #1f2937;
+            font-family: '""" + _FONT_FAMILY + """', 'Helvetica', 'Arial', sans-serif;
+            color: #111827;
             line-height: 1.5;
             font-size: 11pt;
         }
-        h1, h2, h3, h4 {
-            color: #1e3a8a;
+        h1 {
+            font-size: 22pt;
+            font-weight: normal;
+            color: #111827;
+            margin-bottom: 0.75rem;
+            margin-top: 1.5rem;
         }
-        img {
-            max-width: 100%;
-            height: auto;
+        h2 {
+            font-size: 18pt;
+            font-weight: normal;
+            color: #111827;
+            margin-bottom: 0.5rem;
+            margin-top: 1.25rem;
+        }
+        h3 {
+            font-size: 15pt;
+            font-weight: normal;
+            color: #111827;
+            margin-bottom: 0.5rem;
+            margin-top: 1rem;
+        }
+        h4 {
+            font-size: 13pt;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 0.5rem;
+            margin-top: 0.75rem;
+        }
+        p {
+            font-size: 11pt;
+            line-height: 1.15;
+            margin-bottom: 11pt;
+            margin-top: 0;
+            color: #111827;
+        }
+        ul {
+            list-style-type: disc;
+            margin-bottom: 11pt;
+            margin-left: 1.5rem;
+            padding-left: 0;
+        }
+        ol {
+            list-style-type: decimal;
+            margin-bottom: 11pt;
+            margin-left: 1.5rem;
+            padding-left: 0;
+        }
+        li {
+            font-size: 11pt;
+            line-height: 1.15;
+            color: #111827;
+            margin-bottom: 0;
+        }
+        blockquote {
+            border-left: 4px solid #d1d5db;
+            padding-left: 1rem;
+            margin: 11pt 0;
+            font-size: 11pt;
+            color: #374151;
+            font-style: italic;
         }
         table {
             width: 100%;
@@ -57,8 +160,31 @@ class ServerSidePDFGenerator:
             margin: 1rem 0;
         }
         th, td {
-            border: 1px solid #e5e7eb;
-            padding: 0.35rem;
+            border: 1px solid #d1d5db;
+            padding: 0.5rem 0.75rem;
+            font-size: 11pt;
+            color: #111827;
+        }
+        th {
+            background-color: #f3f4f6;
+            font-weight: 600;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+            margin: 1rem 0;
+        }
+        strong {
+            font-weight: 600;
+            color: #111827;
+        }
+        em {
+            font-style: italic;
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #d1d5db;
+            margin: 1rem 0;
         }
         """
 
@@ -99,9 +225,9 @@ class ServerSidePDFGenerator:
     async def generate_pdf(
         self,
         db: AsyncSession,
-        combination: Dict[str, Any],
-        date_range: Dict[str, str],
-        chart_codes: Optional[List[str]] = None,
+        combination: dict[str, Any],
+        date_range: dict[str, str],
+        chart_codes: list[CodigoGrafico] | None = None,
     ) -> bytes:
         """
         Genera un PDF para una combinación de filtros
@@ -123,11 +249,11 @@ class ServerSidePDFGenerator:
         # Charts por defecto si no se especifican
         if not chart_codes:
             chart_codes = [
-                "casos_por_semana",
-                "corredor_endemico",
-                "piramide_edad",
-                "mapa_chubut",
-                "distribucion_clasificacion",
+                CodigoGrafico.CASOS_POR_SEMANA,
+                CodigoGrafico.CORREDOR_ENDEMICO,
+                CodigoGrafico.PIRAMIDE_EDAD,
+                CodigoGrafico.MAPA_CHUBUT,
+                CodigoGrafico.DISTRIBUCION_CLASIFICACION,
             ]
 
         # Crear PDF en memoria
@@ -185,7 +311,7 @@ class ServerSidePDFGenerator:
             except Exception as e:
                 logger.error(f"Error generando chart {chart_code}: {e}")
                 # Agregar mensaje de error
-                error_text = f"Error generando {chart_code}: {str(e)}"
+                error_text = f"Error generando {chart_code}: {e!s}"
                 story.append(Paragraph(error_text, self.styles["Normal"]))
                 story.append(Spacer(1, 0.2 * inch))
 
@@ -198,8 +324,8 @@ class ServerSidePDFGenerator:
         return pdf_bytes
 
     def _create_cover_page(
-        self, combination: Dict[str, Any], date_range: Dict[str, str]
-    ) -> List:
+        self, combination: dict[str, Any], date_range: dict[str, str]
+    ) -> list:
         """Crea la portada del reporte"""
         story = []
 
@@ -249,7 +375,7 @@ class ServerSidePDFGenerator:
         return story
 
     def _combination_to_filters(
-        self, combination: Dict[str, Any], date_range: Dict[str, str]
+        self, combination: dict[str, Any], date_range: dict[str, str]
     ) -> FiltrosGrafico:
         """Convierte combinación a FiltrosGrafico"""
         return FiltrosGrafico(
@@ -269,7 +395,7 @@ class ServerSidePDFGenerator:
         output_path: str,
         page_size: str = "A4",
         margin: str = "20mm",
-        extra_css: Optional[str] = None,
+        extra_css: str | None = None,
     ) -> None:
         """
         Convierte HTML enriquecido a PDF usando xhtml2pdf.

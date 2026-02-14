@@ -5,7 +5,6 @@ Permite ver todos los domicilios ordenados por cantidad de eventos,
 con información de estado de geocodificación y localización.
 """
 
-from typing import List, Optional
 
 from fastapi import Depends, Query
 from pydantic import BaseModel, Field
@@ -28,32 +27,32 @@ class DomicilioListItem(BaseModel):
     """Item de domicilio en la lista"""
 
     id: int = Field(..., description="ID del domicilio")
-    calle: Optional[str] = Field(None, description="Nombre de la calle")
-    numero: Optional[str] = Field(None, description="Número de calle")
+    calle: str | None = Field(None, description="Nombre de la calle")
+    numero: str | None = Field(None, description="Número de calle")
     direccion_completa: str = Field(..., description="Dirección completa formateada")
 
     # Información geográfica
     id_localidad_indec: int = Field(..., description="ID INDEC de localidad")
     localidad_nombre: str = Field(..., description="Nombre de la localidad")
-    id_departamento_indec: Optional[int] = Field(
+    id_departamento_indec: int | None = Field(
         None, description="ID INDEC del departamento"
     )
-    departamento_nombre: Optional[str] = Field(
+    departamento_nombre: str | None = Field(
         None, description="Nombre del departamento"
     )
     id_provincia_indec: int = Field(..., description="ID INDEC de provincia")
     provincia_nombre: str = Field(..., description="Nombre de la provincia")
 
     # Coordenadas
-    latitud: Optional[float] = Field(None, description="Latitud")
-    longitud: Optional[float] = Field(None, description="Longitud")
+    latitud: float | None = Field(None, description="Latitud")
+    longitud: float | None = Field(None, description="Longitud")
 
     # Estado de geocodificación
     estado_geocodificacion: str = Field(..., description="Estado de geocodificación")
-    proveedor_geocoding: Optional[str] = Field(
+    proveedor_geocoding: str | None = Field(
         None, description="Proveedor de geocodificación"
     )
-    confidence_geocoding: Optional[float] = Field(
+    confidence_geocoding: float | None = Field(
         None, description="Confianza de geocodificación (0-1)"
     )
 
@@ -66,7 +65,7 @@ class DomicilioListItem(BaseModel):
 class DomiciliosListResponse(BaseModel):
     """Respuesta paginada de domicilios"""
 
-    items: List[DomicilioListItem] = Field(default_factory=list)
+    items: list[DomicilioListItem] = Field(default_factory=list)
     total: int = Field(..., description="Total de domicilios")
     page: int = Field(..., description="Página actual")
     page_size: int = Field(..., description="Tamaño de página")
@@ -76,19 +75,19 @@ class DomiciliosListResponse(BaseModel):
 async def list_domicilios(
     page: int = Query(1, ge=1, description="Número de página"),
     page_size: int = Query(50, ge=1, le=500, description="Tamaño de página"),
-    estado_geocodificacion: Optional[EstadoGeocodificacion] = Query(
+    estado_geocodificacion: EstadoGeocodificacion | None = Query(
         None, description="Filtrar por estado de geocodificación"
     ),
-    id_provincia_indec: Optional[int] = Query(
+    id_provincia_indec: int | None = Query(
         None, description="Filtrar por provincia"
     ),
-    id_departamento_indec: Optional[int] = Query(
+    id_departamento_indec: int | None = Query(
         None, description="Filtrar por departamento"
     ),
-    id_localidad_indec: Optional[int] = Query(
+    id_localidad_indec: int | None = Query(
         None, description="Filtrar por localidad"
     ),
-    con_eventos: Optional[bool] = Query(
+    con_eventos: bool | None = Query(
         None,
         description="Filtrar solo domicilios con eventos (true) o sin eventos (false)",
     ),
@@ -207,7 +206,7 @@ async def list_domicilios(
     results = session.execute(query).all()
 
     # Construir items
-    items: List[DomicilioListItem] = []
+    items: list[DomicilioListItem] = []
     for row in results:
         # Construir dirección completa
         partes_direccion = []

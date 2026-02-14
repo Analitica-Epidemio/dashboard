@@ -67,5 +67,5 @@ async def generate_zip_report(
     except Exception as e:
         logger.error(f"Error generating ZIP report: {e}", exc_info=True)
         raise HTTPException(
-            status_code=500, detail=f"Error generando reporte ZIP: {str(e)}"
-        )
+            status_code=500, detail=f"Error generando reporte ZIP: {e!s}"
+        ) from e

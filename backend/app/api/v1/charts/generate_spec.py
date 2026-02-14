@@ -44,12 +44,12 @@ async def generate_chart_spec(
 
     except ValueError as e:
         logger.warning(f"ValueError en generate_chart_spec: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         logger.error(f"Error generando chart spec: {e}", exc_info=True)
         raise HTTPException(
-            status_code=500, detail=f"Error generando chart spec: {str(e)}"
-        )
+            status_code=500, detail=f"Error generando chart spec: {e!s}"
+        ) from e
 
 
 @router.get("/available", response_model=list[str])

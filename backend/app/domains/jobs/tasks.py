@@ -6,15 +6,16 @@ Este módulo contiene:
 - Tasks de mantenimiento (limpieza)
 """
 
+import contextlib
 import json
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from sqlmodel import and_, col, select
 
-import app.domains.vigilancia_agregada.procesamiento  # noqa: F401
+import app.domains.vigilancia_agregada.procesamiento
 
 # IMPORTANTE: Importar módulos de procesamiento para registrar processors
 import app.domains.vigilancia_nominal.procesamiento  # noqa: F401
@@ -50,7 +51,7 @@ def convert_numpy_types(obj: Any) -> Any:
 
 
 @file_processing_task(name="app.domains.jobs.tasks.execute_job")
-def execute_job(self, job_id: str) -> Dict[str, Any]:
+def execute_job(self, job_id: str) -> dict[str, Any]:
     """
     Task genérica que ejecuta un job usando el processor del registry.
     """
@@ -121,10 +122,8 @@ def execute_job(self, job_id: str) -> Dict[str, Any]:
                 job.mark_completed(**result_data)
                 logger.info(f"Job exitoso: {job_id}")
             else:
-                try:
+                with contextlib.suppress(Exception):
                     session.rollback()
-                except Exception:
-                    pass
 
                 with Session(engine) as new_session:
                     statement = select(Job).where(col(Job.id) == job_id)
@@ -151,7 +150,7 @@ def execute_job(self, job_id: str) -> Dict[str, Any]:
         except Exception:
             pass
 
-        error_msg = f"Error ejecutando job {job_id}: {str(e)}"
+        error_msg = f"Error ejecutando job {job_id}: {e!s}"
         logger.error(error_msg, exc_info=True)
 
         if job:
@@ -180,7 +179,7 @@ def execute_job(self, job_id: str) -> Dict[str, Any]:
 
 
 @maintenance_task(name="app.domains.jobs.tasks.cleanup_old_jobs")
-def cleanup_old_jobs() -> Dict[str, Any]:
+def cleanup_old_jobs() -> dict[str, Any]:
     """Limpia jobs antiguos."""
     logger.info("Limpiando jobs antiguos")
 
@@ -195,7 +194,7 @@ def cleanup_old_jobs() -> Dict[str, Any]:
             total_cleaned = 0
 
             for status, retention_time in retention_policies.items():
-                cutoff_time = datetime.now(timezone.utc) - retention_time
+                cutoff_time = datetime.now(UTC) - retention_time
                 query = select(Job).where(
                     and_(col(Job.created_at) < cutoff_time, col(Job.status) == status)
                 )
@@ -213,7 +212,7 @@ def cleanup_old_jobs() -> Dict[str, Any]:
 
 
 @maintenance_task(name="app.domains.jobs.tasks.cleanup_old_files")
-def cleanup_old_files() -> Dict[str, Any]:
+def cleanup_old_files() -> dict[str, Any]:
     """Limpia archivos temporales antiguos."""
     upload_dir = Path("uploads")
     if not upload_dir.exists():
@@ -244,7 +243,7 @@ def cleanup_old_files() -> Dict[str, Any]:
 
 
 @maintenance_task(name="app.domains.jobs.tasks.cleanup_temp_uploads")
-def cleanup_temp_uploads() -> Dict[str, Any]:
+def cleanup_temp_uploads() -> dict[str, Any]:
     """Limpia archivos temporales de preview."""
     from app.scripts.cleanup_temp_uploads import cleanup_old_temp_files
 

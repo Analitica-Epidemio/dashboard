@@ -3,7 +3,6 @@ List tipos ENO endpoint con estadísticas
 """
 
 import logging
-from typing import List, Optional
 
 from fastapi import Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
@@ -33,11 +32,11 @@ class GrupoInfo(BaseModel):
 class EnfermedadInfo(BaseModel):
     id: int = Field(..., description="ID del tipo ENO")
     nombre: str = Field(..., max_length=200, description="Nombre del tipo ENO")
-    descripcion: Optional[str] = Field(
+    descripcion: str | None = Field(
         None, max_length=500, description="Descripción del tipo"
     )
-    codigo: Optional[str] = Field(None, description="Código del tipo")
-    grupos: List[GrupoInfo] = Field(
+    codigo: str | None = Field(None, description="Código del tipo")
+    grupos: list[GrupoInfo] = Field(
         default_factory=list,
         description="Lista de grupos a los que pertenece este tipo",
     )
@@ -51,9 +50,9 @@ logger = logging.getLogger(__name__)
 async def list_tipos_eno(
     page: int = Query(1, ge=1, description="Número de página"),
     per_page: int = Query(50, ge=1, le=200, description="Elementos por página"),
-    nombre: Optional[str] = Query(None, description="Filtrar por nombre del tipo"),
-    grupo_id: Optional[int] = Query(None, description="Filtrar por ID del grupo"),
-    grupos: Optional[List[int]] = Query(
+    nombre: str | None = Query(None, description="Filtrar por nombre del tipo"),
+    grupo_id: int | None = Query(None, description="Filtrar por ID del grupo"),
+    grupos: list[int] | None = Query(
         None, description="Filtrar por múltiples IDs de grupo"
     ),
     ordenar_por: str = Query(
@@ -209,8 +208,8 @@ async def list_tipos_eno(
             },
         )
     except Exception as e:
-        logger.error(f"💥 Error listando tipos ENO: {str(e)}")
+        logger.error(f"💥 Error listando tipos ENO: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error obteniendo tipos de eventos: {str(e)}",
-        )
+            detail=f"Error obteniendo tipos de eventos: {e!s}",
+        ) from e

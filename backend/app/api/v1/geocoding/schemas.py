@@ -2,7 +2,6 @@
 Schemas para la API de geocodificación.
 """
 
-from typing import Dict, Optional
 
 from pydantic import BaseModel, Field
 
@@ -19,7 +18,7 @@ class GeocodingStatsResponse(BaseModel):
     percentage_geocoded: float = Field(
         ..., description="Porcentaje de domicilios geocodificados"
     )
-    by_estado: Dict[str, int] = Field(
+    by_estado: dict[str, int] = Field(
         ..., description="Conteo de domicilios por cada estado de geocodificación"
     )
 
@@ -29,12 +28,12 @@ class TriggerGeocodingResponse(BaseModel):
 
     message: str = Field(..., description="Mensaje descriptivo del resultado")
     pending_count: int = Field(..., description="Número de domicilios pendientes")
-    task_id: Optional[str] = Field(
+    task_id: str | None = Field(
         None, description="ID de la tarea encolada (si se inició)"
     )
-    batch_size: Optional[int] = Field(
+    batch_size: int | None = Field(
         None, description="Tamaño del batch de procesamiento"
     )
-    estimated_batches: Optional[int] = Field(
+    estimated_batches: int | None = Field(
         None, description="Número estimado de batches a procesar"
     )

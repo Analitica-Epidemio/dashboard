@@ -1,7 +1,7 @@
 """Bulk processor for symptoms - POLARS PURO optimizado."""
 
 from datetime import date, datetime
-from typing import Any, Dict
+from typing import Any
 
 import polars as pl
 from sqlalchemy import inspect, select
@@ -48,7 +48,7 @@ class SintomasProcessor(BulkProcessorBase):
     def upsert_sintomas_eventos(
         self,
         df: pl.DataFrame,
-        sintoma_mapping: Dict[str, int],
+        sintoma_mapping: dict[str, int],
     ) -> BulkOperationResult:
         """
         Bulk upsert de síntomas de eventos - POLARS PURO.
@@ -228,7 +228,7 @@ class SintomasProcessor(BulkProcessorBase):
             duration_seconds=duration,
         )
 
-    def _get_or_create_sintomas(self, df: pl.DataFrame) -> Dict[str, int]:
+    def _get_or_create_sintomas(self, df: pl.DataFrame) -> dict[str, int]:
         """
         Get or create symptom catalog entries - POLARS PURO.
 
@@ -284,7 +284,7 @@ class SintomasProcessor(BulkProcessorBase):
         sintomas_data = dict(
             zip(
                 sintomas_prepared["sintoma_clean"].to_list(),
-                sintomas_prepared["id_snvs"].to_list(),
+                sintomas_prepared["id_snvs"].to_list(), strict=False,
             )
         )
 

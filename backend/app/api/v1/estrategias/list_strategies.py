@@ -3,7 +3,6 @@ List strategies endpoint
 """
 
 import logging
-from typing import Optional
 
 from fastapi import Depends, HTTPException, Query, status
 from sqlalchemy import func, select
@@ -25,8 +24,8 @@ logger = logging.getLogger(__name__)
 
 
 async def list_strategies(
-    active_only: Optional[bool] = None,
-    tipo_eno_id: Optional[int] = None,
+    active_only: bool | None = None,
+    tipo_eno_id: int | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=100),
     db: AsyncSession = Depends(get_async_session),
@@ -102,8 +101,8 @@ async def list_strategies(
         )
 
     except Exception as e:
-        logger.error(f"💥 Error listing strategies: {str(e)}")
+        logger.error(f"💥 Error listing strategies: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error obteniendo estrategias: {str(e)}",
-        )
+            detail=f"Error obteniendo estrategias: {e!s}",
+        ) from e

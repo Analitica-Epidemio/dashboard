@@ -3,7 +3,7 @@ Authentication dependencies for FastAPI
 """
 
 import logging
-from typing import List, Optional
+from datetime import UTC
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -58,19 +58,19 @@ async def get_current_user_token(
 
         # Check session expiry
         if SessionSecurity.es_sesion_expirada(session.expira_en):
-            from datetime import datetime, timezone
+            from datetime import datetime
 
             logger.warning(
-                f"Session {token_data.id_sesion} expired. Expiry: {session.expira_en}, Current: {datetime.now(timezone.utc)}"
+                f"Session {token_data.id_sesion} expired. Expiry: {session.expira_en}, Current: {datetime.now(UTC)}"
             )
             session.es_activa = False
             await db.commit()
             raise crear_excepcion_credenciales("Session expired")
 
         # Update last activity to current time
-        from datetime import datetime, timezone
+        from datetime import datetime
 
-        session.ultima_actividad = datetime.now(timezone.utc)
+        session.ultima_actividad = datetime.now(UTC)
         await db.commit()
 
     logger.debug(f"Token validated successfully for user_id: {token_data.user_id}")
@@ -106,7 +106,7 @@ async def get_current_user(
 
 async def get_current_user_optional(
     request: Request, db: AsyncSession = Depends(get_async_session)
-) -> Optional[User]:
+) -> User | None:
     """
     Get current user if authenticated, None otherwise
     Does not raise exceptions for missing auth
@@ -145,7 +145,7 @@ async def get_current_active_user(
     return current_user
 
 
-def require_roles(allowed_roles: List[UserRole]):
+def require_roles(allowed_roles: list[UserRole]):
     """
     Dependency factory for role-based access control
     Usage: @router.get("/admin", dependencies=[Depends(require_roles([UserRole.ADMIN]))])
@@ -182,7 +182,7 @@ def require_any_role(current_user: User = Depends(get_current_user)) -> User:
 
 async def get_optional_user(
     request: Request, db: AsyncSession = Depends(get_async_session)
-) -> Optional[User]:
+) -> User | None:
     """
     Get current user if authenticated, None otherwise
     Useful for endpoints that work for both authenticated and anonymous users

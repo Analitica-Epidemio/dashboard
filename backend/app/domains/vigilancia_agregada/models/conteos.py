@@ -11,7 +11,7 @@ Tipos de conteos:
 """
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from pydantic import model_validator
 from sqlalchemy import BigInteger, Index, SmallInteger
@@ -100,12 +100,12 @@ class ConteoCasosClinicos(BaseModel, table=True):
     # Auditoría SNVS
     # ═══════════════════════════════════════════════════════════════
 
-    fecha_registro_snvs: Optional[datetime] = Field(
+    fecha_registro_snvs: datetime | None = Field(
         None,
         description="Fecha de registro de la línea (FECHAREGISTROCLINICA)",
     )
 
-    usuario_snvs: Optional[str] = Field(
+    usuario_snvs: str | None = Field(
         None,
         max_length=200,
         description="Usuario que registró (USERREGISTROCLINICA)",
@@ -231,17 +231,17 @@ class ConteoEstudiosLab(BaseModel, table=True):
     # Auditoría SNVS
     # ═══════════════════════════════════════════════════════════════
 
-    fecha_registro_snvs: Optional[datetime] = Field(
+    fecha_registro_snvs: datetime | None = Field(
         None,
         description="Fecha de registro (FECHA_REGISTRO1)",
     )
 
-    fecha_modificacion_snvs: Optional[datetime] = Field(
+    fecha_modificacion_snvs: datetime | None = Field(
         None,
         description="Fecha de última modificación (FECHA_MODIFICACION)",
     )
 
-    usuario_snvs: Optional[str] = Field(
+    usuario_snvs: str | None = Field(
         None,
         max_length=200,
         description="Usuario que registró (USER_REGISTRO)",
@@ -280,12 +280,11 @@ class ConteoEstudiosLab(BaseModel, table=True):
     def positivas_no_mayor_que_estudiadas(self) -> "ConteoEstudiosLab":
         """Valida que positivas <= estudiadas."""
         # Verificar que ambos valores estén definidos (SQLModel puede tener None temporalmente)
-        if self.positivas is not None and self.estudiadas is not None:
-            if self.positivas > self.estudiadas:
-                raise ValueError(
-                    f"positivas ({self.positivas}) no puede ser mayor que "
-                    f"estudiadas ({self.estudiadas})"
-                )
+        if self.positivas is not None and self.estudiadas is not None and self.positivas > self.estudiadas:
+            raise ValueError(
+                f"positivas ({self.positivas}) no puede ser mayor que "
+                f"estudiadas ({self.estudiadas})"
+            )
         return self
 
     # ═══════════════════════════════════════════════════════════════
@@ -293,7 +292,7 @@ class ConteoEstudiosLab(BaseModel, table=True):
     # ═══════════════════════════════════════════════════════════════
 
     @property
-    def tasa_positividad(self) -> Optional[float]:
+    def tasa_positividad(self) -> float | None:
         """
         Calcula la tasa de positividad (0-1).
 
@@ -305,7 +304,7 @@ class ConteoEstudiosLab(BaseModel, table=True):
         return self.positivas / self.estudiadas
 
     @property
-    def tasa_positividad_porcentaje(self) -> Optional[float]:
+    def tasa_positividad_porcentaje(self) -> float | None:
         """
         Calcula la tasa de positividad como porcentaje (0-100).
 
@@ -393,12 +392,12 @@ class ConteoCamasIRA(BaseModel, table=True):
     # Auditoría SNVS
     # ═══════════════════════════════════════════════════════════════
 
-    fecha_registro_snvs: Optional[datetime] = Field(
+    fecha_registro_snvs: datetime | None = Field(
         None,
         description="Fecha de registro de la línea",
     )
 
-    usuario_snvs: Optional[str] = Field(
+    usuario_snvs: str | None = Field(
         None,
         max_length=200,
         description="Usuario que registró",

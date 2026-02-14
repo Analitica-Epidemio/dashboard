@@ -3,7 +3,7 @@ Schemas Pydantic para el sistema de boletines
 """
 
 from datetime import date, datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -17,10 +17,10 @@ class CoverConfig(BaseModel):
 
     enabled: bool = Field(True, description="Mostrar portada")
     title: str = Field(..., description="Título del boletín")
-    subtitle: Optional[str] = Field(None, description="Subtítulo")
-    logo: Optional[str] = Field(None, description="URL o path al logo")
-    background_image: Optional[str] = Field(None, description="Imagen de fondo")
-    footer: Optional[str] = Field(None, description="Texto del pie de página")
+    subtitle: str | None = Field(None, description="Subtítulo")
+    logo: str | None = Field(None, description="URL o path al logo")
+    background_image: str | None = Field(None, description="Imagen de fondo")
+    footer: str | None = Field(None, description="Texto del pie de página")
 
 
 # ============================================================================
@@ -34,12 +34,12 @@ class BoletinTemplateCreate(BaseModel):
     name: str = Field(
         ..., min_length=1, max_length=255, description="Nombre del template"
     )
-    description: Optional[str] = Field(None, description="Descripción")
+    description: str | None = Field(None, description="Descripción")
     category: str = Field(
         ..., description="Categoría: semanal, brote, tendencias, etc."
     )
-    cover: Optional[CoverConfig] = Field(None, description="Configuración de portada")
-    content: Optional[str] = Field(
+    cover: CoverConfig | None = Field(None, description="Configuración de portada")
+    content: str | None = Field(
         None, description="Contenido HTML del boletín (Tiptap)"
     )
     is_public: bool = Field(False, description="Template público")
@@ -48,12 +48,12 @@ class BoletinTemplateCreate(BaseModel):
 class BoletinTemplateUpdate(BaseModel):
     """Schema para actualizar template"""
 
-    name: Optional[str] = Field(None, min_length=1, max_length=255)
-    description: Optional[str] = None
-    category: Optional[str] = None
-    cover: Optional[CoverConfig] = None
-    content: Optional[str] = None
-    is_public: Optional[bool] = None
+    name: str | None = Field(None, min_length=1, max_length=255)
+    description: str | None = None
+    category: str | None = None
+    cover: CoverConfig | None = None
+    content: str | None = None
+    is_public: bool | None = None
 
 
 class BoletinTemplateResponse(BaseModel):
@@ -61,13 +61,13 @@ class BoletinTemplateResponse(BaseModel):
 
     id: int
     name: str
-    description: Optional[str]
+    description: str | None
     category: str
-    cover: Optional[Dict[str, Any]]
-    content: Optional[str]
-    created_by: Optional[int]
+    cover: dict[str, Any] | None
+    content: str | None
+    created_by: int | None
     created_at: datetime
-    updated_at: Optional[datetime]
+    updated_at: datetime | None
     is_public: bool
     is_system: bool
 
@@ -87,27 +87,27 @@ class BoletinGenerateRequest(BaseModel):
     name: str = Field(
         ..., min_length=1, max_length=255, description="Nombre del boletín"
     )
-    parameters: Dict[str, Any] = Field(..., description="Parámetros específicos")
+    parameters: dict[str, Any] = Field(..., description="Parámetros específicos")
 
 
 class BoletinInstanceResponse(BaseModel):
     """Schema de respuesta de instancia"""
 
     id: int
-    template_id: Optional[int]
+    template_id: int | None
     name: str
-    semana_epidemiologica: Optional[int]
-    anio_epidemiologico: Optional[int]
-    fecha_inicio: Optional[date]
-    fecha_fin: Optional[date]
-    num_semanas: Optional[int]
-    parameters: Dict[str, Any]
-    content: Optional[str]
-    pdf_path: Optional[str]
-    pdf_size: Optional[int]
-    error_message: Optional[str]
-    generated_by: Optional[int]
-    generated_at: Optional[datetime]
+    semana_epidemiologica: int | None
+    anio_epidemiologico: int | None
+    fecha_inicio: date | None
+    fecha_fin: date | None
+    num_semanas: int | None
+    parameters: dict[str, Any]
+    content: str | None
+    pdf_path: str | None
+    pdf_size: int | None
+    error_message: str | None
+    generated_by: int | None
+    generated_at: datetime | None
     created_at: datetime
 
     class Config:
@@ -124,55 +124,55 @@ class TopEnoItem(BaseModel):
 
     evento: str
     n_casos: int
-    tasa_por_100k: Optional[float] = None
+    tasa_por_100k: float | None = None
 
 
 class CorredorEndemicoResponse(BaseModel):
     """Respuesta del corredor endémico"""
 
-    semanas: List[int]
-    zonas: Dict[
-        str, List[float]
+    semanas: list[int]
+    zonas: dict[
+        str, list[float]
     ]  # {'exito': [...], 'seguridad': [...], 'alerta': [...], 'brote': [...]}
-    casos_actuales: List[int]
+    casos_actuales: list[int]
     tipo_ira: str
 
 
 class CapacidadHospitalariaResponse(BaseModel):
     """Respuesta de capacidad hospitalaria"""
 
-    hospitales: List[str]
-    dotacion: Dict[str, int]  # Por hospital
-    ocupacion_ira: Dict[str, int]  # Por hospital
-    porcentaje_ocupacion: Dict[str, float]  # Por hospital
+    hospitales: list[str]
+    dotacion: dict[str, int]  # Por hospital
+    ocupacion_ira: dict[str, int]  # Por hospital
+    porcentaje_ocupacion: dict[str, float]  # Por hospital
 
 
 class VirusRespiratoriosResponse(BaseModel):
     """Respuesta de virus respiratorios"""
 
-    por_semana: List[Dict[str, Any]]
-    por_edad: List[Dict[str, Any]]
+    por_semana: list[dict[str, Any]]
+    por_edad: list[dict[str, Any]]
 
 
 class IntoxicacionCOResponse(BaseModel):
     """Respuesta de intoxicación por CO"""
 
-    por_ugd: List[Dict[str, Any]]
-    comparacion: Dict[str, Any]
+    por_ugd: list[dict[str, Any]]
+    comparacion: dict[str, Any]
 
 
 class DiarreasResponse(BaseModel):
     """Respuesta de diarreas"""
 
-    corredor: Dict[str, Any]
-    agentes_etiologicos: List[Dict[str, Any]]
+    corredor: dict[str, Any]
+    agentes_etiologicos: list[dict[str, Any]]
 
 
 class SUHResponse(BaseModel):
     """Respuesta de SUH"""
 
-    casos: List[Dict[str, Any]]
-    historico: List[Dict[str, Any]]
+    casos: list[dict[str, Any]]
+    historico: list[dict[str, Any]]
 
 
 # ============================================================================
@@ -185,7 +185,7 @@ class CasoEpidemiologicoSeleccionado(BaseModel):
 
     tipo_eno_id: int = Field(..., description="ID del tipo de evento")
     incluir_charts: bool = Field(True, description="Incluir charts del evento")
-    snippets_custom: Optional[List[str]] = Field(
+    snippets_custom: list[str] | None = Field(
         None, description="Códigos de snippets custom adicionales"
     )
 
@@ -198,10 +198,10 @@ class GenerateDraftRequest(BaseModel):
     num_semanas: int = Field(
         4, description="Número de semanas de análisis", ge=1, le=52
     )
-    eventos_seleccionados: List[CasoEpidemiologicoSeleccionado] = Field(
+    eventos_seleccionados: list[CasoEpidemiologicoSeleccionado] = Field(
         ..., description="CasoEpidemiologicos a incluir en el boletín"
     )
-    titulo_custom: Optional[str] = Field(
+    titulo_custom: str | None = Field(
         None, description="Título personalizado (opcional)"
     )
 
@@ -209,10 +209,10 @@ class GenerateDraftRequest(BaseModel):
 class BoletinMetadata(BaseModel):
     """Metadatos del boletín generado"""
 
-    periodo_analisis: Dict[str, Any] = Field(
+    periodo_analisis: dict[str, Any] = Field(
         ..., description="Información del período analizado"
     )
-    eventos_incluidos: List[Dict[str, Any]] = Field(
+    eventos_incluidos: list[dict[str, Any]] = Field(
         ..., description="CasoEpidemiologicos incluidos con sus datos"
     )
     fecha_generacion: datetime = Field(
@@ -228,7 +228,7 @@ class GenerateDraftResponse(BaseModel):
     )
     content: str = Field(..., description="Contenido HTML generado (TipTap compatible)")
     metadata: BoletinMetadata = Field(..., description="Metadatos del boletín")
-    warnings: Optional[List[str]] = Field(
+    warnings: list[str] | None = Field(
         None, description="Advertencias de validación"
     )
 
@@ -238,7 +238,7 @@ class PreviewDraftResponse(BaseModel):
 
     content: str = Field(..., description="Contenido TipTap JSON generado")
     metadata: BoletinMetadata = Field(..., description="Metadatos del boletín")
-    warnings: Optional[List[str]] = Field(
+    warnings: list[str] | None = Field(
         None, description="Advertencias de validación"
     )
 
@@ -252,16 +252,16 @@ class BoletinTemplateConfigResponse(BaseModel):
     """Response de configuración de template de boletines"""
 
     id: int
-    static_content_template: Dict[str, Any] = Field(
+    static_content_template: dict[str, Any] = Field(
         ...,
         description="Template base en formato TipTap JSON (incluye selectedEventsPlaceholder)",
     )
-    event_section_template: Dict[str, Any] = Field(
+    event_section_template: dict[str, Any] = Field(
         default_factory=dict,
         description="Template de sección de evento (se repite por cada evento seleccionado)",
     )
-    updated_at: Optional[datetime] = Field(None, description="Última actualización")
-    updated_by: Optional[int] = Field(None, description="Usuario que actualizó")
+    updated_at: datetime | None = Field(None, description="Última actualización")
+    updated_by: int | None = Field(None, description="Usuario que actualizó")
 
     class Config:
         from_attributes = True
@@ -270,13 +270,13 @@ class BoletinTemplateConfigResponse(BaseModel):
 class UpdateStaticContentRequest(BaseModel):
     """Request para actualizar contenido estático"""
 
-    content: Dict[str, Any] = Field(..., description="Contenido TipTap JSON")
+    content: dict[str, Any] = Field(..., description="Contenido TipTap JSON")
 
 
 class UpdateEventSectionTemplateRequest(BaseModel):
     """Request para actualizar template de sección de evento"""
 
-    content: Dict[str, Any] = Field(
+    content: dict[str, Any] = Field(
         ..., description="Template TipTap JSON de sección de evento"
     )
 
@@ -307,11 +307,11 @@ class BloqueConfigResponse(BaseModel):
     tipo_bloque: str
     tipo_visualizacion: str
     metrica_codigo: str
-    dimensiones: List[str]
-    rango_temporal: Optional[RangoTemporalInfo] = Field(
+    dimensiones: list[str]
+    rango_temporal: RangoTemporalInfo | None = Field(
         None, description="Información del rango temporal que usa el bloque"
     )
-    descripcion: Optional[str] = None
+    descripcion: str | None = None
     orden: int
 
     class Config:
@@ -324,9 +324,9 @@ class SeccionConfigResponse(BaseModel):
     id: int
     slug: str
     titulo: str
-    descripcion: Optional[str] = None
+    descripcion: str | None = None
     orden: int
-    bloques: List[BloqueConfigResponse] = Field(
+    bloques: list[BloqueConfigResponse] = Field(
         default_factory=list, description="Bloques de la sección"
     )
 
@@ -337,7 +337,7 @@ class SeccionConfigResponse(BaseModel):
 class SeccionesConfigResponse(BaseModel):
     """Respuesta con todas las secciones y sus bloques configurados"""
 
-    secciones: List[SeccionConfigResponse]
+    secciones: list[SeccionConfigResponse]
     semana_referencia: int = Field(
         ..., description="Semana epidemiológica de referencia"
     )

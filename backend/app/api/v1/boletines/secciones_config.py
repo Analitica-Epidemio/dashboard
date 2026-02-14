@@ -7,7 +7,6 @@ para cada sección y bloque, incluyendo los rangos temporales.
 
 import re
 from datetime import date
-from typing import Optional
 
 from fastapi import Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,7 +26,7 @@ from .schemas import (
 
 
 def _interpretar_rango_temporal(
-    rango_temporal: Optional[str],
+    rango_temporal: str | None,
     semana_ref: int,
     anio_ref: int,
     tipo_bloque: str,
@@ -135,13 +134,13 @@ def _bloque_to_response(
 
 
 async def get_secciones_config(
-    semana: Optional[int] = Query(
+    semana: int | None = Query(
         default=None,
         description="Semana epidemiológica de referencia (default: semana actual)",
         ge=1,
         le=53,
     ),
-    anio: Optional[int] = Query(
+    anio: int | None = Query(
         default=None,
         description="Año de referencia (default: año actual)",
         ge=2014,

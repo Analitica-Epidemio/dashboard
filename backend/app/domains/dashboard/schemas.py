@@ -5,7 +5,7 @@ Simplificados y enfocados en UX
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -57,16 +57,16 @@ class ChartTemplateResponse(BaseModel):
     id: int
     codigo: str
     nombre: str
-    descripcion: Optional[str]
+    descripcion: str | None
     categoria: str
     tipo_visualizacion: ChartVisualizationType
 
     # Capacidades dinámicas
-    tipo_eno_compatible: Optional[List[str]] = None  # null = todos
-    filtros_requeridos: List[str] = Field(default_factory=list)
-    filtros_opcionales: List[str] = Field(default_factory=list)
-    parametros_disponibles: Dict[str, Any] = Field(default_factory=dict)
-    parametros_default: Dict[str, Any] = Field(default_factory=dict)
+    tipo_eno_compatible: list[str] | None = None  # null = todos
+    filtros_requeridos: list[str] = Field(default_factory=list)
+    filtros_opcionales: list[str] = Field(default_factory=list)
+    parametros_disponibles: dict[str, Any] = Field(default_factory=dict)
+    parametros_default: dict[str, Any] = Field(default_factory=dict)
 
     # UI metadata
     orden_sugerido: int = 0
@@ -84,23 +84,23 @@ class ChartDataResponse(BaseModel):
     id_grafico: int
     codigo_grafico: str
     titulo: str
-    descripcion: Optional[str] = None
+    descripcion: str | None = None
     tipo_visualizacion: ChartVisualizationType
 
     # Datos principales
-    data: Dict[str, Any]
-    configuracion_chart: Dict[str, Any] = Field(default_factory=dict)
+    data: dict[str, Any]
+    configuracion_chart: dict[str, Any] = Field(default_factory=dict)
 
     # Metadatos
-    filtros_aplicados: Dict[str, Any] = Field(default_factory=dict)
-    parametros_aplicados: Dict[str, Any] = Field(default_factory=dict)
+    filtros_aplicados: dict[str, Any] = Field(default_factory=dict)
+    parametros_aplicados: dict[str, Any] = Field(default_factory=dict)
     timestamp_generacion: datetime
-    tiempo_ejecucion_ms: Optional[int] = None
+    tiempo_ejecucion_ms: int | None = None
 
     # Info de datos
-    total_registros: Optional[int] = None
-    registros_filtrados: Optional[int] = None
-    mensaje: Optional[str] = None
+    total_registros: int | None = None
+    registros_filtrados: int | None = None
+    mensaje: str | None = None
 
 
 class FilterDefinitionResponse(BaseModel):
@@ -108,12 +108,12 @@ class FilterDefinitionResponse(BaseModel):
 
     codigo: str
     nombre: str
-    descripcion: Optional[str]
+    descripcion: str | None
     tipo_filtro: FilterType
-    configuracion: Dict[str, Any] = Field(default_factory=dict)
-    valor_default: Optional[Any] = None
+    configuracion: dict[str, Any] = Field(default_factory=dict)
+    valor_default: Any | None = None
     es_requerido: bool = False
-    opciones: Optional[List[Dict[str, Any]]] = None
+    opciones: list[dict[str, Any]] | None = None
 
 
 # ====== REQUESTS ======
@@ -123,8 +123,8 @@ class ExecuteChartRequest(BaseModel):
     """Request para ejecutar un chart"""
 
     codigo_grafico: str
-    filtros: Dict[str, Any] = Field(default_factory=dict)
-    parametros: Dict[str, Any] = Field(default_factory=dict)
+    filtros: dict[str, Any] = Field(default_factory=dict)
+    parametros: dict[str, Any] = Field(default_factory=dict)
     usar_cache: bool = True
     formato_respuesta: str = Field(default="json")
 
@@ -133,8 +133,8 @@ class ChartPreviewRequest(BaseModel):
     """Request para vista previa de chart"""
 
     codigo_grafico: str
-    filtros: Dict[str, Any] = Field(default_factory=dict)
-    parametros: Dict[str, Any] = Field(default_factory=dict)
+    filtros: dict[str, Any] = Field(default_factory=dict)
+    parametros: dict[str, Any] = Field(default_factory=dict)
     usar_datos_muestra: bool = True
     limite_registros: int = Field(default=100, ge=10, le=1000)
 
@@ -146,9 +146,9 @@ class DashboardChartItem(BaseModel):
     """Item de chart en dashboard"""
 
     codigo_grafico: str
-    titulo_personalizado: Optional[str] = None
-    filtros_aplicados: Dict[str, Any] = Field(default_factory=dict)
-    parametros_aplicados: Dict[str, Any] = Field(default_factory=dict)
+    titulo_personalizado: str | None = None
+    filtros_aplicados: dict[str, Any] = Field(default_factory=dict)
+    parametros_aplicados: dict[str, Any] = Field(default_factory=dict)
 
     # Layout position
     posicion_x: int = 0
@@ -165,9 +165,9 @@ class DashboardLayoutRequest(BaseModel):
     """Request para crear/actualizar dashboard"""
 
     nombre: str
-    descripcion: Optional[str] = None
-    charts: List[DashboardChartItem]
-    filtros_globales: Dict[str, Any] = Field(default_factory=dict)
+    descripcion: str | None = None
+    charts: list[DashboardChartItem]
+    filtros_globales: dict[str, Any] = Field(default_factory=dict)
     es_publico: bool = False
 
 
@@ -175,8 +175,8 @@ class ChartAvailabilityResponse(BaseModel):
     """Disponibilidad de charts para un contexto específico"""
 
     total_graficos: int
-    graficos_disponibles: List[ChartTemplateResponse]
-    filtros_disponibles: List[FilterDefinitionResponse]
+    graficos_disponibles: list[ChartTemplateResponse]
+    filtros_disponibles: list[FilterDefinitionResponse]
 
 
 class ExportConfigRequest(BaseModel):
@@ -185,4 +185,4 @@ class ExportConfigRequest(BaseModel):
     incluir_templates: bool = True
     incluir_preferencias_usuario: bool = False
     formato: str = Field(default="json")
-    codigos_graficos: Optional[List[str]] = None
+    codigos_graficos: list[str] | None = None

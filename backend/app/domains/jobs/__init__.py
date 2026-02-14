@@ -10,6 +10,6 @@ from .models import Job
 
 __all__ = [
     "Job",
-    "JobStatus",
     "JobPriority",
+    "JobStatus",
 ]

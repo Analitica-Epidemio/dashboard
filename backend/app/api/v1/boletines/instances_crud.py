@@ -3,7 +3,6 @@ CRUD operations para instancias de boletines (boletines generados)
 """
 
 import logging
-from typing import List, Optional
 
 from fastapi import Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -34,7 +33,7 @@ class UpdateInstanceContentRequest(BaseModel):
 async def create_instance(
     request_data: BoletinGenerateRequest,
     db: AsyncSession = Depends(get_async_session),
-    current_user: Optional[User] = RequireAuthOrSignedUrl,
+    current_user: User | None = RequireAuthOrSignedUrl,
 ) -> SuccessResponse[BoletinInstanceResponse]:
     """
     Crear una nueva instancia de boletín (sin generar PDF todavía).
@@ -68,12 +67,12 @@ async def create_instance(
 
 
 async def list_instances(
-    template_id: Optional[int] = Query(None, description="Filtrar por template"),
+    template_id: int | None = Query(None, description="Filtrar por template"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_async_session),
-    current_user: Optional[User] = RequireAuthOrSignedUrl,
-) -> SuccessResponse[List[BoletinInstanceResponse]]:
+    current_user: User | None = RequireAuthOrSignedUrl,
+) -> SuccessResponse[list[BoletinInstanceResponse]]:
     """
     Listar instancias de boletines generados.
     """
@@ -101,7 +100,7 @@ async def list_instances(
 async def get_instance(
     instance_id: int,
     db: AsyncSession = Depends(get_async_session),
-    current_user: Optional[User] = RequireAuthOrSignedUrl,
+    current_user: User | None = RequireAuthOrSignedUrl,
 ) -> SuccessResponse[BoletinInstanceResponse]:
     """
     Obtener una instancia específica por ID.
@@ -128,7 +127,7 @@ async def get_instance(
 async def delete_instance(
     instance_id: int,
     db: AsyncSession = Depends(get_async_session),
-    current_user: Optional[User] = RequireAuthOrSignedUrl,
+    current_user: User | None = RequireAuthOrSignedUrl,
 ) -> SuccessResponse[dict]:
     """
     Eliminar una instancia.
@@ -165,7 +164,7 @@ async def update_instance_content(
     instance_id: int,
     request_data: UpdateInstanceContentRequest,
     db: AsyncSession = Depends(get_async_session),
-    current_user: Optional[User] = RequireAuthOrSignedUrl,
+    current_user: User | None = RequireAuthOrSignedUrl,
 ) -> SuccessResponse[BoletinInstanceResponse]:
     """
     Actualizar el contenido HTML de una instancia de boletín.
@@ -202,14 +201,12 @@ async def update_instance_content(
 async def duplicate_instance(
     instance_id: int,
     db: AsyncSession = Depends(get_async_session),
-    current_user: Optional[User] = RequireAuthOrSignedUrl,
+    current_user: User | None = RequireAuthOrSignedUrl,
 ) -> SuccessResponse[BoletinInstanceResponse]:
     """
     Duplicar una instancia de boletín existente.
     Crea una copia con el mismo contenido y parámetros.
     """
-    from datetime import datetime
-
     stmt = select(BoletinInstance).where(col(BoletinInstance.id) == instance_id)
     result = await db.execute(stmt)
     original = result.scalar_one_or_none()
@@ -249,7 +246,7 @@ async def duplicate_instance(
 async def generate_instance_pdf(
     instance_id: int,
     db: AsyncSession = Depends(get_async_session),
-    current_user: Optional[User] = RequireAuthOrSignedUrl,
+    current_user: User | None = RequireAuthOrSignedUrl,
 ):
     """
     Generar PDF de una instancia de boletín y retornarlo como descarga.
@@ -284,7 +281,7 @@ async def generate_instance_pdf(
     try:
         # Detectar si el contenido es JSON TipTap y convertirlo a HTML
         content = instance.content.strip()
-        if content.startswith("{") or content.startswith("["):
+        if content.startswith(("{", "[")):
             import json
 
             try:
@@ -298,7 +295,7 @@ async def generate_instance_pdf(
                 pass  # No es JSON válido, usar como HTML
 
         # Renderizar el HTML con los gráficos convertidos a imágenes usando la misma sesión
-        html_renderer = BulletinHTMLRenderer(db)
+        html_renderer = BulletinHTMLRenderer(db, instance=instance)
         rendered_html = await html_renderer.render_html_with_charts(content)
 
         safe_name = (
@@ -306,9 +303,8 @@ async def generate_instance_pdf(
         ).strip() or f"boletin_{instance_id}"
 
         # Crear archivo temporal para el PDF
-        temp_pdf = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-        temp_pdf_path = temp_pdf.name
-        temp_pdf.close()
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
+            temp_pdf_path = temp_pdf.name
 
         # Generar PDF usando el servicio serverside
         from app.domains.reporteria.serverside_pdf_generator import (
@@ -320,7 +316,7 @@ async def generate_instance_pdf(
             html_content=rendered_html,
             output_path=temp_pdf_path,
             page_size="A4",
-            margin="20mm",
+            margin="25.4mm",
         )
 
         # Actualizar la instancia con la ruta del PDF
@@ -348,4 +344,73 @@ async def generate_instance_pdf(
         logger.exception("Error generando PDF para instancia %s", instance_id)
         instance.error_message = str(e)
         await db.commit()
-        raise HTTPException(status_code=500, detail=f"Error generando PDF: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error generando PDF: {e!s}") from e
+
+
+async def generate_instance_docx(
+    instance_id: int,
+    db: AsyncSession = Depends(get_async_session),
+    current_user: User | None = RequireAuthOrSignedUrl,
+):
+    """
+    Generar DOCX de una instancia de boletín y retornarlo como descarga.
+    """
+    import tempfile
+
+    from fastapi.responses import FileResponse
+
+    stmt = select(BoletinInstance).where(col(BoletinInstance.id) == instance_id)
+    result = await db.execute(stmt)
+    instance = result.scalar_one_or_none()
+
+    if not instance:
+        raise HTTPException(status_code=404, detail="Instancia no encontrada")
+
+    # Verificar permisos
+    if not current_user or (
+        instance.generated_by != current_user.id
+        and not getattr(current_user, "is_admin", False)
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="No tiene permisos para generar DOCX de esta instancia",
+        )
+
+    if not instance.content:
+        raise HTTPException(
+            status_code=400,
+            detail="La instancia no tiene contenido para generar DOCX",
+        )
+
+    try:
+        from app.domains.reporteria.docx_generator import BulletinDocxGenerator
+
+        generator = BulletinDocxGenerator(db, instance=instance)
+        docx_bytes = await generator.generate_docx(instance.content)
+
+        safe_name = (
+            instance.name or f"boletin_{instance_id}"
+        ).strip() or f"boletin_{instance_id}"
+
+        # Write to temp file
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".docx") as temp_docx:
+            temp_docx.write(docx_bytes)
+
+        filename = f"{safe_name.replace(' ', '_')}.docx"
+
+        logger.info(
+            "DOCX generado para instancia: %s (ID: %s)", safe_name, instance_id
+        )
+
+        return FileResponse(
+            path=temp_docx.name,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            filename=filename,
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+
+    except Exception as e:
+        logger.exception("Error generando DOCX para instancia %s", instance_id)
+        raise HTTPException(
+            status_code=500, detail=f"Error generando DOCX: {e!s}"
+        ) from e

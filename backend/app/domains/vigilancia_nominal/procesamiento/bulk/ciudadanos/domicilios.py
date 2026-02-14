@@ -391,9 +391,9 @@ class DomiciliosProcessor(BulkProcessorBase):
         stmt = select(col(Localidad.id_localidad_indec)).where(
             col(Localidad.id_localidad_indec).in_(ids_localidad)
         )
-        existentes = set(
+        existentes = {
             id_loc for (id_loc,) in self.context.session.execute(stmt).all()
-        )
+        }
 
         # Mapping: all existing ones map to themselves
         mapeo_localidad = {loc_id: loc_id for loc_id in existentes}
@@ -407,19 +407,18 @@ class DomiciliosProcessor(BulkProcessorBase):
             )
 
             timestamp = self._get_current_timestamp()
-            placeholders = []
-            for loc_id in faltantes:
-                placeholders.append(
-                    {
-                        "id_localidad_indec": loc_id,
-                        "nombre": f"Localidad INDEC {loc_id}",
-                        "latitud": None,
-                        "longitud": None,
-                        "id_departamento_indec": None,  # Sin departamento conocido
-                        "created_at": timestamp,
-                        "updated_at": timestamp,
-                    }
-                )
+            placeholders = [
+                {
+                    "id_localidad_indec": loc_id,
+                    "nombre": f"Localidad INDEC {loc_id}",
+                    "latitud": None,
+                    "longitud": None,
+                    "id_departamento_indec": None,  # Sin departamento conocido
+                    "created_at": timestamp,
+                    "updated_at": timestamp,
+                }
+                for loc_id in faltantes
+            ]
 
             # Insert placeholders
             if placeholders:
@@ -430,7 +429,6 @@ class DomiciliosProcessor(BulkProcessorBase):
                 self.context.session.execute(upsert_stmt)
 
                 # All map to themselves
-                for loc_id in faltantes:
-                    mapeo_localidad[loc_id] = loc_id
+                mapeo_localidad.update({loc_id: loc_id for loc_id in faltantes})
 
         return mapeo_localidad

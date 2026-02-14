@@ -6,7 +6,6 @@ Docs: https://developers.google.com/maps/documentation/geocoding/overview
 
 import logging
 from decimal import Decimal
-from typing import Optional
 from urllib.parse import quote
 
 import httpx
@@ -35,13 +34,13 @@ class GoogleMapsAdapter(GeocodingAdapter):
 
     async def geocode(
         self,
-        calle: Optional[str] = None,
-        numero: Optional[str] = None,
-        barrio: Optional[str] = None,
-        localidad: Optional[str] = None,
-        provincia: Optional[str] = None,
+        calle: str | None = None,
+        numero: str | None = None,
+        barrio: str | None = None,
+        localidad: str | None = None,
+        provincia: str | None = None,
         pais: str = "Argentina",
-    ) -> Optional[GeocodingResult]:
+    ) -> GeocodingResult | None:
         """Geocodifica una dirección usando Google Maps."""
         # Construir query de búsqueda
         address_parts = []
@@ -210,7 +209,7 @@ class GoogleMapsAdapter(GeocodingAdapter):
 
     async def reverse_geocode(
         self, latitud: Decimal, longitud: Decimal
-    ) -> Optional[GeocodingResult]:
+    ) -> GeocodingResult | None:
         """Geocodificación reversa usando Google Maps."""
         try:
             # Construir URL para reverse geocoding

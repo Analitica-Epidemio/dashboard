@@ -17,7 +17,8 @@ Usage:
 """
 
 import logging
-from typing import Any, Callable, Dict, Optional, Protocol
+from collections.abc import Callable
+from typing import Any, Protocol
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +27,8 @@ class ProcessorProtocol(Protocol):
     """Contrato que todos los processors deben cumplir."""
 
     def procesar_archivo(
-        self, ruta_archivo: Any, nombre_hoja: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, ruta_archivo: Any, nombre_hoja: str | None = None
+    ) -> dict[str, Any]:
         """Procesa un archivo y retorna resultados."""
         ...
 
@@ -36,7 +37,7 @@ class ProcessorProtocol(Protocol):
 ProcessorFactory = Callable[[Any, Callable[[int, str], None]], ProcessorProtocol]
 
 # Registry interno
-_processors: Dict[str, ProcessorFactory] = {}
+_processors: dict[str, ProcessorFactory] = {}
 
 
 def register_processor(name: str, factory: ProcessorFactory) -> None:

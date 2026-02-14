@@ -11,8 +11,8 @@ from .sync_geocoding_service import SyncGeocodingService
 
 __all__ = [
     "GeocodingAdapter",
-    "GeocodingResult",
     "GeocodingFactory",
+    "GeocodingResult",
     "MapboxAdapter",
     "SyncGeocodingService",
 ]

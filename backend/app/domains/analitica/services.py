@@ -4,7 +4,7 @@ Servicios para Analytics - lógica de negocio para visualizaciones epidemiológi
 
 import logging
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -37,7 +37,7 @@ class AnalyticsService:
         self.grupos_config = self._get_grupos_config()
         self.graficos_config = self._get_graficos_config()
 
-    def _get_grupos_config(self) -> Dict[str, Dict]:
+    def _get_grupos_config(self) -> dict[str, dict]:
         """
         Configuración de grupos basada en epidemiologia_chubut/filters/eventos_config.py
         """
@@ -136,7 +136,7 @@ class AnalyticsService:
             },
         }
 
-    def _get_graficos_config(self) -> List[ConfiguracionVisualizacion]:
+    def _get_graficos_config(self) -> list[ConfiguracionVisualizacion]:
         """Configuración de gráficos disponibles."""
         return [
             ConfiguracionVisualizacion(
@@ -253,7 +253,7 @@ class AnalyticsService:
 
     async def get_grupo_detalle(
         self, grupo_id: int
-    ) -> Optional[GrupoCasoEpidemiologicoResponse]:
+    ) -> GrupoCasoEpidemiologicoResponse | None:
         """Obtiene el detalle de un grupo específico con sus eventos."""
 
         # Buscar el grupo en la configuración
@@ -478,7 +478,7 @@ class AnalyticsService:
 
     async def _generar_datos_grafico(
         self, query: Any, tipo_grafico: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Genera datos específicos según el tipo de gráfico."""
 
         if tipo_grafico == "casos_por_edad":
@@ -493,7 +493,7 @@ class AnalyticsService:
             # Gráfico genérico de totales
             return await self._generar_totales(query)
 
-    async def _generar_casos_por_edad(self, query: Any) -> List[Dict[str, Any]]:
+    async def _generar_casos_por_edad(self, query: Any) -> list[dict[str, Any]]:
         """Genera datos para gráfico de casos por edad."""
         # Unir con ciudadano para obtener fecha de nacimiento
         from app.domains.vigilancia_nominal.models.sujetos import Ciudadano
@@ -544,7 +544,7 @@ class AnalyticsService:
             {"rango": rango, "casos": cantidad} for rango, cantidad in rangos.items()
         ]
 
-    async def _generar_torta_sexo(self, query: Any) -> List[Dict[str, Any]]:
+    async def _generar_torta_sexo(self, query: Any) -> list[dict[str, Any]]:
         """Genera datos para gráfico de torta por sexo."""
         from app.domains.vigilancia_nominal.models.sujetos import Ciudadano
 
@@ -563,7 +563,7 @@ class AnalyticsService:
             for r in resultados
         ]
 
-    async def _generar_casos_mensual(self, query: Any) -> List[Dict[str, Any]]:
+    async def _generar_casos_mensual(self, query: Any) -> list[dict[str, Any]]:
         """Genera datos para gráfico mensual."""
         resultados = (
             query.with_entities(
@@ -590,30 +590,29 @@ class AnalyticsService:
             for r in resultados
         ]
 
-    async def _generar_tabla(self, query: Any) -> List[Dict[str, Any]]:
+    async def _generar_tabla(self, query: Any) -> list[dict[str, Any]]:
         """Genera datos para tabla."""
         from app.domains.vigilancia_nominal.models.sujetos import Ciudadano
 
         resultados = query.join(Ciudadano).limit(100).all()
 
-        datos = []
-        for evento in resultados:
-            datos.append(
-                {
-                    "id": evento.id_evento_caso,
-                    "nombre": f"{evento.ciudadano.nombre} {evento.ciudadano.apellido}",
-                    "fecha": evento.fecha_minima_caso.isoformat()
-                    if evento.fecha_minima_caso
-                    else None,
-                    "clasificacion": evento.clasificacion_estrategia,
-                    "provincia": evento.ciudadano.provincia,
-                    "localidad": evento.ciudadano.localidad,
-                }
-            )
+        datos = [
+            {
+                "id": evento.id_evento_caso,
+                "nombre": f"{evento.ciudadano.nombre} {evento.ciudadano.apellido}",
+                "fecha": evento.fecha_minima_caso.isoformat()
+                if evento.fecha_minima_caso
+                else None,
+                "clasificacion": evento.clasificacion_estrategia,
+                "provincia": evento.ciudadano.provincia,
+                "localidad": evento.ciudadano.localidad,
+            }
+            for evento in resultados
+        ]
 
         return datos
 
-    async def _generar_totales(self, query: Any) -> List[Dict[str, Any]]:
+    async def _generar_totales(self, query: Any) -> list[dict[str, Any]]:
         """Genera datos de totales simples."""
         total = query.count()
         return [{"categoria": "Total de casos", "valor": total}]

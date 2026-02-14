@@ -7,7 +7,7 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TypedDict
+from typing import Any, TypedDict
 
 # Agregar el directorio raíz al path
 sys.path.append(str(Path(__file__).parent.parent.parent))
@@ -28,15 +28,15 @@ class ChartData(TypedDict):
     nombre: str
     descripcion: str
     funcion_procesamiento: str
-    condiciones_display: Optional[Dict[str, Any]]
+    condiciones_display: dict[str, Any] | None
     tipo_visualizacion: str
-    configuracion_chart: Dict[str, Any]
+    configuracion_chart: dict[str, Any]
     orden: int
     activo: bool
 
 
 # Configuración de charts basados en el sistema Chubut
-DASHBOARD_CHARTS: List[ChartData] = [
+DASHBOARD_CHARTS: list[ChartData] = [
     {
         "codigo": "curva-epidemiologica",
         "nombre": "Curva Epidemiológica",

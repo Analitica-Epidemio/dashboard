@@ -13,8 +13,6 @@ USAGE:
   manager.upsert_vacunas_ciudadanos(df)
 """
 
-from typing import Dict
-
 import polars as pl
 
 from ..shared import BulkOperationResult
@@ -41,8 +39,8 @@ class SaludManager:
     def upsert_muestras_eventos(
         self,
         df: pl.DataFrame,
-        establecimiento_mapping: Dict[str, int],
-        evento_mapping: Dict[int, int],
+        establecimiento_mapping: dict[str, int],
+        evento_mapping: dict[int, int],
     ) -> BulkOperationResult:
         """Bulk upsert event samples."""
         return self.muestras.upsert_muestras_eventos(

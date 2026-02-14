@@ -27,7 +27,7 @@ async def login(
 
     Returns access token (30 min) and refresh token (7 days)
     """
-    user, token = await auth_service.autenticar_usuario(credentials, request)
+    _user, token = await auth_service.autenticar_usuario(credentials, request)
     # Logging is done inside autenticar_usuario to avoid SQLAlchemy lazy loading issues
     return token
 

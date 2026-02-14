@@ -11,7 +11,7 @@ Los datos agregados no tienen sujetos individuales.
 """
 
 from datetime import date
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, ClassVar, Optional
 
 from sqlalchemy import JSON, BigInteger, Column
 from sqlalchemy.orm import Mapped
@@ -59,44 +59,44 @@ class Ciudadano(BaseModel, table=True):
     )
 
     # Identificación
-    nombre: Optional[str] = Field(
+    nombre: str | None = Field(
         None, max_length=150, index=True, description="Nombre del ciudadano"
     )
-    apellido: Optional[str] = Field(
+    apellido: str | None = Field(
         None, max_length=150, index=True, description="Apellido del ciudadano"
     )
-    tipo_documento: Optional[TipoDocumento] = Field(
+    tipo_documento: TipoDocumento | None = Field(
         None, index=True, description="Tipo de documento"
     )
-    numero_documento: Optional[int] = Field(
+    numero_documento: int | None = Field(
         None, sa_type=BigInteger, index=True, description="Número de documento"
     )
 
     # Datos personales
-    fecha_nacimiento: Optional[date] = Field(None, description="Fecha de nacimiento")
-    sexo_biologico_al_nacer: Optional[SexoBiologico] = Field(
+    fecha_nacimiento: date | None = Field(None, description="Fecha de nacimiento")
+    sexo_biologico_al_nacer: SexoBiologico | None = Field(
         None, description="Sexo biológico al nacer"
     )
-    sexo_biologico: Optional[SexoBiologico] = Field(None, description="Sexo biológico")
-    genero_autopercibido: Optional[str] = Field(
+    sexo_biologico: SexoBiologico | None = Field(None, description="Sexo biológico")
+    genero_autopercibido: str | None = Field(
         None, max_length=150, description="Género autopercibido"
     )
-    etnia: Optional[str] = Field(None, max_length=30, description="Etnia")
+    etnia: str | None = Field(None, max_length=30, description="Etnia")
 
     # Relaciones
-    domicilios: Mapped[List["CiudadanoDomicilio"]] = Relationship(
+    domicilios: Mapped[list["CiudadanoDomicilio"]] = Relationship(
         back_populates="ciudadano"
     )
-    domicilios_historico: Mapped[List["PersonaDomicilio"]] = Relationship(
+    domicilios_historico: Mapped[list["PersonaDomicilio"]] = Relationship(
         back_populates="ciudadano"
     )
-    datos: Mapped[List["CiudadanoDatos"]] = Relationship(back_populates="ciudadano")
-    casos: Mapped[List["CasoEpidemiologico"]] = Relationship(back_populates="ciudadano")
-    comorbilidades: Mapped[List["CiudadanoComorbilidades"]] = Relationship(
+    datos: Mapped[list["CiudadanoDatos"]] = Relationship(back_populates="ciudadano")
+    casos: Mapped[list["CasoEpidemiologico"]] = Relationship(back_populates="ciudadano")
+    comorbilidades: Mapped[list["CiudadanoComorbilidades"]] = Relationship(
         back_populates="ciudadano"
     )
-    viajes: Mapped[List["ViajesCiudadano"]] = Relationship(back_populates="ciudadano")
-    vacunas: Mapped[List["VacunasCiudadano"]] = Relationship(back_populates="ciudadano")
+    viajes: Mapped[list["ViajesCiudadano"]] = Relationship(back_populates="ciudadano")
+    vacunas: Mapped[list["VacunasCiudadano"]] = Relationship(back_populates="ciudadano")
 
 
 class CiudadanoDomicilio(BaseModel, table=True):
@@ -147,22 +147,22 @@ class CiudadanoDatos(BaseModel, table=True):
     )
 
     # Campos propios
-    cobertura_social_obra_social: Optional[str] = Field(
+    cobertura_social_obra_social: str | None = Field(
         None, max_length=250, description="Obra social o cobertura de salud"
     )
-    edad_anos_actual: Optional[int] = Field(None, description="Edad actual en años")
-    ocupacion_laboral: Optional[str] = Field(
+    edad_anos_actual: int | None = Field(None, description="Edad actual en años")
+    ocupacion_laboral: str | None = Field(
         None, max_length=150, description="Ocupación laboral"
     )
-    informacion_contacto: Optional[str] = Field(
+    informacion_contacto: str | None = Field(
         None,
         max_length=150,
         description="Información de contacto (teléfono, email, etc)",
     )
-    es_declarado_pueblo_indigena: Optional[bool] = Field(
+    es_declarado_pueblo_indigena: bool | None = Field(
         None, description="Se declara perteneciente a pueblo indígena"
     )
-    es_embarazada: Optional[bool] = Field(
+    es_embarazada: bool | None = Field(
         None,
         description="Indica si la ciudadana está embarazada",
     )
@@ -224,7 +224,7 @@ class PersonaDomicilio(BaseModel, table=True):
     fecha_desde: date = Field(
         ..., index=True, description="Fecha desde la cual vive en este domicilio"
     )
-    fecha_hasta: Optional[date] = Field(
+    fecha_hasta: date | None = Field(
         None, description="Fecha hasta la cual vivió (NULL = domicilio actual)"
     )
 
@@ -246,36 +246,36 @@ class Animal(BaseModel, table=True):
     """
 
     __tablename__ = "animal"
-    __table_args__ = {"extend_existing": True}
+    __table_args__: ClassVar[dict[str, bool]] = {"extend_existing": True}
 
     # Campos propios
     especie: str = Field(..., max_length=100, description="Especie del animal")
-    raza: Optional[str] = Field(None, max_length=100, description="Raza del animal")
-    sexo: Optional[str] = Field(None, max_length=20, description="Sexo del animal")
-    edad_aproximada: Optional[int] = Field(None, description="Edad aproximada en meses")
-    identificacion: Optional[str] = Field(
+    raza: str | None = Field(None, max_length=100, description="Raza del animal")
+    sexo: str | None = Field(None, max_length=20, description="Sexo del animal")
+    edad_aproximada: int | None = Field(None, description="Edad aproximada en meses")
+    identificacion: str | None = Field(
         None,
         max_length=100,
         description="Identificación del animal (collar, chip, etc)",
     )
 
     # Clasificación taxonómica
-    subespecie: Optional[str] = Field(
+    subespecie: str | None = Field(
         None,
         max_length=100,
         description="Subespecie o nombre científico completo",
     )
-    clasificacion_taxonomica: Optional[Dict] = Field(
+    clasificacion_taxonomica: dict | None = Field(
         None,
         sa_column=Column(JSON),
         description="Información taxonómica estructurada",
     )
-    origen_deteccion: Optional[str] = Field(
+    origen_deteccion: str | None = Field(
         None,
         max_length=255,
         description="Cómo se detectó: 'automatico', 'manual', 'revision'",
     )
-    confidence_deteccion: Optional[float] = Field(
+    confidence_deteccion: float | None = Field(
         None,
         ge=0.0,
         le=1.0,
@@ -283,30 +283,30 @@ class Animal(BaseModel, table=True):
     )
 
     # Datos del propietario
-    propietario_nombre: Optional[str] = Field(
+    propietario_nombre: str | None = Field(
         None, max_length=150, description="Nombre del propietario"
     )
-    propietario_contacto: Optional[str] = Field(
+    propietario_contacto: str | None = Field(
         None, max_length=150, description="Contacto del propietario"
     )
 
     # Ubicación
-    provincia: Optional[str] = Field(
+    provincia: str | None = Field(
         None, max_length=100, description="Provincia donde se encuentra el animal"
     )
-    id_localidad_indec: Optional[int] = Field(
+    id_localidad_indec: int | None = Field(
         None,
         sa_type=BigInteger,
         foreign_key="localidad.id_localidad_indec",
         description="ID de la localidad INDEC",
     )
-    direccion: Optional[str] = Field(
+    direccion: str | None = Field(
         None, max_length=200, description="Dirección donde se encuentra el animal"
     )
 
     # Relaciones
     localidad: Mapped[Optional["Localidad"]] = Relationship()
-    casos: Mapped[List["CasoEpidemiologico"]] = Relationship(back_populates="animal")
+    casos: Mapped[list["CasoEpidemiologico"]] = Relationship(back_populates="animal")
 
 
 # =============================================================================
@@ -323,7 +323,7 @@ class ViajesCiudadano(BaseModel, table=True):
     """
 
     __tablename__ = "viajes_ciudadano"
-    __table_args__ = {"extend_existing": True}
+    __table_args__: ClassVar[dict[str, bool]] = {"extend_existing": True}
 
     # ID SNVS como identificador único
     id_snvs_viaje_epidemiologico: int = Field(
@@ -336,7 +336,7 @@ class ViajesCiudadano(BaseModel, table=True):
         foreign_key="ciudadano.codigo_ciudadano",
         description="Código del ciudadano",
     )
-    id_localidad_destino_viaje: Optional[int] = Field(
+    id_localidad_destino_viaje: int | None = Field(
         None,
         sa_type=BigInteger,
         foreign_key="localidad.id_localidad_indec",
@@ -344,10 +344,10 @@ class ViajesCiudadano(BaseModel, table=True):
     )
 
     # Campos propios
-    fecha_inicio_viaje: Optional[date] = Field(
+    fecha_inicio_viaje: date | None = Field(
         None, description="Fecha de inicio del viaje"
     )
-    fecha_finalizacion_viaje: Optional[date] = Field(
+    fecha_finalizacion_viaje: date | None = Field(
         None, description="Fecha de finalización del viaje"
     )
 

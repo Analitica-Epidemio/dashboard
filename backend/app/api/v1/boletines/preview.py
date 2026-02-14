@@ -5,7 +5,7 @@ Endpoint genérico que genera resúmenes de datos basados en código de evento/g
 
 import logging
 from datetime import date
-from typing import Literal, Optional
+from typing import Literal
 
 from fastapi import Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -41,9 +41,9 @@ class MetricItem(BaseModel):
 
     label: str
     value: str | int | float
-    trend: Optional[Literal["up", "down", "stable"]] = None
-    trend_value: Optional[float] = None
-    alert: Optional[bool] = None
+    trend: Literal["up", "down", "stable"] | None = None
+    trend_value: float | None = None
+    alert: bool | None = None
 
 
 class CorredorPreview(BaseModel):
@@ -52,7 +52,7 @@ class CorredorPreview(BaseModel):
     casos_acumulados: int
     zona_actual: Literal["exito", "seguridad", "alerta", "brote"]
     tendencia: Literal["up", "down", "stable"]
-    porcentaje_cambio: Optional[float] = None
+    porcentaje_cambio: float | None = None
 
 
 class SectionPreviewResponse(BaseModel):
@@ -61,10 +61,10 @@ class SectionPreviewResponse(BaseModel):
     evento_codigo: str
     evento_nombre: str
     evento_tipo: Literal["tipo_eno", "grupo_de_enfermedades"]
-    summary: Optional[str] = None
+    summary: str | None = None
     metrics: list[MetricItem] = Field(default_factory=list)
-    corredor: Optional[CorredorPreview] = None
-    periodo: Optional[dict] = None
+    corredor: CorredorPreview | None = None
+    periodo: dict | None = None
 
 
 class CasoEpidemiologicoDisponible(BaseModel):
@@ -135,7 +135,7 @@ def calculate_zona(
 
 async def get_evento_info(
     db: AsyncSession, codigo: str
-) -> tuple[Optional[int], Optional[str], Literal["tipo_eno", "grupo_de_enfermedades"]]:
+) -> tuple[int | None, str | None, Literal["tipo_eno", "grupo_de_enfermedades"]]:
     """
     Busca un evento por código en Enfermedad o GrupoDeEnfermedades.
     Retorna (id, nombre, tipo).
@@ -411,15 +411,15 @@ async def list_available_eventos(
         )
         result = await db.execute(stmt)
 
-        for row in result.all():
-            eventos.append(
-                CasoEpidemiologicoDisponible(
-                    id=row.id,
-                    codigo=row.slug,
-                    nombre=row.nombre,
-                    tipo="tipo_eno",
-                )
+        eventos.extend(
+            CasoEpidemiologicoDisponible(
+                id=row.id,
+                codigo=row.slug,
+                nombre=row.nombre,
+                tipo="tipo_eno",
             )
+            for row in result.all()
+        )
 
         # Obtener GrupoDeEnfermedades con código
         stmt = (
@@ -433,21 +433,21 @@ async def list_available_eventos(
         )
         result = await db.execute(stmt)
 
-        for row in result.all():
-            eventos.append(
-                CasoEpidemiologicoDisponible(
-                    id=row.id,
-                    codigo=row.slug,
-                    nombre=row.nombre,
-                    tipo="grupo_de_enfermedades",
-                )
+        eventos.extend(
+            CasoEpidemiologicoDisponible(
+                id=row.id,
+                codigo=row.slug,
+                nombre=row.nombre,
+                tipo="grupo_de_enfermedades",
             )
+            for row in result.all()
+        )
 
         return SuccessResponse(data=eventos)
 
     except Exception as e:
         logger.error(f"Error listando eventos: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Error al listar eventos")
+        raise HTTPException(status_code=500, detail="Error al listar eventos") from e
 
 
 async def list_available_agentes(
@@ -476,20 +476,20 @@ async def list_available_agentes(
 
         result = await db.execute(stmt)
 
-        for row in result.all():
-            agentes.append(
-                AgenteDisponible(
-                    id=row.id,
-                    codigo=row.slug,
-                    nombre=row.nombre,
-                    nombre_corto=row.nombre_corto,
-                    categoria=row.categoria,
-                    grupo=row.grupo,
-                )
+        agentes = [
+            AgenteDisponible(
+                id=row.id,
+                codigo=row.slug,
+                nombre=row.nombre,
+                nombre_corto=row.nombre_corto,
+                categoria=row.categoria,
+                grupo=row.grupo,
             )
+            for row in result.all()
+        ]
 
         return SuccessResponse(data=agentes)
 
     except Exception as e:
         logger.error(f"Error listando agentes: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Error al listar agentes")
+        raise HTTPException(status_code=500, detail="Error al listar agentes") from e

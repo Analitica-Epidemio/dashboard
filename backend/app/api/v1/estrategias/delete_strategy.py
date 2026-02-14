@@ -67,8 +67,8 @@ async def delete_strategy(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"💥 Error deleting strategy {strategy_id}: {str(e)}")
+        logger.error(f"💥 Error deleting strategy {strategy_id}: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error eliminando estrategia: {str(e)}",
-        )
+            detail=f"Error eliminando estrategia: {e!s}",
+        ) from e

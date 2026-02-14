@@ -5,7 +5,7 @@ Retorna indicadores/métricas clave para los reportes
 
 import logging
 from datetime import date
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import Depends, Query
 from pydantic import BaseModel
@@ -32,12 +32,12 @@ class IndicadoresData(BaseModel):
 async def get_indicadores(
     db: AsyncSession = Depends(get_async_session),
     current_user: User | None = RequireAuthOrSignedUrl,
-    grupo_id: Optional[int] = Query(None),
-    tipo_eno_ids: Optional[List[int]] = Query(None),
-    fecha_desde: Optional[str] = Query(None),
-    fecha_hasta: Optional[str] = Query(None),
-    clasificaciones: Optional[List[str]] = Query(None),
-    provincia_id: Optional[int] = Query(None),
+    grupo_id: int | None = Query(None),
+    tipo_eno_ids: list[int] | None = Query(None),
+    fecha_desde: str | None = Query(None),
+    fecha_hasta: str | None = Query(None),
+    clasificaciones: list[str] | None = Query(None),
+    provincia_id: int | None = Query(None),
 ) -> SuccessResponse[IndicadoresData]:
     """
     Obtiene indicadores clave basados en filtros
@@ -56,7 +56,7 @@ async def get_indicadores(
         Indicadores calculados
     """
     try:
-        params: Dict[str, Any] = {}
+        params: dict[str, Any] = {}
         where_clauses = []
 
         # Filtros de fechas

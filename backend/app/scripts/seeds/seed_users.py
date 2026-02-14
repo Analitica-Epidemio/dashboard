@@ -6,7 +6,7 @@ si el usuario confirma explícitamente. Esto evita crear credenciales
 inseguras en producción por accidente.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
@@ -68,7 +68,7 @@ def seed_superadmin(session: Session, force: bool = False) -> None:
         rol=UserRole.SUPERADMIN,
         estado=UserStatus.ACTIVE,
         es_email_verificado=True,
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
 
     session.add(superadmin)

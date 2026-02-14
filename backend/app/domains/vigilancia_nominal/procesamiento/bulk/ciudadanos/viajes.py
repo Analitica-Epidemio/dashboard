@@ -36,9 +36,9 @@ class ViajesProcessor(BulkProcessorBase):
         stmt = select(Ciudadano.codigo_ciudadano).where(
             col(Ciudadano.codigo_ciudadano).in_(codigos_ciudadanos)
         )
-        ciudadanos_existentes = set(
+        ciudadanos_existentes = {
             codigo for (codigo,) in self.context.session.execute(stmt).all()
-        )
+        }
 
         # LAZY EVALUATION - todo el procesamiento en un solo query plan
         timestamp = self._get_current_timestamp()

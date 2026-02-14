@@ -3,7 +3,6 @@ Dependencia de autenticación flexible que acepta JWT o URL firmada
 """
 
 import logging
-from typing import Optional
 
 from fastapi import Depends, HTTPException, Request
 
@@ -15,8 +14,8 @@ logger = logging.getLogger(__name__)
 
 
 async def require_auth_or_signed_url(
-    request: Request, current_user: Optional[User] = Depends(get_current_user_optional)
-) -> Optional[User]:
+    request: Request, current_user: User | None = Depends(get_current_user_optional)
+) -> User | None:
     """
     Dependencia que requiere autenticación JWT O URL firmada válida
 

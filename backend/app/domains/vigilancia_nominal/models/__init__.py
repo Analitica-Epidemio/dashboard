@@ -73,46 +73,46 @@ from app.domains.vigilancia_nominal.models.sujetos import (
 )
 
 __all__ = [
+    # Agentes
+    "AgenteExtraccionConfig",
+    # Ámbitos
+    "AmbitosConcurrenciaCaso",
+    "Animal",
+    "AntecedenteEpidemiologico",
+    "AntecedentesCasoEpidemiologico",
+    "CasoAgente",
     # Caso
     "CasoEpidemiologico",
     "CasoGrupoEnfermedad",
-    "DetalleCasoSintomas",
-    "AntecedenteEpidemiologico",
-    "AntecedentesCasoEpidemiologico",
-    # Enfermedades
-    "Enfermedad",
-    "GrupoDeEnfermedades",
-    "EnfermedadGrupo",
     # Sujetos
     "Ciudadano",
+    "CiudadanoComorbilidades",
     "CiudadanoDatos",
     "CiudadanoDomicilio",
-    "CiudadanoComorbilidades",
-    "PersonaDomicilio",
-    "Animal",
-    "ViajesCiudadano",
-    # Agentes
-    "AgenteExtraccionConfig",
-    "CasoAgente",
-    "ResultadoDeteccion",
+    "Comorbilidad",
+    "ContactosNotificacion",
+    "DetalleCasoSintomas",
+    "Determinacion",
     # Atención
     "DiagnosticoCasoEpidemiologico",
+    # Enfermedades
+    "Enfermedad",
+    "EnfermedadGrupo",
+    "EstudioCasoEpidemiologico",
+    "GrupoDeEnfermedades",
     "InternacionCasoEpidemiologico",
-    "TratamientoCasoEpidemiologico",
     "InvestigacionCasoEpidemiologico",
-    "ContactosNotificacion",
+    "Muestra",
     # Muestras y estudios
     "MuestraCasoEpidemiologico",
-    "EstudioCasoEpidemiologico",
+    "PersonaDomicilio",
+    "ResultadoDeteccion",
+    "ResultadoTecnica",
     # Catálogos de salud
     "Sintoma",
-    "Comorbilidad",
+    "Tecnica",
+    "TratamientoCasoEpidemiologico",
     "Vacuna",
     "VacunasCiudadano",
-    "Muestra",
-    "Determinacion",
-    "Tecnica",
-    "ResultadoTecnica",
-    # Ámbitos
-    "AmbitosConcurrenciaCaso",
+    "ViajesCiudadano",
 ]

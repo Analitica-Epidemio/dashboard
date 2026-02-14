@@ -5,6 +5,7 @@ Guarda en: ConteoCasosClinicos
 """
 
 import logging
+from datetime import UTC
 
 import polars as pl
 
@@ -162,7 +163,7 @@ class CLIP26Processor(FileTypeProcessor):
                         inserted += 1
 
                     except Exception as e:
-                        errors.append(f"Error en fila: {str(e)}")
+                        errors.append(f"Error en fila: {e!s}")
 
                 # Commit cada 100 notificaciones
                 if i % 100 == 0:
@@ -210,15 +211,11 @@ class CLIP26Processor(FileTypeProcessor):
                 TipoCasoEpidemiologicoPasivo.id_snvs, TipoCasoEpidemiologicoPasivo.id
             )
         ).all()
-        for id_snvs, id_interno in eventos:
-            if id_snvs:
-                eventos_cache[id_snvs] = id_interno
+        eventos_cache.update({id_snvs: id_interno for id_snvs, id_interno in eventos if id_snvs})
 
         # Edades
         edades = self.session.exec(select(RangoEtario.id_snvs, RangoEtario.id)).all()
-        for id_snvs, id_interno in edades:
-            if id_snvs:
-                edades_cache[id_snvs] = id_interno
+        edades_cache.update({id_snvs: id_interno for id_snvs, id_interno in edades if id_snvs})
 
     def _get_or_create_notificacion(
         self,
@@ -392,7 +389,7 @@ class CLIP26Processor(FileTypeProcessor):
         Crea establecimientos faltantes con source='SNVS'.
         Similar a como hace el procesador de nominales.
         """
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         from sqlalchemy import inspect
         from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -436,7 +433,7 @@ class CLIP26Processor(FileTypeProcessor):
 
         if faltantes:
             logger.info(f"➕ Creando {len(faltantes)} establecimientos faltantes")
-            timestamp = datetime.now(timezone.utc)
+            timestamp = datetime.now(UTC)
             nuevos = [
                 {
                     "codigo_snvs": str(row["id_snvs"]),

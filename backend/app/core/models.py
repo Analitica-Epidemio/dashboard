@@ -4,8 +4,8 @@ Modelos base para toda la aplicación.
 Proveen funcionalidad común como timestamps, soft delete, y métodos útiles.
 """
 
-from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import func
 from sqlmodel import Field, SQLModel
@@ -32,7 +32,7 @@ class TimestampMixin(SQLModel):
 class SoftDeleteMixin(SQLModel):
     """Mixin para soft delete (borrado lógico)."""
 
-    deleted_at: Optional[datetime] = Field(
+    deleted_at: datetime | None = Field(
         default=None,
         sa_column_kwargs={"nullable": True},
         description="Fecha de borrado lógico",
@@ -49,7 +49,7 @@ class SoftDeleteMixin(SQLModel):
 
     def soft_delete(self) -> None:
         """Marca el registro como eliminado."""
-        self.deleted_at = datetime.now(timezone.utc)
+        self.deleted_at = datetime.now(UTC)
         self.is_active = False
 
     def restore(self) -> None:
@@ -68,7 +68,7 @@ class BaseModel(TimestampMixin, SQLModel):
     - Configuración común
     """
 
-    id: Optional[int] = Field(
+    id: int | None = Field(
         default=None, primary_key=True, description="Identificador único"
     )
 
@@ -82,12 +82,12 @@ class BaseModel(TimestampMixin, SQLModel):
         # Permite campos arbitrarios en JSON
         arbitrary_types_allowed = True
 
-    def model_dump(self, **kwargs: Any) -> Dict[str, Any]:
+    def model_dump(self, **kwargs: Any) -> dict[str, Any]:
         """Override para excluir campos None por defecto."""
         kwargs.setdefault("exclude_none", True)
         return super().model_dump(**kwargs)
 
-    def update_from_dict(self, data: Dict[str, Any]) -> None:
+    def update_from_dict(self, data: dict[str, Any]) -> None:
         """Actualiza el modelo desde un diccionario."""
         for key, value in data.items():
             if hasattr(self, key):
@@ -102,7 +102,6 @@ class BaseModelWithSoftDelete(BaseModel, SoftDeleteMixin):
     (ej: usuarios, datos sensibles, registros de auditoría).
     """
 
-    pass
 
 
 class BaseModelWithoutId(TimestampMixin, SQLModel):

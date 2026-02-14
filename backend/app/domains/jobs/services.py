@@ -7,7 +7,6 @@ NO contiene lógica específica de archivos.
 
 import logging
 from datetime import datetime
-from typing import Optional
 
 from celery.result import AsyncResult
 
@@ -29,7 +28,7 @@ class JobService:
         tipo_procesador: str,
         datos_entrada: dict,
         prioridad: JobPriority = JobPriority.NORMAL,
-        creado_por: Optional[str] = None,
+        creado_por: str | None = None,
     ) -> Job:
         """Crear un nuevo job."""
         job = Job(
@@ -57,7 +56,7 @@ class JobService:
         logger.info(f"Job {job.id} iniciado con task {celery_task.id}")
         return job
 
-    async def obtener_estado_job(self, job_id: str) -> Optional[JobStatusResponse]:
+    async def obtener_estado_job(self, job_id: str) -> JobStatusResponse | None:
         """Obtener estado actual de un job."""
         job = await job_repository.get_by_id(job_id)
         if not job:
@@ -124,7 +123,7 @@ class JobService:
                     await job_repository.update(job)
 
         except Exception as e:
-            logger.error(f"Error sincronizando con Celery para job {job.id}: {str(e)}")
+            logger.error(f"Error sincronizando con Celery para job {job.id}: {e!s}")
 
 
 job_service = JobService()

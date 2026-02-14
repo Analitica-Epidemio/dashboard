@@ -2,7 +2,7 @@
 Servicios síncronos para clasificación de eventos usando estrategias de DB.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pandas as pd
 from sqlmodel import Session, col, select
@@ -31,7 +31,7 @@ class SyncEventClassificationService:
             session: Sesión de base de datos síncrona
         """
         self.session = session
-        self._cache: Dict[int, EstrategiaClasificacion] = {}
+        self._cache: dict[int, EstrategiaClasificacion] = {}
 
     @staticmethod
     def normalize_text(text: str) -> str:
@@ -197,13 +197,13 @@ class SyncEventClassificationService:
 
     def _get_strategy(
         self, id_enfermedad: int, use_cache: bool
-    ) -> Optional[EstrategiaClasificacion]:
+    ) -> EstrategiaClasificacion | None:
         """Obtiene la estrategia para un tipo de ENO."""
         if use_cache and id_enfermedad in self._cache:
             return self._cache[id_enfermedad]
 
         # Buscar estrategia activa
-        result: Optional[EstrategiaClasificacion] = (
+        result: EstrategiaClasificacion | None = (
             self.session.execute(
                 select(EstrategiaClasificacion)
                 .where(EstrategiaClasificacion.id_enfermedad == id_enfermedad)
@@ -288,7 +288,7 @@ class SyncEventClassificationService:
 
     def _apply_rule_with_traceability(
         self, df: pd.DataFrame, rule: ClassificationRule
-    ) -> tuple[pd.Series, Dict]:
+    ) -> tuple[pd.Series, dict]:
         """
         Evalúa una regla sobre un DataFrame capturando información de trazabilidad.
 
@@ -300,7 +300,7 @@ class SyncEventClassificationService:
             Tupla con (máscara booleana, diccionario de trazabilidad por índice)
         """
         # Diccionario para almacenar trazabilidad por índice de fila
-        traceability: Dict[int, List[Dict[str, Any]]] = {}
+        traceability: dict[int, list[dict[str, Any]]] = {}
 
         # Si no hay condiciones, la regla aplica a todas las filas
         if not rule.filters:

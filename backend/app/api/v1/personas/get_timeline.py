@@ -5,7 +5,7 @@ Timeline completo de TODOS los eventos y actividades de una persona.
 
 import logging
 from datetime import date
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import Depends, HTTPException, Path, status
 from pydantic import BaseModel, ConfigDict, Field
@@ -34,19 +34,19 @@ class TimelineItem(BaseModel):
     )
     fecha: date = Field(..., description="Fecha del item")
     titulo: str = Field(..., description="Título descriptivo")
-    descripcion: Optional[str] = Field(None, description="Descripción adicional")
-    detalles: Optional[Dict[str, Any]] = Field(
+    descripcion: str | None = Field(None, description="Descripción adicional")
+    detalles: dict[str, Any] | None = Field(
         None, description="Detalles adicionales en formato JSON"
     )
 
     # Relación con evento padre
-    evento_id: Optional[int] = Field(
+    evento_id: int | None = Field(
         None, description="ID del evento al que pertenece (si aplica)"
     )
-    evento_tipo: Optional[str] = Field(None, description="Tipo de ENO del evento")
+    evento_tipo: str | None = Field(None, description="Tipo de ENO del evento")
 
     # Metadata
-    clasificacion: Optional[str] = Field(None, description="Clasificación si es evento")
+    clasificacion: str | None = Field(None, description="Clasificación si es evento")
     es_critico: bool = Field(
         default=False, description="Si es un item crítico (muerte, UCI, confirmado)"
     )
@@ -64,13 +64,13 @@ class PersonaTimelineResponse(BaseModel):
     nombre_completo: str = Field(..., description="Nombre de la persona")
 
     # Timeline completo ordenado cronológicamente
-    items: List[TimelineItem] = Field(
+    items: list[TimelineItem] = Field(
         default_factory=list, description="Items del timeline ordenados por fecha"
     )
 
     # Metadatos
-    fecha_inicio: Optional[date] = Field(None, description="Fecha del primer item")
-    fecha_fin: Optional[date] = Field(None, description="Fecha del último item")
+    fecha_inicio: date | None = Field(None, description="Fecha del primer item")
+    fecha_fin: date | None = Field(None, description="Fecha del último item")
     total_items: int = Field(..., description="Total de items en el timeline")
     total_eventos: int = Field(..., description="Total de eventos")
 
@@ -450,9 +450,9 @@ async def get_persona_timeline(
         raise
     except Exception as e:
         logger.error(
-            f"💥 Error obteniendo timeline de persona {tipo_sujeto}/{persona_id}: {str(e)}"
+            f"💥 Error obteniendo timeline de persona {tipo_sujeto}/{persona_id}: {e!s}"
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error obteniendo timeline: {str(e)}",
-        )
+            detail=f"Error obteniendo timeline: {e!s}",
+        ) from e

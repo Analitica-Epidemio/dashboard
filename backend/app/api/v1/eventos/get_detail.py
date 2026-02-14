@@ -5,7 +5,7 @@ Get evento detail endpoint
 import logging
 from datetime import date
 from decimal import Decimal
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import Depends, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field
@@ -37,73 +37,73 @@ class CiudadanoInfo(BaseModel):
     codigo: int = Field(..., description="Código del ciudadano")
     nombre: str = Field(..., description="Nombre")
     apellido: str = Field(..., description="Apellido")
-    documento: Optional[str] = Field(None, description="Número de documento")
-    fecha_nacimiento: Optional[date] = Field(None, description="Fecha de nacimiento")
-    sexo: Optional[str] = Field(None, description="Sexo")
-    provincia: Optional[str] = Field(None, description="Provincia de residencia")
-    localidad: Optional[str] = Field(None, description="Localidad de residencia")
-    calle: Optional[str] = Field(None, description="Calle del domicilio")
-    numero: Optional[str] = Field(None, description="Número del domicilio")
-    barrio: Optional[str] = Field(None, description="Barrio popular")
-    telefono: Optional[str] = Field(None, description="Teléfono de contacto")
-    es_embarazada: Optional[bool] = Field(None, description="Si está embarazada")
-    cobertura_social: Optional[str] = Field(
+    documento: str | None = Field(None, description="Número de documento")
+    fecha_nacimiento: date | None = Field(None, description="Fecha de nacimiento")
+    sexo: str | None = Field(None, description="Sexo")
+    provincia: str | None = Field(None, description="Provincia de residencia")
+    localidad: str | None = Field(None, description="Localidad de residencia")
+    calle: str | None = Field(None, description="Calle del domicilio")
+    numero: str | None = Field(None, description="Número del domicilio")
+    barrio: str | None = Field(None, description="Barrio popular")
+    telefono: str | None = Field(None, description="Teléfono de contacto")
+    es_embarazada: bool | None = Field(None, description="Si está embarazada")
+    cobertura_social: str | None = Field(
         None, description="Cobertura social u obra social"
     )
-    ocupacion_laboral: Optional[str] = Field(None, description="Ocupación laboral")
+    ocupacion_laboral: str | None = Field(None, description="Ocupación laboral")
 
 
 class AnimalInfo(BaseModel):
     """Información del animal"""
 
     id: int = Field(..., description="ID del animal")
-    identificacion: Optional[str] = Field(None, description="Identificación del animal")
-    especie: Optional[str] = Field(None, description="Especie")
-    raza: Optional[str] = Field(None, description="Raza")
-    provincia: Optional[str] = Field(None, description="Provincia")
-    localidad: Optional[str] = Field(None, description="Localidad")
+    identificacion: str | None = Field(None, description="Identificación del animal")
+    especie: str | None = Field(None, description="Especie")
+    raza: str | None = Field(None, description="Raza")
+    provincia: str | None = Field(None, description="Provincia")
+    localidad: str | None = Field(None, description="Localidad")
 
 
 class SintomaInfo(BaseModel):
     """Información de síntoma"""
 
     id: int = Field(..., description="ID del síntoma")
-    nombre: Optional[str] = Field(None, description="Nombre del síntoma")
-    fecha_inicio: Optional[date] = Field(
+    nombre: str | None = Field(None, description="Nombre del síntoma")
+    fecha_inicio: date | None = Field(
         None, description="Fecha de inicio del síntoma"
     )
-    semana_epidemiologica: Optional[int] = Field(
+    semana_epidemiologica: int | None = Field(
         None, description="Semana epidemiológica de aparición"
     )
-    anio_epidemiologico: Optional[int] = Field(None, description="Año epidemiológico")
+    anio_epidemiologico: int | None = Field(None, description="Año epidemiológico")
 
 
 class EstudioInfo(BaseModel):
     """Información de estudio realizado sobre una muestra"""
 
     id: int = Field(..., description="ID del estudio")
-    determinacion: Optional[str] = Field(None, description="Determinación realizada")
-    tecnica: Optional[str] = Field(None, description="Técnica utilizada")
-    resultado: Optional[str] = Field(None, description="Resultado del estudio")
-    fecha_estudio: Optional[date] = Field(None, description="Fecha del estudio")
-    fecha_recepcion: Optional[date] = Field(None, description="Fecha de recepción")
+    determinacion: str | None = Field(None, description="Determinación realizada")
+    tecnica: str | None = Field(None, description="Técnica utilizada")
+    resultado: str | None = Field(None, description="Resultado del estudio")
+    fecha_estudio: date | None = Field(None, description="Fecha del estudio")
+    fecha_recepcion: date | None = Field(None, description="Fecha de recepción")
 
 
 class MuestraInfo(BaseModel):
     """Información de muestra con sus estudios"""
 
     id: int = Field(..., description="ID de la muestra")
-    tipo: Optional[str] = Field(None, description="Tipo de muestra")
-    fecha_toma_muestra: Optional[date] = Field(None, description="Fecha de toma")
-    establecimiento: Optional[str] = Field(
+    tipo: str | None = Field(None, description="Tipo de muestra")
+    fecha_toma_muestra: date | None = Field(None, description="Fecha de toma")
+    establecimiento: str | None = Field(
         None, description="Establecimiento donde se tomó"
     )
-    semana_epidemiologica: Optional[int] = Field(
+    semana_epidemiologica: int | None = Field(
         None, description="Semana epidemiológica"
     )
-    anio_epidemiologico: Optional[int] = Field(None, description="Año epidemiológico")
-    valor: Optional[str] = Field(None, description="Valor del resultado general")
-    estudios: List[EstudioInfo] = Field(
+    anio_epidemiologico: int | None = Field(None, description="Año epidemiológico")
+    valor: str | None = Field(None, description="Valor del resultado general")
+    estudios: list[EstudioInfo] = Field(
         default_factory=list, description="Estudios realizados sobre esta muestra"
     )
 
@@ -112,9 +112,9 @@ class DiagnosticoInfo(BaseModel):
     """Información de diagnóstico"""
 
     id: int = Field(..., description="ID del diagnóstico")
-    diagnostico: Optional[str] = Field(None, description="Diagnóstico")
-    fecha: Optional[date] = Field(None, description="Fecha del diagnóstico")
-    es_principal: Optional[bool] = Field(
+    diagnostico: str | None = Field(None, description="Diagnóstico")
+    fecha: date | None = Field(None, description="Fecha del diagnóstico")
+    es_principal: bool | None = Field(
         None, description="Si es diagnóstico principal"
     )
 
@@ -123,24 +123,24 @@ class EstablecimientoInfo(BaseModel):
     """Información de establecimiento"""
 
     id: int = Field(..., description="ID del establecimiento")
-    nombre: Optional[str] = Field(None, description="Nombre del establecimiento")
-    tipo: Optional[str] = Field(None, description="Tipo de establecimiento")
-    provincia: Optional[str] = Field(None, description="Provincia")
-    localidad: Optional[str] = Field(None, description="Localidad")
+    nombre: str | None = Field(None, description="Nombre del establecimiento")
+    tipo: str | None = Field(None, description="Tipo de establecimiento")
+    provincia: str | None = Field(None, description="Provincia")
+    localidad: str | None = Field(None, description="Localidad")
 
 
 class TratamientoInfo(BaseModel):
     """Información de tratamiento"""
 
     id: int = Field(..., description="ID del tratamiento")
-    descripcion: Optional[str] = Field(None, description="Descripción del tratamiento")
-    establecimiento: Optional[str] = Field(
+    descripcion: str | None = Field(None, description="Descripción del tratamiento")
+    establecimiento: str | None = Field(
         None, description="Establecimiento de tratamiento"
     )
-    fecha_inicio: Optional[date] = Field(None, description="Fecha de inicio")
-    fecha_fin: Optional[date] = Field(None, description="Fecha de fin")
-    resultado: Optional[str] = Field(None, description="Resultado del tratamiento")
-    recibio_tratamiento: Optional[bool] = Field(
+    fecha_inicio: date | None = Field(None, description="Fecha de inicio")
+    fecha_fin: date | None = Field(None, description="Fecha de fin")
+    resultado: str | None = Field(None, description="Resultado del tratamiento")
+    recibio_tratamiento: bool | None = Field(
         None, description="Si recibió tratamiento"
     )
 
@@ -149,41 +149,41 @@ class InternacionInfo(BaseModel):
     """Información de internación"""
 
     id: int = Field(..., description="ID de la internación")
-    fecha_internacion: Optional[date] = Field(None, description="Fecha de internación")
-    fecha_alta: Optional[date] = Field(None, description="Fecha de alta")
-    requirio_uci: Optional[bool] = Field(None, description="Si requirió UCI")
+    fecha_internacion: date | None = Field(None, description="Fecha de internación")
+    fecha_alta: date | None = Field(None, description="Fecha de alta")
+    requirio_uci: bool | None = Field(None, description="Si requirió UCI")
 
 
 class InvestigacionInfo(BaseModel):
     """Información de investigación epidemiológica"""
 
     id: int = Field(..., description="ID de la investigación")
-    es_usuario_centinela: Optional[bool] = Field(
+    es_usuario_centinela: bool | None = Field(
         None, description="Si es usuario centinela"
     )
-    es_evento_centinela: Optional[bool] = Field(
+    es_evento_centinela: bool | None = Field(
         None, description="Si es evento centinela"
     )
-    participo_usuario_centinela: Optional[bool] = Field(
+    participo_usuario_centinela: bool | None = Field(
         None, description="Si participó usuario centinela"
     )
-    id_usuario_centinela_participante: Optional[int] = Field(
+    id_usuario_centinela_participante: int | None = Field(
         None, description="ID del usuario centinela que participó"
     )
-    id_usuario_registro: Optional[int] = Field(
+    id_usuario_registro: int | None = Field(
         None, description="ID del usuario que registró"
     )
-    id_snvs_evento: Optional[int] = Field(None, description="ID SNVS del evento")
-    es_investigacion_terreno: Optional[bool] = Field(
+    id_snvs_evento: int | None = Field(None, description="ID SNVS del evento")
+    es_investigacion_terreno: bool | None = Field(
         None, description="Si fue investigación de terreno"
     )
-    fecha_investigacion: Optional[date] = Field(
+    fecha_investigacion: date | None = Field(
         None, description="Fecha de investigación"
     )
-    tipo_lugar_investigacion: Optional[str] = Field(
+    tipo_lugar_investigacion: str | None = Field(
         None, description="Tipo y lugar de investigación"
     )
-    origen_financiamiento: Optional[str] = Field(
+    origen_financiamiento: str | None = Field(
         None, description="Origen del financiamiento"
     )
 
@@ -192,17 +192,17 @@ class ContactoInfo(BaseModel):
     """Información de contactos"""
 
     id: int = Field(..., description="ID del registro de contactos")
-    contacto_caso_confirmado: Optional[bool] = Field(
+    contacto_caso_confirmado: bool | None = Field(
         None, description="Contacto con caso confirmado"
     )
-    contacto_caso_sospechoso: Optional[bool] = Field(
+    contacto_caso_sospechoso: bool | None = Field(
         None, description="Contacto con caso sospechoso"
     )
-    contactos_menores_un_ano: Optional[int] = Field(
+    contactos_menores_un_ano: int | None = Field(
         None, description="Contactos menores de 1 año"
     )
-    contactos_vacunados: Optional[int] = Field(None, description="Contactos vacunados")
-    contactos_embarazadas: Optional[int] = Field(
+    contactos_vacunados: int | None = Field(None, description="Contactos vacunados")
+    contactos_embarazadas: int | None = Field(
         None, description="Contactos embarazadas"
     )
 
@@ -211,11 +211,11 @@ class AmbitoConcurrenciaInfo(BaseModel):
     """Información de ámbito de concurrencia"""
 
     id: int = Field(..., description="ID del ámbito")
-    nombre_lugar: Optional[str] = Field(None, description="Nombre del lugar")
-    tipo_lugar: Optional[str] = Field(None, description="Tipo de lugar")
-    localidad: Optional[str] = Field(None, description="Localidad del ámbito")
-    fecha_ocurrencia: Optional[date] = Field(None, description="Fecha de ocurrencia")
-    frecuencia_concurrencia: Optional[str] = Field(
+    nombre_lugar: str | None = Field(None, description="Nombre del lugar")
+    tipo_lugar: str | None = Field(None, description="Tipo de lugar")
+    localidad: str | None = Field(None, description="Localidad del ámbito")
+    fecha_ocurrencia: date | None = Field(None, description="Fecha de ocurrencia")
+    frecuencia_concurrencia: str | None = Field(
         None, description="Frecuencia de concurrencia"
     )
 
@@ -224,31 +224,31 @@ class AntecedenteInfo(BaseModel):
     """Información de antecedente epidemiológico"""
 
     id: int = Field(..., description="ID del antecedente")
-    descripcion: Optional[str] = Field(None, description="Descripción del antecedente")
-    fecha_antecedente: Optional[date] = Field(None, description="Fecha del antecedente")
+    descripcion: str | None = Field(None, description="Descripción del antecedente")
+    fecha_antecedente: date | None = Field(None, description="Fecha del antecedente")
 
 
 class VacunaInfo(BaseModel):
     """Información de vacuna"""
 
     id: int = Field(..., description="ID de la vacuna")
-    nombre_vacuna: Optional[str] = Field(None, description="Nombre de la vacuna")
-    fecha_ultima_dosis: Optional[date] = Field(
+    nombre_vacuna: str | None = Field(None, description="Nombre de la vacuna")
+    fecha_ultima_dosis: date | None = Field(
         None, description="Fecha de última dosis"
     )
-    dosis_total: Optional[int] = Field(None, description="Total de dosis")
+    dosis_total: int | None = Field(None, description="Total de dosis")
 
 
 class DomicilioGeograficoInfo(BaseModel):
     """Información geográfica del domicilio al momento del evento"""
 
-    latitud: Optional[Decimal] = Field(None, description="Latitud del domicilio")
-    longitud: Optional[Decimal] = Field(None, description="Longitud del domicilio")
-    calle: Optional[str] = Field(None, description="Calle del domicilio")
-    numero: Optional[str] = Field(None, description="Número del domicilio")
-    localidad: Optional[str] = Field(None, description="Localidad del domicilio")
-    departamento: Optional[str] = Field(None, description="Departamento del domicilio")
-    provincia: Optional[str] = Field(None, description="Provincia del domicilio")
+    latitud: Decimal | None = Field(None, description="Latitud del domicilio")
+    longitud: Decimal | None = Field(None, description="Longitud del domicilio")
+    calle: str | None = Field(None, description="Calle del domicilio")
+    numero: str | None = Field(None, description="Número del domicilio")
+    localidad: str | None = Field(None, description="Localidad del domicilio")
+    departamento: str | None = Field(None, description="Departamento del domicilio")
+    provincia: str | None = Field(None, description="Provincia del domicilio")
 
 
 class CasoEpidemiologicoDetailResponse(BaseModel):
@@ -258,137 +258,137 @@ class CasoEpidemiologicoDetailResponse(BaseModel):
     id: int = Field(..., description="ID del evento")
     id_evento_caso: int = Field(..., description="ID del caso")
     tipo_eno_id: int = Field(..., description="ID del tipo ENO")
-    tipo_eno_nombre: Optional[str] = Field(None, description="Nombre del tipo ENO")
-    tipo_eno_descripcion: Optional[str] = Field(
+    tipo_eno_nombre: str | None = Field(None, description="Nombre del tipo ENO")
+    tipo_eno_descripcion: str | None = Field(
         None, description="Descripción del tipo ENO"
     )
-    enfermedad: Optional[str] = Field(None, description="Enfermedad relacionada")
+    enfermedad: str | None = Field(None, description="Enfermedad relacionada")
 
     # Fechas importantes
     fecha_minima_caso: date = Field(..., description="Fecha mínima del evento")
-    fecha_inicio_sintomas: Optional[date] = Field(
+    fecha_inicio_sintomas: date | None = Field(
         None, description="Fecha de inicio de síntomas"
     )
-    fecha_apertura_caso: Optional[date] = Field(
+    fecha_apertura_caso: date | None = Field(
         None, description="Fecha de apertura del caso"
     )
-    fecha_primera_consulta: Optional[date] = Field(
+    fecha_primera_consulta: date | None = Field(
         None, description="Fecha de primera consulta"
     )
-    fecha_notificacion: Optional[date] = Field(
+    fecha_notificacion: date | None = Field(
         None, description="Fecha de notificación"
     )
-    fecha_diagnostico: Optional[date] = Field(None, description="Fecha de diagnóstico")
-    fecha_investigacion: Optional[date] = Field(
+    fecha_diagnostico: date | None = Field(None, description="Fecha de diagnóstico")
+    fecha_investigacion: date | None = Field(
         None, description="Fecha de investigación"
     )
 
     # Semanas epidemiológicas
-    semana_epidemiologica_apertura: Optional[int] = Field(
+    semana_epidemiologica_apertura: int | None = Field(
         None, description="Semana epidemiológica de apertura"
     )
-    anio_epidemiologico_apertura: Optional[int] = Field(
+    anio_epidemiologico_apertura: int | None = Field(
         None, description="Año epidemiológico de apertura"
     )
-    semana_epidemiologica_sintomas: Optional[int] = Field(
+    semana_epidemiologica_sintomas: int | None = Field(
         None, description="Semana epidemiológica de síntomas"
     )
 
     # Clasificación del evento
-    clasificacion_estrategia: Optional[TipoClasificacion] = Field(
+    clasificacion_estrategia: TipoClasificacion | None = Field(
         None, description="Clasificación estratégica del evento"
     )
-    confidence_score: Optional[float] = Field(None, description="Score de confianza")
-    metadata_clasificacion: Optional[Dict[str, Any]] = Field(
+    confidence_score: float | None = Field(None, description="Score de confianza")
+    metadata_clasificacion: dict[str, Any] | None = Field(
         None, description="Metadata de clasificación"
     )
-    metadata_extraida: Optional[Dict[str, Any]] = Field(
+    metadata_extraida: dict[str, Any] | None = Field(
         None, description="Metadata extraída"
     )
 
     # Trazabilidad de clasificación
-    id_estrategia_aplicada: Optional[int] = Field(
+    id_estrategia_aplicada: int | None = Field(
         None, description="ID de la estrategia que se aplicó para clasificar"
     )
-    estrategia_nombre: Optional[str] = Field(
+    estrategia_nombre: str | None = Field(
         None, description="Nombre de la estrategia aplicada"
     )
-    trazabilidad_clasificacion: Optional[Dict[str, Any]] = Field(
+    trazabilidad_clasificacion: dict[str, Any] | None = Field(
         None,
         description="Trazabilidad completa: reglas evaluadas, condiciones cumplidas, razón de clasificación",
     )
 
     # Sujeto del evento
     tipo_sujeto: str = Field(..., description="Tipo de sujeto")
-    ciudadano: Optional[CiudadanoInfo] = Field(
+    ciudadano: CiudadanoInfo | None = Field(
         None, description="Información del ciudadano"
     )
-    animal: Optional[AnimalInfo] = Field(None, description="Información del animal")
+    animal: AnimalInfo | None = Field(None, description="Información del animal")
 
     # Información geográfica del domicilio (snapshot del momento del evento)
-    domicilio_geografico: Optional[DomicilioGeograficoInfo] = Field(
+    domicilio_geografico: DomicilioGeograficoInfo | None = Field(
         None, description="Snapshot geográfico del domicilio al momento del evento"
     )
 
     # Establecimientos relacionados
-    establecimiento_consulta: Optional[EstablecimientoInfo] = Field(
+    establecimiento_consulta: EstablecimientoInfo | None = Field(
         None, description="Establecimiento de consulta"
     )
-    establecimiento_notificacion: Optional[EstablecimientoInfo] = Field(
+    establecimiento_notificacion: EstablecimientoInfo | None = Field(
         None, description="Establecimiento que notificó"
     )
-    establecimiento_carga: Optional[EstablecimientoInfo] = Field(
+    establecimiento_carga: EstablecimientoInfo | None = Field(
         None, description="Establecimiento de carga"
     )
 
     # Estados y flags
-    es_caso_sintomatico: Optional[bool] = Field(None, description="Si es sintomático")
-    requiere_revision_especie: Optional[bool] = Field(
+    es_caso_sintomatico: bool | None = Field(None, description="Si es sintomático")
+    requiere_revision_especie: bool | None = Field(
         None, description="Si requiere revisión"
     )
 
     # Observaciones y datos originales
-    observaciones_texto: Optional[str] = Field(None, description="Observaciones")
-    id_origen: Optional[str] = Field(None, description="ID del sistema origen")
-    datos_originales_csv: Optional[Dict[str, Any]] = Field(
+    observaciones_texto: str | None = Field(None, description="Observaciones")
+    id_origen: str | None = Field(None, description="ID del sistema origen")
+    datos_originales_csv: dict[str, Any] | None = Field(
         None, description="Datos originales del CSV"
     )
 
     # TODAS las relaciones del evento (EVENT-CENTERED)
-    sintomas: List[SintomaInfo] = Field(
+    sintomas: list[SintomaInfo] = Field(
         default_factory=list, description="Síntomas del evento"
     )
-    muestras: List[MuestraInfo] = Field(
+    muestras: list[MuestraInfo] = Field(
         default_factory=list, description="Muestras del evento"
     )
-    diagnosticos: List[DiagnosticoInfo] = Field(
+    diagnosticos: list[DiagnosticoInfo] = Field(
         default_factory=list, description="Diagnósticos del evento"
     )
-    tratamientos: List[TratamientoInfo] = Field(
+    tratamientos: list[TratamientoInfo] = Field(
         default_factory=list, description="Tratamientos del evento"
     )
-    internaciones: List[InternacionInfo] = Field(
+    internaciones: list[InternacionInfo] = Field(
         default_factory=list, description="Internaciones del evento"
     )
-    investigaciones: List[InvestigacionInfo] = Field(
+    investigaciones: list[InvestigacionInfo] = Field(
         default_factory=list, description="Investigaciones del evento"
     )
-    contactos: List[ContactoInfo] = Field(
+    contactos: list[ContactoInfo] = Field(
         default_factory=list, description="Contactos del evento"
     )
-    ambitos_concurrencia: List[AmbitoConcurrenciaInfo] = Field(
+    ambitos_concurrencia: list[AmbitoConcurrenciaInfo] = Field(
         default_factory=list, description="Ámbitos de concurrencia"
     )
-    antecedentes: List[AntecedenteInfo] = Field(
+    antecedentes: list[AntecedenteInfo] = Field(
         default_factory=list, description="Antecedentes epidemiológicos"
     )
-    vacunas: List[VacunaInfo] = Field(
+    vacunas: list[VacunaInfo] = Field(
         default_factory=list, description="Vacunas relacionadas"
     )
 
     # Timestamps
-    created_at: Optional[Any] = Field(None, description="Fecha de creación")
-    updated_at: Optional[Any] = Field(None, description="Fecha de actualización")
+    created_at: Any | None = Field(None, description="Fecha de creación")
+    updated_at: Any | None = Field(None, description="Fecha de actualización")
 
     # Conteos
     total_sintomas: int = Field(0, description="Total de síntomas")
@@ -875,8 +875,8 @@ async def get_evento_detail(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"💥 Error obteniendo evento {evento_id}: {str(e)}")
+        logger.error(f"💥 Error obteniendo evento {evento_id}: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error obteniendo evento: {str(e)}",
-        )
+            detail=f"Error obteniendo evento: {e!s}",
+        ) from e

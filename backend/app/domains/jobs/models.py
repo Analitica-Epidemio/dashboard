@@ -7,14 +7,14 @@ específica va en input_data/output_data JSON.
 
 import uuid
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
 
 from sqlmodel import JSON, Column, Field
 
 from app.core.models import BaseModel
 from app.domains.jobs.constants import JobPriority, JobStatus
 
-__all__ = ["Job", "JobStatus", "JobPriority"]
+__all__ = ["Job", "JobPriority", "JobStatus"]
 
 
 class Job(BaseModel, table=True):
@@ -43,7 +43,7 @@ class Job(BaseModel, table=True):
         ...,
         description="Tipo de trabajo (file_processing, report_generation, etc.)",
     )
-    processor_type: Optional[str] = Field(
+    processor_type: str | None = Field(
         default=None,
         description="Tipo de processor a usar (vigilancia_nominal, vigilancia_agregada, etc.)",
     )
@@ -54,29 +54,29 @@ class Job(BaseModel, table=True):
     progress_percentage: int = Field(
         default=0, description="Porcentaje de completado (0-100)"
     )
-    current_step: Optional[str] = Field(
+    current_step: str | None = Field(
         default=None, description="Descripción del paso actual"
     )
     total_steps: int = Field(default=1, description="Total de pasos estimados")
     completed_steps: int = Field(default=0, description="Pasos completados")
 
     # === Datos genéricos (JSON) ===
-    input_data: Optional[Dict[str, Any]] = Field(
+    input_data: dict[str, Any] | None = Field(
         default=None,
         sa_column=Column(JSON),
         description="Datos de entrada específicos del job_type",
     )
-    output_data: Optional[Dict[str, Any]] = Field(
+    output_data: dict[str, Any] | None = Field(
         default=None,
         sa_column=Column(JSON),
         description="Resultados específicos del job_type",
     )
 
     # === Errores ===
-    error_message: Optional[str] = Field(
+    error_message: str | None = Field(
         default=None, description="Mensaje de error si falla"
     )
-    error_traceback: Optional[str] = Field(
+    error_traceback: str | None = Field(
         default=None, description="Traceback completo del error"
     )
 
@@ -84,10 +84,10 @@ class Job(BaseModel, table=True):
     created_at: datetime = Field(
         default_factory=datetime.now, description="Momento de creación"
     )
-    started_at: Optional[datetime] = Field(
+    started_at: datetime | None = Field(
         default=None, description="Momento de inicio"
     )
-    completed_at: Optional[datetime] = Field(
+    completed_at: datetime | None = Field(
         default=None, description="Momento de finalización"
     )
     updated_at: datetime = Field(
@@ -95,12 +95,12 @@ class Job(BaseModel, table=True):
     )
 
     # === Celery ===
-    celery_task_id: Optional[str] = Field(
+    celery_task_id: str | None = Field(
         default=None, description="ID de la task de Celery"
     )
 
     # === Usuario ===
-    created_by: Optional[str] = Field(
+    created_by: str | None = Field(
         default=None, description="Usuario que creó el trabajo"
     )
 
@@ -109,7 +109,7 @@ class Job(BaseModel, table=True):
     def update_progress(
         self,
         percentage: int,
-        step: Optional[str] = None,
+        step: str | None = None,
         increment_completed_steps: bool = False,
     ) -> None:
         """Actualiza el progreso del trabajo."""
@@ -143,7 +143,7 @@ class Job(BaseModel, table=True):
             self.output_data = {**(self.output_data or {}), **result_data}
 
     def mark_failed(
-        self, error_message: str, error_traceback: Optional[str] = None
+        self, error_message: str, error_traceback: str | None = None
     ) -> None:
         """Marca el trabajo como fallido."""
         self.status = JobStatus.FAILED
@@ -162,7 +162,7 @@ class Job(BaseModel, table=True):
         ]
 
     @property
-    def duration_seconds(self) -> Optional[float]:
+    def duration_seconds(self) -> float | None:
         """Calcula la duración del trabajo en segundos."""
         if not self.started_at:
             return None

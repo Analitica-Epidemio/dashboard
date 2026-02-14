@@ -6,8 +6,9 @@ Sin abstracciones innecesarias.
 """
 
 import logging
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional
+from typing import Any
 
 import polars as pl
 from sqlmodel import Session
@@ -37,19 +38,19 @@ class SimpleEpidemiologicalProcessor:
     def __init__(
         self,
         session: Session,
-        callback_progreso: Optional[Callable[[int, str], None]] = None,
+        callback_progreso: Callable[[int, str], None] | None = None,
     ):
         self.session = session
         self.callback_progreso = callback_progreso
-        self.estadisticas: Dict[str, Any] = {
+        self.estadisticas: dict[str, Any] = {
             "filas_procesadas": 0,
             "entidades_creadas": 0,
             "errores": [],
         }
 
     def procesar_archivo(
-        self, ruta_archivo: Path, nombre_hoja: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, ruta_archivo: Path, nombre_hoja: str | None = None
+    ) -> dict[str, Any]:
         """
         Procesa archivo CSV/Excel.
 
@@ -62,7 +63,7 @@ class SimpleEpidemiologicalProcessor:
         """
         logger.info(f"Procesando: {ruta_archivo}")
 
-        df_datos: Optional[pl.DataFrame] = None
+        df_datos: pl.DataFrame | None = None
         try:
             # 1. Cargar archivo (5% del trabajo)
             self._actualizar_progreso(5, "Cargando archivo")
@@ -100,7 +101,7 @@ class SimpleEpidemiologicalProcessor:
             }
 
         except Exception as e:
-            mensaje_error = f"Error: {str(e)}"
+            mensaje_error = f"Error: {e!s}"
             logger.error(mensaje_error, exc_info=True)
 
             return {
@@ -204,7 +205,7 @@ class SimpleEpidemiologicalProcessor:
 
 
 def crear_procesador(
-    session: Session, callback_progreso: Optional[Callable] = None
+    session: Session, callback_progreso: Callable | None = None
 ) -> SimpleEpidemiologicalProcessor:
     """Crea procesador simple."""
     return SimpleEpidemiologicalProcessor(session, callback_progreso)

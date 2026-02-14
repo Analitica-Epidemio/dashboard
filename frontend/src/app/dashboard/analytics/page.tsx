@@ -146,6 +146,7 @@ export default function AnalyticsPage() {
     const [numSemanas, setNumSemanas] = useState(4);
     const [tituloCustom, setTituloCustom] = useState("");
     const [generatedContent, setGeneratedContent] = useState<string | null>(null);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [generatedInstanceId, setGeneratedInstanceId] = useState<number | null>(null);
 
     const rangoPreview = `SE 1 - ${semanaReferencia} / ${anioReferencia}`;

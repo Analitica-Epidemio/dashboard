@@ -4,8 +4,7 @@ Handles user management, authentication, and session management
 """
 
 import logging
-from datetime import datetime, timezone
-from typing import List, Optional, Tuple
+from datetime import UTC, datetime
 
 from fastapi import HTTPException, Request, status
 from sqlalchemy import and_, select, update
@@ -78,7 +77,7 @@ class AuthService:
 
     async def autenticar_usuario(
         self, credenciales: UserLoginSchema, request: Request
-    ) -> Tuple[User, Token]:
+    ) -> tuple[User, Token]:
         """Authenticate user and create session - simplified and fixed"""
         # Get user with all needed data in single query
         usuario = await self._obtener_usuario_por_email(credenciales.email)
@@ -104,7 +103,7 @@ class AuthService:
         user_hashed_password = usuario.contrasena_hasheada
 
         # Check if user is locked
-        if user_locked_until and user_locked_until > datetime.now(timezone.utc):
+        if user_locked_until and user_locked_until > datetime.now(UTC):
             raise HTTPException(
                 status_code=status.HTTP_423_LOCKED,
                 detail="Account is temporarily locked",
@@ -129,7 +128,7 @@ class AuthService:
         # Update user for successful login
         usuario.intentos_login = 0
         usuario.bloqueado_hasta = None
-        usuario.ultimo_login = datetime.now(timezone.utc)
+        usuario.ultimo_login = datetime.now(UTC)
 
         # Commit and refresh in single transaction
         await self.db.commit()
@@ -167,7 +166,7 @@ class AuthService:
             raise crear_excepcion_credenciales("User not found or inactive")
 
         # Update session activity
-        sesion.ultima_actividad = datetime.now(timezone.utc)
+        sesion.ultima_actividad = datetime.now(UTC)
         await self.db.commit()
 
         # Create new tokens
@@ -209,8 +208,8 @@ class AuthService:
         logger.info(f"All sessions for user {user_id} logged out")
 
     async def obtener_sesiones_usuario(
-        self, user_id: int, current_session_id: Optional[int] = None
-    ) -> List[SessionInfo]:
+        self, user_id: int, current_session_id: int | None = None
+    ) -> list[SessionInfo]:
         """Get active sessions for user"""
         resultado = await self.db.execute(
             select(UserSession)
@@ -218,7 +217,7 @@ class AuthService:
                 and_(
                     col(UserSession.user_id) == user_id,
                     col(UserSession.es_activa).is_(True),
-                    col(UserSession.expira_en) > datetime.now(timezone.utc),
+                    col(UserSession.expira_en) > datetime.now(UTC),
                 )
             )
             .order_by(col(UserSession.ultima_actividad).desc())
@@ -259,7 +258,7 @@ class AuthService:
         for campo, valor in datos_actualizacion.items():
             setattr(usuario, campo, valor)
 
-        usuario.updated_at = datetime.now(timezone.utc)
+        usuario.updated_at = datetime.now(UTC)
         await self.db.commit()
         await self.db.refresh(usuario)
 
@@ -298,7 +297,7 @@ class AuthService:
         usuario.contrasena_hasheada = PasswordSecurity.obtener_hash_contrasena(
             nueva_password
         )
-        usuario.updated_at = datetime.now(timezone.utc)
+        usuario.updated_at = datetime.now(UTC)
         await self.db.commit()
 
         # Logout all other sessions for security
@@ -308,17 +307,17 @@ class AuthService:
 
     # Private helper methods
 
-    async def _obtener_usuario_por_email(self, email: str) -> Optional[User]:
+    async def _obtener_usuario_por_email(self, email: str) -> User | None:
         """Get user by email"""
         resultado = await self.db.execute(select(User).where(col(User.email) == email))
         return resultado.scalar_one_or_none()
 
-    async def _obtener_usuario_por_id(self, user_id: int) -> Optional[User]:
+    async def _obtener_usuario_por_id(self, user_id: int) -> User | None:
         """Get user by ID"""
         resultado = await self.db.execute(select(User).where(col(User.id) == user_id))
         return resultado.scalar_one_or_none()
 
-    async def _obtener_sesion(self, session_id: int) -> Optional[UserSession]:
+    async def _obtener_sesion(self, session_id: int) -> UserSession | None:
         """Get session by ID"""
         resultado = await self.db.execute(
             select(UserSession).where(col(UserSession.id) == session_id)
@@ -354,7 +353,7 @@ class AuthService:
             .where(
                 and_(
                     col(UserSession.user_id) == user_id,
-                    col(UserSession.expira_en) < datetime.now(timezone.utc),
+                    col(UserSession.expira_en) < datetime.now(UTC),
                 )
             )
             .values(es_activa=False)
@@ -440,10 +439,10 @@ class AuthService:
         self,
         email: str,
         exito: bool,
-        razon_fallo: Optional[str] = None,
-        ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None,
-        user_id: Optional[int] = None,
+        razon_fallo: str | None = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+        user_id: int | None = None,
     ) -> None:
         """Log login attempt for audit purposes"""
         log_login = UserLogin(

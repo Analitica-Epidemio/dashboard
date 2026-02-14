@@ -7,8 +7,9 @@ JWT y gestión de eventos de salud pública.
 
 import logging
 import time
+from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator, Callable, Dict
+from typing import Any
 
 import uvicorn
 from fastapi import FastAPI, Request, Response, status
@@ -71,14 +72,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.info("✅ Redis connection successful on startup!")
 
     except Exception as e:
-        logger.error(f"❌ Redis/Celery initialization failed: {str(e)}")
+        logger.error(f"❌ Redis/Celery initialization failed: {e!s}")
         logger.error(f"❌ Error type: {type(e).__name__}")
         logger.warning("⚠️ File upload functionality will not work without Redis!")
 
     # Registrar processors de cada dominio
     # Al importar, cada módulo se registra automáticamente
     logger.info("📦 Registrando processors de dominios...")
-    import app.domains.vigilancia_agregada.procesamiento  # noqa: F401
+    import app.domains.vigilancia_agregada.procesamiento
     import app.domains.vigilancia_nominal.procesamiento  # noqa: F401
     from app.domains.jobs.registry import list_processors
 
@@ -233,7 +234,7 @@ def setup_exception_handlers(app: FastAPI) -> None:
         request: Request, exc: Exception
     ) -> JSONResponse:
         """Maneja excepciones generales no capturadas"""
-        logger.error(f"💥 Error no manejado: {str(exc)}", exc_info=True)
+        logger.error(f"💥 Error no manejado: {exc!s}", exc_info=True)
 
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -253,7 +254,7 @@ app = create_application()
 
 
 @app.get("/", include_in_schema=False)
-async def root() -> Dict[str, Any]:
+async def root() -> dict[str, Any]:
     """Endpoint raíz con información del sistema"""
     return {
         "message": "🏥 Sistema de Epidemiología Moderna",
@@ -265,7 +266,7 @@ async def root() -> Dict[str, Any]:
 
 
 @app.get("/health", include_in_schema=False)
-async def health_check(response: Response) -> Dict[str, Any]:
+async def health_check(response: Response) -> dict[str, Any]:
     """Health check para monitoreo. Devuelve HTTP 503 si unhealthy."""
     from sqlalchemy import text
 
@@ -299,7 +300,7 @@ if __name__ == "__main__":
         "app.main:app",
         host="0.0.0.0",
         port=8000,
-        reload=True if settings.ENVIRONMENT == "development" else False,
+        reload=settings.ENVIRONMENT == "development",
         log_level="info",
         access_log=True,
     )

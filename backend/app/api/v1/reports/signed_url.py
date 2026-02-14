@@ -9,7 +9,7 @@ import json
 import logging
 import time
 from datetime import date
-from typing import Dict, List, Optional, TypedDict
+from typing import TypedDict
 
 from fastapi import Depends
 from pydantic import BaseModel, Field
@@ -32,9 +32,9 @@ class SignedUrlResult(TypedDict):
 class ReportFiltersRequest(BaseModel):
     """Request para generar URL firmada"""
 
-    filters: List[Dict] = Field(..., description="Lista de combinaciones de filtros")
-    date_from: Optional[date] = Field(None, description="Fecha desde")
-    date_to: Optional[date] = Field(None, description="Fecha hasta")
+    filters: list[dict] = Field(..., description="Lista de combinaciones de filtros")
+    date_from: date | None = Field(None, description="Fecha desde")
+    date_to: date | None = Field(None, description="Fecha hasta")
     expires_in: int = Field(
         3600, description="Tiempo de expiración en segundos", ge=60, le=86400
     )
@@ -57,14 +57,14 @@ class VerifySignedUrlRequest(BaseModel):
 class VerifySignedUrlResponse(BaseModel):
     """Response con los datos verificados"""
 
-    filters: List[Dict] = Field(..., description="Lista de filtros verificados")
-    date_from: Optional[str] = Field(None, description="Fecha desde")
-    date_to: Optional[str] = Field(None, description="Fecha hasta")
+    filters: list[dict] = Field(..., description="Lista de filtros verificados")
+    date_from: str | None = Field(None, description="Fecha desde")
+    date_to: str | None = Field(None, description="Fecha hasta")
     generated_by: int = Field(..., description="ID del usuario que generó la URL")
     generated_at: int = Field(..., description="Timestamp de generación")
 
 
-def generate_signed_url(filters_data: Dict, expires_in: int = 3600) -> SignedUrlResult:
+def generate_signed_url(filters_data: dict, expires_in: int = 3600) -> SignedUrlResult:
     """
     Genera una URL firmada para los filtros del reporte
 
@@ -97,7 +97,7 @@ def generate_signed_url(filters_data: Dict, expires_in: int = 3600) -> SignedUrl
     return {"signed_url": signed_url, "expires_at": expires_at}
 
 
-def verify_signed_url(data: str, signature: str) -> Dict:
+def verify_signed_url(data: str, signature: str) -> dict:
     """
     Verifica una URL firmada y devuelve los filtros
 
@@ -145,7 +145,7 @@ def verify_signed_url(data: str, signature: str) -> Dict:
         return payload
 
     except (json.JSONDecodeError, ValueError) as e:
-        raise ValueError(f"Invalid signed URL: {str(e)}")
+        raise ValueError(f"Invalid signed URL: {e!s}") from e
 
 
 async def generate_report_signed_url(
@@ -196,4 +196,4 @@ async def verify_signed_url_endpoint(
     except ValueError as e:
         from fastapi import HTTPException
 
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e

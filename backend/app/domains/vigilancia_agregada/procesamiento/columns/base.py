@@ -4,9 +4,10 @@ Base definitions for column handling.
 Provides ColumnDefinition dataclass and ColumnRegistry for validation.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Optional
+from typing import Any
 
 import polars as pl
 
@@ -41,7 +42,7 @@ class ColumnDefinition:
     col_type: ColumnType
     required: bool = True
     nullable: bool = True
-    transform: Optional[Callable[[Any], Any]] = None
+    transform: Callable[[Any], Any] | None = None
     default: Any = None
 
     def apply_transform(self, value: Any) -> Any:
@@ -86,14 +87,11 @@ class ColumnRegistry:
         Returns:
             (is_valid, missing_columns)
         """
-        missing = []
-        for col in self.required_columns:
-            if col not in df.columns:
-                missing.append(col)
+        missing = [col for col in self.required_columns if col not in df.columns]
 
         return len(missing) == 0, missing
 
-    def get_column_by_source(self, source_name: str) -> Optional[ColumnDefinition]:
+    def get_column_by_source(self, source_name: str) -> ColumnDefinition | None:
         """Obtiene definición de columna por nombre fuente."""
         for col in self.columns:
             if col.source_name == source_name:

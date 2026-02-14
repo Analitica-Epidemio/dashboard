@@ -8,7 +8,6 @@ Usa asyncio.run() para poder llamar al adapter async desde código sync.
 import asyncio
 import logging
 from decimal import Decimal
-from typing import Optional, Tuple
 
 from sqlalchemy import select
 from sqlmodel import Session
@@ -28,8 +27,8 @@ class SyncGeocodingService:
     def __init__(
         self,
         session: Session,
-        provider: Optional[str] = None,
-        api_key: Optional[str] = None,
+        provider: str | None = None,
+        api_key: str | None = None,
     ):
         """
         Inicializa el servicio de geocodificación.
@@ -67,12 +66,12 @@ class SyncGeocodingService:
 
     def geocodificar_direccion(
         self,
-        calle: Optional[str] = None,
-        numero: Optional[str] = None,
-        localidad: Optional[str] = None,
-        provincia: Optional[str] = None,
-        id_localidad_indec: Optional[int] = None,
-    ) -> Optional[GeocodingResult]:
+        calle: str | None = None,
+        numero: str | None = None,
+        localidad: str | None = None,
+        provincia: str | None = None,
+        id_localidad_indec: int | None = None,
+    ) -> GeocodingResult | None:
         """
         Geocodifica una dirección.
 
@@ -127,7 +126,7 @@ class SyncGeocodingService:
 
     def resolver_ids_geograficos(
         self, latitud: Decimal, longitud: Decimal
-    ) -> Tuple[Optional[int], Optional[int], Optional[int]]:
+    ) -> tuple[int | None, int | None, int | None]:
         """
         Resuelve IDs de localidad, departamento y provincia desde coordenadas.
 
@@ -153,7 +152,7 @@ class SyncGeocodingService:
 
     def _resolver_nombres_geograficos(
         self, id_localidad_indec: int
-    ) -> Tuple[Optional[str], Optional[str]]:
+    ) -> tuple[str | None, str | None]:
         """
         Resuelve nombres de localidad y provincia desde ID INDEC.
 
@@ -182,7 +181,7 @@ class SyncGeocodingService:
             resultado = self.session.execute(stmt).first()
 
             if resultado:
-                localidad, departamento, provincia = resultado
+                localidad, _departamento, provincia = resultado
                 logger.debug(
                     f"✅ Resuelto: {localidad.nombre}, {provincia.nombre} (INDEC: {id_localidad_indec})"
                 )

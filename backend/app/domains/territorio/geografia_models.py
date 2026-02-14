@@ -7,7 +7,7 @@ Solo incluye Argentina ya que es el único país que manejamos actualmente.
 
 import enum
 from decimal import Decimal
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
 
 from geoalchemy2 import Geometry
 from sqlalchemy import BigInteger, Column, Index, Numeric, UniqueConstraint
@@ -68,33 +68,33 @@ class Provincia(BaseModel, table=True):
     )
 
     # Datos adicionales
-    poblacion: Optional[int] = Field(
+    poblacion: int | None = Field(
         None, description="Población total de la provincia"
     )
-    superficie_km2: Optional[float] = Field(None, description="Superficie en km²")
+    superficie_km2: float | None = Field(None, description="Superficie en km²")
 
     # Coordenadas del centroide (para visualización en mapa)
-    latitud: Optional[float] = Field(
+    latitud: float | None = Field(
         None, description="Latitud del centroide geográfico"
     )
-    longitud: Optional[float] = Field(
+    longitud: float | None = Field(
         None, description="Longitud del centroide geográfico"
     )
 
     # Geometría para mapa coroplético (polígono de la provincia)
-    geometria: Optional[str] = Field(
+    geometria: str | None = Field(
         default=None,
         sa_column=Column(Geometry("MULTIPOLYGON", srid=4326, spatial_index=False)),
         description="Geometría de la provincia (MultiPolygon en WGS84)",
     )
 
     # Metadatos de la fuente
-    fuente_geometria: Optional[str] = Field(
+    fuente_geometria: str | None = Field(
         None, max_length=100, description="Fuente de la geometría (IGN, Georef, etc.)"
     )
 
     # Relaciones
-    departamentos: Mapped[List["Departamento"]] = Relationship(
+    departamentos: Mapped[list["Departamento"]] = Relationship(
         back_populates="provincia"
     )
 
@@ -129,33 +129,33 @@ class Departamento(BaseModel, table=True):
     )
 
     # Datos específicos de salud
-    region_sanitaria: Optional[str] = Field(
+    region_sanitaria: str | None = Field(
         None, max_length=150, description="Región sanitaria/Área programática"
     )
 
     # Datos adicionales
-    poblacion: Optional[int] = Field(
+    poblacion: int | None = Field(
         None, description="Población total del departamento"
     )
-    superficie_km2: Optional[float] = Field(None, description="Superficie en km²")
+    superficie_km2: float | None = Field(None, description="Superficie en km²")
 
     # Coordenadas del centroide (para visualización en mapa)
-    latitud: Optional[float] = Field(
+    latitud: float | None = Field(
         None, description="Latitud del centroide geográfico"
     )
-    longitud: Optional[float] = Field(
+    longitud: float | None = Field(
         None, description="Longitud del centroide geográfico"
     )
 
     # Geometría para mapa coroplético (polígono del departamento)
-    geometria: Optional[str] = Field(
+    geometria: str | None = Field(
         default=None,
         sa_column=Column(Geometry("MULTIPOLYGON", srid=4326, spatial_index=False)),
         description="Geometría del departamento (MultiPolygon en WGS84)",
     )
 
     # Metadatos de la fuente
-    fuente_geometria: Optional[str] = Field(
+    fuente_geometria: str | None = Field(
         None, max_length=100, description="Fuente de la geometría (IGN, Georef, etc.)"
     )
 
@@ -176,7 +176,7 @@ class Localidad(BaseModel, table=True):
         max_length=150, index=True, description="Nombre de la localidad"
     )
     # Código INDEC del departamento (para JOINs con tabla departamento)
-    id_departamento_indec: Optional[int] = Field(
+    id_departamento_indec: int | None = Field(
         None,
         index=True,
         description="Código INDEC del departamento",
@@ -184,24 +184,24 @@ class Localidad(BaseModel, table=True):
 
     # Datos adicionales
     # TODO: Agregado por ignacio
-    poblacion: Optional[int] = Field(None, description="Población de la localidad")
+    poblacion: int | None = Field(None, description="Población de la localidad")
     # TODO: Agregado por ignacio
-    codigo_postal: Optional[str] = Field(
+    codigo_postal: str | None = Field(
         None, max_length=10, description="Código postal"
     )
     # TODO: Agregado por ignacio
-    latitud: Optional[float] = Field(None, description="Latitud geográfica")
+    latitud: float | None = Field(None, description="Latitud geográfica")
     # TODO: Agregado por ignacio
-    longitud: Optional[float] = Field(None, description="Longitud geográfica")
+    longitud: float | None = Field(None, description="Longitud geográfica")
 
     # Relaciones
-    establecimientos: Mapped[List["Establecimiento"]] = Relationship(
+    establecimientos: Mapped[list["Establecimiento"]] = Relationship(
         back_populates="localidad_establecimiento"
     )
     # Nota: CiudadanoDomicilio no tiene FK a Localidad, la relación es indirecta via Domicilio
-    domicilios: Mapped[List["Domicilio"]] = Relationship(back_populates="localidad")
-    viajes: Mapped[List["ViajesCiudadano"]] = Relationship(back_populates="localidad")
-    ambitos_concurrencia: Mapped[List["AmbitosConcurrenciaCaso"]] = Relationship(
+    domicilios: Mapped[list["Domicilio"]] = Relationship(back_populates="localidad")
+    viajes: Mapped[list["ViajesCiudadano"]] = Relationship(back_populates="localidad")
+    ambitos_concurrencia: Mapped[list["AmbitosConcurrenciaCaso"]] = Relationship(
         back_populates="localidad"
     )
 
@@ -231,10 +231,10 @@ class Domicilio(BaseModel, table=True):
     )
 
     # Campos de dirección (solo los que existen en el CSV y tienen datos)
-    calle: Optional[str] = Field(
+    calle: str | None = Field(
         None, max_length=150, index=True, description="Nombre de la calle"
     )
-    numero: Optional[str] = Field(None, max_length=10, description="Número de calle")
+    numero: str | None = Field(None, max_length=10, description="Número de calle")
 
     # Localidad (FK)
     id_localidad_indec: int = Field(
@@ -245,12 +245,12 @@ class Domicilio(BaseModel, table=True):
     )
 
     # Coordenadas geográficas (geocodificadas)
-    latitud: Optional[Decimal] = Field(
+    latitud: Decimal | None = Field(
         None,
         sa_column=Column(Numeric(precision=10, scale=8)),
         description="Latitud GPS (geocodificada)",
     )
-    longitud: Optional[Decimal] = Field(
+    longitud: Decimal | None = Field(
         None,
         sa_column=Column(Numeric(precision=11, scale=8)),
         description="Longitud GPS (geocodificada)",
@@ -261,16 +261,16 @@ class Domicilio(BaseModel, table=True):
         default=EstadoGeocodificacion.PENDIENTE,
         description="Estado del proceso de geocodificación",
     )
-    proveedor_geocoding: Optional[str] = Field(
+    proveedor_geocoding: str | None = Field(
         None, max_length=50, description="Proveedor usado (mapbox, google, etc.)"
     )
-    confidence_geocoding: Optional[float] = Field(
+    confidence_geocoding: float | None = Field(
         None, description="Score de confianza de la geocodificación (0-1)"
     )
     intentos_geocodificacion: int = Field(
         default=0, description="Número de intentos de geocodificación realizados"
     )
-    ultimo_error_geocodificacion: Optional[str] = Field(
+    ultimo_error_geocodificacion: str | None = Field(
         None,
         max_length=500,
         description="Último mensaje de error si falló la geocodificación",
@@ -278,5 +278,5 @@ class Domicilio(BaseModel, table=True):
 
     # Relaciones
     localidad: Mapped["Localidad"] = Relationship(back_populates="domicilios")
-    casos: Mapped[List["CasoEpidemiologico"]] = Relationship(back_populates="domicilio")
+    casos: Mapped[list["CasoEpidemiologico"]] = Relationship(back_populates="domicilio")
     # personas_historico: Mapped[List["PersonaDomicilio"]] = Relationship(back_populates="domicilio")

@@ -351,7 +351,7 @@ def query_metric(
         criteria = _parse_filters_to_criteria(request.filters)
     except Exception as e:
         logger.error(f"❌ Error parseando filtros: {e}")
-        raise HTTPException(status_code=400, detail=f"Error en filtros: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Error en filtros: {e!s}") from e
 
     # Convertir a dict para compute functions
     filters_dict = _filters_to_dict(request.filters)
@@ -366,10 +366,10 @@ def query_metric(
         )
     except ValueError as e:
         logger.error(f"❌ ValueError en query: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except NotImplementedError as e:
         logger.error(f"❌ NotImplementedError: {e}")
-        raise HTTPException(status_code=501, detail=str(e))
+        raise HTTPException(status_code=501, detail=str(e)) from e
 
     return MetricQueryResponse(**result)
 

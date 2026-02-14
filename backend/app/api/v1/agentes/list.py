@@ -3,7 +3,6 @@ List agentes etiológicos endpoint con estadísticas
 """
 
 import logging
-from typing import List, Optional
 
 from fastapi import Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
@@ -33,7 +32,7 @@ class AgenteEtiologicoInfo(BaseModel):
     nombre_corto: str = Field(..., description="Nombre corto para gráficos")
     categoria: str = Field(..., description="Categoría: virus, bacteria, etc.")
     grupo: str = Field(..., description="Grupo: respiratorio, entérico, etc.")
-    descripcion: Optional[str] = Field(None, description="Descripción del agente")
+    descripcion: str | None = Field(None, description="Descripción del agente")
     activo: bool = Field(..., description="Si está activo")
     # Estadísticas
     total_eventos: int = Field(0, description="Total de eventos donde se buscó/detectó")
@@ -49,17 +48,17 @@ class AgenteEtiologicoInfo(BaseModel):
 class AgentesCategoriasResponse(BaseModel):
     """Respuesta con categorías y grupos de agentes"""
 
-    categorias: List[str] = Field(..., description="Lista de categorías únicas")
-    grupos: List[str] = Field(..., description="Lista de grupos únicos")
+    categorias: list[str] = Field(..., description="Lista de categorías únicas")
+    grupos: list[str] = Field(..., description="Lista de grupos únicos")
 
 
 async def list_agentes(
     page: int = Query(1, ge=1, description="Número de página"),
     per_page: int = Query(50, ge=1, le=200, description="Elementos por página"),
-    categoria: Optional[str] = Query(None, description="Filtrar por categoría"),
-    grupo: Optional[str] = Query(None, description="Filtrar por grupo"),
-    activo: Optional[bool] = Query(None, description="Filtrar por estado activo"),
-    busqueda: Optional[str] = Query(None, description="Buscar por nombre o código"),
+    categoria: str | None = Query(None, description="Filtrar por categoría"),
+    grupo: str | None = Query(None, description="Filtrar por grupo"),
+    activo: bool | None = Query(None, description="Filtrar por estado activo"),
+    busqueda: str | None = Query(None, description="Buscar por nombre o código"),
     ordenar_por: str = Query(
         "eventos_positivos",
         description="Campo para ordenar: nombre, codigo, total_eventos, eventos_positivos, tasa_positividad",
@@ -239,11 +238,11 @@ async def list_agentes(
             },
         )
     except Exception as e:
-        logger.error(f"Error listando agentes: {str(e)}")
+        logger.error(f"Error listando agentes: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error obteniendo agentes: {str(e)}",
-        )
+            detail=f"Error obteniendo agentes: {e!s}",
+        ) from e
 
 
 async def get_agentes_categorias(
@@ -273,8 +272,8 @@ async def get_agentes_categorias(
             grupos=grupos,
         )
     except Exception as e:
-        logger.error(f"Error obteniendo categorías: {str(e)}")
+        logger.error(f"Error obteniendo categorías: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error obteniendo categorías: {str(e)}",
-        )
+            detail=f"Error obteniendo categorías: {e!s}",
+        ) from e

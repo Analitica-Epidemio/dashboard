@@ -7,7 +7,6 @@ permitiendo mostrar puntos exactos en el mapa.
 
 import logging
 from datetime import date
-from typing import List, Optional
 
 from fastapi import Depends, Query
 from pydantic import BaseModel, Field
@@ -46,30 +45,30 @@ class DomicilioMapaItem(BaseModel):
 
     # Datos geográficos
     id_provincia_indec: int = Field(..., description="ID INDEC de provincia")
-    id_departamento_indec: Optional[int] = Field(
+    id_departamento_indec: int | None = Field(
         None, description="ID INDEC de departamento"
     )
     id_localidad_indec: int = Field(..., description="ID INDEC de localidad")
     provincia_nombre: str = Field(..., description="Nombre de provincia")
-    departamento_nombre: Optional[str] = Field(
+    departamento_nombre: str | None = Field(
         None, description="Nombre de departamento"
     )
     localidad_nombre: str = Field(..., description="Nombre de localidad")
 
     # Datos de tipos de evento (para colorear markers)
-    tipo_evento_predominante: Optional[str] = Field(
+    tipo_evento_predominante: str | None = Field(
         None, description="Tipo de evento más frecuente"
     )
     tipos_eventos: dict = Field(
         default_factory=dict, description="Conteo por tipo de evento"
     )
-    primer_evento_fecha: Optional[date] = Field(
+    primer_evento_fecha: date | None = Field(
         None, description="Fecha del primer evento registrado en el domicilio"
     )
 
     # Fechas de todos los eventos para animación temporal
     # Lista de fechas (fecha_inicio_sintomas o fecha_minima_caso) para timeline
-    fechas_eventos: List[date] = Field(
+    fechas_eventos: list[date] = Field(
         default_factory=list,
         description="Lista de fechas de eventos para animación temporal",
     )
@@ -78,7 +77,7 @@ class DomicilioMapaItem(BaseModel):
 class DomicilioMapaResponse(BaseModel):
     """Respuesta del endpoint de domicilios geocodificados"""
 
-    items: List[DomicilioMapaItem] = Field(default_factory=list)
+    items: list[DomicilioMapaItem] = Field(default_factory=list)
     total: int = Field(..., description="Total de domicilios geocodificados")
     total_eventos: int = Field(
         ..., description="Total de eventos en todos los domicilios"
@@ -86,18 +85,18 @@ class DomicilioMapaResponse(BaseModel):
 
 
 async def get_domicilios_mapa(
-    id_provincia_indec: Optional[int] = Query(
+    id_provincia_indec: int | None = Query(
         None, description="Filtrar por provincia"
     ),
-    id_departamento_indec: Optional[int] = Query(
+    id_departamento_indec: int | None = Query(
         None, description="Filtrar por departamento"
     ),
-    id_localidad_indec: Optional[int] = Query(
+    id_localidad_indec: int | None = Query(
         None, description="Filtrar por localidad"
     ),
-    id_grupo: Optional[int] = Query(None, description="Filtrar por grupo ENO"),
-    id_enfermedad: Optional[int] = Query(None, description="Filtrar por tipo ENO"),
-    fecha_hasta: Optional[date] = Query(
+    id_grupo: int | None = Query(None, description="Filtrar por grupo ENO"),
+    id_enfermedad: int | None = Query(None, description="Filtrar por tipo ENO"),
+    fecha_hasta: date | None = Query(
         None, description="Filtrar eventos hasta esta fecha"
     ),
     limit: int = Query(
@@ -260,7 +259,7 @@ async def get_domicilios_mapa(
             tipos_por_domicilio[dom_id][tipo_nombre] = count
 
     # Query para obtener fechas de eventos por domicilio (para animación temporal)
-    fechas_por_domicilio: dict[int, List[date]] = {}
+    fechas_por_domicilio: dict[int, list[date]] = {}
 
     if domicilio_ids:
         # Obtener fecha_minima_caso de cada evento por domicilio
@@ -286,7 +285,7 @@ async def get_domicilios_mapa(
             fechas_por_domicilio[dom_id].append(fecha)
 
     # Construir items
-    items: List[DomicilioMapaItem] = []
+    items: list[DomicilioMapaItem] = []
     total_eventos_global = 0
 
     for row in result:

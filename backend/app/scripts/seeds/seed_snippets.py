@@ -2,7 +2,7 @@
 Seed de snippets para boletines epidemiológicos
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from app.core.database import get_session
@@ -195,7 +195,7 @@ def seed_snippets() -> None:
         return
 
     # Crear snippets
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     for snippet_data in snippets_data:
         snippet_data["created_at"] = now
         snippet_data["updated_at"] = now

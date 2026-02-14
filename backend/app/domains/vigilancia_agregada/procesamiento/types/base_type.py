@@ -4,9 +4,10 @@ Base interface para procesadores de tipos de archivo.
 Cada tipo de archivo (CLI_P26, CLI_P26_INT, LAB_P26) implementa esta interfaz.
 """
 
+import contextlib
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, Optional
 
 import polars as pl
 from sqlmodel import Session
@@ -41,7 +42,7 @@ class FileTypeProcessor(ABC):
     def __init__(
         self,
         session: Session,
-        progress_callback: Optional[Callable[[int, str], None]] = None,
+        progress_callback: Callable[[int, str], None] | None = None,
     ):
         self.session = session
         self.progress_callback = progress_callback
@@ -50,13 +51,11 @@ class FileTypeProcessor(ABC):
     @abstractmethod
     def file_type(self) -> str:
         """Código del tipo de archivo (ej: CLI_P26)."""
-        pass
 
     @property
     @abstractmethod
     def column_registry(self) -> ColumnRegistry:
         """Registro de columnas para este tipo."""
-        pass
 
     @abstractmethod
     def transform(self, df: pl.DataFrame) -> pl.DataFrame:
@@ -68,7 +67,6 @@ class FileTypeProcessor(ABC):
         - Convertir tipos
         - Normalizar valores
         """
-        pass
 
     @abstractmethod
     def save_to_db(self, df: pl.DataFrame) -> ProcessingResult:
@@ -80,7 +78,6 @@ class FileTypeProcessor(ABC):
         - Lookup/upsert de catálogos
         - Bulk insert de conteos
         """
-        pass
 
     def validate(self, df: pl.DataFrame) -> tuple[bool, list[str]]:
         """Valida columnas requeridas."""
@@ -121,7 +118,5 @@ class FileTypeProcessor(ABC):
     def _update_progress(self, percentage: int, message: str) -> None:
         """Actualiza progreso si hay callback."""
         if self.progress_callback:
-            try:
+            with contextlib.suppress(Exception):
                 self.progress_callback(percentage, message)
-            except Exception:
-                pass  # Ignorar errores de callback

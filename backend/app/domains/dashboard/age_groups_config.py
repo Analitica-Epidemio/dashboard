@@ -12,7 +12,6 @@ Grupos etarios estándar basados en:
 """
 
 from dataclasses import dataclass
-from typing import List
 
 
 @dataclass
@@ -31,7 +30,7 @@ class GrupoEdad:
 # CONFIGURACIÓN: Grupos Etarios Estándar (Quinquenales)
 # =============================================================================
 
-GRUPOS_EDAD_ESTANDAR: List[GrupoEdad] = [
+GRUPOS_EDAD_ESTANDAR: list[GrupoEdad] = [
     GrupoEdad(
         etiqueta="0-4",
         edad_minima_anios=0,
@@ -141,7 +140,7 @@ GRUPOS_EDAD_ESTANDAR: List[GrupoEdad] = [
 # CONFIGURACIÓN: Grupos Pediátricos Detallados
 # =============================================================================
 
-GRUPOS_EDAD_PEDIATRICOS: List[GrupoEdad] = [
+GRUPOS_EDAD_PEDIATRICOS: list[GrupoEdad] = [
     # Grupos neonatales (primeros 28 días de vida)
     GrupoEdad(
         etiqueta="Neonato precoz (0-6 días)",
@@ -205,7 +204,7 @@ GRUPOS_EDAD_PEDIATRICOS: List[GrupoEdad] = [
 # CONFIGURACIÓN: Grupos Simplificados (Grandes grupos)
 # =============================================================================
 
-GRUPOS_EDAD_SIMPLIFICADOS: List[GrupoEdad] = [
+GRUPOS_EDAD_SIMPLIFICADOS: list[GrupoEdad] = [
     GrupoEdad(
         etiqueta="0-17",
         edad_minima_anios=0,
@@ -237,7 +236,7 @@ GRUPOS_EDAD_SIMPLIFICADOS: List[GrupoEdad] = [
 # CONFIGURACIÓN: Grupos por Decenios
 # =============================================================================
 
-GRUPOS_EDAD_DECENALES: List[GrupoEdad] = [
+GRUPOS_EDAD_DECENALES: list[GrupoEdad] = [
     GrupoEdad(
         etiqueta="0-9", edad_minima_anios=0, edad_maxima_anios=9, descripcion="Niñez"
     ),
@@ -291,7 +290,7 @@ GRUPOS_EDAD_DECENALES: List[GrupoEdad] = [
 # =============================================================================
 
 
-def generar_sql_case_when(grupos_edad: List[GrupoEdad]) -> str:
+def generar_sql_case_when(grupos_edad: list[GrupoEdad]) -> str:
     """
     Genera la cláusula CASE WHEN de SQL para clasificar edades en grupos
 
@@ -341,14 +340,14 @@ def generar_sql_case_when(grupos_edad: List[GrupoEdad]) -> str:
     return "CASE\n    " + "\n    ".join(cases) + "\nEND"
 
 
-def obtener_etiquetas_grupos_edad(grupos_edad: List[GrupoEdad]) -> List[str]:
+def obtener_etiquetas_grupos_edad(grupos_edad: list[GrupoEdad]) -> list[str]:
     """Obtiene las etiquetas de los grupos en orden"""
     return [grupo.etiqueta for grupo in grupos_edad]
 
 
 def obtener_configuracion_grupos_edad(
     nombre_config: str = "standard",
-) -> List[GrupoEdad]:
+) -> list[GrupoEdad]:
     """
     Obtiene la configuración de grupos etarios por nombre
 

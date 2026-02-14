@@ -9,9 +9,10 @@ Consolidates:
 """
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Type, TypeVar
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any, TypeVar
 
 if TYPE_CHECKING:
     from app.domains.vigilancia_nominal.procesamiento.config import ProcessingContext
@@ -25,7 +26,7 @@ from app.core.constants import SexoBiologico, TipoDocumento
 
 # === MAPEOS DE NORMALIZACIÓN ===
 # Mapeo de tipos de documento
-DOCUMENTO_MAPPING: Dict[str, TipoDocumento] = {
+DOCUMENTO_MAPPING: dict[str, TipoDocumento] = {
     "DNI": TipoDocumento.DNI,
     "D.N.I.": TipoDocumento.DNI,
     "D.N.I": TipoDocumento.DNI,
@@ -43,7 +44,7 @@ DOCUMENTO_MAPPING: Dict[str, TipoDocumento] = {
 }
 
 # Mapeo de valores booleanos
-BOOLEAN_MAPPING: Dict[str, bool] = {
+BOOLEAN_MAPPING: dict[str, bool] = {
     "SI": True,
     "SÍ": True,
     "S": True,
@@ -66,7 +67,7 @@ class BulkOperationResult:
     inserted_count: int
     updated_count: int
     skipped_count: int
-    errors: List[str]
+    errors: list[str]
     duration_seconds: float
 
 
@@ -210,7 +211,7 @@ def pl_clean_numero_domicilio(col_name: str) -> pl.Expr:
 def pl_col_or_null(
     df: pl.DataFrame,
     col_name: str,
-    transform_fn: Optional[Callable[[str], pl.Expr]] = None,
+    transform_fn: Callable[[str], pl.Expr] | None = None,
 ) -> pl.Expr:
     """
     Helper para columnas opcionales - retorna expresión o null.
@@ -245,7 +246,7 @@ def pl_col_or_null(
 
 def get_current_timestamp() -> datetime:
     """Get current timestamp for created_at/updated_at."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def has_any_value(values: list) -> bool:
@@ -264,15 +265,15 @@ T = TypeVar("T", bound=SQLModel)
 
 def get_or_create_catalog(
     session: Any,  # Session type
-    model: Type[T],
+    model: type[T],
     df: pl.DataFrame,  # Accept both pandas and Polars DataFrames
     column: str,
     key_field: str = "codigo",
     name_field: str = "nombre",
-    transform_fn: Optional[Callable[[str], Dict[str, Any]]] = None,
-    existing_filter: Optional[Callable] = None,
+    transform_fn: Callable[[str], dict[str, Any]] | None = None,
+    existing_filter: Callable | None = None,
     has_unique_constraint: bool = True,
-) -> Dict[str, int]:
+) -> dict[str, int]:
     """
     Patrón genérico para get-or-create de catálogos.
 
@@ -334,7 +335,7 @@ def get_or_create_catalog(
     # 3. Buscar existentes en BD usando las keys transformadas
     keys_to_search = list(set(valor_to_key.values()))
     model_key = getattr(model, key_field)
-    model_id = getattr(model, "id")
+    model_id = model.id
     stmt = select(col(model_id), col(model_key))
 
     if existing_filter:
@@ -379,7 +380,7 @@ def get_or_create_catalog(
         nuevos.append(record)
 
     if nuevos:
-        model_table = getattr(model, "__table__")
+        model_table = model.__table__
         stmt = pg_insert(model_table).values(nuevos)
 
         # Usar ON CONFLICT solo si la tabla tiene unique constraint

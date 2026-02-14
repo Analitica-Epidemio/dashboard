@@ -9,7 +9,7 @@ Estos modelos están ligados a casos de vigilancia nominal.
 """
 
 from datetime import date
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, ClassVar, Optional
 
 from sqlalchemy import BigInteger, UniqueConstraint
 from sqlalchemy.orm import Mapped
@@ -45,19 +45,19 @@ class Determinacion(BaseModel, table=True):
     __tablename__ = "determinacion"
 
     nombre: str = Field(..., max_length=200, description="Nombre de la determinación")
-    codigo: Optional[str] = Field(
+    codigo: str | None = Field(
         None,
         max_length=255,
         unique=True,
         index=True,
         description="Código de la determinación",
     )
-    descripcion: Optional[str] = Field(
+    descripcion: str | None = Field(
         None, max_length=500, description="Descripción de la determinación"
     )
 
     # Relaciones
-    tecnicas: Mapped[List["Tecnica"]] = Relationship(back_populates="determinacion")
+    tecnicas: Mapped[list["Tecnica"]] = Relationship(back_populates="determinacion")
 
 
 class Tecnica(BaseModel, table=True):
@@ -71,14 +71,14 @@ class Tecnica(BaseModel, table=True):
     __tablename__ = "tecnica"
 
     nombre: str = Field(..., max_length=200, description="Nombre de la técnica")
-    codigo: Optional[str] = Field(
+    codigo: str | None = Field(
         None,
         max_length=255,
         unique=True,
         index=True,
         description="Código de la técnica",
     )
-    descripcion: Optional[str] = Field(
+    descripcion: str | None = Field(
         None, max_length=500, description="Descripción de la técnica"
     )
 
@@ -89,7 +89,7 @@ class Tecnica(BaseModel, table=True):
 
     # Relaciones
     determinacion: Mapped["Determinacion"] = Relationship(back_populates="tecnicas")
-    resultados_tecnica: Mapped[List["ResultadoTecnica"]] = Relationship(
+    resultados_tecnica: Mapped[list["ResultadoTecnica"]] = Relationship(
         back_populates="tecnica"
     )
 
@@ -104,17 +104,17 @@ class ResultadoTecnica(BaseModel, table=True):
     __tablename__ = "resultado_tecnica"
 
     nombre: str = Field(..., max_length=200, description="Nombre del resultado")
-    codigo: Optional[str] = Field(
+    codigo: str | None = Field(
         None,
         max_length=255,
         unique=True,
         index=True,
         description="Código del resultado",
     )
-    descripcion: Optional[str] = Field(
+    descripcion: str | None = Field(
         None, max_length=500, description="Descripción del resultado"
     )
-    es_positivo: Optional[bool] = Field(
+    es_positivo: bool | None = Field(
         None, description="Indica si es un resultado positivo"
     )
 
@@ -133,17 +133,17 @@ class Sintoma(BaseModel, table=True):
     """
 
     __tablename__ = "sintoma"
-    __table_args__ = {"extend_existing": True}
+    __table_args__: ClassVar[dict[str, bool]] = {"extend_existing": True}
 
     id_snvs_signo_sintoma: int = Field(
         unique=True, index=True, description="ID SNVS del síntoma"
     )
-    signo_sintoma: Optional[str] = Field(
+    signo_sintoma: str | None = Field(
         None, max_length=150, description="Descripción del síntoma o signo"
     )
 
     # Relaciones
-    detalle_casos: Mapped[List["DetalleCasoSintomas"]] = Relationship(
+    detalle_casos: Mapped[list["DetalleCasoSintomas"]] = Relationship(
         back_populates="sintoma"
     )
 
@@ -161,12 +161,12 @@ class Comorbilidad(BaseModel, table=True):
         UniqueConstraint("descripcion", name="uq_comorbilidad_descripcion"),
     )
 
-    descripcion: Optional[str] = Field(
+    descripcion: str | None = Field(
         None, max_length=150, description="Descripción de la comorbilidad"
     )
 
     # Relaciones
-    ciudadanos_comorbilidades: Mapped[List["CiudadanoComorbilidades"]] = Relationship(
+    ciudadanos_comorbilidades: Mapped[list["CiudadanoComorbilidades"]] = Relationship(
         back_populates="comorbilidad"
     )
 
@@ -181,12 +181,12 @@ class Muestra(BaseModel, table=True):
     __tablename__ = "muestra"
     __table_args__ = (UniqueConstraint("descripcion", name="uq_muestra_descripcion"),)
 
-    descripcion: Optional[str] = Field(
+    descripcion: str | None = Field(
         None, max_length=150, description="Descripción de muestra"
     )
 
     # Relaciones
-    muestras_casos: Mapped[List["MuestraCasoEpidemiologico"]] = Relationship(
+    muestras_casos: Mapped[list["MuestraCasoEpidemiologico"]] = Relationship(
         back_populates="muestra"
     )
 
@@ -201,12 +201,12 @@ class Vacuna(BaseModel, table=True):
     __tablename__ = "vacuna"
     __table_args__ = (UniqueConstraint("nombre", name="uq_vacuna_nombre"),)
 
-    nombre: Optional[str] = Field(
+    nombre: str | None = Field(
         None, max_length=150, description="Nombre de la vacuna"
     )
 
     # Relaciones
-    vacunas_ciudadanos: Mapped[List["VacunasCiudadano"]] = Relationship(
+    vacunas_ciudadanos: Mapped[list["VacunasCiudadano"]] = Relationship(
         back_populates="vacuna"
     )
 
@@ -230,34 +230,34 @@ class MuestraCasoEpidemiologico(BaseModel, table=True):
     )
 
     # Campos propios
-    fecha_toma_muestra: Optional[date] = Field(
+    fecha_toma_muestra: date | None = Field(
         None, description="Fecha de toma de muestra"
     )
-    semana_epidemiologica_muestra: Optional[int] = Field(
+    semana_epidemiologica_muestra: int | None = Field(
         None, description="Semana epidemiológica de la muestra"
     )
-    anio_epidemiologico_muestra: Optional[int] = Field(
+    anio_epidemiologico_muestra: int | None = Field(
         None, description="Año epidemiológico de la muestra"
     )
-    id_snvs_caso_muestra: Optional[int] = Field(
+    id_snvs_caso_muestra: int | None = Field(
         None, sa_type=BigInteger, description="ID SNVS del caso muestra"
     )
-    id_snvs_prueba_muestra: Optional[int] = Field(
+    id_snvs_prueba_muestra: int | None = Field(
         None, sa_type=BigInteger, description="ID SNVS de la prueba muestra"
     )
-    valor: Optional[str] = Field(
+    valor: str | None = Field(
         None, max_length=150, description="Valor del resultado"
     )
-    id_snvs_usuario_interpretacion: Optional[int] = Field(
+    id_snvs_usuario_interpretacion: int | None = Field(
         None, description="ID del usuario que interpretó"
     )
-    id_snvs_tipo_prueba: Optional[int] = Field(
+    id_snvs_tipo_prueba: int | None = Field(
         None, description="ID del tipo de prueba"
     )
-    id_snvs_prueba: Optional[int] = Field(None, description="ID de la prueba")
-    id_snvs_resultado: Optional[int] = Field(None, description="ID del resultado")
-    fecha_papel: Optional[date] = Field(None, description="Fecha en papel")
-    id_snvs_muestra: Optional[int] = Field(
+    id_snvs_prueba: int | None = Field(None, description="ID de la prueba")
+    id_snvs_resultado: int | None = Field(None, description="ID del resultado")
+    fecha_papel: date | None = Field(None, description="Fecha en papel")
+    id_snvs_muestra: int | None = Field(
         None, sa_type=BigInteger, index=True, description="ID SNVS de la muestra"
     )
 
@@ -276,7 +276,7 @@ class MuestraCasoEpidemiologico(BaseModel, table=True):
     caso: Mapped["CasoEpidemiologico"] = Relationship(back_populates="muestras")
     establecimiento: Mapped["Establecimiento"] = Relationship(back_populates="muestras")
     muestra: Mapped["Muestra"] = Relationship(back_populates="muestras_casos")
-    estudios: Mapped[List["EstudioCasoEpidemiologico"]] = Relationship(
+    estudios: Mapped[list["EstudioCasoEpidemiologico"]] = Relationship(
         back_populates="muestra_caso"
     )
 
@@ -290,19 +290,19 @@ class EstudioCasoEpidemiologico(BaseModel, table=True):
     """
 
     __tablename__ = "estudio_caso_epidemiologico"
-    __table_args__ = {"extend_existing": True}
+    __table_args__: ClassVar[dict[str, bool]] = {"extend_existing": True}
 
-    fecha_estudio: Optional[date] = Field(None, description="Fecha del estudio")
-    determinacion: Optional[str] = Field(
+    fecha_estudio: date | None = Field(None, description="Fecha del estudio")
+    determinacion: str | None = Field(
         None, max_length=150, description="Determinación realizada"
     )
-    tecnica: Optional[str] = Field(
+    tecnica: str | None = Field(
         None, max_length=150, description="Técnica utilizada"
     )
-    resultado: Optional[str] = Field(
+    resultado: str | None = Field(
         None, max_length=150, description="Resultado del estudio"
     )
-    fecha_recepcion: Optional[date] = Field(None, description="Fecha de recepción")
+    fecha_recepcion: date | None = Field(None, description="Fecha de recepción")
 
     # Foreign Keys
     id_muestra: int = Field(
@@ -334,10 +334,10 @@ class VacunasCiudadano(BaseModel, table=True):
         ),
     )
 
-    dosis: Optional[str] = Field(
+    dosis: str | None = Field(
         None, max_length=150, description="Número o descripción de la dosis"
     )
-    fecha_aplicacion: Optional[date] = Field(
+    fecha_aplicacion: date | None = Field(
         None, description="Fecha de aplicación de la vacuna"
     )
 
@@ -348,7 +348,7 @@ class VacunasCiudadano(BaseModel, table=True):
         description="Código del ciudadano",
     )
     id_vacuna: int = Field(foreign_key="vacuna.id", description="ID de la vacuna")
-    id_caso: Optional[int] = Field(
+    id_caso: int | None = Field(
         None, foreign_key="caso_epidemiologico.id", description="ID del caso (opcional)"
     )
 

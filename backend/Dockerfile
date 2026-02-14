@@ -29,7 +29,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libcairo2 \
     fonts-roboto \
     fontconfig \
+    wget \
+    unzip \
+    && mkdir -p /usr/share/fonts/truetype/geist \
+    && wget -qO /tmp/geist.zip "https://github.com/vercel/geist-font/releases/download/geist%401.7.0/geist-font-v1.7.0.zip" \
+    && unzip -j /tmp/geist.zip "geist-font/Geist/ttf/Geist-Regular.ttf" \
+       "geist-font/Geist/ttf/Geist-Bold.ttf" \
+       "geist-font/Geist/ttf/Geist-SemiBold.ttf" \
+       "geist-font/Geist/ttf/Geist-Medium.ttf" \
+       "geist-font/Geist/ttf/Geist-Light.ttf" \
+       -d /usr/share/fonts/truetype/geist/ \
+    && mv /usr/share/fonts/truetype/geist/geist-font/Geist/ttf/*.ttf /usr/share/fonts/truetype/geist/ \
+    && rm -rf /usr/share/fonts/truetype/geist/geist-font /tmp/geist.zip \
     && fc-cache -f -v \
+    && apt-get purge -y wget unzip \
+    && apt-get autoremove -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 

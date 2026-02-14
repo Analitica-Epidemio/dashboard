@@ -2,7 +2,6 @@
 Auth router - Organizes authentication endpoints by responsibility
 """
 
-from typing import List
 
 from fastapi import APIRouter, status
 
@@ -85,7 +84,7 @@ router.add_api_route(
     "/sessions",
     get_user_sessions,
     methods=["GET"],
-    response_model=List[SessionInfo],
+    response_model=list[SessionInfo],
 )
 
 router.add_api_route(
@@ -110,7 +109,7 @@ router.add_api_route(
     "/users",
     list_users,
     methods=["GET"],
-    response_model=List[UserResponse],
+    response_model=list[UserResponse],
 )
 
 router.add_api_route(

@@ -1,6 +1,6 @@
 """Endpoint para buscar establecimientos IGN."""
 
-from typing import Optional, cast
+from typing import cast
 
 from fastapi import Depends, Query
 from sqlmodel import Session
@@ -12,9 +12,9 @@ from .suggestions_service import buscar_establecimientos_ign
 
 
 async def buscar_establecimientos_ign_endpoint(
-    q: Optional[str] = Query(None, description="Búsqueda por nombre o código REFES"),
-    provincia: Optional[str] = Query(None, description="Filtrar por provincia"),
-    departamento: Optional[str] = Query(None, description="Filtrar por departamento"),
+    q: str | None = Query(None, description="Búsqueda por nombre o código REFES"),
+    provincia: str | None = Query(None, description="Filtrar por provincia"),
+    departamento: str | None = Query(None, description="Filtrar por departamento"),
     page: int = Query(1, ge=1, description="Número de página"),
     page_size: int = Query(50, ge=1, le=200, description="Resultados por página"),
     session: Session = Depends(get_session),

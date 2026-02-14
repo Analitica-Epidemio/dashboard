@@ -9,7 +9,7 @@ Características:
 
 import logging
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, and_, col, desc, select
@@ -56,15 +56,15 @@ class PostgreSQLJobRepository:
                 return job
 
         except SQLAlchemyError as e:
-            logger.error(f"SQLAlchemy error creating job: {str(e)}", exc_info=True)
-            raise RepositoryError(f"Error creating job: {str(e)}") from e
+            logger.error(f"SQLAlchemy error creating job: {e!s}", exc_info=True)
+            raise RepositoryError(f"Error creating job: {e!s}") from e
         except Exception as e:
             logger.error(
-                f"Unexpected error in repository.create: {str(e)}", exc_info=True
+                f"Unexpected error in repository.create: {e!s}", exc_info=True
             )
-            raise RepositoryError(f"Unexpected error creating job: {str(e)}") from e
+            raise RepositoryError(f"Unexpected error creating job: {e!s}") from e
 
-    async def get_by_id(self, job_id: str) -> Optional[Job]:
+    async def get_by_id(self, job_id: str) -> Job | None:
         """
         Obtener trabajo por su ID único.
 
@@ -87,8 +87,8 @@ class PostgreSQLJobRepository:
                 return result
 
         except SQLAlchemyError as e:
-            logger.error(f"Error obteniendo trabajo {job_id}: {str(e)}")
-            raise RepositoryError(f"Error fetching job {job_id}: {str(e)}") from e
+            logger.error(f"Error obteniendo trabajo {job_id}: {e!s}")
+            raise RepositoryError(f"Error fetching job {job_id}: {e!s}") from e
 
     async def update(self, job: Job) -> Job:
         """
@@ -114,16 +114,16 @@ class PostgreSQLJobRepository:
                 return job
 
         except SQLAlchemyError as e:
-            logger.error(f"Error actualizando trabajo {job.id}: {str(e)}")
-            raise RepositoryError(f"Error updating job {job.id}: {str(e)}") from e
+            logger.error(f"Error actualizando trabajo {job.id}: {e!s}")
+            raise RepositoryError(f"Error updating job {job.id}: {e!s}") from e
 
     async def list_jobs(
         self,
-        status: Optional[JobStatus] = None,
+        status: JobStatus | None = None,
         limit: int = 50,
         offset: int = 0,
         order_by: str = "created_at",
-    ) -> List[Job]:
+    ) -> list[Job]:
         """
         Listar trabajos con filtros y paginación.
 
@@ -161,17 +161,17 @@ class PostgreSQLJobRepository:
                 return list(results)
 
         except SQLAlchemyError as e:
-            logger.error(f"Error listando trabajos: {str(e)}")
-            raise RepositoryError(f"Error listing jobs: {str(e)}") from e
+            logger.error(f"Error listando trabajos: {e!s}")
+            raise RepositoryError(f"Error listing jobs: {e!s}") from e
 
-    async def get_active_jobs(self) -> List[Job]:
+    async def get_active_jobs(self) -> list[Job]:
         """Obtener trabajos activos (pending o in_progress)."""
         return await self.list_jobs(
             status=None,  # No filtrar por uno solo
             limit=100,
         )
 
-    async def get_jobs_by_status(self, statuses: List[JobStatus]) -> List[Job]:
+    async def get_jobs_by_status(self, statuses: list[JobStatus]) -> list[Job]:
         """Obtener trabajos por múltiples estados."""
         try:
             with self.session_factory(engine) as session:
@@ -185,8 +185,8 @@ class PostgreSQLJobRepository:
                 return list(results)
 
         except SQLAlchemyError as e:
-            logger.error(f"Error obteniendo trabajos por estados: {str(e)}")
-            raise RepositoryError(f"Error fetching jobs by status: {str(e)}") from e
+            logger.error(f"Error obteniendo trabajos por estados: {e!s}")
+            raise RepositoryError(f"Error fetching jobs by status: {e!s}") from e
 
     async def cleanup_old_jobs(self, days_old: int = 7) -> int:
         """
@@ -223,10 +223,10 @@ class PostgreSQLJobRepository:
                 return count
 
         except SQLAlchemyError as e:
-            logger.error(f"Error en limpieza de trabajos: {str(e)}")
-            raise RepositoryError(f"Error cleaning up jobs: {str(e)}") from e
+            logger.error(f"Error en limpieza de trabajos: {e!s}")
+            raise RepositoryError(f"Error cleaning up jobs: {e!s}") from e
 
-    async def get_job_stats(self) -> Dict[str, Any]:
+    async def get_job_stats(self) -> dict[str, Any]:
         """Obtener estadísticas de trabajos."""
         try:
             with self.session_factory(engine) as session:
@@ -259,14 +259,13 @@ class PostgreSQLJobRepository:
                 }
 
         except SQLAlchemyError as e:
-            logger.error(f"Error obteniendo estadísticas: {str(e)}")
+            logger.error(f"Error obteniendo estadísticas: {e!s}")
             return {}
 
 
 class RepositoryError(Exception):
     """Excepción específica para errores del repositorio."""
 
-    pass
 
 
 # Instancia singleton del repositorio

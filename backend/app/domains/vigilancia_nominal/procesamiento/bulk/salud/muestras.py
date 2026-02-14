@@ -1,6 +1,5 @@
 """Bulk processor for health-related data (samples, vaccines, treatments)."""
 
-from typing import Dict
 
 import polars as pl
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -32,8 +31,8 @@ class MuestrasProcessor(BulkProcessorBase):
     def upsert_muestras_eventos(
         self,
         df: pl.DataFrame,
-        establecimiento_mapping: Dict[str, int],
-        evento_mapping: Dict[int, int],
+        establecimiento_mapping: dict[str, int],
+        evento_mapping: dict[int, int],
     ) -> BulkOperationResult:
         """Bulk upsert de muestras de eventos - POLARS PURO."""
         start_time = self._get_current_timestamp()
@@ -222,7 +221,7 @@ class MuestrasProcessor(BulkProcessorBase):
             duration_seconds=duration,
         )
 
-    def _get_or_create_muestras(self, df: pl.DataFrame) -> Dict[str, int]:
+    def _get_or_create_muestras(self, df: pl.DataFrame) -> dict[str, int]:
         """Get or create sample catalog entries - POLARS PURO."""
         # Limpiar tipos con POLARS LAZY
         tipos_muestra_clean = (

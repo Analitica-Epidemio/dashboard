@@ -5,7 +5,7 @@ Consulta datos reales de eventos desde la base de datos
 
 import logging
 from datetime import date, datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pandas as pd
 from sqlalchemy import text
@@ -31,7 +31,7 @@ class ChartDataProcessor:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    def _parsear_fecha(self, date_str: Optional[str]) -> Optional[date]:
+    def _parsear_fecha(self, date_str: str | None) -> date | None:
         """Convierte string de fecha a objeto date"""
         if not date_str:
             return None
@@ -41,8 +41,8 @@ class ChartDataProcessor:
             return None
 
     def _aplicar_filtros_comunes(
-        self, query: str, filtros: Dict[str, Any], params: Dict[str, Any]
-    ) -> tuple[str, Dict[str, Any]]:
+        self, query: str, filtros: dict[str, Any], params: dict[str, Any]
+    ) -> tuple[str, dict[str, Any]]:
         """
         Aplica filtros comunes a las queries incluyendo clasificación
 
@@ -89,8 +89,8 @@ class ChartDataProcessor:
     def _agregar_filtro_clasificacion(
         self,
         query: str,
-        filtros: Dict[str, Any],
-        params: Dict[str, Any],
+        filtros: dict[str, Any],
+        params: dict[str, Any],
         table_alias: str = "",
     ) -> str:
         """Helper para agregar filtro de clasificación a cualquier query"""
@@ -113,10 +113,10 @@ class ChartDataProcessor:
     def _agregar_filtro_provincia(
         self,
         query: str,
-        filtros: Dict[str, Any],
-        params: Dict[str, Any],
+        filtros: dict[str, Any],
+        params: dict[str, Any],
         table_alias: str = "d",
-    ) -> tuple[str, Dict[str, Any]]:
+    ) -> tuple[str, dict[str, Any]]:
         """Helper para agregar filtro de provincia por código INDEC"""
         provincia_id = filtros.get("provincia_id")
 
@@ -170,8 +170,8 @@ class ChartDataProcessor:
         return metadata
 
     async def procesar_grafico(
-        self, chart_config: Any, filtros: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, chart_config: Any, filtros: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Procesa un chart según su función de procesamiento
 
@@ -182,11 +182,11 @@ class ChartDataProcessor:
         Returns:
             Dict con los datos procesados para el chart
         """
-        from typing import Awaitable, Callable
+        from collections.abc import Awaitable, Callable
 
         # Mapear función de procesamiento
-        processor_map: Dict[
-            str, Callable[[Dict[str, Any]], Awaitable[Dict[str, Any]]]
+        processor_map: dict[
+            str, Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
         ] = {
             "curva_epidemiologica": self.procesar_curva_epidemiologica,
             "corredor_endemico": self.procesar_corredor_endemico,
@@ -219,7 +219,7 @@ class ChartDataProcessor:
             return result
         except Exception as e:
             logger.error(
-                f"Error en procesador {chart_config.funcion_procesamiento}: {str(e)}"
+                f"Error en procesador {chart_config.funcion_procesamiento}: {e!s}"
             )
             # Retornar estructura vacía en caso de error
             return {
@@ -230,10 +230,10 @@ class ChartDataProcessor:
 
     async def procesar_curva_epidemiologica(
         self,
-        filtros: Dict[str, Any],
-        series_config: Optional[List[Dict[str, Any]]] = None,
-        agrupar_por: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        filtros: dict[str, Any],
+        series_config: list[dict[str, Any]] | None = None,
+        agrupar_por: str | None = None,
+    ) -> dict[str, Any]:
         """
         Procesa curva epidemiológica con una o múltiples series.
 
@@ -389,7 +389,7 @@ class ChartDataProcessor:
                 datos_por_tipo[tipo_eno_id][(int(periodo), int(año))] = casos
 
         # Ordenar períodos cronológicamente y generar labels
-        metadata: List[Dict[str, Any]] = []
+        metadata: list[dict[str, Any]] = []
 
         if agrupacion == "anio":
             periodos_ordenados = sorted(periodos_set, key=lambda x: x[0])
@@ -474,8 +474,8 @@ class ChartDataProcessor:
         }
 
     async def _procesar_curva_por_agente(
-        self, filtros: Dict[str, Any], series_config: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+        self, filtros: dict[str, Any], series_config: list[dict[str, Any]]
+    ) -> dict[str, Any]:
         """
         Procesa curva epidemiológica agrupada por agentes etiológicos.
 
@@ -518,7 +518,7 @@ class ChartDataProcessor:
           AND ea.resultado = :resultado_positivo
         """
 
-        params: Dict[str, Any] = {
+        params: dict[str, Any] = {
             "agente_codigos": all_agente_codigos,
             "resultado_positivo": ResultadoDeteccion.POSITIVO.value,
         }
@@ -620,8 +620,8 @@ class ChartDataProcessor:
         }
 
     async def procesar_corredor_endemico(
-        self, filtros: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, filtros: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Procesa datos para corredor endémico
         Calcula percentiles basados en datos históricos (últimos 5 años)
@@ -875,8 +875,8 @@ class ChartDataProcessor:
         }
 
     async def procesar_piramide_poblacional(
-        self, filtros: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, filtros: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Procesa datos para pirámide poblacional - Solo Chubut
         Usa configuración flexible de grupos etarios desde age_groups_config.py
@@ -950,12 +950,12 @@ class ChartDataProcessor:
         if rows and len(rows) > 0:
             logger.info(f"📊 Pirámide poblacional - Primeras 5 filas: {rows[:5]}")
             logger.info(
-                f"👥 Pirámide poblacional - Valores de sexo encontrados: {set([row[1] for row in rows])}"
+                f"👥 Pirámide poblacional - Valores de sexo encontrados: { {row[1] for row in rows} }"
             )
 
         # Procesar para formato de pirámide usando los labels de la configuración
-        male_data = {g: 0 for g in age_group_labels}
-        female_data = {g: 0 for g in age_group_labels}
+        male_data = dict.fromkeys(age_group_labels, 0)
+        female_data = dict.fromkeys(age_group_labels, 0)
 
         for row in rows:
             grupo_edad, sexo, casos = row
@@ -968,9 +968,8 @@ class ChartDataProcessor:
             if sexo == "MASCULINO":
                 if grupo_edad in male_data:
                     male_data[grupo_edad] = casos
-            elif sexo == "FEMENINO":
-                if grupo_edad in female_data:
-                    female_data[grupo_edad] = casos
+            elif sexo == "FEMENINO" and grupo_edad in female_data:
+                female_data[grupo_edad] = casos
             # Ignorar casos con sexo NO_ESPECIFICADO - no crear datos falsos
 
         # Preparar datos para D3.js - formato de pirámide poblacional
@@ -1008,7 +1007,7 @@ class ChartDataProcessor:
             },
         }
 
-    async def procesar_mapa_geografico(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
+    async def procesar_mapa_geografico(self, filtros: dict[str, Any]) -> dict[str, Any]:
         """
         Procesa datos para mapa geográfico con departamentos de Chubut
         """
@@ -1082,7 +1081,7 @@ class ChartDataProcessor:
 
         # Construir datos para todos los departamentos
         departamentos_data = []
-        for codigo_indec in DEPARTAMENTOS_CHUBUT.keys():
+        for codigo_indec in DEPARTAMENTOS_CHUBUT:
             casos = casos_por_departamento.get(codigo_indec, 0)
             poblacion = POBLACION_DEPARTAMENTOS.get(codigo_indec, 0)
             tasa_incidencia = (
@@ -1111,7 +1110,7 @@ class ChartDataProcessor:
             "data": {"departamentos": departamentos_data, "total_casos": total_casos},
         }
 
-    async def procesar_estacionalidad(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
+    async def procesar_estacionalidad(self, filtros: dict[str, Any]) -> dict[str, Any]:
         """
         Procesa datos para estacionalidad mensual - Solo Chubut
         Muestra la distribución de casos por mes del año
@@ -1182,7 +1181,7 @@ class ChartDataProcessor:
         ]
 
         # Crear diccionario con todos los meses (inicializar en 0)
-        casos_por_mes = {i: 0 for i in range(1, 13)}
+        casos_por_mes = dict.fromkeys(range(1, 13), 0)
 
         # Llenar con los datos obtenidos
         for row in rows:
@@ -1206,10 +1205,10 @@ class ChartDataProcessor:
 
     async def procesar_casos_edad(
         self,
-        filtros: Dict[str, Any],
-        series_config: Optional[List[Dict[str, Any]]] = None,
-        agrupar_por: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        filtros: dict[str, Any],
+        series_config: list[dict[str, Any]] | None = None,
+        agrupar_por: str | None = None,
+    ) -> dict[str, Any]:
         """
         Procesa datos para casos por grupos de edad con soporte para múltiples series.
 
@@ -1323,8 +1322,8 @@ class ChartDataProcessor:
         }
 
     async def _procesar_casos_edad_por_evento(
-        self, filtros: Dict[str, Any], series_config: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+        self, filtros: dict[str, Any], series_config: list[dict[str, Any]]
+    ) -> dict[str, Any]:
         """
         Procesa distribución por edad agrupada por múltiples eventos (tipo_eno).
         Cada serie puede agrupar múltiples tipo_eno_ids que se suman.
@@ -1374,7 +1373,7 @@ class ChartDataProcessor:
           AND e.id_enfermedad = ANY(:tipo_eno_ids)
         """
 
-        params: Dict[str, Any] = {"tipo_eno_ids": all_tipo_eno_ids}
+        params: dict[str, Any] = {"tipo_eno_ids": all_tipo_eno_ids}
 
         if filtros.get("fecha_desde"):
             query += " AND e.fecha_minima_caso >= :fecha_desde"
@@ -1449,8 +1448,8 @@ class ChartDataProcessor:
         return {"data": {"labels": grupos_etarios, "datasets": datasets}}
 
     async def _procesar_casos_edad_por_agente(
-        self, filtros: Dict[str, Any], series_config: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+        self, filtros: dict[str, Any], series_config: list[dict[str, Any]]
+    ) -> dict[str, Any]:
         """
         Procesa distribución por edad agrupada por agentes etiológicos.
         Cada serie puede agrupar múltiples agente_codigos que se suman.
@@ -1502,7 +1501,7 @@ class ChartDataProcessor:
           AND ea.resultado = :resultado_positivo
         """
 
-        params: Dict[str, Any] = {
+        params: dict[str, Any] = {
             "agente_codigos": all_agente_codigos,
             "resultado_positivo": ResultadoDeteccion.POSITIVO.value,
         }
@@ -1575,8 +1574,8 @@ class ChartDataProcessor:
         return {"data": {"labels": grupos_etarios, "datasets": datasets}}
 
     async def procesar_intento_suicidio(
-        self, filtros: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, filtros: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Procesa datos específicos para intentos de suicidio
         Similar al sistema Chubut pero con datos reales
@@ -1639,7 +1638,7 @@ class ChartDataProcessor:
             },
         }
 
-    async def procesar_rabia_animal(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
+    async def procesar_rabia_animal(self, filtros: dict[str, Any]) -> dict[str, Any]:
         """
         Procesa datos específicos para rabia animal
         """
@@ -1711,7 +1710,7 @@ class ChartDataProcessor:
             },
         }
 
-    async def procesar_proporcion_ira(self, filtros: Dict[str, Any]) -> Dict[str, Any]:
+    async def procesar_proporcion_ira(self, filtros: dict[str, Any]) -> dict[str, Any]:
         """
         Procesa datos para proporción de IRA (Infecciones Respiratorias Agudas)
         Basado en unidades centinela
@@ -1811,8 +1810,8 @@ class ChartDataProcessor:
         }
 
     async def procesar_distribucion_clasificacion(
-        self, filtros: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, filtros: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Procesa datos para distribución por clasificación estratégica - Solo Chubut
         Muestra casos por tipo de clasificación (CONFIRMADOS, PROBABLES, SOSPECHOSOS, etc.)

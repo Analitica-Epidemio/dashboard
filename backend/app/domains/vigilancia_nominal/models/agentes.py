@@ -10,7 +10,7 @@ Aquí solo están los modelos de detección/extracción:
 
 from datetime import date
 from enum import Enum
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import JSON, Column, Index, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped
@@ -77,19 +77,19 @@ class AgenteExtraccionConfig(BaseModel, table=True):
     )
 
     # Configuración de resultado
-    campo_resultado: Optional[str] = Field(
+    campo_resultado: str | None = Field(
         None,
         max_length=100,
         description="Campo donde verificar resultado positivo. NULL si no aplica.",
     )
-    valores_positivos: Optional[List[str]] = Field(
+    valores_positivos: list[str] | None = Field(
         None,
         sa_column=Column(JSON),
         description="Valores que indican resultado positivo",
     )
 
     # Método de detección
-    metodo_deteccion_default: Optional[str] = Field(
+    metodo_deteccion_default: str | None = Field(
         None,
         max_length=100,
         description="Método de detección por defecto (ej: 'PCR', 'cultivo')",
@@ -103,14 +103,14 @@ class AgenteExtraccionConfig(BaseModel, table=True):
         default=True, index=True, description="Si esta config está activa"
     )
 
-    notas: Optional[str] = Field(
+    notas: str | None = Field(
         None, sa_column=Column(Text), description="Notas sobre esta configuración"
     )
 
     # Relaciones
     agente: Mapped["AgenteEtiologico"] = Relationship()
     enfermedad: Mapped["Enfermedad"] = Relationship()
-    casos_extraidos: Mapped[List["CasoAgente"]] = Relationship(
+    casos_extraidos: Mapped[list["CasoAgente"]] = Relationship(
         back_populates="config_usada",
         sa_relationship_kwargs={"foreign_keys": "[CasoAgente.id_config_usada]"},
     )
@@ -161,28 +161,28 @@ class CasoAgente(BaseModel, table=True):
     )
 
     # Metadata de la detección
-    metodo_deteccion: Optional[str] = Field(
+    metodo_deteccion: str | None = Field(
         None,
         max_length=100,
         description="Método de detección usado (ej: 'PCR', 'cultivo')",
     )
-    resultado_raw: Optional[str] = Field(
+    resultado_raw: str | None = Field(
         None, max_length=200, description="Valor original del resultado"
     )
-    fecha_deteccion: Optional[date] = Field(
+    fecha_deteccion: date | None = Field(
         None, index=True, description="Fecha de la detección/resultado"
     )
 
     # Trazabilidad
-    id_config_usada: Optional[int] = Field(
+    id_config_usada: int | None = Field(
         None,
         foreign_key="agente_extraccion_config.id",
         description="Config que extrajo este agente",
     )
-    campo_origen: Optional[str] = Field(
+    campo_origen: str | None = Field(
         None, max_length=100, description="Campo del CSV de donde se extrajo"
     )
-    valor_origen: Optional[str] = Field(
+    valor_origen: str | None = Field(
         None, max_length=500, description="Valor original del campo que matcheó"
     )
 

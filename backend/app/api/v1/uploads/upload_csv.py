@@ -79,7 +79,7 @@ async def upload_csv_async(
         logger.info("✅ Redis es accesible desde el endpoint de carga")
     except Exception as redis_error:
         logger.error(
-            f"❌ Falló prueba de conexión Redis en endpoint: {str(redis_error)}"
+            f"❌ Falló prueba de conexión Redis en endpoint: {redis_error!s}"
         )
         logger.error(f"❌ Tipo de error Redis: {type(redis_error).__name__}")
 
@@ -134,13 +134,13 @@ async def upload_csv_async(
         )
 
     except Exception as e:
-        logger.error(f"💥 Error inesperado en upload_csv_async: {str(e)}")
+        logger.error(f"💥 Error inesperado en upload_csv_async: {e!s}")
         logger.error(f"💥 Traceback completo:\n{traceback.format_exc()}")
 
         error_response = ErrorResponse(
             error=ErrorDetail(
                 code="INTERNAL_SERVER_ERROR",
-                message=f"Error iniciando procesamiento asíncrono: {str(e)}",
+                message=f"Error iniciando procesamiento asíncrono: {e!s}",
                 field=None,
             )
         )

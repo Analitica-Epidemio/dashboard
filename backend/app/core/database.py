@@ -1,7 +1,7 @@
 """Configuración de la base de datos."""
 
 import logging
-from typing import AsyncGenerator, Generator
+from collections.abc import AsyncGenerator, Generator
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlmodel import Session, SQLModel, create_engine

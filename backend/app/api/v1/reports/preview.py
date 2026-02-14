@@ -4,7 +4,7 @@ Preview report endpoint
 
 import logging
 from datetime import date, datetime
-from typing import Any, Dict, Optional
+from typing import Any
 
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,7 +24,7 @@ async def preview_report(
     request: ReportRequest,
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(RequireAnyRole()),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Obtiene los datos que se incluirían en el reporte sin generar el PDF
     Útil para preview en el frontend
@@ -38,11 +38,11 @@ async def preview_report(
             fecha_hasta_str = request.date_range.get("to")
 
             # Convertir strings a objetos date
-            fecha_desde: Optional[date] = None
+            fecha_desde: date | None = None
             if fecha_desde_str:
                 fecha_desde = date.fromisoformat(fecha_desde_str)
 
-            fecha_hasta: Optional[date] = None
+            fecha_hasta: date | None = None
             if fecha_hasta_str:
                 fecha_hasta = date.fromisoformat(fecha_hasta_str)
 
@@ -90,4 +90,4 @@ async def preview_report(
 
     except Exception as e:
         logger.error(f"Error en preview de reporte: {e}")
-        raise HTTPException(status_code=500, detail=f"Error en preview: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error en preview: {e!s}") from e

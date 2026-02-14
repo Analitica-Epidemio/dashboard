@@ -6,22 +6,22 @@ Este módulo contiene lógica para detectar automáticamente el tipo de sujeto
 """
 
 import re
-from typing import Any, Dict, List, Optional, Tuple, TypedDict
+from typing import Any, TypedDict
 
 
 class ClasificacionTaxonomica(TypedDict):
-    genero: Optional[str]
-    especie: Optional[str]
+    genero: str | None
+    especie: str | None
     nombre_completo: str
 
 
 class InfoAnimal(TypedDict):
-    especie: Optional[str]
-    subespecie: Optional[str]
-    ubicacion: Optional[str]
-    info_adicional: List[str]
-    clasificacion_taxonomica: Dict[
-        str, Optional[str]
+    especie: str | None
+    subespecie: str | None
+    ubicacion: str | None
+    info_adicional: list[str]
+    clasificacion_taxonomica: dict[
+        str, str | None
     ]  # Usamos Dict simple para evitar anidamiento complejo si no es necesario, o ClasificacionTaxonomica si lo es.
     # Mejor usemos ClasificacionTaxonomica con total=False si fuera necesario, pero aquí parece que siempre se inicializa vacía.
     # Simplifiquemos: clasificacion_taxonomica puede estar vacía.
@@ -48,9 +48,9 @@ class TipoSujetoDetector:
         ]
 
     def detectar(
-        self, row: Dict[str, Any]
-    ) -> Tuple[
-        str, float, Dict[str, Any]
+        self, row: dict[str, Any]
+    ) -> tuple[
+        str, float, dict[str, Any]
     ]:  # Keep generic Dict return for now as it mixes Human/Animal/Indet metadata
         """
         Detecta el tipo de sujeto y extrae metadata.
@@ -104,7 +104,7 @@ class TipoSujetoDetector:
 
     def _detectar_tipo_sujeto(
         self, nombre: str, apellido: str, sexo: str, tipo_doc: str, nro_doc: str
-    ) -> Tuple[str, float]:
+    ) -> tuple[str, float]:
         """
         Detección basada en patrones, no en especies hardcodeadas.
         """
@@ -268,7 +268,7 @@ class TipoSujetoDetector:
 
     def _extraer_info_humano(
         self, nombre: str, apellido: str, tipo_doc: str, nro_doc: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Extrae información del humano.
         """
@@ -323,7 +323,7 @@ class MetadataExtractor:
             "myotis": "murcielago",
         }
 
-    def extraer_fuente_contagio(self, row: Dict[str, Any]) -> Optional[str]:
+    def extraer_fuente_contagio(self, row: dict[str, Any]) -> str | None:
         """
         Extrae fuente de contagio usando el patrón existente de regex.
         """

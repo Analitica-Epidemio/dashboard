@@ -56,9 +56,9 @@ class ComorbilidadesProcessor(BulkProcessorBase):
         stmt = select(col(Ciudadano.codigo_ciudadano)).where(
             col(Ciudadano.codigo_ciudadano).in_(codigos_ciudadanos)
         )
-        ciudadanos_existentes = set(
+        ciudadanos_existentes = {
             codigo for (codigo,) in self.context.session.execute(stmt).all()
-        )
+        }
 
         # Crear DataFrame de mapeo para hacer join en Polars
         mapping_df = pl.DataFrame(

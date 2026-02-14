@@ -4,7 +4,7 @@ Get top winners/losers endpoint - entidades con mayor cambio
 
 import logging
 from datetime import date
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import Depends, Query
 from sqlalchemy import text
@@ -37,30 +37,30 @@ async def get_top_winners_losers(
     period_type: PeriodType = Query(
         PeriodType.ULTIMAS_4_SEMANAS_EPI, description="Tipo de período predefinido"
     ),
-    fecha_desde: Optional[date] = Query(
+    fecha_desde: date | None = Query(
         None, description="Fecha desde (solo si period_type=personalizado)"
     ),
-    fecha_hasta: Optional[date] = Query(
+    fecha_hasta: date | None = Query(
         None, description="Fecha hasta (solo si period_type=personalizado)"
     ),
-    fecha_referencia: Optional[date] = Query(
+    fecha_referencia: date | None = Query(
         None,
         description="Fecha de referencia para 'viajar en el tiempo' (ej: 2023-03-15)",
     ),
-    grupo_id: Optional[int] = Query(None, description="ID del grupo seleccionado"),
-    tipo_eno_ids: Optional[List[int]] = Query(
+    grupo_id: int | None = Query(None, description="ID del grupo seleccionado"),
+    tipo_eno_ids: list[int] | None = Query(
         None, description="IDs de los eventos a filtrar"
     ),
-    clasificaciones: Optional[List[str]] = Query(
+    clasificaciones: list[str] | None = Query(
         None, description="Filtrar por clasificaciones estratégicas"
     ),
-    provincia_id: Optional[int] = Query(
+    provincia_id: int | None = Query(
         None,
         description="Código INDEC de provincia (solo para metric_type=departamentos)",
     ),
     limit: int = Query(10, description="Número de winners/losers a retornar"),
     db: AsyncSession = Depends(get_async_session),
-    current_user: Optional[User] = RequireAuthOrSignedUrl,
+    current_user: User | None = RequireAuthOrSignedUrl,
 ) -> SuccessResponse[TopWinnersLosersResponse]:
     """
     Endpoint para obtener top winners y losers.
@@ -98,7 +98,7 @@ async def get_top_winners_losers(
     periodo_comparacion = create_period_info(comp_desde, comp_hasta, descripcion_comp)
 
     # Construir WHERE clauses
-    params: Dict[str, Any] = {}
+    params: dict[str, Any] = {}
     where_clauses_base = []
 
     if provincia_id and metric_type == "departamentos":
@@ -328,34 +328,32 @@ async def get_top_winners_losers(
     rows_losers = result_losers.fetchall()
 
     # Procesar winners
-    winners = []
-    for row in rows_winners:
-        if row.diferencia_porcentual is not None:
-            winners.append(
-                TopWinnerLoser(
-                    entidad_id=row.entidad_id,
-                    entidad_nombre=row.entidad_nombre,
-                    valor_actual=float(row.valor_actual),
-                    valor_anterior=float(row.valor_anterior),
-                    diferencia_porcentual=round(float(row.diferencia_porcentual), 2),
-                    diferencia_absoluta=float(row.diferencia_absoluta),
-                )
-            )
+    winners = [
+        TopWinnerLoser(
+            entidad_id=row.entidad_id,
+            entidad_nombre=row.entidad_nombre,
+            valor_actual=float(row.valor_actual),
+            valor_anterior=float(row.valor_anterior),
+            diferencia_porcentual=round(float(row.diferencia_porcentual), 2),
+            diferencia_absoluta=float(row.diferencia_absoluta),
+        )
+        for row in rows_winners
+        if row.diferencia_porcentual is not None
+    ]
 
     # Procesar losers
-    losers = []
-    for row in rows_losers:
-        if row.diferencia_porcentual is not None:
-            losers.append(
-                TopWinnerLoser(
-                    entidad_id=row.entidad_id,
-                    entidad_nombre=row.entidad_nombre,
-                    valor_actual=float(row.valor_actual),
-                    valor_anterior=float(row.valor_anterior),
-                    diferencia_porcentual=round(float(row.diferencia_porcentual), 2),
-                    diferencia_absoluta=float(row.diferencia_absoluta),
-                )
-            )
+    losers = [
+        TopWinnerLoser(
+            entidad_id=row.entidad_id,
+            entidad_nombre=row.entidad_nombre,
+            valor_actual=float(row.valor_actual),
+            valor_anterior=float(row.valor_anterior),
+            diferencia_porcentual=round(float(row.diferencia_porcentual), 2),
+            diferencia_absoluta=float(row.diferencia_absoluta),
+        )
+        for row in rows_losers
+        if row.diferencia_porcentual is not None
+    ]
 
     response = TopWinnersLosersResponse(
         top_winners=winners,

@@ -14,7 +14,7 @@ Esto permite que en los gráficos se muestre una sola serie "Flu A"
 que suma todas las variantes.
 """
 
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Column, Index, Text
 from sqlmodel import Field, Relationship, SQLModel
@@ -115,7 +115,7 @@ class AgrupacionAgentes(BaseModel, table=True):
     )
 
     # Metadata
-    descripcion: Optional[str] = Field(
+    descripcion: str | None = Field(
         None,
         sa_column=Column(Text),
         description="Descripción de la agrupación y qué incluye",
@@ -129,7 +129,7 @@ class AgrupacionAgentes(BaseModel, table=True):
     )
 
     # Relación many-to-many con AgenteEtiologico
-    agentes: List["AgenteEtiologico"] = Relationship(
+    agentes: list["AgenteEtiologico"] = Relationship(
         back_populates="agrupaciones",
         link_model=AgrupacionAgenteLink,
     )

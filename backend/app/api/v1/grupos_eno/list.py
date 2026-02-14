@@ -3,7 +3,6 @@ List grupos ENO endpoint
 """
 
 import logging
-from typing import Optional
 
 from fastapi import Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
@@ -31,10 +30,10 @@ class EnfermedadSimple(BaseModel):
 class GrupoDeEnfermedadesInfo(BaseModel):
     id: int = Field(..., description="ID del grupo ENO")
     nombre: str = Field(..., max_length=150, description="Nombre del grupo ENO")
-    descripcion: Optional[str] = Field(
+    descripcion: str | None = Field(
         None, max_length=500, description="Descripcion del grupo"
     )
-    codigo: Optional[str] = Field(None, max_length=200, description="Codigo del grupo")
+    codigo: str | None = Field(None, max_length=200, description="Codigo del grupo")
     eventos: list[EnfermedadSimple] = Field(
         default_factory=list, description="ENOs que pertenecen a este grupo"
     )
@@ -46,7 +45,7 @@ logger = logging.getLogger(__name__)
 async def list_grupos_eno(
     page: int = Query(1, ge=1, description="Numero de pagina"),
     per_page: int = Query(20, ge=1, le=100, description="Elementos por pagina"),
-    nombre: Optional[str] = Query(None, description="Filtrar por nombre"),
+    nombre: str | None = Query(None, description="Filtrar por nombre"),
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(RequireAnyRole()),
 ) -> PaginatedResponse[GrupoDeEnfermedadesInfo]:
@@ -117,14 +116,13 @@ async def list_grupos_eno(
             if grupo.id is None:
                 continue
 
-            eventos = []
-            for rel in grupo.enfermedad_grupos:
-                if rel.enfermedad.id is not None:
-                    eventos.append(
-                        EnfermedadSimple(
-                            id=rel.enfermedad.id, nombre=rel.enfermedad.nombre
-                        )
-                    )
+            eventos = [
+                EnfermedadSimple(
+                    id=rel.enfermedad.id, nombre=rel.enfermedad.nombre
+                )
+                for rel in grupo.enfermedad_grupos
+                if rel.enfermedad.id is not None
+            ]
 
             grupos_info.append(
                 GrupoDeEnfermedadesInfo(
@@ -171,8 +169,8 @@ async def list_grupos_eno(
             },
         )
     except Exception as e:
-        logger.error(f"Error listando grupos ENO: {str(e)}")
+        logger.error(f"Error listando grupos ENO: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error obteniendo grupos de eventos: {str(e)}",
-        )
+            detail=f"Error obteniendo grupos de eventos: {e!s}",
+        ) from e

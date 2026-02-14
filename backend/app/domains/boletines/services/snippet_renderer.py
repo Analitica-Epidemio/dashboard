@@ -4,7 +4,7 @@ Renderiza snippets de boletines con placeholders usando Jinja2
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from jinja2 import Environment, TemplateSyntaxError
 from sqlalchemy import select
@@ -32,7 +32,7 @@ class SnippetRenderer:
             lstrip_blocks=True,
         )
 
-    def render(self, snippet: BoletinSnippet, variables: Dict[str, Any]) -> str:
+    def render(self, snippet: BoletinSnippet, variables: dict[str, Any]) -> str:
         """
         Renderiza un snippet con las variables proporcionadas.
 
@@ -63,7 +63,7 @@ class SnippetRenderer:
 
     async def get_snippet_by_codigo(
         self, db: AsyncSession, codigo: str
-    ) -> Optional[BoletinSnippet]:
+    ) -> BoletinSnippet | None:
         """
         Obtiene un snippet por su código.
 
@@ -83,7 +83,7 @@ class SnippetRenderer:
 
     async def get_snippets_by_categoria(
         self, db: AsyncSession, categoria: str
-    ) -> List[BoletinSnippet]:
+    ) -> list[BoletinSnippet]:
         """
         Obtiene todos los snippets de una categoría.
 
@@ -106,8 +106,8 @@ class SnippetRenderer:
         return list(result.scalars().all())
 
     def get_applicable_snippets(
-        self, snippets: List[BoletinSnippet], context: Dict[str, Any]
-    ) -> List[BoletinSnippet]:
+        self, snippets: list[BoletinSnippet], context: dict[str, Any]
+    ) -> list[BoletinSnippet]:
         """
         Filtra snippets basándose en sus condiciones.
 
@@ -179,8 +179,8 @@ class SnippetRenderer:
         return applicable
 
     async def render_snippet_by_codigo(
-        self, db: AsyncSession, codigo: str, variables: Dict[str, Any]
-    ) -> Optional[str]:
+        self, db: AsyncSession, codigo: str, variables: dict[str, Any]
+    ) -> str | None:
         """
         Renderiza un snippet buscándolo por código.
 
@@ -200,8 +200,8 @@ class SnippetRenderer:
         return self.render(snippet, variables)
 
     def validate_variables(
-        self, snippet: BoletinSnippet, variables: Dict[str, Any]
-    ) -> List[str]:
+        self, snippet: BoletinSnippet, variables: dict[str, Any]
+    ) -> list[str]:
         """
         Valida que todas las variables requeridas estén presentes.
 

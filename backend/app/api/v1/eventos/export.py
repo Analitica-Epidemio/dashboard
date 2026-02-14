@@ -5,7 +5,6 @@ Endpoint para exportación de eventos epidemiológicos.
 import io
 import logging
 from datetime import date, datetime
-from typing import Optional
 
 import pandas as pd
 from fastapi import Depends, HTTPException, Query, status
@@ -21,10 +20,10 @@ logger = logging.getLogger(__name__)
 
 async def export_eventos(
     # Mismos filtros que el listado
-    tipo_eno_id: Optional[int] = None,
-    fecha_desde: Optional[date] = None,
-    fecha_hasta: Optional[date] = None,
-    clasificacion: Optional[str] = None,
+    tipo_eno_id: int | None = None,
+    fecha_desde: date | None = None,
+    fecha_hasta: date | None = None,
+    clasificacion: str | None = None,
     formato: str = Query("csv", description="Formato de exportación (csv/excel)"),
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(RequireAnyRole()),
@@ -77,8 +76,8 @@ async def export_eventos(
         )
 
     except Exception as e:
-        logger.error(f"💥 Error exportando eventos: {str(e)}")
+        logger.error(f"💥 Error exportando eventos: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error exportando eventos: {str(e)}",
-        )
+            detail=f"Error exportando eventos: {e!s}",
+        ) from e

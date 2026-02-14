@@ -7,7 +7,7 @@ import gzip
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ class TopoJSONOptimizer:
 
     def __init__(self, topojson_dir: str):
         self.topojson_dir = Path(topojson_dir)
-        self._cache: Dict[str, bytes] = {}
+        self._cache: dict[str, bytes] = {}
 
     def _quantize_geometry(self, coords: Any, decimals: int = 4) -> Any:
         """
@@ -43,8 +43,8 @@ class TopoJSONOptimizer:
         return [self._quantize_geometry(c, decimals) for c in coords]
 
     def _quantize_topojson(
-        self, data: Dict[str, Any], decimals: int = 4
-    ) -> Dict[str, Any]:
+        self, data: dict[str, Any], decimals: int = 4
+    ) -> dict[str, Any]:
         """Quantize all coordinates in TopoJSON to reduce JSON size"""
         result = data.copy()
 
@@ -92,7 +92,7 @@ class TopoJSONOptimizer:
             raise FileNotFoundError(f"TopoJSON file not found: {filename}")
 
         # Load JSON
-        with open(file_path, "r") as f:
+        with open(file_path) as f:
             data = json.load(f)
 
         # Apply quantization if enabled
@@ -126,7 +126,7 @@ class TopoJSONOptimizer:
             return []
         return [f.name for f in self.topojson_dir.glob("*.topojson")]
 
-    def get_file_info(self, filename: str) -> Dict[str, Any]:
+    def get_file_info(self, filename: str) -> dict[str, Any]:
         """Get information about a TopoJSON file"""
         file_path = self.topojson_dir / filename
         if not file_path.exists():
@@ -136,7 +136,7 @@ class TopoJSONOptimizer:
         original_size = file_path.stat().st_size
 
         # Load and check structure
-        with open(file_path, "r") as f:
+        with open(file_path) as f:
             data = json.load(f)
 
         objects = list(data.get("objects", {}).keys())
@@ -150,13 +150,13 @@ class TopoJSONOptimizer:
             "arcs_count": len(data.get("arcs", [])) if "arcs" in data else 0,
         }
 
-    def estimate_compression(self, filename: str, decimals: int = 4) -> Dict[str, Any]:
+    def estimate_compression(self, filename: str, decimals: int = 4) -> dict[str, Any]:
         """Estimate compression ratios for a file"""
         file_path = self.topojson_dir / filename
         if not file_path.exists():
             raise FileNotFoundError(f"TopoJSON file not found: {filename}")
 
-        with open(file_path, "r") as f:
+        with open(file_path) as f:
             data = json.load(f)
 
         # Original size

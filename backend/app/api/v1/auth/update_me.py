@@ -26,12 +26,11 @@ async def update_current_user(
     Role and status changes require superadmin privileges.
     """
     # Users can't change their own role/status
-    if user_data.rol is not None or user_data.estado is not None:
-        if current_user.rol.value != "superadmin":
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Cannot change role or status",
-            )
+    if (user_data.rol is not None or user_data.estado is not None) and current_user.rol.value != "superadmin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot change role or status",
+        )
 
     assert current_user.id is not None
     updated_user = await auth_service.actualizar_usuario(current_user.id, user_data)

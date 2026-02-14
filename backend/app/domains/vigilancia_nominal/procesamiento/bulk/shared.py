@@ -106,10 +106,7 @@ def es_nombre_calle_valido(calle: str) -> bool:
 
     # Si la calle es muy corta (menos de 3 caracteres no espacios), probablemente no es válida
     calle_sin_espacios = calle_limpia.replace(" ", "")
-    if len(calle_sin_espacios) < 3:
-        return False
-
-    return True
+    return not len(calle_sin_espacios) < 3
 
 
 # Type variable for SQLAlchemy models

@@ -15,7 +15,6 @@ class Criterion(ABC):
     @abstractmethod
     def to_expression(self) -> BinaryExpression | None:
         """Convierte el criterio a expresión SQLAlchemy."""
-        pass
 
     def __and__(self, other: "Criterion") -> "AndCriteria":
         """Permite combinar criterios con &."""

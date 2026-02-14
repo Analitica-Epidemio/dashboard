@@ -6,7 +6,6 @@ Muestra toda la información de una persona y TODOS sus eventos completos.
 import logging
 from datetime import date
 from decimal import Decimal
-from typing import List, Optional
 
 from fastapi import Depends, HTTPException, Path, Query, status
 from pydantic import BaseModel, ConfigDict, Field
@@ -42,27 +41,27 @@ class SintomaInfo(BaseModel):
 
     id: int
     nombre: str
-    fecha_inicio: Optional[date] = None
+    fecha_inicio: date | None = None
 
 
 class MuestraInfo(BaseModel):
     """Información de una muestra"""
 
     id: int
-    tipo_muestra: Optional[str] = None
-    fecha_toma: Optional[date] = None
-    fecha_recepcion: Optional[date] = None
-    resultado: Optional[str] = None
+    tipo_muestra: str | None = None
+    fecha_toma: date | None = None
+    fecha_recepcion: date | None = None
+    resultado: str | None = None
 
 
 class EstudioInfo(BaseModel):
     """Información de un estudio"""
 
     id: int
-    determinacion: Optional[str] = None
-    tecnica: Optional[str] = None
-    resultado: Optional[str] = None
-    fecha_estudio: Optional[date] = None
+    determinacion: str | None = None
+    tecnica: str | None = None
+    resultado: str | None = None
+    fecha_estudio: date | None = None
 
 
 class DiagnosticoInfo(BaseModel):
@@ -70,26 +69,26 @@ class DiagnosticoInfo(BaseModel):
 
     id: int
     diagnostico: str
-    fecha: Optional[date] = None
+    fecha: date | None = None
 
 
 class TratamientoInfo(BaseModel):
     """Información de tratamiento"""
 
     id: int
-    tratamiento: Optional[str] = None
-    fecha_inicio: Optional[date] = None
-    fecha_fin: Optional[date] = None
-    resultado: Optional[str] = None
+    tratamiento: str | None = None
+    fecha_inicio: date | None = None
+    fecha_fin: date | None = None
+    resultado: str | None = None
 
 
 class InternacionInfo(BaseModel):
     """Información de internación"""
 
     id: int
-    establecimiento: Optional[str] = None
-    fecha_internacion: Optional[date] = None
-    fecha_alta: Optional[date] = None
+    establecimiento: str | None = None
+    fecha_internacion: date | None = None
+    fecha_alta: date | None = None
     cuidados_intensivos: bool = False
 
 
@@ -98,20 +97,20 @@ class VacunaInfo(BaseModel):
 
     id: int
     vacuna: str
-    dosis: Optional[int] = None
-    fecha_aplicacion: Optional[date] = None
+    dosis: int | None = None
+    fecha_aplicacion: date | None = None
 
 
 class DomicilioGeograficoInfo(BaseModel):
     """Información geográfica del domicilio"""
 
-    latitud: Optional[Decimal] = None
-    longitud: Optional[Decimal] = None
-    calle: Optional[str] = None
-    numero: Optional[str] = None
-    localidad: Optional[str] = None
-    departamento: Optional[str] = None
-    provincia: Optional[str] = None
+    latitud: Decimal | None = None
+    longitud: Decimal | None = None
+    calle: str | None = None
+    numero: str | None = None
+    localidad: str | None = None
+    departamento: str | None = None
+    provincia: str | None = None
 
 
 class CasoEpidemiologicoCompleto(BaseModel):
@@ -120,42 +119,42 @@ class CasoEpidemiologicoCompleto(BaseModel):
     # Identificación
     id: int
     id_evento_caso: int
-    tipo_eno_id: Optional[int] = None
-    tipo_eno_nombre: Optional[str] = None
-    grupos_eno_nombres: List[str] = Field(
+    tipo_eno_id: int | None = None
+    tipo_eno_nombre: str | None = None
+    grupos_eno_nombres: list[str] = Field(
         default_factory=list,
         description="Nombres de grupos ENO (puede pertenecer a múltiples)",
     )
 
     # Fechas
-    fecha_minima_caso: Optional[date] = None
-    fecha_inicio_sintomas: Optional[date] = None
-    fecha_apertura: Optional[date] = None
+    fecha_minima_caso: date | None = None
+    fecha_inicio_sintomas: date | None = None
+    fecha_apertura: date | None = None
 
     # Clasificación
-    clasificacion_estrategia: Optional[str] = None
-    clasificacion_manual: Optional[str] = None
-    clasificacion_algoritmo: Optional[str] = None
+    clasificacion_estrategia: str | None = None
+    clasificacion_manual: str | None = None
+    clasificacion_algoritmo: str | None = None
 
     # Semanas epidemiológicas
-    semana_epidemiologica_apertura: Optional[int] = None
-    anio_epidemiologico_apertura: Optional[int] = None
+    semana_epidemiologica_apertura: int | None = None
+    anio_epidemiologico_apertura: int | None = None
 
     # Flags
     es_sintomatico: bool = False
     requiere_revision: bool = False
 
     # Domicilio del evento
-    domicilio: Optional[DomicilioGeograficoInfo] = None
+    domicilio: DomicilioGeograficoInfo | None = None
 
     # Datos clínicos
-    sintomas: List[SintomaInfo] = []
-    muestras: List[MuestraInfo] = []
-    estudios: List[EstudioInfo] = []
-    diagnosticos: List[DiagnosticoInfo] = []
-    tratamientos: List[TratamientoInfo] = []
-    internaciones: List[InternacionInfo] = []
-    vacunas: List[VacunaInfo] = []
+    sintomas: list[SintomaInfo] = []
+    muestras: list[MuestraInfo] = []
+    estudios: list[EstudioInfo] = []
+    diagnosticos: list[DiagnosticoInfo] = []
+    tratamientos: list[TratamientoInfo] = []
+    internaciones: list[InternacionInfo] = []
+    vacunas: list[VacunaInfo] = []
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -163,11 +162,11 @@ class CasoEpidemiologicoCompleto(BaseModel):
 class DomicilioInfo(BaseModel):
     """Información de domicilio actual"""
 
-    calle: Optional[str] = None
-    numero: Optional[str] = None
-    barrio: Optional[str] = None
-    localidad: Optional[str] = None
-    provincia: Optional[str] = None
+    calle: str | None = None
+    numero: str | None = None
+    barrio: str | None = None
+    localidad: str | None = None
+    provincia: str | None = None
 
 
 class PersonaDetailResponse(BaseModel):
@@ -178,33 +177,33 @@ class PersonaDetailResponse(BaseModel):
     persona_id: int = Field(..., description="ID de la persona")
 
     # Datos personales (ciudadano)
-    nombre: Optional[str] = None
-    apellido: Optional[str] = None
+    nombre: str | None = None
+    apellido: str | None = None
     nombre_completo: str = Field(..., description="Nombre completo")
-    documento_tipo: Optional[str] = None
-    documento_numero: Optional[str] = None
-    fecha_nacimiento: Optional[date] = None
-    edad_actual: Optional[int] = None
-    sexo_biologico: Optional[str] = None
-    genero_autopercibido: Optional[str] = None
+    documento_tipo: str | None = None
+    documento_numero: str | None = None
+    fecha_nacimiento: date | None = None
+    edad_actual: int | None = None
+    sexo_biologico: str | None = None
+    genero_autopercibido: str | None = None
 
     # Datos de animal
-    especie: Optional[str] = None
-    raza: Optional[str] = None
-    identificacion_animal: Optional[str] = None
+    especie: str | None = None
+    raza: str | None = None
+    identificacion_animal: str | None = None
 
     # Ubicación
-    domicilio: Optional[DomicilioInfo] = None
-    provincia: Optional[str] = None
-    localidad: Optional[str] = None
+    domicilio: DomicilioInfo | None = None
+    provincia: str | None = None
+    localidad: str | None = None
 
     # Contacto
-    telefono: Optional[str] = None
-    obra_social: Optional[str] = None
+    telefono: str | None = None
+    obra_social: str | None = None
 
     # CasoEpidemiologicos COMPLETOS (toda la información)
     total_eventos: int = Field(..., description="Total de eventos")
-    eventos: List[CasoEpidemiologicoCompleto] = Field(
+    eventos: list[CasoEpidemiologicoCompleto] = Field(
         default_factory=list, description="Lista completa de eventos"
     )
 
@@ -218,8 +217,8 @@ class PersonaDetailResponse(BaseModel):
     eventos_descartados: int = 0
 
     # Fechas relevantes
-    primer_evento_fecha: Optional[date] = None
-    ultimo_evento_fecha: Optional[date] = None
+    primer_evento_fecha: date | None = None
+    ultimo_evento_fecha: date | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -665,10 +664,10 @@ async def get_persona_detail(
         raise
     except Exception as e:
         logger.error(
-            f"💥 Error obteniendo persona {tipo_sujeto}/{persona_id}: {str(e)}",
+            f"💥 Error obteniendo persona {tipo_sujeto}/{persona_id}: {e!s}",
             exc_info=True,
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error obteniendo persona: {str(e)}",
-        )
+            detail=f"Error obteniendo persona: {e!s}",
+        ) from e

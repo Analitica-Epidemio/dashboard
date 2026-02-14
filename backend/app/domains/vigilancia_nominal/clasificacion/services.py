@@ -3,7 +3,7 @@ Services layer para clasificación de eventos usando estrategias de DB.
 """
 
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pandas as pd
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -40,7 +40,7 @@ class EventClassificationService:
         self.strategy_repo = EstrategiaClasificacionRepository(session)
         self.rule_repo = ClassificationRuleRepository(session)
         self.rule_repo = ClassificationRuleRepository(session)
-        self._cache: Dict[int, EstrategiaClasificacion] = {}
+        self._cache: dict[int, EstrategiaClasificacion] = {}
         self.POSITIVE_CLASSIFICATIONS = {
             TipoClasificacion.CONFIRMADOS.value,
             TipoClasificacion.CON_RESULTADO_MORTAL.value,
@@ -167,10 +167,7 @@ class EventClassificationService:
             mask, _ = conditions[i]
             operator = conditions[i - 1][1]  # Usar operador de la condición anterior
 
-            if operator == "OR":
-                result = result | mask
-            else:  # AND
-                result = result & mask
+            result = result | mask if operator == "OR" else result & mask
 
         return result
 
@@ -343,7 +340,7 @@ class EventClassificationService:
         results = []
 
         for idx, row in df.iterrows():
-            tipo, confidence, metadata = detector.detectar(row.to_dict())
+            tipo, confidence, _metadata = detector.detectar(row.to_dict())
 
             # Verificar si cumple criterios
             matches = tipo == target_type and confidence >= min_confidence
@@ -391,7 +388,7 @@ class EventClassificationService:
 
     async def _get_strategy(
         self, id_enfermedad: int, use_cache: bool = True
-    ) -> Optional[EstrategiaClasificacion]:
+    ) -> EstrategiaClasificacion | None:
         """
         Obtiene una estrategia, usando cache si está disponible.
 
@@ -486,8 +483,8 @@ class EventClassificationService:
         return df
 
     async def test_classification_legacy(
-        self, test_data: List[Dict[str, Any]], id_enfermedad: int
-    ) -> Dict[str, Any]:
+        self, test_data: list[dict[str, Any]], id_enfermedad: int
+    ) -> dict[str, Any]:
         """
         Prueba la clasificación con datos de ejemplo (método legacy).
 
@@ -534,7 +531,7 @@ class StrategyValidationService:
         self.session = session
         self.strategy_repo = EstrategiaClasificacionRepository(session)
 
-    async def validate_strategy(self, strategy: EstrategiaClasificacion) -> List[str]:
+    async def validate_strategy(self, strategy: EstrategiaClasificacion) -> list[str]:
         """
         Valida una estrategia completa.
 
@@ -591,9 +588,11 @@ class StrategyValidationService:
         graficos = (
             strategy.config.get("graficos_disponibles", []) if strategy.config else []
         )
-        for chart in graficos:
-            if chart not in valid_charts:
-                errors.append(f"Tipo de gráfico inválido: {chart}")
+        errors.extend(
+            f"Tipo de gráfico inválido: {chart}"
+            for chart in graficos
+            if chart not in valid_charts
+        )
 
         # Validar reglas
         if strategy.classification_rules:
@@ -602,7 +601,7 @@ class StrategyValidationService:
 
         return errors
 
-    def _validate_rules(self, rules: List[ClassificationRule]) -> List[str]:
+    def _validate_rules(self, rules: list[ClassificationRule]) -> list[str]:
         """
         Valida un conjunto de reglas.
 
@@ -631,7 +630,7 @@ class StrategyValidationService:
 
         return errors
 
-    def _validate_condition(self, condition: FilterCondition) -> List[str]:
+    def _validate_condition(self, condition: FilterCondition) -> list[str]:
         """
         Valida una condición de filtro.
 
@@ -672,11 +671,10 @@ class StrategyValidationService:
                     errors.append(f"Condición {condition.id}: Patrón regex inválido")
 
             # Validar configuración
-            if condition.config:
-                if "extraction_fields" not in condition.config:
-                    errors.append(
-                        f"Condición {condition.id}: REGEX_EXTRACCION requiere extraction_fields en config"
-                    )
+            if condition.config and "extraction_fields" not in condition.config:
+                errors.append(
+                    f"Condición {condition.id}: REGEX_EXTRACCION requiere extraction_fields en config"
+                )
 
         # Validar operador lógico
         if condition.logical_operator not in ["AND", "OR"]:

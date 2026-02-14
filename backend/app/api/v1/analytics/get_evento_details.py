@@ -4,7 +4,6 @@ Incluye resumen, trend semanal y metadatos
 """
 
 import logging
-from typing import Optional
 
 from fastapi import Depends, Path, Query
 from sqlalchemy import select, text
@@ -39,7 +38,7 @@ async def get_evento_details(
         4, description="Número de semanas hacia atrás", ge=1, le=52
     ),
     db: AsyncSession = Depends(get_async_session),
-    current_user: Optional[User] = RequireAuthOrSignedUrl,
+    current_user: User | None = RequireAuthOrSignedUrl,
 ) -> SuccessResponse[CasoEpidemiologicoDetailsResponse]:
     """
     Obtiene detalles completos de un evento específico para mostrar en el dialog.

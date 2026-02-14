@@ -4,9 +4,11 @@ Dispatcher de procesamiento para vigilancia agregada.
 Detecta el tipo de archivo y delega al procesador correspondiente.
 """
 
+import contextlib
 import logging
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional
+from typing import Any
 
 import polars as pl
 from sqlmodel import Session
@@ -38,7 +40,7 @@ class AgregadaProcessor:
     def __init__(
         self,
         session: Session,
-        callback_progreso: Optional[Callable[[int, str], None]] = None,
+        callback_progreso: Callable[[int, str], None] | None = None,
     ):
         self.session = session
         self.callback_progreso = callback_progreso
@@ -46,9 +48,9 @@ class AgregadaProcessor:
     def procesar_archivo(
         self,
         ruta_archivo: Path,
-        nombre_hoja: Optional[str] = None,
-        file_type: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        nombre_hoja: str | None = None,
+        file_type: str | None = None,
+    ) -> dict[str, Any]:
         """
         Procesa un archivo de vigilancia agregada.
 
@@ -122,7 +124,7 @@ class AgregadaProcessor:
                 "processed_rows": 0,
             }
 
-    def _detect_file_type(self, df: pl.DataFrame) -> Optional[str]:
+    def _detect_file_type(self, df: pl.DataFrame) -> str | None:
         """
         Detecta el tipo de archivo basándose en las columnas.
 
@@ -179,7 +181,7 @@ class AgregadaProcessor:
 
         return None
 
-    def _get_processor(self, file_type: str) -> Optional[FileTypeProcessor]:
+    def _get_processor(self, file_type: str) -> FileTypeProcessor | None:
         """Obtiene el procesador para un tipo de archivo."""
         processors = {
             "CLI_P26": CLIP26Processor,
@@ -199,15 +201,13 @@ class AgregadaProcessor:
     def _update_progress(self, percentage: int, message: str) -> None:
         """Actualiza progreso si hay callback."""
         if self.callback_progreso:
-            try:
+            with contextlib.suppress(Exception):
                 self.callback_progreso(percentage, message)
-            except Exception:
-                pass
 
 
 def crear_procesador(
     session: Session,
-    callback_progreso: Optional[Callable[[int, str], None]] = None,
+    callback_progreso: Callable[[int, str], None] | None = None,
 ) -> AgregadaProcessor:
     """Factory function para crear el procesador."""
     return AgregadaProcessor(session, callback_progreso)

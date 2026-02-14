@@ -5,11 +5,12 @@ Reutiliza ChartDataProcessor para obtener los datos
 """
 
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.charts.schemas import (
+    CodigoGrafico,
     ConfiguracionGraficoArea,
     ConfiguracionGraficoBarra,
     ConfiguracionGraficoLinea,
@@ -53,32 +54,34 @@ class ChartSpecGenerator:
 
     async def generar_spec(
         self,
-        codigo_grafico: str,
+        codigo_grafico: CodigoGrafico,
         filtros: FiltrosGrafico,
-        configuracion: Optional[Dict[str, Any]] = None,
+        configuracion: dict[str, Any] | None = None,
     ) -> EspecificacionGraficoUniversal:
         """
         Genera el spec universal para un chart dado con datos REALES
         """
         # Mapeo de códigos de charts a generadores
         generadores = {
-            "curva_epidemiologica": self._generar_curva_epidemiologica,
-            "corredor_endemico": self._generar_corredor_endemico,
-            "piramide_edad": self._generar_piramide_edad,
-            "mapa_chubut": self._generar_mapa_chubut,
-            "estacionalidad": self._generar_estacionalidad,
-            "casos_edad": self._generar_casos_edad,
-            "distribucion_clasificacion": self._generar_distribucion_clasificacion,
-            "casos_por_semana": self._generar_curva_epidemiologica,  # Alias
+            CodigoGrafico.CURVA_EPIDEMIOLOGICA: self._generar_curva_epidemiologica,
+            CodigoGrafico.CORREDOR_ENDEMICO: self._generar_corredor_endemico,
+            CodigoGrafico.PIRAMIDE_EDAD: self._generar_piramide_edad,
+            CodigoGrafico.MAPA_CHUBUT: self._generar_mapa_chubut,
+            CodigoGrafico.ESTACIONALIDAD: self._generar_estacionalidad,
+            CodigoGrafico.CASOS_EDAD: self._generar_casos_edad,
+            CodigoGrafico.DISTRIBUCION_CLASIFICACION: self._generar_distribucion_clasificacion,
+            CodigoGrafico.CASOS_POR_SEMANA: self._generar_curva_epidemiologica,
         }
 
-        generador = generadores.get(codigo_grafico)
-        if not generador:
-            raise ValueError(f"Chart code '{codigo_grafico}' no reconocido")
+        try:
+            codigo = CodigoGrafico(codigo_grafico)
+        except ValueError:
+            raise ValueError(f"Chart code '{codigo_grafico}' no reconocido. "
+                             f"Valores válidos: {[c.value for c in CodigoGrafico]}") from None
 
-        return await generador(filtros, configuracion)
+        return await generadores[codigo](filtros, configuracion)
 
-    def _convertir_filtros_a_dict(self, filtros: FiltrosGrafico) -> Dict[str, Any]:
+    def _convertir_filtros_a_dict(self, filtros: FiltrosGrafico) -> dict[str, Any]:
         """Convierte FiltrosGrafico a dict para ChartDataProcessor"""
         return {
             "grupo_id": filtros.ids_grupo_eno[0]
@@ -96,9 +99,9 @@ class ChartSpecGenerator:
     async def _generar_curva_epidemiologica(
         self,
         filtros: FiltrosGrafico,
-        configuracion: Optional[Dict[str, Any]] = None,
-        configuracion_series: Optional[List[Dict[str, Any]]] = None,
-        agrupar_por: Optional[str] = None,
+        configuracion: dict[str, Any] | None = None,
+        configuracion_series: list[dict[str, Any]] | None = None,
+        agrupar_por: str | None = None,
     ) -> EspecificacionGraficoUniversal:
         """
         Genera spec para curva epidemiológica (casos por semana)
@@ -132,16 +135,15 @@ class ChartSpecGenerator:
         datos_crudos = resultado.get("data", {})
 
         # Convertir datasets al formato correcto
-        conjuntos_datos = []
-        for ds in datos_crudos.get("datasets", []):
-            conjuntos_datos.append(
-                ConjuntoDatos(
-                    etiqueta=ds.get("label"),
-                    datos=ds.get("data", []),
-                    color=ds.get("borderColor"),
-                    tipo=ds.get("type"),  # "line" o "area"
-                )
+        conjuntos_datos = [
+            ConjuntoDatos(
+                etiqueta=ds.get("label"),
+                datos=ds.get("data", []),
+                color=ds.get("borderColor"),
+                tipo=ds.get("type"),  # "line" o "area"
             )
+            for ds in datos_crudos.get("datasets", [])
+        ]
 
         # Convertir metadata si existe
         metadata = None
@@ -216,7 +218,7 @@ class ChartSpecGenerator:
             )
 
     async def _generar_corredor_endemico(
-        self, filtros: FiltrosGrafico, configuracion: Optional[Dict[str, Any]] = None
+        self, filtros: FiltrosGrafico, configuracion: dict[str, Any] | None = None
     ) -> EspecificacionGraficoUniversal:
         """
         Genera spec para corredor endémico
@@ -241,16 +243,15 @@ class ChartSpecGenerator:
                 sugerencia=datos_error.get("suggestion"),
             )
 
-        conjuntos_datos = []
-        for ds in datos_crudos.get("datasets", []):
-            conjuntos_datos.append(
-                ConjuntoDatos(
-                    etiqueta=ds.get("label"),
-                    datos=ds.get("data", []),
-                    color=ds.get("color"),  # Usar "color" directamente
-                    tipo=ds.get("type"),  # No default - respetar el tipo del backend
-                )
+        conjuntos_datos = [
+            ConjuntoDatos(
+                etiqueta=ds.get("label"),
+                datos=ds.get("data", []),
+                color=ds.get("color"),  # Usar "color" directamente
+                tipo=ds.get("type"),  # No default - respetar el tipo del backend
             )
+            for ds in datos_crudos.get("datasets", [])
+        ]
 
         metadata = None
         if datos_crudos.get("metadata"):
@@ -295,7 +296,7 @@ class ChartSpecGenerator:
         )
 
     async def _generar_piramide_edad(
-        self, filtros: FiltrosGrafico, configuracion: Optional[Dict[str, Any]] = None
+        self, filtros: FiltrosGrafico, configuracion: dict[str, Any] | None = None
     ) -> EspecificacionGraficoUniversal:
         """
         Genera spec para pirámide poblacional
@@ -342,7 +343,7 @@ class ChartSpecGenerator:
         )
 
     async def _generar_mapa_chubut(
-        self, filtros: FiltrosGrafico, configuracion: Optional[Dict[str, Any]] = None
+        self, filtros: FiltrosGrafico, configuracion: dict[str, Any] | None = None
     ) -> EspecificacionGraficoUniversal:
         """
         Genera spec para mapa de Chubut
@@ -394,7 +395,7 @@ class ChartSpecGenerator:
         )
 
     async def _generar_estacionalidad(
-        self, filtros: FiltrosGrafico, configuracion: Optional[Dict[str, Any]] = None
+        self, filtros: FiltrosGrafico, configuracion: dict[str, Any] | None = None
     ) -> EspecificacionGraficoUniversal:
         """
         Genera spec para estacionalidad mensual
@@ -405,16 +406,15 @@ class ChartSpecGenerator:
 
         datos_crudos = resultado.get("data", {})
 
-        conjuntos_datos = []
-        for ds in datos_crudos.get("datasets", []):
-            conjuntos_datos.append(
-                ConjuntoDatos(
-                    etiqueta=ds.get("label"),
-                    datos=ds.get("data", []),
-                    color=ds.get("backgroundColor"),
-                    tipo=None,
-                )
+        conjuntos_datos = [
+            ConjuntoDatos(
+                etiqueta=ds.get("label"),
+                datos=ds.get("data", []),
+                color=ds.get("backgroundColor"),
+                tipo=None,
             )
+            for ds in datos_crudos.get("datasets", [])
+        ]
 
         datos_base = DatosGraficoBase(
             etiquetas=datos_crudos.get("labels", []),
@@ -446,9 +446,9 @@ class ChartSpecGenerator:
     async def _generar_casos_por_edad(
         self,
         filtros: FiltrosGrafico,
-        configuracion: Optional[Dict[str, Any]] = None,
-        configuracion_series: Optional[List[Dict[str, Any]]] = None,
-        agrupar_por: Optional[str] = None,
+        configuracion: dict[str, Any] | None = None,
+        configuracion_series: list[dict[str, Any]] | None = None,
+        agrupar_por: str | None = None,
     ) -> EspecificacionGraficoUniversal:
         """
         Genera spec para casos por grupo de edad (con soporte para múltiples series)
@@ -479,16 +479,15 @@ class ChartSpecGenerator:
 
         datos_crudos = resultado.get("data", {})
 
-        conjuntos_datos = []
-        for ds in datos_crudos.get("datasets", []):
-            conjuntos_datos.append(
-                ConjuntoDatos(
-                    etiqueta=ds.get("label"),
-                    datos=ds.get("data", []),
-                    color=ds.get("backgroundColor") or ds.get("color"),
-                    tipo=None,
-                )
+        conjuntos_datos = [
+            ConjuntoDatos(
+                etiqueta=ds.get("label"),
+                datos=ds.get("data", []),
+                color=ds.get("backgroundColor") or ds.get("color"),
+                tipo=None,
             )
+            for ds in datos_crudos.get("datasets", [])
+        ]
 
         datos_base = DatosGraficoBase(
             etiquetas=datos_crudos.get("labels", []),
@@ -528,7 +527,7 @@ class ChartSpecGenerator:
         )
 
     async def _generar_casos_edad(
-        self, filtros: FiltrosGrafico, configuracion: Optional[Dict[str, Any]] = None
+        self, filtros: FiltrosGrafico, configuracion: dict[str, Any] | None = None
     ) -> EspecificacionGraficoUniversal:
         """
         Genera spec para casos por grupo de edad (versión simple, sin series)
@@ -537,7 +536,7 @@ class ChartSpecGenerator:
         return await self._generar_casos_por_edad(filtros, configuracion)
 
     async def _generar_distribucion_clasificacion(
-        self, filtros: FiltrosGrafico, configuracion: Optional[Dict[str, Any]] = None
+        self, filtros: FiltrosGrafico, configuracion: dict[str, Any] | None = None
     ) -> EspecificacionGraficoUniversal:
         """
         Genera spec para distribución por clasificación
@@ -550,16 +549,15 @@ class ChartSpecGenerator:
 
         datos_crudos = resultado.get("data", {})
 
-        conjuntos_datos = []
-        for ds in datos_crudos.get("datasets", []):
-            conjuntos_datos.append(
-                ConjuntoDatos(
-                    etiqueta=ds.get("label", "Casos"),
-                    datos=ds.get("data", []),
-                    color=None,  # Pie chart usa backgroundColor del dataset
-                    tipo=None,
-                )
+        conjuntos_datos = [
+            ConjuntoDatos(
+                etiqueta=ds.get("label", "Casos"),
+                datos=ds.get("data", []),
+                color=None,  # Pie chart usa backgroundColor del dataset
+                tipo=None,
             )
+            for ds in datos_crudos.get("datasets", [])
+        ]
 
         datos_base = DatosGraficoBase(
             etiquetas=datos_crudos.get("labels", []),

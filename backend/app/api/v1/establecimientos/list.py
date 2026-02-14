@@ -2,7 +2,6 @@
 Endpoint para obtener establecimientos de salud geocodificados para visualización en mapa.
 """
 
-from typing import List, Optional
 
 from fastapi import Depends, Query
 from pydantic import BaseModel, Field
@@ -19,40 +18,40 @@ class EstablecimientoMapaItem(BaseModel):
     """Item de establecimiento para mostrar en el mapa"""
 
     id: int = Field(..., description="ID del establecimiento")
-    codigo_refes: Optional[str] = Field(None, description="Código REFES/IGN")
+    codigo_refes: str | None = Field(None, description="Código REFES/IGN")
     nombre: str = Field(..., description="Nombre del establecimiento")
     latitud: float = Field(..., description="Latitud")
     longitud: float = Field(..., description="Longitud")
 
     # Datos geográficos
-    id_localidad_indec: Optional[int] = Field(None, description="ID INDEC localidad")
-    localidad_nombre: Optional[str] = Field(None, description="Nombre de la localidad")
-    departamento_nombre: Optional[str] = Field(
+    id_localidad_indec: int | None = Field(None, description="ID INDEC localidad")
+    localidad_nombre: str | None = Field(None, description="Nombre de la localidad")
+    departamento_nombre: str | None = Field(
         None, description="Nombre del departamento"
     )
-    provincia_nombre: Optional[str] = Field(None, description="Nombre de la provincia")
+    provincia_nombre: str | None = Field(None, description="Nombre de la provincia")
 
 
 class EstablecimientosMapaResponse(BaseModel):
     """Respuesta con lista de establecimientos para mapa"""
 
-    items: List[EstablecimientoMapaItem] = Field(
+    items: list[EstablecimientoMapaItem] = Field(
         default_factory=list, description="Lista de establecimientos"
     )
     total: int = Field(..., description="Total de establecimientos")
 
 
 async def get_establecimientos_mapa(
-    id_provincia_indec: Optional[int] = Query(
+    id_provincia_indec: int | None = Query(
         None, description="Filtrar por provincia"
     ),
-    id_departamento_indec: Optional[int] = Query(
+    id_departamento_indec: int | None = Query(
         None, description="Filtrar por departamento"
     ),
-    id_localidad_indec: Optional[int] = Query(
+    id_localidad_indec: int | None = Query(
         None, description="Filtrar por localidad"
     ),
-    limit: Optional[int] = Query(10000, description="Límite de resultados", le=50000),
+    limit: int | None = Query(10000, description="Límite de resultados", le=50000),
     session: Session = Depends(get_session),
 ) -> SuccessResponse[EstablecimientosMapaResponse]:
     """

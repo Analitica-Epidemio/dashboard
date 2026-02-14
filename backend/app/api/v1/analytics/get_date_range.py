@@ -4,7 +4,6 @@ Get available date range endpoint - retorna el rango de fechas con datos
 
 import logging
 from datetime import date
-from typing import Optional
 
 from fastapi import Depends
 from pydantic import BaseModel
@@ -30,7 +29,7 @@ class DateRangeResponse(BaseModel):
 
 async def get_date_range(
     db: AsyncSession = Depends(get_async_session),
-    current_user: Optional[User] = RequireAuthOrSignedUrl,
+    current_user: User | None = RequireAuthOrSignedUrl,
 ) -> SuccessResponse[DateRangeResponse]:
     """
     Endpoint para obtener el rango de fechas con datos disponibles.

@@ -8,7 +8,7 @@ Provee validación de:
 """
 
 import logging
-from typing import Set
+from typing import ClassVar
 
 import magic
 from fastapi import HTTPException, UploadFile
@@ -20,7 +20,7 @@ class FileValidator:
     """Validador genérico de archivos."""
 
     # MIME types conocidos
-    SPREADSHEET_MIMES = {
+    SPREADSHEET_MIMES: ClassVar[set[str]] = {
         "text/csv",
         "text/plain",
         "application/csv",
@@ -28,7 +28,7 @@ class FileValidator:
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     }
 
-    IMAGE_MIMES = {
+    IMAGE_MIMES: ClassVar[set[str]] = {
         "image/jpeg",
         "image/png",
         "image/gif",
@@ -41,8 +41,8 @@ class FileValidator:
     async def validar(
         self,
         archivo: UploadFile,
-        extensiones_permitidas: Set[str],
-        mimes_permitidos: Set[str],
+        extensiones_permitidas: set[str],
+        mimes_permitidos: set[str],
     ) -> bytes:
         """
         Validar archivo.

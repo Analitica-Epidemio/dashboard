@@ -65,8 +65,8 @@ async def create_strategy(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"💥 Error creating strategy: {str(e)}")
+        logger.error(f"💥 Error creating strategy: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error creando estrategia: {str(e)}",
-        )
+            detail=f"Error creando estrategia: {e!s}",
+        ) from e

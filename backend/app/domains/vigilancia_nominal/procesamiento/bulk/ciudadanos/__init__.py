@@ -68,7 +68,7 @@ class CiudadanosManager:
 __all__ = [
     "CiudadanosManager",
     "CiudadanosProcessor",
+    "ComorbilidadesProcessor",
     "DomiciliosProcessor",
     "ViajesProcessor",
-    "ComorbilidadesProcessor",
 ]

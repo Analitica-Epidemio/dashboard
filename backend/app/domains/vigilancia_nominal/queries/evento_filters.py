@@ -9,7 +9,7 @@ no domicilio del ciudadano, para consistencia epidemiológica.
 """
 
 from datetime import date
-from typing import Any, List, Optional
+from typing import Any
 
 from sqlalchemy import String, and_, cast, func, or_
 from sqlmodel import col
@@ -80,18 +80,18 @@ class CasoEpidemiologicoQueryBuilder:
 
     @staticmethod
     def build_filter_conditions(
-        tipo_eno_ids: Optional[List[int]] = None,
-        grupo_eno_ids: Optional[List[int]] = None,
-        fecha_desde: Optional[date] = None,
-        fecha_hasta: Optional[date] = None,
-        clasificacion: Optional[List[str]] = None,
-        provincia_ids_establecimiento_notificacion: Optional[List[int]] = None,
-        tipo_sujeto: Optional[str] = None,
-        requiere_revision: Optional[bool] = None,
-        edad_min: Optional[int] = None,
-        edad_max: Optional[int] = None,
-        search: Optional[str] = None,
-    ) -> List:
+        tipo_eno_ids: list[int] | None = None,
+        grupo_eno_ids: list[int] | None = None,
+        fecha_desde: date | None = None,
+        fecha_hasta: date | None = None,
+        clasificacion: list[str] | None = None,
+        provincia_ids_establecimiento_notificacion: list[int] | None = None,
+        tipo_sujeto: str | None = None,
+        requiere_revision: bool | None = None,
+        edad_min: int | None = None,
+        edad_max: int | None = None,
+        search: str | None = None,
+    ) -> list:
         """
         Construye las condiciones de filtro de manera uniforme.
 

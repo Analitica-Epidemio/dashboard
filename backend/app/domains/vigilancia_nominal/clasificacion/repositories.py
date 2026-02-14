@@ -2,8 +2,7 @@
 Repository layer para el dominio de estrategias.
 """
 
-from datetime import datetime, timezone
-from typing import List, Optional
+from datetime import UTC, datetime
 
 from sqlalchemy import and_, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,11 +31,11 @@ class EstrategiaClasificacionRepository:
 
     async def get_all(
         self,
-        active_only: Optional[bool] = None,
-        id_enfermedad: Optional[int] = None,
+        active_only: bool | None = None,
+        id_enfermedad: int | None = None,
         skip: int = 0,
         limit: int = 100,
-    ) -> List[EstrategiaClasificacion]:
+    ) -> list[EstrategiaClasificacion]:
         """
         Obtiene todas las estrategias con filtros opcionales.
 
@@ -80,7 +79,7 @@ class EstrategiaClasificacionRepository:
 
         # Obtener los nombres de Enfermedad para cada estrategia
         if strategies:
-            id_enfermedads = list(set(s.id_enfermedad for s in strategies))
+            id_enfermedads = list({s.id_enfermedad for s in strategies})
             tipo_query = select(Enfermedad).where(
                 col(Enfermedad.id).in_(id_enfermedads)
             )
@@ -96,7 +95,7 @@ class EstrategiaClasificacionRepository:
 
     async def get_by_id(
         self, strategy_id: int, include_rules: bool = True
-    ) -> Optional[EstrategiaClasificacion]:
+    ) -> EstrategiaClasificacion | None:
         """
         Obtiene una estrategia por ID.
 
@@ -137,8 +136,8 @@ class EstrategiaClasificacionRepository:
         self,
         id_enfermedad: int,
         active_only: bool = True,
-        fecha: Optional[datetime] = None,
-    ) -> Optional[EstrategiaClasificacion]:
+        fecha: datetime | None = None,
+    ) -> EstrategiaClasificacion | None:
         """
         Obtiene una estrategia por tipo de ENO válida en una fecha específica.
 
@@ -151,7 +150,7 @@ class EstrategiaClasificacionRepository:
             Estrategia encontrada o None
         """
         if fecha is None:
-            fecha = datetime.now(timezone.utc)
+            fecha = datetime.now(UTC)
 
         query = (
             select(EstrategiaClasificacion)
@@ -196,7 +195,7 @@ class EstrategiaClasificacionRepository:
     # Alias para compatibilidad con el servicio existente
     async def get_by_tipo_enfermedad(
         self, id_enfermedad: int, include_rules: bool = True
-    ) -> Optional[EstrategiaClasificacion]:
+    ) -> EstrategiaClasificacion | None:
         """
         Alias para get_by_id_enfermedad para compatibilidad.
         """
@@ -564,7 +563,7 @@ class EstrategiaClasificacionRepository:
 
     async def get_audit_log(
         self, strategy_id: int, limit: int = 50
-    ) -> List[EventClassificationAudit]:
+    ) -> list[EventClassificationAudit]:
         """
         Obtiene el historial de auditoría de una estrategia.
 
@@ -587,9 +586,9 @@ class EstrategiaClasificacionRepository:
         self,
         id_enfermedad: int,
         valid_from: datetime,
-        valid_until: Optional[datetime],
-        exclude_strategy_id: Optional[int] = None,
-    ) -> List[EstrategiaClasificacion]:
+        valid_until: datetime | None,
+        exclude_strategy_id: int | None = None,
+    ) -> list[EstrategiaClasificacion]:
         """
         Verifica si existen estrategias con solapamiento de fechas.
 
@@ -653,10 +652,10 @@ class EstrategiaClasificacionRepository:
         strategy_id: int,
         action: str,
         field_changed: str,
-        old_value: Optional[str] = None,
-        new_value: Optional[str] = None,
+        old_value: str | None = None,
+        new_value: str | None = None,
         changed_by: str = "system",
-        ip_address: Optional[str] = None,
+        ip_address: str | None = None,
     ) -> None:
         """
         Registra una entrada en el log de auditoría.
@@ -681,7 +680,7 @@ class EstrategiaClasificacionRepository:
                 "new_value": new_value,
                 "changed_by": changed_by,
                 "ip_address": ip_address,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             },
         )
         self.session.add(audit_entry)
@@ -697,9 +696,9 @@ class ClassificationRuleRepository:
     async def get_by_strategy(
         self,
         strategy_id: int,
-        classification: Optional[TipoClasificacion] = None,
+        classification: TipoClasificacion | None = None,
         active_only: bool = True,
-    ) -> List[ClassificationRule]:
+    ) -> list[ClassificationRule]:
         """
         Obtiene reglas de una estrategia.
 
@@ -737,7 +736,7 @@ class FilterConditionRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_by_rule(self, rule_id: int) -> List[FilterCondition]:
+    async def get_by_rule(self, rule_id: int) -> list[FilterCondition]:
         """
         Obtiene todas las condiciones de una regla.
 

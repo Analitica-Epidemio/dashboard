@@ -7,7 +7,6 @@ Estilo inspirado en Recharts para fidelidad visual con el dashboard web
 import io
 import logging
 import os
-from typing import Optional
 
 import matplotlib
 
@@ -39,8 +38,9 @@ plt.rcParams.update(
     {
         "font.family": "sans-serif",
         "font.sans-serif": [
-            "Roboto",
+            "Geist",
             "Inter",
+            "Roboto",
             "Segoe UI",
             "Helvetica",
             "Arial",
@@ -118,7 +118,7 @@ class ChartRenderer:
             return config.get(key, default)
         return getattr(config, key, default)
 
-    def _normalizar_color(self, color: Optional[str]) -> Optional[str]:
+    def _normalizar_color(self, color: str | None) -> str | None:
         """
         Normaliza colores de diferentes formatos a formato hex de matplotlib
         Convierte: rgb(r, g, b), rgba(r, g, b, a) -> #RRGGBB o #RRGGBBAA
@@ -136,25 +136,21 @@ class ChartRenderer:
 
             # Extraer números
             match = re.findall(r"[\d.]+", color)
-            if match:
-                if len(match) >= 3:
-                    r, g, b = (
-                        int(float(match[0])),
-                        int(float(match[1])),
-                        int(float(match[2])),
-                    )
-                    # Convertir a hex
-                    hex_color = f"#{r:02x}{g:02x}{b:02x}"
-                    # Si tiene alpha
-                    if len(match) >= 4:
-                        alpha = float(match[3])
-                        # Convertir alpha de 0-1 a 0-255
-                        if alpha <= 1.0:
-                            alpha = int(alpha * 255)
-                        else:
-                            alpha = int(alpha)
-                        hex_color += f"{alpha:02x}"
-                    return hex_color
+            if match and len(match) >= 3:
+                r, g, b = (
+                    int(float(match[0])),
+                    int(float(match[1])),
+                    int(float(match[2])),
+                )
+                # Convertir a hex
+                hex_color = f"#{r:02x}{g:02x}{b:02x}"
+                # Si tiene alpha
+                if len(match) >= 4:
+                    alpha = float(match[3])
+                    # Convertir alpha de 0-1 a 0-255
+                    alpha = int(alpha * 255) if alpha <= 1.0 else int(alpha)
+                    hex_color += f"{alpha:02x}"
+                return hex_color
 
         # Si es un color nombrado o formato desconocido, intentar retornar tal cual
         return color
@@ -367,12 +363,12 @@ class ChartRenderer:
                 color="#6B7280",
                 transform=ax.transAxes,
                 style="italic",
-                bbox=dict(
-                    boxstyle="round,pad=1",
-                    facecolor="#F9FAFB",
-                    edgecolor="#E5E7EB",
-                    linewidth=2,
-                ),
+                bbox={
+                    "boxstyle": "round,pad=1",
+                    "facecolor": "#F9FAFB",
+                    "edgecolor": "#E5E7EB",
+                    "linewidth": 2,
+                },
             )
             ax.set_title(
                 spec.titulo, fontsize=15, fontweight="600", color="#1F2937", pad=15
@@ -813,13 +809,12 @@ class ChartRenderer:
         ax.axis("off")
 
         # Preparar datos de la tabla (todos los departamentos con casos, ordenados)
-        datos_tabla = []
-        for dept in sorted(
-            datos.datos.departamentos, key=lambda x: x.casos, reverse=True
-        ):
-            datos_tabla.append(
-                [dept.nombre, f"{dept.casos:,}", f"{dept.tasa_incidencia:.2f}"]
+        datos_tabla = [
+            [dept.nombre, f"{dept.casos:,}", f"{dept.tasa_incidencia:.2f}"]
+            for dept in sorted(
+                datos.datos.departamentos, key=lambda x: x.casos, reverse=True
             )
+        ]
 
         if not datos_tabla:
             ax.text(

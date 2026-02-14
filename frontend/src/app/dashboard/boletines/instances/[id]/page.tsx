@@ -8,7 +8,7 @@
  */
 
 import { use, useState, useEffect, useCallback } from "react";
-import { ArrowLeft, Save, FileDown, Loader2, Calendar } from "lucide-react";
+import { ArrowLeft, Save, FileDown, FileText, Loader2, Calendar, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { $api, apiClient } from "@/lib/api/client";
@@ -18,6 +18,12 @@ import { BoletinThreePanelEditor } from "@/features/boletines/components/editor/
 import { useKeyboardShortcuts, formatShortcut } from "@/features/boletines/hooks/use-keyboard-shortcuts";
 import { toast } from "sonner";
 import { env } from "@/env";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -79,8 +85,8 @@ export default function InstanceEditorPage({ params }: PageProps) {
     }
   }, [content, hasChanges, isSaving, instanceId]);
 
-  // Export to PDF
-  const handleExportPDF = useCallback(async () => {
+  // Generic export handler for both PDF and DOCX
+  const handleExport = useCallback(async (format: "pdf" | "docx") => {
     if (isExporting || !content) return;
 
     setIsExporting(true);
@@ -89,7 +95,7 @@ export default function InstanceEditorPage({ params }: PageProps) {
       const session = await getSession();
 
       const response = await fetch(
-        `${env.NEXT_PUBLIC_API_HOST}/api/v1/boletines/instances/${instanceId}/export-pdf`,
+        `${env.NEXT_PUBLIC_API_HOST}/api/v1/boletines/instances/${instanceId}/export-${format}`,
         {
           method: "POST",
           headers: {
@@ -101,27 +107,30 @@ export default function InstanceEditorPage({ params }: PageProps) {
       );
 
       if (!response.ok) {
-        throw new Error("Error al generar PDF");
+        throw new Error(`Error al generar ${format.toUpperCase()}`);
       }
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${instance?.name || "boletin"}.pdf`;
+      a.download = `${instance?.name || "boletin"}.${format}`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
-      toast.success("PDF generado y descargado exitosamente");
+      toast.success(`${format.toUpperCase()} generado y descargado exitosamente`);
     } catch (error) {
       console.error("Error exportando:", error);
-      toast.error("Error al exportar a PDF");
+      toast.error(`Error al exportar a ${format.toUpperCase()}`);
     } finally {
       setIsExporting(false);
     }
   }, [content, instanceId, isExporting, instance?.name]);
+
+  const handleExportPDF = useCallback(() => handleExport("pdf"), [handleExport]);
+  const handleExportDOCX = useCallback(() => handleExport("docx"), [handleExport]);
 
   // Keyboard shortcuts (Cmd+S save, Cmd+E export)
   useKeyboardShortcuts({
@@ -206,27 +215,41 @@ export default function InstanceEditorPage({ params }: PageProps) {
                 </>
               )}
             </Button>
-            <Button
-              size="sm"
-              onClick={handleExportPDF}
-              disabled={isExporting || !content}
-              title={`Exportar PDF (${formatShortcut("E")})`}
-            >
-              {isExporting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Exportando...
-                </>
-              ) : (
-                <>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="sm"
+                  disabled={isExporting || !content}
+                  title={`Exportar (${formatShortcut("E")} para PDF)`}
+                >
+                  {isExporting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Exportando...
+                    </>
+                  ) : (
+                    <>
+                      <FileDown className="mr-2 h-4 w-4" />
+                      Exportar
+                      <ChevronDown className="ml-1 h-3 w-3" />
+                    </>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleExportPDF}>
                   <FileDown className="mr-2 h-4 w-4" />
-                  Exportar
-                  <kbd className="ml-2 hidden sm:inline-flex h-5 items-center gap-1 rounded border bg-muted/50 px-1.5 font-mono text-[10px] font-medium text-primary-foreground/70">
+                  Exportar como PDF
+                  <kbd className="ml-auto hidden sm:inline-flex h-5 items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
                     {formatShortcut("E")}
                   </kbd>
-                </>
-              )}
-            </Button>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportDOCX}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Exportar como Word (.docx)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>

@@ -6,7 +6,7 @@ Representa el encabezado de una notificación semanal de un establecimiento
 """
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Annotated, List, Optional
+from typing import TYPE_CHECKING, Annotated, Optional
 
 from pydantic import field_validator
 from sqlalchemy import BigInteger, Index, SmallInteger
@@ -119,12 +119,12 @@ class NotificacionSemanal(BaseModel, table=True):
     # Auditoría SNVS (datos originales de la carga)
     # ═══════════════════════════════════════════════════════════════
 
-    fecha_registro_snvs: Optional[datetime] = Field(
+    fecha_registro_snvs: datetime | None = Field(
         None,
         description="Fecha/hora de registro en SNVS (FECHAREGISTROENCABEZADO)",
     )
 
-    usuario_snvs: Optional[str] = Field(
+    usuario_snvs: str | None = Field(
         None,
         max_length=200,
         description="Usuario que registró en SNVS (USUARIOREGISTROENCABEZADO)",
@@ -134,29 +134,29 @@ class NotificacionSemanal(BaseModel, table=True):
     # Geografía (desnormalizado para queries rápidas)
     # ═══════════════════════════════════════════════════════════════
 
-    establecimiento_nombre_original: Optional[str] = Field(
+    establecimiento_nombre_original: str | None = Field(
         None,
         max_length=300,
         description="Nombre del establecimiento como vino en el archivo (ORIGEN)",
     )
 
-    localidad_codigo_snvs: Optional[int] = Field(
+    localidad_codigo_snvs: int | None = Field(
         None,
         description="Código de localidad SNVS (CODIGO_LOCALIDAD)",
     )
 
-    localidad_nombre: Optional[str] = Field(
+    localidad_nombre: str | None = Field(
         None,
         max_length=200,
         description="Nombre de localidad (LOCALIDAD)",
     )
 
-    departamento_codigo_snvs: Optional[int] = Field(
+    departamento_codigo_snvs: int | None = Field(
         None,
         description="Código de departamento SNVS (CODIGO_DEPTO)",
     )
 
-    departamento_nombre: Optional[str] = Field(
+    departamento_nombre: str | None = Field(
         None,
         max_length=200,
         description="Nombre de departamento (DEPARTAMENTO)",
@@ -166,7 +166,7 @@ class NotificacionSemanal(BaseModel, table=True):
     # Foreign Keys
     # ═══════════════════════════════════════════════════════════════
 
-    establecimiento_id: Optional[int] = Field(
+    establecimiento_id: int | None = Field(
         None,
         foreign_key="establecimiento.id",
         index=True,
@@ -199,17 +199,17 @@ class NotificacionSemanal(BaseModel, table=True):
 
     establecimiento: Mapped[Optional["Establecimiento"]] = Relationship()
 
-    conteos_clinicos: Mapped[List["ConteoCasosClinicos"]] = Relationship(
+    conteos_clinicos: Mapped[list["ConteoCasosClinicos"]] = Relationship(
         back_populates="notificacion",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
 
-    conteos_laboratorio: Mapped[List["ConteoEstudiosLab"]] = Relationship(
+    conteos_laboratorio: Mapped[list["ConteoEstudiosLab"]] = Relationship(
         back_populates="notificacion",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
 
-    conteos_internacion: Mapped[List["ConteoCamasIRA"]] = Relationship(
+    conteos_internacion: Mapped[list["ConteoCamasIRA"]] = Relationship(
         back_populates="notificacion",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )

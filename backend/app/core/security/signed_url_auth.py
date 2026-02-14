@@ -3,7 +3,6 @@ Middleware para autenticación con URLs firmadas
 """
 
 import logging
-from typing import Optional
 
 from fastapi import HTTPException, Request
 
@@ -12,7 +11,7 @@ from app.api.v1.reports.signed_url import verify_signed_url
 logger = logging.getLogger(__name__)
 
 
-async def verify_signed_url_headers(request: Request) -> Optional[dict]:
+async def verify_signed_url_headers(request: Request) -> dict | None:
     """
     Verifica si la petición tiene headers de URL firmada válidos
 
@@ -45,5 +44,5 @@ async def verify_signed_url_headers(request: Request) -> Optional[dict]:
         )
         return verified_data
     except ValueError as e:
-        logger.error(f"❌ Signed URL verification failed: {str(e)}")
-        raise HTTPException(status_code=401, detail=str(e))
+        logger.error(f"❌ Signed URL verification failed: {e!s}")
+        raise HTTPException(status_code=401, detail=str(e)) from e

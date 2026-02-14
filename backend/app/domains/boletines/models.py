@@ -3,7 +3,7 @@ Modelos de base de datos para el sistema de boletines epidemiológicos
 """
 
 from datetime import date, datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from sqlalchemy import JSON, Column, Index, Text
 from sqlalchemy.orm import Mapped
@@ -34,7 +34,7 @@ class BoletinSnippet(BaseModel, table=True):
         description="Codigo unico del snippet (ej: portada, introduccion)",
     )
     nombre: str = Field(max_length=255, description="Nombre descriptivo del snippet")
-    descripcion: Optional[str] = Field(
+    descripcion: str | None = Field(
         default=None,
         sa_column=Column(Text),
         description="Descripcion del proposito del snippet",
@@ -48,11 +48,11 @@ class BoletinSnippet(BaseModel, table=True):
         sa_column=Column(Text, nullable=False),
         description="Template HTML con placeholders Jinja2",
     )
-    variables_schema: Dict[str, Any] = Field(
+    variables_schema: dict[str, Any] = Field(
         sa_column=Column(JSON, nullable=False),
         description="Schema de variables requeridas por el template",
     )
-    condiciones: Optional[Dict[str, Any]] = Field(
+    condiciones: dict[str, Any] | None = Field(
         default=None,
         sa_column=Column(JSON),
         description="Condiciones para aplicar este snippet",
@@ -77,20 +77,20 @@ class BoletinTemplateConfig(BaseModel, table=True):
 
     # Contenido TipTap base con estructura fija
     # Incluye bloque "selectedEventsPlaceholder" donde se insertan eventos dinámicos
-    static_content_template: Dict[str, Any] = Field(
+    static_content_template: dict[str, Any] = Field(
         sa_column=Column(JSON, nullable=False),
         description="TipTap JSON del contenido base (portada, intro, autoridades, metodología)",
     )
 
     # Template de sección de evento - se repite para cada evento seleccionado
     # Variables: {{ tipo_evento }}, {{ semana }}, {{ anio }}, {{ num_semanas }}, etc.
-    event_section_template: Dict[str, Any] = Field(
+    event_section_template: dict[str, Any] = Field(
         default_factory=dict,
         sa_column=Column(JSON, nullable=False),
         description="TipTap JSON del template de sección de evento (se repite por cada evento)",
     )
 
-    updated_by: Optional[int] = Field(
+    updated_by: int | None = Field(
         default=None,
         foreign_key="users.id",
         description="Usuario que actualizó la configuración",
@@ -150,7 +150,7 @@ class BoletinTemplate(BaseModel, table=True):
     __tablename__ = "boletin_templates"
 
     name: str = Field(max_length=255, index=True, description="Nombre de la plantilla")
-    description: Optional[str] = Field(
+    description: str | None = Field(
         default=None, sa_column=Column(Text), description="Descripción de la plantilla"
     )
     category: str = Field(
@@ -161,12 +161,12 @@ class BoletinTemplate(BaseModel, table=True):
 
     # Configuración de portada (JSON)
     # { "enabled": true, "title": "...", "subtitle": "...", "footer": "..." }
-    cover: Optional[Dict[str, Any]] = Field(
+    cover: dict[str, Any] | None = Field(
         default=None, sa_column=Column(JSON), description="Configuración de portada"
     )
 
     # Contenido HTML del boletín (Tiptap)
-    content: Optional[str] = Field(
+    content: str | None = Field(
         default=None,
         sa_column=Column(Text),
         description="Contenido HTML del boletín editado con Tiptap",
@@ -179,14 +179,14 @@ class BoletinTemplate(BaseModel, table=True):
     is_system: bool = Field(
         default=False, description="Si es una plantilla del sistema (no editable)"
     )
-    created_by: Optional[int] = Field(
+    created_by: int | None = Field(
         default=None,
         foreign_key="users.id",
         description="Usuario que creó la plantilla",
     )
 
     # Relaciones
-    instances: Mapped[List["BoletinInstance"]] = Relationship(back_populates="template")
+    instances: Mapped[list["BoletinInstance"]] = Relationship(back_populates="template")
 
 
 class BoletinInstance(BaseModel, table=True):
@@ -200,7 +200,7 @@ class BoletinInstance(BaseModel, table=True):
     name: str = Field(
         max_length=255, index=True, description="Nombre del boletín generado"
     )
-    template_id: Optional[int] = Field(
+    template_id: int | None = Field(
         default=None,
         foreign_key="boletin_templates.id",
         index=True,
@@ -208,71 +208,71 @@ class BoletinInstance(BaseModel, table=True):
     )
 
     # Período epidemiológico (columnas first-class para queries directas)
-    semana_epidemiologica: Optional[int] = Field(
+    semana_epidemiologica: int | None = Field(
         default=None,
         index=True,
         description="Semana epidemiológica del boletín",
     )
-    anio_epidemiologico: Optional[int] = Field(
+    anio_epidemiologico: int | None = Field(
         default=None,
         index=True,
         description="Año epidemiológico del boletín",
     )
-    fecha_inicio: Optional[date] = Field(
+    fecha_inicio: date | None = Field(
         default=None,
         description="Fecha inicio del período analizado",
     )
-    fecha_fin: Optional[date] = Field(
+    fecha_fin: date | None = Field(
         default=None,
         description="Fecha fin del período analizado",
     )
-    num_semanas: Optional[int] = Field(
+    num_semanas: int | None = Field(
         default=None,
         description="Número de semanas comparadas (ventana de análisis)",
     )
 
     # Parámetros usados para generar el boletín (JSON)
     # { "periodo": "2024-W40", "departamento": "Rawson", "filtros_aplicados": {...} }
-    parameters: Dict[str, Any] = Field(
+    parameters: dict[str, Any] = Field(
         sa_column=Column(JSON, nullable=False), description="Parámetros de generación"
     )
 
     # Snapshot de la configuración del template al momento de generar (JSON)
     # Guarda widgets y layout para que cambios futuros no afecten el historial
-    template_snapshot: Dict[str, Any] = Field(
+    template_snapshot: dict[str, Any] = Field(
         sa_column=Column(JSON, nullable=False), description="Snapshot del template"
     )
 
     # Contenido HTML editable (TipTap)
-    content: Optional[str] = Field(
+    content: str | None = Field(
         default=None,
         sa_column=Column(Text),
         description="Contenido HTML del boletín (editable con TipTap)",
     )
 
     # Archivo PDF generado
-    pdf_path: Optional[str] = Field(
+    pdf_path: str | None = Field(
         default=None, max_length=500, description="Path al archivo PDF generado"
     )
-    pdf_size: Optional[int] = Field(default=None, description="Tamaño del PDF en bytes")
+    pdf_size: int | None = Field(default=None, description="Tamaño del PDF en bytes")
 
     # Metadatos de generación
-    generated_at: Optional[datetime] = Field(
+    generated_at: datetime | None = Field(
         default=None, description="Fecha de generación exitosa"
     )
-    error_message: Optional[str] = Field(
+    error_message: str | None = Field(
         default=None, sa_column=Column(Text), description="Mensaje de error si falló"
     )
 
     # Usuario que generó el boletín
-    generated_by: Optional[int] = Field(
+    generated_by: int | None = Field(
         default=None,
         foreign_key="users.id",
         description="Usuario que generó el boletín",
     )
 
     # Relaciones
-    template: Mapped[Optional[BoletinTemplate]] = Relationship(
+    template: Mapped[BoletinTemplate | None] = Relationship(
         back_populates="instances"
     )
 
@@ -306,19 +306,19 @@ class BoletinSeccion(BaseModel, table=True):
         max_length=300,
         description="Título de la sección",
     )
-    contenido_intro: Optional[Dict[str, Any]] = Field(
+    contenido_intro: dict[str, Any] | None = Field(
         default=None,
         sa_column=Column(JSON),
         description="Contenido TipTap JSON introductorio opcional",
     )
     orden: int = Field(default=0, index=True)
     activo: bool = Field(default=True, index=True)
-    descripcion: Optional[str] = Field(
+    descripcion: str | None = Field(
         default=None,
         sa_column=Column(Text),
     )
 
-    bloques: List["BoletinBloque"] = Relationship(
+    bloques: list["BoletinBloque"] = Relationship(
         back_populates="seccion",
         sa_relationship_kwargs={"lazy": "selectin", "order_by": "BoletinBloque.orden"},
     )
@@ -358,33 +358,33 @@ class BoletinBloque(BaseModel, table=True):
     tipo_bloque: TipoBloque = Field()
     tipo_visualizacion: TipoVisualizacion = Field()
     metrica_codigo: str = Field(max_length=100)
-    dimensiones: List[str] = Field(
+    dimensiones: list[str] = Field(
         default_factory=list,
         sa_column=Column(JSON, nullable=False),
     )
-    compute: Optional[str] = Field(default=None, max_length=100)
+    compute: str | None = Field(default=None, max_length=100)
 
     # Criterios y series
-    criterios_fijos: Dict[str, Any] = Field(
+    criterios_fijos: dict[str, Any] = Field(
         default_factory=dict,
         sa_column=Column(JSON, nullable=False),
     )
-    series_source: Optional[str] = Field(default=None, max_length=200)
-    series_config: Optional[List[Dict[str, Any]]] = Field(
+    series_source: str | None = Field(default=None, max_length=200)
+    series_config: list[dict[str, Any]] | None = Field(
         default=None,
         sa_column=Column(JSON),
     )
 
     # Visual y estado
-    config_visual: Dict[str, Any] = Field(
+    config_visual: dict[str, Any] = Field(
         default_factory=dict,
         sa_column=Column(JSON, nullable=False),
     )
     orden: int = Field(default=0, index=True)
     activo: bool = Field(default=True, index=True)
-    descripcion: Optional[str] = Field(
+    descripcion: str | None = Field(
         default=None,
         sa_column=Column(Text),
     )
 
-    seccion: Optional[BoletinSeccion] = Relationship(back_populates="bloques")
+    seccion: BoletinSeccion | None = Relationship(back_populates="bloques")

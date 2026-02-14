@@ -4,8 +4,8 @@ Modern role-based access control following 2025 best practices
 """
 
 import logging
+from collections.abc import Callable
 from functools import wraps
-from typing import Callable, Optional
 
 from fastapi import Depends, HTTPException, status
 
@@ -242,7 +242,7 @@ class PermissionContext:
         )
         return self
 
-    def require_permission(self, condition: bool, message: Optional[str] = None):
+    def require_permission(self, condition: bool, message: str | None = None):
         """Require custom permission condition"""
         if message is None:
             message = f"Permission denied for {self.action}"

@@ -9,7 +9,7 @@ Por ejemplo:
 
 import logging
 from datetime import date
-from typing import Any, Optional
+from typing import Any
 
 from sqlalchemy import and_, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -39,7 +39,7 @@ class BoletinInsightsService:
         evento_id: int,
         fecha_inicio: date,
         fecha_fin: date,
-        evento_nombre: Optional[str] = None,
+        evento_nombre: str | None = None,
     ) -> dict[str, Any]:
         """
         Genera insight sobre distribución por edad.
@@ -154,7 +154,7 @@ class BoletinInsightsService:
         evento_id: int,
         fecha_inicio: date,
         fecha_fin: date,
-        evento_nombre: Optional[str] = None,
+        evento_nombre: str | None = None,
     ) -> dict[str, Any]:
         """
         Genera insight sobre distribución geográfica.
@@ -257,7 +257,7 @@ class BoletinInsightsService:
         semana_actual: int,
         anio: int,
         num_semanas: int = 4,
-        evento_nombre: Optional[str] = None,
+        evento_nombre: str | None = None,
     ) -> dict[str, Any]:
         """
         Genera insight sobre tendencia temporal.
@@ -388,7 +388,7 @@ class BoletinInsightsService:
         evento_id: int,
         fecha_inicio: date,
         fecha_fin: date,
-        evento_nombre: Optional[str] = None,
+        evento_nombre: str | None = None,
     ) -> dict[str, Any]:
         """
         Genera un resumen completo combinando múltiples insights.

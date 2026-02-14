@@ -5,6 +5,7 @@ Guarda en: ConteoEstudiosLab
 """
 
 import logging
+from datetime import UTC
 
 import polars as pl
 
@@ -146,7 +147,7 @@ class LabP26Processor(FileTypeProcessor):
                         inserted += 1
 
                     except Exception as e:
-                        errors.append(f"Error en fila: {str(e)}")
+                        errors.append(f"Error en fila: {e!s}")
 
                 if i % 100 == 0:
                     self.session.commit()
@@ -188,14 +189,10 @@ class LabP26Processor(FileTypeProcessor):
         agentes = self.session.exec(
             select(AgenteEtiologico.id_snvs, AgenteEtiologico.id)
         ).all()
-        for id_snvs, id_interno in agentes:
-            if id_snvs:
-                agentes_cache[id_snvs] = id_interno
+        agentes_cache.update({id_snvs: id_interno for id_snvs, id_interno in agentes if id_snvs})
 
         edades = self.session.exec(select(RangoEtario.id_snvs, RangoEtario.id)).all()
-        for id_snvs, id_interno in edades:
-            if id_snvs:
-                edades_cache[id_snvs] = id_interno
+        edades_cache.update({id_snvs: id_interno for id_snvs, id_interno in edades if id_snvs})
 
     def _get_or_create_notificacion(
         self,
@@ -339,7 +336,7 @@ class LabP26Processor(FileTypeProcessor):
 
     def _ensure_establecimientos_exist(self, df: pl.DataFrame) -> None:
         """Crea establecimientos faltantes con source='SNVS'."""
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         from sqlalchemy import inspect
         from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -379,7 +376,7 @@ class LabP26Processor(FileTypeProcessor):
 
         if faltantes:
             logger.info(f"➕ Creando {len(faltantes)} establecimientos faltantes")
-            timestamp = datetime.now(timezone.utc)
+            timestamp = datetime.now(UTC)
             nuevos = [
                 {
                     "codigo_snvs": str(row["id_snvs"]),

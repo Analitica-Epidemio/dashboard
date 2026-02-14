@@ -10,10 +10,10 @@ from .response import (
 )
 
 __all__ = [
+    "DataResponse",
     "ErrorDetail",
     "ErrorResponse",
-    "SuccessResponse",
     "PaginatedResponse",
     "PaginationMeta",
-    "DataResponse",
+    "SuccessResponse",
 ]

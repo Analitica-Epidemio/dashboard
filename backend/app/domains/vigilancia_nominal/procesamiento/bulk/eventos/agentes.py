@@ -9,7 +9,7 @@ Basado en analisis del CSV real de CHUBUT.
 
 import logging
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any
 
 import polars as pl
 from sqlalchemy import inspect, select
@@ -38,7 +38,7 @@ from ..shared import BulkOperationResult, get_current_timestamp
 #     - metodo: metodo de deteccion
 # =============================================================================
 
-REGLAS_EXTRACCION: Dict[str, List[Dict[str, Any]]] = {
+REGLAS_EXTRACCION: dict[str, list[dict[str, Any]]] = {
     # =========================================================================
     # UC-IRAG - Unidad Centinela de Infeccion Respiratoria Aguda Grave
     # =========================================================================
@@ -329,13 +329,13 @@ class AgentesExtractor:
     def __init__(self, context: Any, logger: logging.Logger) -> None:
         self.context = context
         self.logger = logger
-        self._agentes_by_codigo: Optional[Dict[str, int]] = None
+        self._agentes_by_codigo: dict[str, int] | None = None
         # Pre-computar mapping case-insensitive de reglas
-        self._reglas_lower: Dict[str, List[Dict[str, Any]]] = {
+        self._reglas_lower: dict[str, list[dict[str, Any]]] = {
             k.lower(): v for k, v in REGLAS_EXTRACCION.items()
         }
 
-    def _load_agentes_by_codigo(self) -> Dict[str, int]:
+    def _load_agentes_by_codigo(self) -> dict[str, int]:
         """Carga mapping codigo -> id de agentes activos."""
         if self._agentes_by_codigo is not None:
             return self._agentes_by_codigo
@@ -370,9 +370,9 @@ class AgentesExtractor:
 
     def _determinar_resultado(
         self,
-        row: Dict[str, Any],
-        regla: Dict[str, Any],
-    ) -> Tuple[ResultadoDeteccion, Optional[str]]:
+        row: dict[str, Any],
+        regla: dict[str, Any],
+    ) -> tuple[ResultadoDeteccion, str | None]:
         """
         Determina si el resultado es positivo/negativo/indeterminado.
 
@@ -406,19 +406,19 @@ class AgentesExtractor:
 
     def _extraer_agentes_de_fila(
         self,
-        row: Dict[str, Any],
+        row: dict[str, Any],
         id_evento: int,
         evento_nombre: str,
-        agentes_by_codigo: Dict[str, int],
-    ) -> List[Dict[str, Any]]:
+        agentes_by_codigo: dict[str, int],
+    ) -> list[dict[str, Any]]:
         """
         Extrae agentes de una fila usando las reglas del evento.
 
         Returns:
             Lista de dicts listos para insertar en evento_agente
         """
-        agentes_encontrados: List[Dict[str, Any]] = []
-        agentes_ya_agregados: Set[str] = set()
+        agentes_encontrados: list[dict[str, Any]] = []
+        agentes_ya_agregados: set[str] = set()
 
         # Obtener reglas (case-insensitive, O(1) lookup)
         evento_lower = evento_nombre.lower() if evento_nombre else ""
@@ -469,14 +469,14 @@ class AgentesExtractor:
 
         return agentes_encontrados
 
-    def _load_tipo_eno_mapping(self) -> Dict[str, int]:
+    def _load_tipo_eno_mapping(self) -> dict[str, int]:
         """No usado - mantenido por compatibilidad."""
         return {}
 
     def upsert_agentes_eventos(
         self,
         df: pl.DataFrame,
-        evento_mapping: Dict[int, int],
+        evento_mapping: dict[int, int],
     ) -> BulkOperationResult:
         """
         Extrae y guarda agentes de los eventos del CSV.
@@ -484,7 +484,7 @@ class AgentesExtractor:
         Usa MATCH EXACTO con valores del CSV.
         """
         start_time = datetime.now()
-        errors: List[str] = []
+        errors: list[str] = []
         inserted_count = 0
 
         self.logger.info("📊 Extrayendo agentes etiológicos...")
@@ -528,7 +528,7 @@ class AgentesExtractor:
             self.logger.info(f"  ✓ Con reglas: {matched_names}")
 
         # Procesar filas
-        all_agentes_data: List[Dict[str, Any]] = []
+        all_agentes_data: list[dict[str, Any]] = []
         filas_procesadas = 0
         filas_con_agentes = 0
 
@@ -577,8 +577,8 @@ class AgentesExtractor:
             )
 
         # Deduplicar (mismo evento + mismo agente)
-        seen: Set[Tuple[int, int]] = set()
-        unique_agentes: List[Dict[str, Any]] = []
+        seen: set[tuple[int, int]] = set()
+        unique_agentes: list[dict[str, Any]] = []
         for a in all_agentes_data:
             key = (a["id_caso"], a["id_agente"])
             if key not in seen:
@@ -605,7 +605,7 @@ class AgentesExtractor:
             inserted_count = len(unique_agentes)
 
         except Exception as e:
-            errors.append(f"Error en bulk insert: {str(e)}")
+            errors.append(f"Error en bulk insert: {e!s}")
             self.logger.error(f"  Error: {e}")
 
         duration = (datetime.now() - start_time).total_seconds()

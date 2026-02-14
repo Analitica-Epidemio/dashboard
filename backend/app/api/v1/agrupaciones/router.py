@@ -4,7 +4,6 @@ Endpoints de Agrupaciones de Agentes Etiológicos.
 Permite listar y gestionar agrupaciones de agentes para visualización.
 """
 
-from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -59,14 +58,14 @@ class AgrupacionDetailResponse(BaseModel):
     color: str
     categoria: str
     orden: int
-    descripcion: Optional[str]
-    agentes: List[AgenteSimple]
+    descripcion: str | None
+    agentes: list[AgenteSimple]
 
 
 class AgrupacionesListResponse(BaseModel):
     """Lista de agrupaciones."""
 
-    items: List[AgrupacionListItem]
+    items: list[AgrupacionListItem]
     total: int
 
 
@@ -77,7 +76,7 @@ class AgrupacionesListResponse(BaseModel):
 
 @router.get("/", response_model=AgrupacionesListResponse)
 def list_agrupaciones(
-    categoria: Optional[str] = None,
+    categoria: str | None = None,
     session: Session = Depends(get_session),
     current_user: User = Depends(RequireAnyRole()),
 ) -> AgrupacionesListResponse:

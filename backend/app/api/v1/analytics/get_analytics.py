@@ -4,7 +4,7 @@ Get analytics endpoint - comparación de métricas epidemiológicas entre perío
 
 import logging
 from datetime import date
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import Depends, Query
 from sqlalchemy import text
@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 
 def calculate_metric_value(
-    valor_actual: float, valor_anterior: Optional[float]
+    valor_actual: float, valor_anterior: float | None
 ) -> MetricValue:
     """
     Calcula un MetricValue con la comparación entre valores.
@@ -72,15 +72,15 @@ async def query_casos_metrics(
     db: AsyncSession,
     fecha_desde: date,
     fecha_hasta: date,
-    grupo_id: Optional[int],
-    tipo_eno_ids: Optional[List[int]],
-    clasificaciones: Optional[List[str]],
-    provincia_id: Optional[int],
-) -> Dict[str, Any]:
+    grupo_id: int | None,
+    tipo_eno_ids: list[int] | None,
+    clasificaciones: list[str] | None,
+    provincia_id: int | None,
+) -> dict[str, Any]:
     """
     Consulta métricas de casos para un período específico.
     """
-    params: Dict[str, Any] = {"fecha_desde": fecha_desde, "fecha_hasta": fecha_hasta}
+    params: dict[str, Any] = {"fecha_desde": fecha_desde, "fecha_hasta": fecha_hasta}
 
     # Base query
     where_clauses = [
@@ -175,17 +175,17 @@ async def query_cobertura_metrics(
     db: AsyncSession,
     fecha_desde: date,
     fecha_hasta: date,
-    fecha_desde_comp: Optional[date],
-    fecha_hasta_comp: Optional[date],
-    grupo_id: Optional[int],
-    tipo_eno_ids: Optional[List[int]],
-    clasificaciones: Optional[List[str]],
-    provincia_id: Optional[int],
-) -> Dict[str, Any]:
+    fecha_desde_comp: date | None,
+    fecha_hasta_comp: date | None,
+    grupo_id: int | None,
+    tipo_eno_ids: list[int] | None,
+    clasificaciones: list[str] | None,
+    provincia_id: int | None,
+) -> dict[str, Any]:
     """
     Consulta métricas de cobertura geográfica.
     """
-    params: Dict[str, Any] = {"fecha_desde": fecha_desde, "fecha_hasta": fecha_hasta}
+    params: dict[str, Any] = {"fecha_desde": fecha_desde, "fecha_hasta": fecha_hasta}
 
     where_clauses = [
         "e.fecha_minima_caso >= :fecha_desde",
@@ -244,15 +244,14 @@ async def query_cobertura_metrics(
     """
 
     result_top = await db.execute(text(query_top), params)
-    top_departamentos = []
-    for row in result_top:
-        top_departamentos.append(
-            {
-                "departamento_id": row.id_departamento_indec,
-                "departamento_nombre": row.departamento_nombre,
-                "casos": row.casos,
-            }
-        )
+    top_departamentos = [
+        {
+            "departamento_id": row.id_departamento_indec,
+            "departamento_nombre": row.departamento_nombre,
+            "casos": row.casos,
+        }
+        for row in result_top
+    ]
 
     # Nuevas áreas y áreas sin casos (si hay período de comparación)
     nuevas_areas = 0
@@ -312,15 +311,15 @@ async def query_performance_metrics(
     db: AsyncSession,
     fecha_desde: date,
     fecha_hasta: date,
-    grupo_id: Optional[int],
-    tipo_eno_ids: Optional[List[int]],
-    clasificaciones: Optional[List[str]],
-    provincia_id: Optional[int],
-) -> Dict[str, Any]:
+    grupo_id: int | None,
+    tipo_eno_ids: list[int] | None,
+    clasificaciones: list[str] | None,
+    provincia_id: int | None,
+) -> dict[str, Any]:
     """
     Consulta métricas de performance de clasificación.
     """
-    params: Dict[str, Any] = {"fecha_desde": fecha_desde, "fecha_hasta": fecha_hasta}
+    params: dict[str, Any] = {"fecha_desde": fecha_desde, "fecha_hasta": fecha_hasta}
 
     where_clauses = [
         "e.fecha_minima_caso >= :fecha_desde",
@@ -403,29 +402,29 @@ async def get_analytics(
     period_type: PeriodType = Query(
         PeriodType.ULTIMAS_4_SEMANAS_EPI, description="Tipo de período predefinido"
     ),
-    fecha_desde: Optional[date] = Query(
+    fecha_desde: date | None = Query(
         None, description="Fecha desde (solo si period_type=personalizado)"
     ),
-    fecha_hasta: Optional[date] = Query(
+    fecha_hasta: date | None = Query(
         None, description="Fecha hasta (solo si period_type=personalizado)"
     ),
     comparison_type: ComparisonType = Query(
         ComparisonType.ROLLING, description="Tipo de comparación"
     ),
-    fecha_referencia: Optional[date] = Query(
+    fecha_referencia: date | None = Query(
         None,
         description="Fecha de referencia para 'viajar en el tiempo' y ver métricas históricas (ej: 2023-03-15)",
     ),
-    grupo_id: Optional[int] = Query(None, description="ID del grupo seleccionado"),
-    tipo_eno_ids: Optional[List[int]] = Query(
+    grupo_id: int | None = Query(None, description="ID del grupo seleccionado"),
+    tipo_eno_ids: list[int] | None = Query(
         None, description="IDs de los eventos a filtrar"
     ),
-    clasificaciones: Optional[List[str]] = Query(
+    clasificaciones: list[str] | None = Query(
         None, description="Filtrar por clasificaciones estratégicas"
     ),
-    provincia_id: Optional[int] = Query(None, description="Código INDEC de provincia"),
+    provincia_id: int | None = Query(None, description="Código INDEC de provincia"),
     db: AsyncSession = Depends(get_async_session),
-    current_user: Optional[User] = RequireAuthOrSignedUrl,
+    current_user: User | None = RequireAuthOrSignedUrl,
 ) -> SuccessResponse[AnalyticsResponse]:
     """
     Endpoint principal de analytics.

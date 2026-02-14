@@ -3,7 +3,6 @@ Get strategy audit log endpoint
 """
 
 import logging
-from typing import List
 
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,7 +24,7 @@ async def get_strategy_audit_log(
     limit: int = 50,
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(RequireAnyRole()),
-) -> SuccessResponse[List[AuditLogResponse]]:
+) -> SuccessResponse[list[AuditLogResponse]]:
     """
     Obtener historial de auditoría de una estrategia.
 
@@ -58,8 +57,8 @@ async def get_strategy_audit_log(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"💥 Error getting audit log for strategy {strategy_id}: {str(e)}")
+        logger.error(f"💥 Error getting audit log for strategy {strategy_id}: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error obteniendo historial de auditoría: {str(e)}",
-        )
+            detail=f"Error obteniendo historial de auditoría: {e!s}",
+        ) from e

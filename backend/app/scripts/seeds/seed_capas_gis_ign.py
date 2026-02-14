@@ -49,8 +49,8 @@ TIEMPO ESTIMADO: 3-5 minutos (dependiendo de la velocidad de descarga)
 """
 
 import sys
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator
 
 import geopandas as gpd
 from sqlalchemy import text
@@ -316,7 +316,7 @@ def seed_areas_urbanas(conn: Connection) -> int:
                     )
 
                 values_list = []
-                for idx, row in batch.iterrows():
+                for _idx, row in batch.iterrows():
                     # Extraer nombre y población si existen
                     nombre = None
                     poblacion = None

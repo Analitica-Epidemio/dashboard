@@ -8,7 +8,7 @@ y proveer fallback cuando los servicios están caídos.
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional, cast
+from typing import cast
 
 # Directorio de caché (en .cache/seeds/ en la raíz del proyecto)
 # Esto mantiene el cache fuera de app/ para builds de Docker más rápidos
@@ -17,7 +17,7 @@ CACHE_DIR = _PROJECT_ROOT / ".cache" / "seeds"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def get_cached_response(cache_key: str, max_age_days: int = 7) -> Optional[str]:
+def get_cached_response(cache_key: str, max_age_days: int = 7) -> str | None:
     """
     Obtiene respuesta cacheada si existe y no está muy vieja.
 

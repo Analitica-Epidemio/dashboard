@@ -8,7 +8,7 @@ OPTIMIZADO: Usa agregaciones SQL nativas para evitar N+1 queries.
 import logging
 from datetime import date, datetime, timedelta
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import Depends, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field
@@ -51,13 +51,13 @@ class PersonaListItem(BaseModel):
 
     # Datos básicos
     nombre_completo: str = Field(..., description="Nombre completo o identificación")
-    documento: Optional[str] = Field(None, description="Documento (solo humanos)")
-    edad_actual: Optional[int] = Field(None, description="Edad actual en años")
-    sexo: Optional[str] = Field(None, description="Sexo/género")
+    documento: str | None = Field(None, description="Documento (solo humanos)")
+    edad_actual: int | None = Field(None, description="Edad actual en años")
+    sexo: str | None = Field(None, description="Sexo/género")
 
     # Ubicación
-    provincia: Optional[str] = Field(None, description="Provincia de residencia")
-    localidad: Optional[str] = Field(None, description="Localidad de residencia")
+    provincia: str | None = Field(None, description="Provincia de residencia")
+    localidad: str | None = Field(None, description="Localidad de residencia")
 
     # Estadísticas de eventos de esta persona
     total_eventos: int = Field(..., description="Total de eventos registrados")
@@ -67,16 +67,16 @@ class PersonaListItem(BaseModel):
     eventos_descartados: int = Field(0, description="CasoEpidemiologicos descartados")
 
     # Fechas relevantes
-    primer_evento_fecha: Optional[date] = Field(
+    primer_evento_fecha: date | None = Field(
         None, description="Fecha del primer evento"
     )
-    ultimo_evento_fecha: Optional[date] = Field(
+    ultimo_evento_fecha: date | None = Field(
         None, description="Fecha del último evento"
     )
 
     # Información del último evento
-    ultimo_evento_tipo: Optional[str] = Field(None, description="Tipo del último ENO")
-    ultimo_evento_clasificacion: Optional[str] = Field(
+    ultimo_evento_tipo: str | None = Field(None, description="Tipo del último ENO")
+    ultimo_evento_clasificacion: str | None = Field(
         None, description="Clasificación del último evento"
     )
 
@@ -119,12 +119,12 @@ class AggregatedStats(BaseModel):
 class PersonaListResponse(BaseModel):
     """Respuesta completa del listado de personas (PERSON-CENTERED)"""
 
-    data: List[PersonaListItem] = Field(..., description="Lista de personas")
+    data: list[PersonaListItem] = Field(..., description="Lista de personas")
     pagination: PaginationInfo = Field(..., description="Información de paginación")
     stats: AggregatedStats = Field(
         ..., description="Estadísticas agregadas sobre todos los resultados"
     )
-    filters_applied: Dict[str, Any] = Field(..., description="Filtros aplicados")
+    filters_applied: dict[str, Any] = Field(..., description="Filtros aplicados")
 
 
 logger = logging.getLogger(__name__)
@@ -135,29 +135,29 @@ async def list_personas(
     page: int = Query(1, ge=1, description="Número de página"),
     page_size: int = Query(50, ge=10, le=200, description="Tamaño de página"),
     # Búsqueda
-    search: Optional[str] = Query(
+    search: str | None = Query(
         None, description="Búsqueda por nombre, apellido o documento"
     ),
     # Filtros
-    tipo_sujeto: Optional[str] = Query(
+    tipo_sujeto: str | None = Query(
         None, description="Filtro por tipo: humano, animal, todos"
     ),
-    provincia_ids_establecimiento: Optional[List[int]] = Query(
+    provincia_ids_establecimiento: list[int] | None = Query(
         None,
         description="Lista de códigos INDEC de provincias (filtro por ESTABLECIMIENTO DE NOTIFICACIÓN de eventos)",
         alias="provincia_id",  # Mantiene compatibilidad con frontend
     ),
-    tipo_eno_ids: Optional[List[int]] = Query(
+    tipo_eno_ids: list[int] | None = Query(
         None, description="Lista de IDs de tipos de eventos"
     ),
-    grupo_eno_ids: Optional[List[int]] = Query(
+    grupo_eno_ids: list[int] | None = Query(
         None, description="Lista de IDs de grupos de eventos"
     ),
-    tiene_multiples_eventos: Optional[bool] = Query(
+    tiene_multiples_eventos: bool | None = Query(
         None, description="Solo personas con múltiples eventos"
     ),
-    edad_min: Optional[int] = Query(None, ge=0, le=120, description="Edad mínima"),
-    edad_max: Optional[int] = Query(None, ge=0, le=120, description="Edad máxima"),
+    edad_min: int | None = Query(None, ge=0, le=120, description="Edad mínima"),
+    edad_max: int | None = Query(None, ge=0, le=120, description="Edad máxima"),
     # Ordenamiento
     sort_by: PersonaSortBy = PersonaSortBy.ULTIMO_EVENTO_DESC,
     # DB and Auth
@@ -646,8 +646,8 @@ async def list_personas(
             )
         )
     except Exception as e:
-        logger.error(f"💥 Error listando personas: {str(e)}", exc_info=True)
+        logger.error(f"💥 Error listando personas: {e!s}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error obteniendo personas: {str(e)}",
-        )
+            detail=f"Error obteniendo personas: {e!s}",
+        ) from e

@@ -2,7 +2,6 @@
 
 import unicodedata
 from difflib import SequenceMatcher
-from typing import List, Optional
 
 from sqlalchemy import func, or_, select
 from sqlmodel import Session, col
@@ -81,9 +80,9 @@ def generar_razon_match(
     provincia_match: bool,
     departamento_match: bool,
     localidad_match: bool,
-    provincia_snvs: Optional[str] = None,
-    departamento_snvs: Optional[str] = None,
-    localidad_snvs: Optional[str] = None,
+    provincia_snvs: str | None = None,
+    departamento_snvs: str | None = None,
+    localidad_snvs: str | None = None,
 ) -> str:
     """Genera descripción legible de la razón del match."""
     partes = [f"similitud nombre: {similitud_nombre}%"]
@@ -103,11 +102,11 @@ def generar_razon_match(
 async def buscar_sugerencias_para_establecimiento(
     session: Session,
     nombre_snvs: str,
-    provincia_nombre_snvs: Optional[str],
-    departamento_nombre_snvs: Optional[str],
-    localidad_nombre_snvs: Optional[str],
+    provincia_nombre_snvs: str | None,
+    departamento_nombre_snvs: str | None,
+    localidad_nombre_snvs: str | None,
     limit: int = 5,
-) -> List[dict]:
+) -> list[dict]:
     """
     Busca sugerencias de establecimientos IGN para un establecimiento SNVS.
 
@@ -236,12 +235,12 @@ async def buscar_sugerencias_para_establecimiento(
 
 async def buscar_establecimientos_ign(
     session: Session,
-    query: Optional[str] = None,
-    provincia_nombre: Optional[str] = None,
-    departamento_nombre: Optional[str] = None,
+    query: str | None = None,
+    provincia_nombre: str | None = None,
+    departamento_nombre: str | None = None,
     limit: int = 50,
     offset: int = 0,
-) -> tuple[List[dict], int]:
+) -> tuple[list[dict], int]:
     """
     Busca establecimientos IGN con filtros.
 

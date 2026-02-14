@@ -3,7 +3,6 @@ Authentication Pydantic schemas for requests/responses
 """
 
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
@@ -28,11 +27,11 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     """Schema for updating user information"""
 
-    email: Optional[EmailStr] = None
-    nombre: Optional[str] = Field(default=None, min_length=1, max_length=100)
-    apellido: Optional[str] = Field(default=None, min_length=1, max_length=100)
-    rol: Optional[UserRole] = None
-    estado: Optional[UserStatus] = None
+    email: EmailStr | None = None
+    nombre: str | None = Field(default=None, min_length=1, max_length=100)
+    apellido: str | None = Field(default=None, min_length=1, max_length=100)
+    rol: UserRole | None = None
+    estado: UserStatus | None = None
 
 
 class UserResponse(UserBase):
@@ -45,7 +44,7 @@ class UserResponse(UserBase):
     estado: UserStatus
     es_email_verificado: bool
     created_at: datetime
-    ultimo_login: Optional[datetime] = None
+    ultimo_login: datetime | None = None
 
 
 class UserLogin(BaseModel):
@@ -92,17 +91,17 @@ class Token(BaseModel):
     token_acceso: str
     token_type: str = "bearer"
     expira_en: int
-    token_refresco: Optional[str] = None
-    usuario: Optional[TokenUser] = None
+    token_refresco: str | None = None
+    usuario: TokenUser | None = None
 
 
 class TokenData(BaseModel):
     """Token payload data"""
 
-    user_id: Optional[int] = None
-    email: Optional[str] = None
-    rol: Optional[str] = None
-    id_sesion: Optional[int] = None
+    user_id: int | None = None
+    email: str | None = None
+    rol: str | None = None
+    id_sesion: int | None = None
 
 
 class RefreshToken(BaseModel):
@@ -117,8 +116,8 @@ class SessionInfo(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    direccion_ip: Optional[str]
-    agente_usuario: Optional[str]
+    direccion_ip: str | None
+    agente_usuario: str | None
     created_at: datetime
     ultima_actividad: datetime
     es_actual: bool = False

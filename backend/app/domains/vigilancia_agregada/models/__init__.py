@@ -14,13 +14,13 @@ from app.domains.vigilancia_agregada.models.conteos import (
 )
 
 __all__ = [
-    # Cargas
-    "NotificacionSemanal",
-    # Catálogos
-    "TipoCasoEpidemiologicoPasivo",
-    "RangoEtario",
+    "ConteoCamasIRA",
     # Conteos
     "ConteoCasosClinicos",
     "ConteoEstudiosLab",
-    "ConteoCamasIRA",
+    # Cargas
+    "NotificacionSemanal",
+    "RangoEtario",
+    # Catálogos
+    "TipoCasoEpidemiologicoPasivo",
 ]

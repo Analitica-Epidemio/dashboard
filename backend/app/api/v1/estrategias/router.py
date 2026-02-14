@@ -2,7 +2,6 @@
 Estrategias router - Event classification strategies endpoints
 """
 
-from typing import List
 
 from fastapi import APIRouter, status
 
@@ -127,7 +126,7 @@ router.add_api_route(
     "/{strategy_id}/audit",
     get_strategy_audit_log,
     methods=["GET"],
-    response_model=SuccessResponse[List[AuditLogResponse]],
+    response_model=SuccessResponse[list[AuditLogResponse]],
     responses={
         404: {"model": ErrorResponse, "description": "Estrategia no encontrada"},
         500: {"model": ErrorResponse, "description": "Error interno del servidor"},

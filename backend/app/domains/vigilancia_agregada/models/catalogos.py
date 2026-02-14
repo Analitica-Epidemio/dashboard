@@ -6,7 +6,7 @@ Contiene los catálogos específicos del SNVS para datos de vigilancia pasiva:
 - RangoEtario: Grupos de edad del SNVS
 """
 
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
 
 from pydantic import ValidationInfo, field_validator
 from sqlalchemy import Index, SmallInteger
@@ -81,13 +81,13 @@ class TipoCasoEpidemiologicoPasivo(BaseModel, table=True):
         description="Nombre del evento (NOMBREEVENTOAGRP)",
     )
 
-    grupo_nombre: Optional[str] = Field(
+    grupo_nombre: str | None = Field(
         None,
         max_length=300,
         description="Nombre del grupo de eventos (NOMBREGRPEVENTOAGRP)",
     )
 
-    grupo_id_snvs: Optional[int] = Field(
+    grupo_id_snvs: int | None = Field(
         None,
         description="ID del grupo en SNVS (IDEVENTOAGRUPADO)",
     )
@@ -105,7 +105,7 @@ class TipoCasoEpidemiologicoPasivo(BaseModel, table=True):
     # Metadata adicional
     # ═══════════════════════════════════════════════════════════════
 
-    descripcion: Optional[str] = Field(
+    descripcion: str | None = Field(
         None,
         max_length=500,
         description="Descripción adicional del evento",
@@ -120,11 +120,11 @@ class TipoCasoEpidemiologicoPasivo(BaseModel, table=True):
     # Relaciones
     # ═══════════════════════════════════════════════════════════════
 
-    conteos_clinicos: Mapped[List["ConteoCasosClinicos"]] = Relationship(
+    conteos_clinicos: Mapped[list["ConteoCasosClinicos"]] = Relationship(
         back_populates="tipo_evento"
     )
     # NOTA: conteos_laboratorio ahora usa AgenteEtiologico del catalogo compartido
-    conteos_internacion: Mapped[List["ConteoCamasIRA"]] = Relationship(
+    conteos_internacion: Mapped[list["ConteoCamasIRA"]] = Relationship(
         back_populates="tipo_evento"
     )
 
@@ -174,7 +174,7 @@ class RangoEtario(BaseModel, table=True):
     # Rango numérico (para cálculos y ordenamiento)
     # ═══════════════════════════════════════════════════════════════
 
-    edad_desde: Optional[int] = Field(
+    edad_desde: int | None = Field(
         default=None,
         ge=0,
         le=150,
@@ -182,7 +182,7 @@ class RangoEtario(BaseModel, table=True):
         description="Edad mínima del rango en años (inclusive). 0 = desde nacimiento",
     )
 
-    edad_hasta: Optional[int] = Field(
+    edad_hasta: int | None = Field(
         default=None,
         ge=0,
         le=150,
@@ -212,8 +212,8 @@ class RangoEtario(BaseModel, table=True):
     @field_validator("edad_hasta")
     @classmethod
     def edad_hasta_mayor_que_desde(
-        cls, v: Optional[int], info: ValidationInfo
-    ) -> Optional[int]:
+        cls, v: int | None, info: ValidationInfo
+    ) -> int | None:
         """Valida que edad_hasta >= edad_desde si ambos están definidos."""
         edad_desde = info.data.get("edad_desde")
         if v is not None and edad_desde is not None and v < edad_desde:
@@ -224,12 +224,12 @@ class RangoEtario(BaseModel, table=True):
     # Relaciones
     # ═══════════════════════════════════════════════════════════════
 
-    conteos_clinicos: Mapped[List["ConteoCasosClinicos"]] = Relationship(
+    conteos_clinicos: Mapped[list["ConteoCasosClinicos"]] = Relationship(
         back_populates="rango_etario"
     )
-    conteos_laboratorio: Mapped[List["ConteoEstudiosLab"]] = Relationship(
+    conteos_laboratorio: Mapped[list["ConteoEstudiosLab"]] = Relationship(
         back_populates="rango_etario"
     )
-    conteos_internacion: Mapped[List["ConteoCamasIRA"]] = Relationship(
+    conteos_internacion: Mapped[list["ConteoCamasIRA"]] = Relationship(
         back_populates="rango_etario"
     )

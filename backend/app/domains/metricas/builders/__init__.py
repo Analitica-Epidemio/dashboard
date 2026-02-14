@@ -47,9 +47,9 @@ from .laboratorio import LaboratorioQueryBuilder
 from .nominal import NominalQueryBuilder
 
 __all__ = [
-    "MetricQueryBuilder",
     "ClinicoQueryBuilder",
-    "LaboratorioQueryBuilder",
     "HospitalarioQueryBuilder",
+    "LaboratorioQueryBuilder",
+    "MetricQueryBuilder",
     "NominalQueryBuilder",
 ]

@@ -9,7 +9,6 @@ Provee:
 
 import logging
 from pathlib import Path
-from typing import Optional
 
 from fastapi import HTTPException, UploadFile
 
@@ -27,7 +26,7 @@ class TempFileStorage:
         self,
         archivo: UploadFile,
         id_unico: str,
-        sufijo: Optional[str] = None,
+        sufijo: str | None = None,
     ) -> Path:
         """
         Guardar archivo temporal.
@@ -64,8 +63,8 @@ class TempFileStorage:
             if ruta_archivo.exists():
                 ruta_archivo.unlink()
             raise HTTPException(
-                status_code=500, detail=f"Error guardando archivo: {str(e)}"
-            )
+                status_code=500, detail=f"Error guardando archivo: {e!s}"
+            ) from e
 
     def eliminar(self, ruta_archivo: Path) -> bool:
         """Eliminar archivo."""

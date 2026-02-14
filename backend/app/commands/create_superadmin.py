@@ -123,7 +123,7 @@ def create_superadmin():
                     print("🎉 Ya puede iniciar sesión con la nueva contraseña.")
 
                 except Exception as e:
-                    print(f"\n❌ Error actualizando contraseña: {str(e)}")
+                    print(f"\n❌ Error actualizando contraseña: {e!s}")
                     sys.exit(1)
 
                 return
@@ -225,7 +225,7 @@ def create_superadmin():
             print("\n🎉 Ya puede iniciar sesión en el sistema.")
 
         except Exception as e:
-            print(f"\n❌ Error creando el usuario: {str(e)}")
+            print(f"\n❌ Error creando el usuario: {e!s}")
             sys.exit(1)
 
 
@@ -270,7 +270,7 @@ def create_dev_superadmin():
             print("   Password: admin")
 
         except Exception as e:
-            print(f"❌ Error creando superadmin: {str(e)}")
+            print(f"❌ Error creando superadmin: {e!s}")
             sys.exit(1)
 
 
@@ -282,7 +282,7 @@ def main():
         print("\n\n❌ Operación cancelada por el usuario.")
         sys.exit(1)
     except Exception as e:
-        print(f"\n❌ Error inesperado: {str(e)}")
+        print(f"\n❌ Error inesperado: {e!s}")
         sys.exit(1)
 
 

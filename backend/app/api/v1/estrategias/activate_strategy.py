@@ -61,8 +61,8 @@ async def activate_strategy(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"💥 Error activating strategy {strategy_id}: {str(e)}")
+        logger.error(f"💥 Error activating strategy {strategy_id}: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error activando estrategia: {str(e)}",
-        )
+            detail=f"Error activando estrategia: {e!s}",
+        ) from e

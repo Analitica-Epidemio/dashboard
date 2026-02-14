@@ -6,7 +6,6 @@ específicos para procesamiento de datos nominales.
 """
 
 import logging
-from typing import Optional
 
 from fastapi import UploadFile
 
@@ -27,7 +26,7 @@ class NominalUploadHandler:
         self,
         archivo: UploadFile,
         nombre_archivo: str,
-        nombre_hoja: Optional[str] = None,
+        nombre_hoja: str | None = None,
         prioridad: JobPriority = JobPriority.NORMAL,
     ) -> Job:
         """

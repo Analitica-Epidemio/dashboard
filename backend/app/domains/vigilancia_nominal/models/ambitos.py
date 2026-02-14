@@ -35,7 +35,7 @@ class AmbitosConcurrenciaCaso(BaseModel, table=True):
     id_caso: int = Field(
         foreign_key="caso_epidemiologico.id", description="ID del caso"
     )
-    id_localidad_ambito_ocurrencia: Optional[int] = Field(
+    id_localidad_ambito_ocurrencia: int | None = Field(
         None,
         sa_type=BigInteger,
         foreign_key="localidad.id_localidad_indec",
@@ -43,25 +43,25 @@ class AmbitosConcurrenciaCaso(BaseModel, table=True):
     )
 
     # Campos propios
-    nombre_lugar_ocurrencia: Optional[str] = Field(
+    nombre_lugar_ocurrencia: str | None = Field(
         None, max_length=150, description="Nombre del lugar"
     )
-    tipo_lugar_ocurrencia: Optional[str] = Field(
+    tipo_lugar_ocurrencia: str | None = Field(
         None, max_length=150, description="Tipo de lugar"
     )
-    localidad_ambito_ocurrencia: Optional[str] = Field(
+    localidad_ambito_ocurrencia: str | None = Field(
         None, max_length=150, description="Localidad del ámbito"
     )
-    fecha_ambito_ocurrencia: Optional[date] = Field(
+    fecha_ambito_ocurrencia: date | None = Field(
         None, description="Fecha de ocurrencia"
     )
-    frecuencia_concurrencia: Optional[FrecuenciaOcurrencia] = Field(
+    frecuencia_concurrencia: FrecuenciaOcurrencia | None = Field(
         None, description="Frecuencia de concurrencia al lugar"
     )
-    es_sitio_probable_adquisicion_infeccion: Optional[bool] = Field(
+    es_sitio_probable_adquisicion_infeccion: bool | None = Field(
         None, description="Es el sitio probable donde se adquirió la infección"
     )
-    es_sitio_probable_diseminacion_infeccion: Optional[bool] = Field(
+    es_sitio_probable_diseminacion_infeccion: bool | None = Field(
         None, description="Es el sitio probable donde se diseminó la infección"
     )
 

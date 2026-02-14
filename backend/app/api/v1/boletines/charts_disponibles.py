@@ -4,7 +4,6 @@ Migrado de api/v1/charts/get_disponibles.py
 """
 
 import logging
-from typing import List
 
 from fastapi import Depends
 from pydantic import BaseModel
@@ -35,7 +34,7 @@ class ChartDisponibleItem(BaseModel):
 class ChartsDisponiblesResponse(BaseModel):
     """Response con lista de charts disponibles"""
 
-    charts: List[ChartDisponibleItem]
+    charts: list[ChartDisponibleItem]
     total: int
 
 

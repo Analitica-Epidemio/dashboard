@@ -4,7 +4,7 @@ import logging
 import os
 from datetime import date
 from decimal import Decimal
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import polars as pl
 from sqlalchemy import inspect, select
@@ -217,15 +217,14 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
             )
 
             # EnfermedadGrupo es tabla M2M pura - solo FKs, sin timestamps
-            relaciones_tipo_grupo = []
-            for tipo_id, grupos_ids in tipo_grupos_mapping.items():
-                for grupo_id in grupos_ids:
-                    relaciones_tipo_grupo.append(
-                        {
-                            "id_enfermedad": int(tipo_id),
-                            "id_grupo": int(grupo_id),
-                        }
-                    )
+            relaciones_tipo_grupo = [
+                {
+                    "id_enfermedad": int(tipo_id),
+                    "id_grupo": int(grupo_id),
+                }
+                for tipo_id, grupos_ids in tipo_grupos_mapping.items()
+                for grupo_id in grupos_ids
+            ]
 
             if relaciones_tipo_grupo:
                 stmt = pg_insert(inspect(EnfermedadGrupo).local_table).values(
@@ -244,7 +243,7 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
 
     def _bulk_load_domicilios(
         self, agg_results: pl.DataFrame
-    ) -> dict[int, Optional[int]]:
+    ) -> dict[int, int | None]:
         """
         Bulk load de domicilios - elimina N+1 queries.
 
@@ -307,11 +306,11 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
             domicilios_validos.append(domicilio_key)
 
         if not domicilios_validos:
-            return {k: None for k in evento_to_domicilio}
+            return dict.fromkeys(evento_to_domicilio)
 
         # 3. Bulk SELECT de domicilios existentes (1 query para todos)
         domicilios_unicos = list(set(domicilios_validos))
-        localidades_ids = list(set(d[2] for d in domicilios_unicos))
+        localidades_ids = list({d[2] for d in domicilios_unicos})
 
         # Query todos los domicilios de estas localidades
         stmt = select(
@@ -448,7 +447,7 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
 
         # Primero crear grupos y tipos ENO
         grupo_mapping = self._get_or_create_grupos_eno(df)
-        tipo_mapping, tipo_grupos_mapping = self._get_or_create_tipos_eno(
+        tipo_mapping, _tipo_grupos_mapping = self._get_or_create_tipos_eno(
             df, grupo_mapping
         )
 
@@ -773,10 +772,10 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
             eventos_data.append(evento_dict)
 
             # Preparar relaciones evento-grupo
-            for id_grupo in grupos_ids:
-                eventos_grupos_data.append(
-                    {"id_evento_caso": id_evento_caso, "id_grupo": id_grupo}
-                )
+            eventos_grupos_data.extend(
+                {"id_evento_caso": id_evento_caso, "id_grupo": id_grupo}
+                for id_grupo in grupos_ids
+            )
 
             # Log para casos con muchas filas
             num_filas = agg_row.get("num_filas", 1)
@@ -887,7 +886,7 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
             )
             self.context.session.execute(upsert_stmt)
             casos_unicos = len(
-                set(r["id_caso"] for r in relaciones_eventos_grupos)
+                {r["id_caso"] for r in relaciones_eventos_grupos}
             )  # Cambiado de id_evento a id_caso
             self.logger.info(
                 f"{len(relaciones_eventos_grupos)} relaciones evento-grupo creadas "
@@ -896,7 +895,7 @@ class CasoEpidemiologicosProcessor(BulkProcessorBase):
 
         return evento_mapping
 
-    def _get_or_create_domicilio(self, row: dict) -> Optional[int]:
+    def _get_or_create_domicilio(self, row: dict) -> int | None:
         """
         Get or create an immutable domicilio record.
 

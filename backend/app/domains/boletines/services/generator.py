@@ -195,8 +195,7 @@ class BoletinGenerator:
                     content.extend(intro["content"])
 
             # Bloques de la sección
-            for bloque in seccion["bloques"]:
-                content.append(bloque)
+            content.extend(seccion["bloques"])
 
             # Separador
             content.append({"type": "horizontalRule"})

@@ -2,7 +2,6 @@
 Get current user sessions endpoint
 """
 
-from typing import List
 
 from fastapi import Depends, HTTPException, status
 
@@ -20,7 +19,7 @@ async def get_user_sessions(
     current_user: User = Depends(get_current_user),
     token_data=Depends(get_current_user_token),
     auth_service: AuthService = Depends(get_auth_service),
-) -> List[SessionInfo]:
+) -> list[SessionInfo]:
     """
     Get current user's active sessions
     """

@@ -4,7 +4,7 @@ Get evento timeline endpoint
 
 import logging
 from datetime import date
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -27,13 +27,13 @@ class CasoEpidemiologicoTimelineItem(BaseModel):
     fecha: date = Field(..., description="Fecha del evento")
     tipo: str = Field(..., description="Tipo de evento")
     descripcion: str = Field(..., description="Descripción del evento")
-    detalles: Optional[Dict[str, Any]] = Field(None, description="Detalles adicionales")
+    detalles: dict[str, Any] | None = Field(None, description="Detalles adicionales")
 
 
 class CasoEpidemiologicoTimelineResponse(BaseModel):
     """Respuesta del timeline de un evento"""
 
-    items: List[CasoEpidemiologicoTimelineItem] = Field(
+    items: list[CasoEpidemiologicoTimelineItem] = Field(
         ..., description="Items del timeline"
     )
     total: int = Field(..., description="Total de items")
@@ -128,36 +128,36 @@ async def get_evento_timeline(
             )
 
         # Agregar síntomas detallados
-        for sintoma in evento.sintomas or []:
+        timeline_items.extend(
+            CasoEpidemiologicoTimelineItem(
+                fecha=sintoma.fecha_inicio_sintoma,
+                tipo="sintoma",
+                descripcion=f"Síntoma: {sintoma.sintoma.signo_sintoma}",
+                detalles=None,
+            )
+            for sintoma in evento.sintomas or []
             if (
                 sintoma.fecha_inicio_sintoma
                 and sintoma.sintoma
                 and sintoma.sintoma.signo_sintoma
-            ):
-                timeline_items.append(
-                    CasoEpidemiologicoTimelineItem(
-                        fecha=sintoma.fecha_inicio_sintoma,
-                        tipo="sintoma",
-                        descripcion=f"Síntoma: {sintoma.sintoma.signo_sintoma}",
-                        detalles=None,
-                    )
-                )
+            )
+        )
 
         # Agregar muestras
-        for muestra in evento.muestras or []:
+        timeline_items.extend(
+            CasoEpidemiologicoTimelineItem(
+                fecha=muestra.fecha_toma_muestra,
+                tipo="muestra",
+                descripcion=f"Muestra: {muestra.muestra.descripcion}",
+                detalles={"resultado": muestra.valor},
+            )
+            for muestra in evento.muestras or []
             if (
                 muestra.fecha_toma_muestra
                 and muestra.muestra
                 and muestra.muestra.descripcion
-            ):
-                timeline_items.append(
-                    CasoEpidemiologicoTimelineItem(
-                        fecha=muestra.fecha_toma_muestra,
-                        tipo="muestra",
-                        descripcion=f"Muestra: {muestra.muestra.descripcion}",
-                        detalles={"resultado": muestra.valor},
-                    )
-                )
+            )
+        )
 
         # Agregar diagnósticos
         for diagnostico in evento.diagnosticos or []:
@@ -192,8 +192,8 @@ async def get_evento_timeline(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"💥 Error generando timeline: {str(e)}")
+        logger.error(f"💥 Error generando timeline: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error generando timeline: {str(e)}",
-        )
+            detail=f"Error generando timeline: {e!s}",
+        ) from e

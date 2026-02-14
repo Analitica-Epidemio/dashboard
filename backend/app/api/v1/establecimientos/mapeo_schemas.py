@@ -1,6 +1,5 @@
 """Schemas para endpoints de mapeo de establecimientos."""
 
-from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -10,10 +9,10 @@ class SugerenciaMapeo(BaseModel):
 
     id_establecimiento_ign: int
     nombre_ign: str
-    codigo_refes: Optional[str]
-    localidad_nombre: Optional[str]
-    departamento_nombre: Optional[str]
-    provincia_nombre: Optional[str]
+    codigo_refes: str | None
+    localidad_nombre: str | None
+    departamento_nombre: str | None
+    provincia_nombre: str | None
     similitud_nombre: float
     score: float
     confianza: str  # HIGH, MEDIUM, LOW
@@ -28,18 +27,18 @@ class EstablecimientoSinMapear(BaseModel):
 
     id: int
     nombre: str
-    codigo_snvs: Optional[str]
-    localidad_nombre: Optional[str]
-    departamento_nombre: Optional[str]
-    provincia_nombre: Optional[str]
+    codigo_snvs: str | None
+    localidad_nombre: str | None
+    departamento_nombre: str | None
+    provincia_nombre: str | None
     total_eventos: int  # Número de eventos asociados
-    sugerencias: List[SugerenciaMapeo] = []
+    sugerencias: list[SugerenciaMapeo] = []
 
 
 class EstablecimientosSinMapearResponse(BaseModel):
     """Respuesta de establecimientos sin mapear."""
 
-    items: List[EstablecimientoSinMapear]
+    items: list[EstablecimientoSinMapear]
     total: int
     sin_mapear_count: int  # Total de establecimientos sin código REFES
     eventos_sin_mapear_count: int  # Total de eventos sin geolocalizar
@@ -50,18 +49,18 @@ class EstablecimientoIGNResult(BaseModel):
 
     id: int
     nombre: str
-    codigo_refes: Optional[str]
-    localidad_nombre: Optional[str]
-    departamento_nombre: Optional[str]
-    provincia_nombre: Optional[str]
-    latitud: Optional[float]
-    longitud: Optional[float]
+    codigo_refes: str | None
+    localidad_nombre: str | None
+    departamento_nombre: str | None
+    provincia_nombre: str | None
+    latitud: float | None
+    longitud: float | None
 
 
 class BuscarIGNResponse(BaseModel):
     """Respuesta de búsqueda de establecimientos IGN."""
 
-    items: List[EstablecimientoIGNResult]
+    items: list[EstablecimientoIGNResult]
     total: int
     page: int
     page_size: int
@@ -76,7 +75,7 @@ class CrearMapeoRequest(BaseModel):
     id_establecimiento_ign: int = Field(
         ..., description="ID del establecimiento IGN (source='IGN')"
     )
-    razon: Optional[str] = Field(None, description="Razón del mapeo")
+    razon: str | None = Field(None, description="Razón del mapeo")
 
 
 class ActualizarMapeoRequest(BaseModel):
@@ -85,7 +84,7 @@ class ActualizarMapeoRequest(BaseModel):
     id_establecimiento_ign_nuevo: int = Field(
         ..., description="Nuevo ID del establecimiento IGN"
     )
-    razon: Optional[str] = Field(None, description="Nueva razón del mapeo")
+    razon: str | None = Field(None, description="Nueva razón del mapeo")
 
 
 class MapeoInfo(BaseModel):
@@ -93,27 +92,27 @@ class MapeoInfo(BaseModel):
 
     id_establecimiento_snvs: int
     nombre_snvs: str
-    codigo_snvs: Optional[str]
-    id_establecimiento_ign: Optional[int]
+    codigo_snvs: str | None
+    id_establecimiento_ign: int | None
     nombre_ign: str
-    codigo_refes: Optional[str]
-    mapeo_score: Optional[float]
-    mapeo_similitud_nombre: Optional[float]
-    mapeo_confianza: Optional[str]
-    mapeo_razon: Optional[str]
-    mapeo_es_manual: Optional[bool]
-    mapeo_validado: Optional[bool]
+    codigo_refes: str | None
+    mapeo_score: float | None
+    mapeo_similitud_nombre: float | None
+    mapeo_confianza: str | None
+    mapeo_razon: str | None
+    mapeo_es_manual: bool | None
+    mapeo_validado: bool | None
     total_eventos: int
-    localidad_nombre_snvs: Optional[str]
-    localidad_nombre_ign: Optional[str]
-    provincia_nombre_snvs: Optional[str]
-    provincia_nombre_ign: Optional[str]
+    localidad_nombre_snvs: str | None
+    localidad_nombre_ign: str | None
+    provincia_nombre_snvs: str | None
+    provincia_nombre_ign: str | None
 
 
 class MapeosListResponse(BaseModel):
     """Respuesta de lista de mapeos."""
 
-    items: List[MapeoInfo]
+    items: list[MapeoInfo]
     total: int
     page: int
     page_size: int
@@ -122,7 +121,7 @@ class MapeosListResponse(BaseModel):
 class AceptarSugerenciasBulkRequest(BaseModel):
     """Request para aceptar múltiples sugerencias."""
 
-    mapeos: List[CrearMapeoRequest] = Field(..., description="Lista de mapeos a crear")
+    mapeos: list[CrearMapeoRequest] = Field(..., description="Lista de mapeos a crear")
 
 
 class EstadisticasMapeosResponse(BaseModel):

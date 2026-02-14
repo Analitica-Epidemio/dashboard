@@ -8,9 +8,9 @@ Renombrados:
 - id_caso → id_caso
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from sqlalchemy import JSON, Column, Index, Text
 from sqlalchemy.orm import Mapped
@@ -76,7 +76,7 @@ class EstrategiaClasificacion(BaseModel, table=True):
         {"extend_existing": True},
     )
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
 
     # Identificación
     id_enfermedad: int = Field(
@@ -88,14 +88,14 @@ class EstrategiaClasificacion(BaseModel, table=True):
         index=True,
         description="Nombre de la estrategia (ej: Dengue 2024)",
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
         default=None,
         sa_column=Column(Text),
         description="Descripción completa de la estrategia, notas y casos especiales",
     )
 
     # Configuración flexible
-    config: Optional[Dict] = Field(
+    config: dict | None = Field(
         default=None,
         sa_column=Column(JSON),
         description="Configuración adicional específica (filtros geográficos, eventos relacionados, etc.)",
@@ -127,22 +127,22 @@ class EstrategiaClasificacion(BaseModel, table=True):
 
     # Validez temporal
     valid_from: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="Fecha desde cuando la estrategia es válida",
     )
-    valid_until: Optional[datetime] = Field(
+    valid_until: datetime | None = Field(
         default=None,
         description="Fecha hasta cuando la estrategia es válida (None = sin fin)",
     )
 
     # Auditoría
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    created_by: Optional[str] = Field(default=None, max_length=100)
-    updated_by: Optional[str] = Field(default=None, max_length=100)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    created_by: str | None = Field(default=None, max_length=100)
+    updated_by: str | None = Field(default=None, max_length=100)
 
     # Relaciones
-    classification_rules: Mapped[List["ClassificationRule"]] = Relationship(
+    classification_rules: Mapped[list["ClassificationRule"]] = Relationship(
         back_populates="strategy", cascade_delete=True
     )
 
@@ -159,15 +159,15 @@ class EstrategiaClasificacion(BaseModel, table=True):
 
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
-        self._tipo_enfermedad_name: Optional[str] = None
+        self._tipo_enfermedad_name: str | None = None
 
     @property
-    def tipo_enfermedad_name(self) -> Optional[str]:
+    def tipo_enfermedad_name(self) -> str | None:
         """Nombre del tipo de evento (poblado dinámicamente)."""
         return getattr(self, "_tipo_enfermedad_name", None)
 
     @tipo_enfermedad_name.setter
-    def tipo_enfermedad_name(self, value: Optional[str]) -> None:
+    def tipo_enfermedad_name(self, value: str | None) -> None:
         self._tipo_enfermedad_name = value
 
 
@@ -186,7 +186,7 @@ class ClassificationRule(BaseModel, table=True):
         {"extend_existing": True},
     )
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
 
     # Relación con estrategia
     strategy_id: int = Field(
@@ -199,15 +199,15 @@ class ClassificationRule(BaseModel, table=True):
         description="Tipo de clasificación que aplica esta regla"
     )
     name: str = Field(max_length=100, description="Nombre descriptivo de la regla")
-    description: Optional[str] = Field(
+    description: str | None = Field(
         default=None, max_length=500, description="Descripción detallada de la regla"
     )
-    justificacion: Optional[str] = Field(
+    justificacion: str | None = Field(
         default=None,
         sa_column=Column(Text),
         description="Justificación epidemiológica de por qué se aplica esta regla",
     )
-    ejemplos: Optional[str] = Field(
+    ejemplos: str | None = Field(
         default=None,
         sa_column=Column(Text),
         description="Ejemplos de casos que cumplen esta regla",
@@ -235,7 +235,7 @@ class ClassificationRule(BaseModel, table=True):
     strategy: Mapped[EstrategiaClasificacion] = Relationship(
         back_populates="classification_rules"
     )
-    filters: Mapped[List["FilterCondition"]] = Relationship(
+    filters: Mapped[list["FilterCondition"]] = Relationship(
         back_populates="rule", cascade_delete=True
     )
 
@@ -256,17 +256,17 @@ class FilterCondition(BaseModel, table=True):
         {"extend_existing": True},
     )
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
 
     # Relación con regla (para filtros de clasificación)
-    rule_id: Optional[int] = Field(
+    rule_id: int | None = Field(
         default=None,
         foreign_key="classification_rule.id",
         description="ID de la regla padre (para filtros de clasificación)",
     )
 
     # Relación directa con estrategia (para metadata extractors)
-    strategy_id: Optional[int] = Field(
+    strategy_id: int | None = Field(
         default=None,
         foreign_key="estrategia_clasificacion.id",
         description="ID de la estrategia (para metadata extractors)",
@@ -283,14 +283,14 @@ class FilterCondition(BaseModel, table=True):
     )
 
     # Configuración completa del filtro en un solo campo JSON
-    config: Dict = Field(
+    config: dict = Field(
         default_factory=dict,
         sa_column=Column(JSON),
         description="Configuración completa del filtro (value, values, pattern, etc.)",
     )
 
     # Campo para metadata extraída
-    extracted_metadata_field: Optional[str] = Field(
+    extracted_metadata_field: str | None = Field(
         default=None,
         max_length=100,
         description="Campo donde guardar metadata extraída (ej: 'tipo_sujeto', 'fuente_contagio')",
@@ -317,7 +317,7 @@ class FilterCondition(BaseModel, table=True):
     order: int = Field(default=0, description="Orden de evaluación dentro de la regla")
 
     # Relaciones
-    rule: Mapped[Optional[ClassificationRule]] = Relationship(back_populates="filters")
+    rule: Mapped[ClassificationRule | None] = Relationship(back_populates="filters")
 
 
 class StrategyChangeLog(BaseModel, table=True):
@@ -335,7 +335,7 @@ class StrategyChangeLog(BaseModel, table=True):
         {"extend_existing": True},
     )
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
 
     # Estrategia afectada
     strategy_id: int = Field(
@@ -351,7 +351,7 @@ class StrategyChangeLog(BaseModel, table=True):
     )
 
     # Detalle de cambios
-    changes: Dict = Field(
+    changes: dict = Field(
         sa_column=Column(JSON),
         description="JSON con el detalle de los cambios realizados",
     )
@@ -366,21 +366,21 @@ class StrategyChangeLog(BaseModel, table=True):
     # Auditoría
     changed_by: str = Field(max_length=100, description="Usuario que realizó el cambio")
     changed_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         index=True,
         description="Fecha y hora del cambio",
     )
-    reason: Optional[str] = Field(
+    reason: str | None = Field(
         default=None, max_length=500, description="Razón o justificación del cambio"
     )
 
     # IP y contexto adicional
-    ip_address: Optional[str] = Field(
+    ip_address: str | None = Field(
         default=None,
         max_length=45,
         description="Dirección IP desde donde se realizó el cambio",
     )
-    user_agent: Optional[str] = Field(
+    user_agent: str | None = Field(
         default=None, max_length=500, description="User agent del navegador/cliente"
     )
 
@@ -402,7 +402,7 @@ class EventClassificationAudit(BaseModel, table=True):
         {"extend_existing": True},
     )
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
 
     # Relación con evento y estrategia
     id_caso: int = Field(
@@ -420,19 +420,19 @@ class EventClassificationAudit(BaseModel, table=True):
     clasificacion_aplicada: str = Field(
         description="Clasificación epidemiológica aplicada"
     )
-    rule_id_applied: Optional[int] = Field(
+    rule_id_applied: int | None = Field(
         default=None,
         foreign_key="classification_rule.id",
         description="ID de la regla específica que se aplicó",
     )
 
     # Detección de tipo de sujeto
-    tipo_sujeto_detectado: Optional[str] = Field(
+    tipo_sujeto_detectado: str | None = Field(
         default=None,
         max_length=255,
         description="Tipo detectado: humano, animal, indeterminado",
     )
-    confidence_score: Optional[float] = Field(
+    confidence_score: float | None = Field(
         default=None,
         ge=0.0,
         le=1.0,
@@ -440,7 +440,7 @@ class EventClassificationAudit(BaseModel, table=True):
     )
 
     # Metadata extraída
-    metadata_extraida: Optional[Dict] = Field(
+    metadata_extraida: dict | None = Field(
         default=None,
         sa_column=Column(JSON),
         description="Metadata extraída durante la clasificación (fuente_contagio, especie, etc.)",
@@ -467,37 +467,37 @@ class EventClassificationAudit(BaseModel, table=True):
     revision_completada: bool = Field(
         default=False, description="Si ya fue revisado manualmente"
     )
-    revisado_por: Optional[str] = Field(
+    revisado_por: str | None = Field(
         default=None,
         max_length=100,
         description="Usuario que realizó la revisión manual",
     )
-    fecha_revision: Optional[datetime] = Field(
+    fecha_revision: datetime | None = Field(
         default=None, description="Fecha de revisión manual"
     )
 
     # Cambios posteriores a revisión
-    clasificacion_original: Optional[str] = Field(
+    clasificacion_original: str | None = Field(
         default=None, description="Clasificación original antes de revisión manual"
     )
-    tipo_sujeto_original: Optional[str] = Field(
+    tipo_sujeto_original: str | None = Field(
         default=None,
         max_length=255,
         description="Tipo de sujeto original antes de revisión manual",
     )
-    metadata_original: Optional[Dict] = Field(
+    metadata_original: dict | None = Field(
         default=None,
         sa_column=Column(JSON),
         description="Metadata original antes de revisión manual",
     )
 
     # Notas y justificaciones
-    notas_revision: Optional[str] = Field(
+    notas_revision: str | None = Field(
         default=None,
         sa_column=Column(Text),
         description="Notas del revisor sobre cambios realizados",
     )
-    razon_ambiguedad: Optional[str] = Field(
+    razon_ambiguedad: str | None = Field(
         default=None,
         max_length=500,
         description="Razón por la cual el caso fue marcado como ambiguo",
@@ -505,13 +505,13 @@ class EventClassificationAudit(BaseModel, table=True):
 
     # Auditoría temporal
     classified_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         index=True,
         description="Fecha y hora de la clasificación automática",
     )
 
     # Información del CSV original (para casos ambiguos)
-    datos_csv_originales: Optional[Dict] = Field(
+    datos_csv_originales: dict | None = Field(
         default=None,
         sa_column=Column(JSON),
         description="Datos originales del CSV para referencia en casos ambiguos",
@@ -523,6 +523,6 @@ class EventClassificationAudit(BaseModel, table=True):
         max_length=10,
         description="Versión del algoritmo de procesamiento utilizado",
     )
-    tiempo_procesamiento_ms: Optional[int] = Field(
+    tiempo_procesamiento_ms: int | None = Field(
         default=None, description="Tiempo de procesamiento en milisegundos"
     )

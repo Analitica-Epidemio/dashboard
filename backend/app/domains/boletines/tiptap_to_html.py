@@ -114,6 +114,47 @@ def _render_node(node: dict[str, Any]) -> str:
         inner = _render_nodes(content)
         return f"<th>{inner}</th>"
 
+    # === Custom extensions ===
+
+    # Dynamic Chart (renders as div with data attributes for html_renderer to process)
+    if node_type == "dynamicChart":
+        attr_parts = ['data-type="dynamic-chart"']
+        for key in [
+            "chartId",
+            "chartCode",
+            "title",
+            "grupoIds",
+            "eventoIds",
+            "fechaDesde",
+            "fechaHasta",
+            "height",
+        ]:
+            val = attrs.get(key, "")
+            if val is not None and val != "":
+                attr_parts.append(f'{key.lower()}="{val}"')
+        return f'<div {" ".join(attr_parts)}></div>\n'
+
+    # Page Break
+    if node_type == "pageBreak":
+        return '<div data-type="page-break" class="page-break"></div>\n'
+
+    # Dynamic Table
+    if node_type == "dynamicTable":
+        query_type = attrs.get("queryType", "")
+        title = attrs.get("title", "")
+        return (
+            f'<div data-type="dynamic-table" querytype="{query_type}" '
+            f'title="{title}"></div>\n'
+        )
+
+    # Variable Node
+    if node_type == "variableNode":
+        var_key = attrs.get("variableKey", "")
+        return (
+            f'<span data-type="variable" data-variable-key="{var_key}">'
+            f"{{{{ {var_key} }}}}</span>"
+        )
+
     # Default: renderizar contenido sin wrapper
     return _render_nodes(content)
 

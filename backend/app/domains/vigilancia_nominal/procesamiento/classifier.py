@@ -5,7 +5,7 @@ Usa Polars para máximo rendimiento - sin complexity patterns innecesarios.
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 import polars as pl
 from sqlalchemy import select
@@ -28,9 +28,9 @@ class EventClassifier:
 
     def __init__(self, session: Session):
         self.session = session
-        self._cache_tipo_eno: Dict[str, Any] = {}
-        self.servicio_clasificacion: Optional[Any] = None
-        self.detector_tipo_sujeto: Optional[Any] = None
+        self._cache_tipo_eno: dict[str, Any] = {}
+        self.servicio_clasificacion: Any | None = None
+        self.detector_tipo_sujeto: Any | None = None
 
         # Importar servicio de clasificación
         try:
@@ -293,7 +293,7 @@ class EventClassifier:
 
         return df
 
-    def _obtener_tipo_eno(self, nombre_evento: str) -> Optional[Dict[str, Any]]:
+    def _obtener_tipo_eno(self, nombre_evento: str) -> dict[str, Any] | None:
         """Obtiene tipo ENO desde cache o BD usando código kebab-case."""
         if not nombre_evento or not nombre_evento.strip():
             return None

@@ -2,7 +2,6 @@
 List users endpoint
 """
 
-from typing import List
 
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,7 +18,7 @@ async def list_users(
     limit: int = 100,
     current_user: User = Depends(require_superadmin),
     db: AsyncSession = Depends(get_async_session),
-) -> List[UserResponse]:
+) -> list[UserResponse]:
     """
     List all users (Superadmin only)
 

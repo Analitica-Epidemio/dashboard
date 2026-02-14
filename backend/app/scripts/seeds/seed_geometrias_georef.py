@@ -14,7 +14,7 @@ Debe ejecutarse DESPUÉS del seed principal de geografía.
 import json
 import os
 import urllib.request
-from typing import Any, Dict, Optional
+from typing import Any
 
 from shapely.geometry import shape
 from sqlalchemy import create_engine, text
@@ -28,7 +28,7 @@ DEPARTAMENTOS_GEOJSON_URL = "https://infra.datos.gob.ar/georef/departamentos.geo
 FUENTE = "Georef API (datos.gob.ar)"
 
 
-def descargar_geojson(url: str, nombre: str) -> Optional[Dict[str, Any]]:
+def descargar_geojson(url: str, nombre: str) -> dict[str, Any] | None:
     """Descarga un GeoJSON desde una URL."""
     print(f"   Descargando {nombre} desde {url}...")
     try:
@@ -36,7 +36,7 @@ def descargar_geojson(url: str, nombre: str) -> Optional[Dict[str, Any]]:
             data = json.loads(response.read().decode("utf-8"))
             import typing
 
-            return typing.cast(Dict[str, Any], data)
+            return typing.cast(dict[str, Any], data)
     except Exception as e:
         print(f"❌ Error descargando {nombre}: {e}")
         return None

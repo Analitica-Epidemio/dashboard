@@ -3,12 +3,11 @@ Utilidades para cálculo de períodos epidemiológicos
 """
 
 from datetime import date, timedelta
-from typing import Tuple
 
 from app.api.v1.analytics.schemas import PeriodInfo, PeriodType
 
 
-def get_epi_week(fecha: date) -> Tuple[int, int]:
+def get_epi_week(fecha: date) -> tuple[int, int]:
     """
     Calcula la semana epidemiológica (ISO week) de una fecha.
     Retorna (año_epi, semana_epi)
@@ -17,7 +16,7 @@ def get_epi_week(fecha: date) -> Tuple[int, int]:
     return iso_calendar[0], iso_calendar[1]
 
 
-def get_epi_week_dates(semana: int, anio: int) -> Tuple[date, date]:
+def get_epi_week_dates(semana: int, anio: int) -> tuple[date, date]:
     """
     Calcula las fechas de inicio y fin de una semana epidemiológica.
 
@@ -50,7 +49,7 @@ def get_epi_week_dates(semana: int, anio: int) -> Tuple[date, date]:
 
 def get_period_dates(
     period_type: PeriodType, fecha_referencia: date | None = None
-) -> Tuple[date, date]:
+) -> tuple[date, date]:
     """
     Calcula las fechas de inicio y fin de un período predefinido.
 
@@ -147,7 +146,7 @@ def get_period_dates(
 
 def get_comparison_period(
     fecha_desde: date, fecha_hasta: date, comparison_type: str
-) -> Tuple[date, date]:
+) -> tuple[date, date]:
     """
     Calcula el período de comparación basado en el período actual.
 

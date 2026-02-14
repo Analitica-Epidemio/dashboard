@@ -5,13 +5,28 @@ Compatibles con los tipos TypeScript del frontend
 """
 
 from datetime import datetime
-from typing import Annotated, Any, Dict, List, Literal, Optional, Union
+from enum import StrEnum
+from typing import Annotated, Any, ClassVar, Literal
 
 from pydantic import BaseModel, Field
 
 # ============================================================================
 # Tipos Base
 # ============================================================================
+
+
+class CodigoGrafico(StrEnum):
+    """Códigos canónicos de gráficos soportados por el ChartSpecGenerator."""
+
+    CURVA_EPIDEMIOLOGICA = "curva_epidemiologica"
+    CORREDOR_ENDEMICO = "corredor_endemico"
+    PIRAMIDE_EDAD = "piramide_edad"
+    MAPA_CHUBUT = "mapa_chubut"
+    ESTACIONALIDAD = "estacionalidad"
+    CASOS_EDAD = "casos_edad"
+    DISTRIBUCION_CLASIFICACION = "distribucion_clasificacion"
+    CASOS_POR_SEMANA = "casos_por_semana"  # Alias de CURVA_EPIDEMIOLOGICA
+
 
 TipoGrafico = Literal["line", "bar", "area", "pie", "d3_pyramid", "mapa"]
 
@@ -28,10 +43,10 @@ class MetadataSemana(BaseModel):
 class ConjuntoDatos(BaseModel):
     """Dataset para charts line/bar/area/pie"""
 
-    etiqueta: Optional[str] = Field(None, serialization_alias="label")
-    datos: List[float] = Field(..., serialization_alias="data")
-    color: Optional[str] = None
-    tipo: Optional[Literal["area", "line"]] = Field(
+    etiqueta: str | None = Field(None, serialization_alias="label")
+    datos: list[float] = Field(..., serialization_alias="data")
+    color: str | None = None
+    tipo: Literal["area", "line"] | None = Field(
         None, serialization_alias="type"
     )  # Para area charts con líneas
 
@@ -44,9 +59,9 @@ class ConjuntoDatos(BaseModel):
 class DatosGraficoBase(BaseModel):
     """Datos para line, bar, area, pie charts"""
 
-    etiquetas: List[str] = Field(..., serialization_alias="labels")
-    conjuntos_datos: List[ConjuntoDatos] = Field(..., serialization_alias="datasets")
-    metadata: Optional[List[MetadataSemana]] = None
+    etiquetas: list[str] = Field(..., serialization_alias="labels")
+    conjuntos_datos: list[ConjuntoDatos] = Field(..., serialization_alias="datasets")
+    metadata: list[MetadataSemana] | None = None
 
 
 class PuntoDatosPiramide(BaseModel):
@@ -71,7 +86,7 @@ class DatosDepartamentoMapa(BaseModel):
 class DatosGraficoMapa(BaseModel):
     """Datos para mapa de Chubut"""
 
-    departamentos: List[DatosDepartamentoMapa]
+    departamentos: list[DatosDepartamentoMapa]
     total_casos: int
 
 
@@ -112,7 +127,7 @@ class DatosGraficoPiramide(BaseModel):
     """Wrapper con discriminador para pyramid chart data"""
 
     tipo: Literal["d3_pyramid"] = Field("d3_pyramid", serialization_alias="type")
-    datos: List[PuntoDatosPiramide] = Field(..., serialization_alias="data")
+    datos: list[PuntoDatosPiramide] = Field(..., serialization_alias="data")
 
 
 class WrapperDatosGraficoMapa(BaseModel):
@@ -124,14 +139,7 @@ class WrapperDatosGraficoMapa(BaseModel):
 
 # Union discriminada para todos los tipos de datos
 UnionDatosGrafico = Annotated[
-    Union[
-        DatosGraficoLinea,
-        DatosGraficoBarra,
-        DatosGraficoArea,
-        DatosGraficoTorta,
-        DatosGraficoPiramide,
-        WrapperDatosGraficoMapa,
-    ],
+    DatosGraficoLinea | DatosGraficoBarra | DatosGraficoArea | DatosGraficoTorta | DatosGraficoPiramide | WrapperDatosGraficoMapa,
     Field(discriminator="tipo"),
 ]
 
@@ -144,41 +152,41 @@ UnionDatosGrafico = Annotated[
 class ConfiguracionGraficoBase(BaseModel):
     """Configuración base para todos los charts"""
 
-    alto: Optional[int] = Field(None, serialization_alias="height")
-    ancho: Optional[int] = Field(None, serialization_alias="width")
-    mostrar_leyenda: Optional[bool] = Field(True, serialization_alias="showLegend")
-    mostrar_grilla: Optional[bool] = Field(True, serialization_alias="showGrid")
-    colores: Optional[List[str]] = Field(None, serialization_alias="colors")
+    alto: int | None = Field(None, serialization_alias="height")
+    ancho: int | None = Field(None, serialization_alias="width")
+    mostrar_leyenda: bool | None = Field(True, serialization_alias="showLegend")
+    mostrar_grilla: bool | None = Field(True, serialization_alias="showGrid")
+    colores: list[str] | None = Field(None, serialization_alias="colors")
 
 
 class ConfiguracionGraficoLinea(ConfiguracionGraficoBase):
     """Configuración específica para line charts"""
 
-    mostrar_puntos: Optional[bool] = Field(True, serialization_alias="showPoints")
-    curvado: Optional[bool] = Field(False, serialization_alias="curved")
+    mostrar_puntos: bool | None = Field(True, serialization_alias="showPoints")
+    curvado: bool | None = Field(False, serialization_alias="curved")
 
 
 class ConfiguracionGraficoBarra(ConfiguracionGraficoBase):
     """Configuración específica para bar charts"""
 
-    apilado: Optional[bool] = Field(False, serialization_alias="stacked")
-    horizontal: Optional[bool] = False
+    apilado: bool | None = Field(False, serialization_alias="stacked")
+    horizontal: bool | None = False
 
 
 class ConfiguracionGraficoArea(ConfiguracionGraficoBase):
     """Configuración específica para area charts"""
 
-    apilado: Optional[bool] = Field(False, serialization_alias="stacked")
-    opacidad_relleno: Optional[float] = Field(0.6, serialization_alias="fillOpacity")
+    apilado: bool | None = Field(False, serialization_alias="stacked")
+    opacidad_relleno: float | None = Field(0.6, serialization_alias="fillOpacity")
 
 
 class ConfiguracionGraficoTorta(ConfiguracionGraficoBase):
     """Configuración específica para pie charts"""
 
-    mostrar_porcentajes: Optional[bool] = Field(
+    mostrar_porcentajes: bool | None = Field(
         True, serialization_alias="showPercentages"
     )
-    radio_interno: Optional[int] = Field(
+    radio_interno: int | None = Field(
         0, serialization_alias="innerRadius"
     )  # For donut charts
 
@@ -186,14 +194,14 @@ class ConfiguracionGraficoTorta(ConfiguracionGraficoBase):
 class ConfiguracionGraficoPiramide(ConfiguracionGraficoBase):
     """Configuración específica para pyramid charts"""
 
-    mostrar_etiquetas_ejes: Optional[bool] = True
+    mostrar_etiquetas_ejes: bool | None = True
 
 
 class ConfiguracionGraficoMapa(ConfiguracionGraficoBase):
     """Configuración específica para map charts"""
 
-    escala_color: Optional[Literal["sequential", "diverging"]] = "sequential"
-    provincia: Optional[Literal["chubut"]] = "chubut"
+    escala_color: Literal["sequential", "diverging"] | None = "sequential"
+    provincia: Literal["chubut"] | None = "chubut"
 
 
 # ============================================================================
@@ -247,14 +255,7 @@ class WrapperConfiguracionGraficoMapa(BaseModel):
 
 # Union discriminada para todos los tipos de config
 UnionConfiguracionGrafico = Annotated[
-    Union[
-        WrapperConfiguracionGraficoLinea,
-        WrapperConfiguracionGraficoBarra,
-        WrapperConfiguracionGraficoArea,
-        WrapperConfiguracionGraficoTorta,
-        WrapperConfiguracionGraficoPiramide,
-        WrapperConfiguracionGraficoMapa,
-    ],
+    WrapperConfiguracionGraficoLinea | WrapperConfiguracionGraficoBarra | WrapperConfiguracionGraficoArea | WrapperConfiguracionGraficoTorta | WrapperConfiguracionGraficoPiramide | WrapperConfiguracionGraficoMapa,
     Field(discriminator="tipo"),
 ]
 
@@ -269,27 +270,27 @@ AgrupacionTemporal = Literal["semana", "mes", "anio"]
 class FiltrosGrafico(BaseModel):
     """Filtros aplicados al chart (para reproducibilidad)"""
 
-    ids_grupo_eno: Optional[List[int]] = None
-    ids_tipo_eno: Optional[List[int]] = None
-    clasificacion: Optional[List[str]] = None
-    id_provincia: Optional[List[int]] = None
-    fecha_desde: Optional[str] = None
-    fecha_hasta: Optional[str] = None
-    edad_min: Optional[int] = None
-    edad_max: Optional[int] = None
-    tipo_sujeto: Optional[Literal["humano", "animal"]] = None
+    ids_grupo_eno: list[int] | None = None
+    ids_tipo_eno: list[int] | None = None
+    clasificacion: list[str] | None = None
+    id_provincia: list[int] | None = None
+    fecha_desde: str | None = None
+    fecha_hasta: str | None = None
+    edad_min: int | None = None
+    edad_max: int | None = None
+    tipo_sujeto: Literal["humano", "animal"] | None = None
     # Filtros de período epidemiológico
-    anio: Optional[int] = None  # Año epidemiológico
-    semana_desde: Optional[int] = None  # Semana epidemiológica inicio
-    semana_hasta: Optional[int] = None  # Semana epidemiológica fin
+    anio: int | None = None  # Año epidemiológico
+    semana_desde: int | None = None  # Semana epidemiológica inicio
+    semana_hasta: int | None = None  # Semana epidemiológica fin
     # Agrupación temporal
-    agrupacion_temporal: Optional[AgrupacionTemporal] = (
+    agrupacion_temporal: AgrupacionTemporal | None = (
         "semana"  # Agrupar por semana, mes o año
     )
     # Comparaciones
-    comparar_anio_anterior: Optional[bool] = False  # Incluir línea de año anterior
-    comparar_periodo_anterior: Optional[bool] = False  # Incluir período anterior
-    extra: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    comparar_anio_anterior: bool | None = False  # Incluir línea de año anterior
+    comparar_periodo_anterior: bool | None = False  # Incluir período anterior
+    extra: dict[str, Any] | None = Field(default_factory=dict)
 
 
 # ============================================================================
@@ -307,10 +308,10 @@ class ErrorGrafico(BaseModel):
     mensaje: str = Field(
         ..., serialization_alias="message"
     )  # Mensaje descriptivo para el usuario
-    detalles: Optional[Dict[str, Any]] = Field(
+    detalles: dict[str, Any] | None = Field(
         None, serialization_alias="details"
     )  # Detalles técnicos opcionales
-    sugerencia: Optional[str] = Field(
+    sugerencia: str | None = Field(
         None, serialization_alias="suggestion"
     )  # Sugerencia de cómo resolver
 
@@ -324,8 +325,8 @@ class EspecificacionGraficoUniversal(BaseModel):
     # Metadata
     id: str
     titulo: str = Field(..., serialization_alias="title")
-    descripcion: Optional[str] = Field(None, serialization_alias="description")
-    codigo: Optional[str] = None
+    descripcion: str | None = Field(None, serialization_alias="description")
+    codigo: str | None = None
 
     # Tipo de chart
     tipo: TipoGrafico = Field(..., serialization_alias="type")
@@ -337,19 +338,19 @@ class EspecificacionGraficoUniversal(BaseModel):
     configuracion: UnionConfiguracionGrafico = Field(..., serialization_alias="config")
 
     # Filtros aplicados (para reproducibilidad)
-    filtros: Optional[FiltrosGrafico] = None
+    filtros: FiltrosGrafico | None = None
 
     # Error (si el chart no pudo generarse correctamente)
-    error: Optional[ErrorGrafico] = None
+    error: ErrorGrafico | None = None
 
     # Timestamp
-    generado_en: Optional[str] = Field(
+    generado_en: str | None = Field(
         default_factory=lambda: datetime.now().isoformat(),
         serialization_alias="generated_at",
     )
 
     class Config:
-        json_schema_extra = {
+        json_schema_extra: ClassVar[dict[str, Any]] = {
             "example": {
                 "id": "chart_001",
                 "titulo": "Casos por Semana Epidemiológica",
@@ -373,9 +374,9 @@ class EspecificacionGraficoUniversal(BaseModel):
 class SolicitudSpecGrafico(BaseModel):
     """Request para obtener spec de un chart"""
 
-    codigo_grafico: str
+    codigo_grafico: CodigoGrafico
     filtros: FiltrosGrafico
-    configuracion: Optional[Dict[str, Any]] = None
+    configuracion: dict[str, Any] | None = None
 
 
 class RespuestaSpecGrafico(BaseModel):

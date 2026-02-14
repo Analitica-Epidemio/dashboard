@@ -138,12 +138,12 @@ from .registry.metrics import MetricSource, get_metric, list_metrics
 from .service import MetricService
 
 __all__ = [
+    "DimensionCode",
     # Servicio principal
     "MetricService",
     # Enums y helpers
     "MetricSource",
-    "DimensionCode",
+    "get_dimension",
     "get_metric",
     "list_metrics",
-    "get_dimension",
 ]

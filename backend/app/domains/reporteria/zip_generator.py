@@ -9,7 +9,7 @@ import io
 import logging
 import zipfile
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,9 +29,9 @@ class ZipReportGenerator:
     async def generate_zip_report(
         self,
         db: AsyncSession,
-        combinations: List[Dict[str, Any]],
-        date_range: Dict[str, str],
-        output_path: Optional[str] = None,
+        combinations: list[dict[str, Any]],
+        date_range: dict[str, str],
+        output_path: str | None = None,
     ) -> bytes:
         """
         Generate multiple PDF reports in parallel and create a ZIP file
@@ -79,7 +79,7 @@ class ZipReportGenerator:
                         f"Failed to generate PDF for combination {i + 1}: {result}"
                     )
                     # Add error file
-                    error_msg = f"Error generando PDF para {combo.get('group_name', 'Unknown')}: {str(result)}"
+                    error_msg = f"Error generando PDF para {combo.get('group_name', 'Unknown')}: {result!s}"
                     zip_file.writestr(f"error_{i + 1:02d}.txt", error_msg)
                 elif isinstance(result, bytes):
                     # Type narrowing: result is bytes here
@@ -118,8 +118,8 @@ class ZipReportGenerator:
     async def _generate_single_pdf(
         self,
         db: AsyncSession,
-        combination: Dict[str, Any],
-        date_range: Dict[str, str],
+        combination: dict[str, Any],
+        date_range: dict[str, str],
         index: int,
     ) -> bytes:
         """Generate a single PDF for a combination (SERVER-SIDE)"""
@@ -168,7 +168,7 @@ class ZipReportGenerator:
         return safe_name or "Unknown"
 
     def _create_metadata(
-        self, combinations: List[Dict[str, Any]], date_range: Dict[str, str]
+        self, combinations: list[dict[str, Any]], date_range: dict[str, str]
     ) -> str:
         """Create metadata text file content"""
         metadata_lines = [

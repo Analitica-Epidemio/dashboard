@@ -333,20 +333,19 @@ def seed_refes(conn: Connection) -> int:
 
         # Construir lista de diccionarios para INSERT
         # Usa insert() de SQLAlchemy para bulk
-        values_list = []
-        for est in batch:
-            values_list.append(
-                {
-                    "codigo_refes": est["codigo_refes"],
-                    "nombre": est["nombre"],
-                    "latitud": est["latitud"],
-                    "longitud": est["longitud"],
-                    "id_localidad_indec": est["id_localidad_indec"],
-                    "source": est.get("source"),
-                    "created_at": func.current_timestamp(),
-                    "updated_at": func.current_timestamp(),
-                }
-            )
+        values_list = [
+            {
+                "codigo_refes": est["codigo_refes"],
+                "nombre": est["nombre"],
+                "latitud": est["latitud"],
+                "longitud": est["longitud"],
+                "id_localidad_indec": est["id_localidad_indec"],
+                "source": est.get("source"),
+                "created_at": func.current_timestamp(),
+                "updated_at": func.current_timestamp(),
+            }
+            for est in batch
+        ]
 
         stmt = insert(Establecimiento).values(values_list)
 
@@ -398,7 +397,7 @@ def cargar_mapping_snvs(conn: Connection) -> int:
         print(f"⚠️  Archivo de mapping no encontrado: {mapping_path}")
         return 0
 
-    with open(mapping_path, "r", encoding="utf-8") as f:
+    with open(mapping_path, encoding="utf-8") as f:
         data = json.load(f)
 
     mapping = data.get("mapping", {})

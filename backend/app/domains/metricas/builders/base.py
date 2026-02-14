@@ -53,7 +53,6 @@ class MetricQueryBuilder(ABC):
 
         Cada builder implementa esto según su source de datos.
         """
-        pass
 
     @abstractmethod
     def get_dimension_column(self, dim_code: DimensionCode):
@@ -70,7 +69,6 @@ class MetricQueryBuilder(ABC):
                     ...
                 }[dim_code]
         """
-        pass
 
     def get_dimension_order_column(self, dim_code: DimensionCode):
         """

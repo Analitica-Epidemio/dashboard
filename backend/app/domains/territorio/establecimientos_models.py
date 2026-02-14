@@ -1,6 +1,6 @@
 """Modelos de establecimientos de salud y su participación en eventos epidemiológicos."""
 
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, ClassVar, Optional
 
 from sqlalchemy import BigInteger, Column, Text
 from sqlalchemy.orm import Mapped
@@ -26,37 +26,37 @@ class Establecimiento(BaseModel, table=True):
     """
 
     __tablename__ = "establecimiento"
-    __table_args__ = {"extend_existing": True}
+    __table_args__: ClassVar[dict[str, bool]] = {"extend_existing": True}
 
     # Campos propios
-    nombre: Optional[str] = Field(
+    nombre: str | None = Field(
         None, max_length=150, description="Nombre del establecimiento"
     )
 
-    source: Optional[str] = Field(
+    source: str | None = Field(
         None,
         max_length=20,
         description="Origen de los datos: 'IGN' (Instituto Geográfico Nacional) o 'SNVS' (Sistema Nacional de Vigilancia)",
     )
 
     # Campos IGN (Instituto Geográfico Nacional)
-    codigo_refes: Optional[str] = Field(
+    codigo_refes: str | None = Field(
         None, max_length=50, description="Código GID del IGN (antes REFES)"
     )
 
     # Campos SNVS (para establecimientos creados desde CSVs)
-    codigo_snvs: Optional[str] = Field(
+    codigo_snvs: str | None = Field(
         None, max_length=20, description="ID del establecimiento en SNVS (si aplica)"
     )
-    latitud: Optional[float] = Field(
+    latitud: float | None = Field(
         None, description="Latitud del establecimiento (WGS84)"
     )
-    longitud: Optional[float] = Field(
+    longitud: float | None = Field(
         None, description="Longitud del establecimiento (WGS84)"
     )
 
     # Foreign Keys - Localidad
-    id_localidad_indec: Optional[int] = Field(
+    id_localidad_indec: int | None = Field(
         None,
         sa_type=BigInteger,
         foreign_key="localidad.id_localidad_indec",
@@ -65,24 +65,24 @@ class Establecimiento(BaseModel, table=True):
     )
 
     # Campos de mapeo SNVS → IGN
-    mapeo_validado: Optional[bool] = Field(
+    mapeo_validado: bool | None = Field(
         None, description="Si el mapeo SNVS→IGN fue validado manualmente"
     )
-    mapeo_confianza: Optional[str] = Field(
+    mapeo_confianza: str | None = Field(
         None,
         max_length=20,
         description="Nivel de confianza del mapeo: HIGH, MEDIUM, LOW",
     )
-    mapeo_score: Optional[float] = Field(
+    mapeo_score: float | None = Field(
         None, description="Score de similitud del mapeo (0-100)"
     )
-    mapeo_similitud_nombre: Optional[float] = Field(
+    mapeo_similitud_nombre: float | None = Field(
         None, description="Similitud de nombre del mapeo (0-100)"
     )
-    mapeo_razon: Optional[str] = Field(
+    mapeo_razon: str | None = Field(
         None, sa_column=Column(Text), description="Razón/descripción del mapeo"
     )
-    mapeo_es_manual: Optional[bool] = Field(
+    mapeo_es_manual: bool | None = Field(
         None, description="Si el mapeo fue creado manualmente o automático"
     )
 
@@ -90,9 +90,9 @@ class Establecimiento(BaseModel, table=True):
     localidad_establecimiento: Mapped[Optional["Localidad"]] = Relationship(
         back_populates="establecimientos"
     )
-    muestras: Mapped[List["MuestraCasoEpidemiologico"]] = Relationship(
+    muestras: Mapped[list["MuestraCasoEpidemiologico"]] = Relationship(
         back_populates="establecimiento"
     )
-    diagnosticos: Mapped[List["DiagnosticoCasoEpidemiologico"]] = Relationship(
+    diagnosticos: Mapped[list["DiagnosticoCasoEpidemiologico"]] = Relationship(
         back_populates="establecimiento"
     )

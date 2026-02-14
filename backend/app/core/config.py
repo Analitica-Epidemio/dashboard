@@ -1,7 +1,6 @@
 """Configuración de la aplicación."""
 
 from pathlib import Path
-from typing import List
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -47,7 +46,7 @@ class Settings(BaseSettings):
     )
 
     @property
-    def BACKEND_CORS_ORIGINS(self) -> List[str]:
+    def BACKEND_CORS_ORIGINS(self) -> list[str]:
         """Convierte CORS_ORIGINS en lista."""
         return [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
 

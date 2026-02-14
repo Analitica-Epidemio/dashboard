@@ -4,7 +4,7 @@ Analytics schemas
 
 from datetime import date
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -39,13 +39,13 @@ class PeriodInfo(BaseModel):
 
     fecha_desde: date = Field(..., description="Fecha de inicio del período")
     fecha_hasta: date = Field(..., description="Fecha de fin del período")
-    semana_epi_desde: Optional[int] = Field(
+    semana_epi_desde: int | None = Field(
         None, description="Semana epidemiológica de inicio"
     )
-    semana_epi_hasta: Optional[int] = Field(
+    semana_epi_hasta: int | None = Field(
         None, description="Semana epidemiológica de fin"
     )
-    anio_epi: Optional[int] = Field(None, description="Año epidemiológico")
+    anio_epi: int | None = Field(None, description="Año epidemiológico")
     descripcion: str = Field(..., description="Descripción legible del período")
 
 
@@ -53,16 +53,16 @@ class MetricValue(BaseModel):
     """Valor de una métrica con su comparación"""
 
     valor_actual: float = Field(..., description="Valor en el período actual")
-    valor_anterior: Optional[float] = Field(
+    valor_anterior: float | None = Field(
         None, description="Valor en el período de comparación"
     )
-    diferencia_absoluta: Optional[float] = Field(
+    diferencia_absoluta: float | None = Field(
         None, description="Diferencia absoluta (actual - anterior)"
     )
-    diferencia_porcentual: Optional[float] = Field(
+    diferencia_porcentual: float | None = Field(
         None, description="Diferencia porcentual ((actual - anterior) / anterior * 100)"
     )
-    tendencia: Optional[str] = Field(None, description="up, down o stable")
+    tendencia: str | None = Field(None, description="up, down o stable")
 
 
 class CasosMetrics(BaseModel):
@@ -75,7 +75,7 @@ class CasosMetrics(BaseModel):
     promedio_semanal: MetricValue = Field(
         ..., description="Promedio de casos por semana"
     )
-    casos_por_semana: List[Dict[str, Any]] = Field(
+    casos_por_semana: list[dict[str, Any]] = Field(
         ..., description="Serie temporal de casos por semana"
     )
 
@@ -92,7 +92,7 @@ class CoberturaMetrics(BaseModel):
     areas_sin_casos: int = Field(
         ..., description="Departamentos que dejaron de reportar casos"
     )
-    top_departamentos: List[Dict[str, Any]] = Field(
+    top_departamentos: list[dict[str, Any]] = Field(
         ..., description="Top departamentos por casos"
     )
 
@@ -103,7 +103,7 @@ class PerformanceMetrics(BaseModel):
     tasa_confirmacion: MetricValue = Field(
         ..., description="% de casos confirmados vs total"
     )
-    tiempo_promedio_clasificacion: Optional[MetricValue] = Field(
+    tiempo_promedio_clasificacion: MetricValue | None = Field(
         None, description="Días promedio entre consulta y clasificación"
     )
     casos_en_estudio: MetricValue = Field(
@@ -120,7 +120,7 @@ class AnalyticsResponse(BaseModel):
     periodo_actual: PeriodInfo = Field(
         ..., description="Información del período actual"
     )
-    periodo_comparacion: Optional[PeriodInfo] = Field(
+    periodo_comparacion: PeriodInfo | None = Field(
         None, description="Información del período de comparación"
     )
     tipo_comparacion: ComparisonType = Field(
@@ -135,7 +135,7 @@ class AnalyticsResponse(BaseModel):
     performance: PerformanceMetrics = Field(..., description="Métricas de performance")
 
     # Filtros aplicados
-    filtros_aplicados: Dict[str, Any] = Field(
+    filtros_aplicados: dict[str, Any] = Field(
         ..., description="Filtros aplicados a la consulta"
     )
 
@@ -156,10 +156,10 @@ class TopWinnerLoser(BaseModel):
 class TopWinnersLosersResponse(BaseModel):
     """Response de top winners y losers"""
 
-    top_winners: List[TopWinnerLoser] = Field(
+    top_winners: list[TopWinnerLoser] = Field(
         ..., description="Entidades con mayor mejora"
     )
-    top_losers: List[TopWinnerLoser] = Field(
+    top_losers: list[TopWinnerLoser] = Field(
         ..., description="Entidades con mayor deterioro"
     )
     metric_type: str = Field(..., description="Tipo de métrica analizada")
@@ -183,10 +183,10 @@ class CasoEpidemiologicoCambio(BaseModel):
     casos_anteriores: int = Field(..., description="Casos en período anterior")
     diferencia_absoluta: int = Field(..., description="Diferencia absoluta de casos")
     diferencia_porcentual: float = Field(..., description="% de cambio")
-    tasa_incidencia_actual: Optional[float] = Field(
+    tasa_incidencia_actual: float | None = Field(
         None, description="Tasa por 100k habitantes en período actual"
     )
-    tasa_incidencia_anterior: Optional[float] = Field(
+    tasa_incidencia_anterior: float | None = Field(
         None, description="Tasa por 100k habitantes en período anterior"
     )
 
@@ -196,10 +196,10 @@ class GrupoConCambios(BaseModel):
 
     grupo_id: int = Field(..., description="ID del grupo")
     grupo_nombre: str = Field(..., description="Nombre del grupo")
-    top_crecimiento: List[CasoEpidemiologicoCambio] = Field(
+    top_crecimiento: list[CasoEpidemiologicoCambio] = Field(
         ..., description="Top eventos con mayor crecimiento"
     )
-    top_decrecimiento: List[CasoEpidemiologicoCambio] = Field(
+    top_decrecimiento: list[CasoEpidemiologicoCambio] = Field(
         ..., description="Top eventos con mayor decrecimiento"
     )
 
@@ -219,10 +219,10 @@ class TopChangesByGroupResponse(BaseModel):
 
     periodo_actual: PeriodoAnalisis = Field(..., description="Período actual analizado")
     periodo_anterior: PeriodoAnalisis = Field(..., description="Período de comparación")
-    top_crecimiento: List[CasoEpidemiologicoCambio] = Field(
+    top_crecimiento: list[CasoEpidemiologicoCambio] = Field(
         ..., description="Top 10 eventos con mayor crecimiento"
     )
-    top_decrecimiento: List[CasoEpidemiologicoCambio] = Field(
+    top_decrecimiento: list[CasoEpidemiologicoCambio] = Field(
         ..., description="Top 10 eventos con mayor decrecimiento"
     )
 
@@ -230,7 +230,7 @@ class TopChangesByGroupResponse(BaseModel):
 class CalculateChangesRequest(BaseModel):
     """Request para calcular cambios de eventos custom"""
 
-    tipo_eno_ids: List[int] = Field(..., description="IDs de eventos a calcular")
+    tipo_eno_ids: list[int] = Field(..., description="IDs de eventos a calcular")
     semana_actual: int = Field(
         ..., description="Semana epidemiológica actual", ge=1, le=53
     )
@@ -251,7 +251,7 @@ class CasoEpidemiologicoCambioConCategoria(CasoEpidemiologicoCambio):
 class CalculateChangesResponse(BaseModel):
     """Response de cambios calculados para eventos custom"""
 
-    eventos: List[CasoEpidemiologicoCambioConCategoria] = Field(
+    eventos: list[CasoEpidemiologicoCambioConCategoria] = Field(
         ..., description="CasoEpidemiologicos con sus cambios calculados"
     )
 
@@ -279,7 +279,7 @@ class EnfermedadBasic(BaseModel):
 
     id: int
     nombre: str
-    codigo: Optional[str] = None
+    codigo: str | None = None
 
 
 class GrupoDeEnfermedadesBasic(BaseModel):
@@ -287,7 +287,7 @@ class GrupoDeEnfermedadesBasic(BaseModel):
 
     id: int
     nombre: str
-    descripcion: Optional[str] = None
+    descripcion: str | None = None
 
 
 class CasoEpidemiologicoDetailsResponse(BaseModel):
@@ -298,6 +298,6 @@ class CasoEpidemiologicoDetailsResponse(BaseModel):
         ..., description="Información del grupo epidemiológico"
     )
     resumen: ResumenCasoEpidemiologico = Field(..., description="Resumen del cambio")
-    trend_semanal: List[TrendSemanal] = Field(
+    trend_semanal: list[TrendSemanal] = Field(
         ..., description="Serie temporal por semana"
     )

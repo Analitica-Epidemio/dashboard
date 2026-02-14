@@ -384,7 +384,7 @@ def get_polars_schema_overrides() -> dict[str, pl.DataType]:
     overrides: dict[str, pl.DataType] = {}
     for col in _get_all_columns():
         if col.type == ColumnType.NUMERIC:
-            overrides[col.name] = pl.Utf8
+            overrides[col.name] = pl.Utf8()
     return overrides
 
 

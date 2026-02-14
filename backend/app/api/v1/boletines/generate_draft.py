@@ -6,8 +6,16 @@ REFACTORIZADO: Sistema configurable con queries y renderers reutilizables.
 
 import json
 import logging
-from datetime import date, datetime, timezone
-from typing import Any, Optional
+from datetime import UTC, date, datetime
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
+
+    from app.domains.boletines.services.adapter import BoletinContexto
+    from app.domains.metricas.service import MetricService
+
+import contextlib
 
 from fastapi import Depends, HTTPException
 from sqlalchemy import select
@@ -38,7 +46,7 @@ logger = logging.getLogger(__name__)
 async def generate_draft(
     request: GenerateDraftRequest,
     db: AsyncSession = Depends(get_async_session),
-    current_user: Optional[User] = RequireAuthOrSignedUrl,
+    current_user: User | None = RequireAuthOrSignedUrl,
 ) -> SuccessResponse[GenerateDraftResponse]:
     """
     Genera un borrador de boletín epidemiológico usando configuración desde DB.
@@ -109,7 +117,7 @@ async def generate_draft(
                 {"tipo_eno_id": e.tipo_eno_id, "incluir_charts": e.incluir_charts}
                 for e in request.eventos_seleccionados
             ],
-            fecha_generacion=datetime.now(timezone.utc),
+            fecha_generacion=datetime.now(UTC),
         )
 
         # Verificar que el ID del boletín no sea None
@@ -130,14 +138,14 @@ async def generate_draft(
     except Exception as e:
         logger.error(f"Error generando borrador: {e}", exc_info=True)
         raise HTTPException(
-            status_code=500, detail=f"Error al generar borrador: {str(e)}"
-        )
+            status_code=500, detail=f"Error al generar borrador: {e!s}"
+        ) from e
 
 
 async def preview_draft(
     request: GenerateDraftRequest,
     db: AsyncSession = Depends(get_async_session),
-    current_user: Optional[User] = RequireAuthOrSignedUrl,
+    current_user: User | None = RequireAuthOrSignedUrl,
 ) -> SuccessResponse[PreviewDraftResponse]:
     """
     Genera una vista previa del boletín SIN guardar en la base de datos.
@@ -182,7 +190,7 @@ async def preview_draft(
                 {"tipo_eno_id": e.tipo_eno_id, "incluir_charts": e.incluir_charts}
                 for e in request.eventos_seleccionados
             ],
-            fecha_generacion=datetime.now(timezone.utc),
+            fecha_generacion=datetime.now(UTC),
         )
 
         logger.info("✓ Preview generado exitosamente (sin guardar en DB)")
@@ -198,8 +206,8 @@ async def preview_draft(
     except Exception as e:
         logger.error(f"Error generando preview: {e}", exc_info=True)
         raise HTTPException(
-            status_code=500, detail=f"Error al generar preview: {str(e)}"
-        )
+            status_code=500, detail=f"Error al generar preview: {e!s}"
+        ) from e
 
 
 # ==================== HELPER FUNCTIONS ====================
@@ -235,7 +243,7 @@ async def process_unified_template(
     template: dict[str, Any],
     request: "GenerateDraftRequest",
     context: dict[str, Any],
-    event_template: Optional[dict[str, Any]] = None,
+    event_template: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], list[str]]:
     """
     Procesa un template en formato unificado (bloques embebidos en TipTap).
@@ -444,14 +452,14 @@ async def process_unified_template(
                         f"    ❌ Error procesando evento {evento.tipo_eno_id}: {e}",
                         exc_info=True,
                     )
-                    warnings.append(f"Error en evento {evento.tipo_eno_id}: {str(e)}")
+                    warnings.append(f"Error en evento {evento.tipo_eno_id}: {e!s}")
                     new_content.append(
                         {
                             "type": "paragraph",
                             "content": [
                                 {
                                     "type": "text",
-                                    "text": f"⚠️ Error procesando evento: {str(e)}",
+                                    "text": f"⚠️ Error procesando evento: {e!s}",
                                 }
                             ],
                         }
@@ -537,13 +545,13 @@ async def process_unified_template(
                 logger.error(
                     f"   ❌ Error procesando bloque '{block_id}': {e}", exc_info=True
                 )
-                warnings.append(f"Error en bloque '{block_id}': {str(e)}")
+                warnings.append(f"Error en bloque '{block_id}': {e!s}")
                 # Agregar un placeholder de error
                 new_content.append(
                     {
                         "type": "paragraph",
                         "content": [
-                            {"type": "text", "text": f"⚠️ Error en {block_id}: {str(e)}"}
+                            {"type": "text", "text": f"⚠️ Error en {block_id}: {e!s}"}
                         ],
                     }
                 )
@@ -564,7 +572,7 @@ async def process_unified_template(
     return result, warnings
 
 
-async def get_evento_info(db: AsyncSession, evento_id: int) -> Optional[dict[str, Any]]:
+async def get_evento_info(db: AsyncSession, evento_id: int) -> dict[str, Any] | None:
     """
     Obtiene información de un evento/tipo ENO.
 
@@ -797,12 +805,12 @@ async def process_event_template(
 
             except Exception as e:
                 logger.error(f"      ❌ Error en bloque {block_id}: {e}", exc_info=True)
-                warnings.append(f"Error en {block_id}: {str(e)}")
+                warnings.append(f"Error en {block_id}: {e!s}")
                 processed_nodes.append(
                     {
                         "type": "paragraph",
                         "content": [
-                            {"type": "text", "text": f"⚠️ Error en {block_id}: {str(e)}"}
+                            {"type": "text", "text": f"⚠️ Error en {block_id}: {e!s}"}
                         ],
                     }
                 )
@@ -1142,14 +1150,14 @@ async def generate_content_from_secciones(
                     logger.error(
                         f"  ❌ Error en bloque {bloque.slug}: {e}", exc_info=True
                     )
-                    warnings.append(f"Error en bloque {bloque.slug}: {str(e)}")
+                    warnings.append(f"Error en bloque {bloque.slug}: {e!s}")
                     content_nodes.append(
                         {
                             "type": "paragraph",
                             "content": [
                                 {
                                     "type": "text",
-                                    "text": f"⚠️ Error procesando bloque: {str(e)}",
+                                    "text": f"⚠️ Error procesando bloque: {e!s}",
                                 }
                             ],
                         }
@@ -1192,14 +1200,14 @@ async def generate_content_from_secciones(
                         f"  ❌ Error generando sección para evento {tipo_eno_id}: {e}",
                         exc_info=True,
                     )
-                    warnings.append(f"Error en evento {tipo_eno_id}: {str(e)}")
+                    warnings.append(f"Error en evento {tipo_eno_id}: {e!s}")
                     content_nodes.append(
                         {
                             "type": "paragraph",
                             "content": [
                                 {
                                     "type": "text",
-                                    "text": f"⚠️ Error generando sección para evento {tipo_eno_id}: {str(e)}",
+                                    "text": f"⚠️ Error generando sección para evento {tipo_eno_id}: {e!s}",
                                 }
                             ],
                         }
@@ -1324,14 +1332,12 @@ def _render_chart_resultado(
                 all_x_values.append(x_val)
 
     # Ordenar valores del eje X
-    try:
+    with contextlib.suppress(ValueError, TypeError):
         all_x_values.sort(
             key=lambda v: int(v)
             if isinstance(v, (int, str)) and str(v).isdigit()
             else 0
         )
-    except (ValueError, TypeError):
-        pass
 
     # Crear labels para el eje X
     labels = []
@@ -1397,7 +1403,7 @@ def _render_chart_resultado(
                 "stacked": resultado.tipo_visualizacion == "STACKED_BAR",
             },
         },
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
     }
 
     # Crear nodo dynamicChart con spec embebido
@@ -1693,7 +1699,7 @@ def _generate_evento_section(
                         "stacked": False,
                     },
                 },
-                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "generated_at": datetime.now(UTC).isoformat(),
             }
 
             chart_node = {
@@ -1731,7 +1737,7 @@ def _generate_evento_section(
                 "content": [
                     {
                         "type": "text",
-                        "text": f"⚠️ Error al generar gráfico: {str(e)}",
+                        "text": f"⚠️ Error al generar gráfico: {e!s}",
                     }
                 ],
             }
@@ -1838,7 +1844,7 @@ async def resolve_tipo_eno_codigos(db: AsyncSession, codigos: list[str]) -> list
 async def resolve_series_config(
     db: AsyncSession,
     series_config: list[dict[str, Any]],
-    agrupar_por: Optional[str],
+    agrupar_por: str | None,
 ) -> list[dict[str, Any]]:
     """
     Resuelve la configuración de series con estructura "valores".
@@ -1901,7 +1907,7 @@ async def execute_query(
     query_type: str,
     query_params: dict[str, Any],
     context: dict[str, Any],
-    evento_id: Optional[int] = None,
+    evento_id: int | None = None,
 ) -> Any:
     """
     Ejecuta una query según el tipo configurado.
@@ -2038,7 +2044,7 @@ async def execute_query(
 
     elif query_type == "distribucion_geografica":
         # Usa ChartSpecGenerator para obtener datos del mapa
-        from app.domains.charts.schemas import FiltrosGrafico
+        from app.domains.charts.schemas import CodigoGrafico, FiltrosGrafico
         from app.domains.charts.services.spec_generator import ChartSpecGenerator
 
         generator = ChartSpecGenerator(db)
@@ -2049,16 +2055,16 @@ async def execute_query(
         )
         try:
             spec = await generator.generar_spec(
-                codigo_grafico="mapa_chubut", filtros=filters
+                codigo_grafico=CodigoGrafico.MAPA_CHUBUT, filtros=filters
             )
-            return {"spec": spec.model_dump(by_alias=True), "chart_code": "mapa_chubut"}
+            return {"spec": spec.model_dump(by_alias=True), "chart_code": CodigoGrafico.MAPA_CHUBUT.value}
         except Exception as e:
             logger.warning(f"Error generando spec distribucion_geografica: {e}")
             return {}
 
     elif query_type == "corredor_endemico_chart":
         # Genera spec para corredor endémico
-        from app.domains.charts.schemas import FiltrosGrafico
+        from app.domains.charts.schemas import CodigoGrafico, FiltrosGrafico
         from app.domains.charts.services.spec_generator import ChartSpecGenerator
 
         generator = ChartSpecGenerator(db)
@@ -2086,11 +2092,11 @@ async def execute_query(
             )
         try:
             spec = await generator.generar_spec(
-                codigo_grafico="corredor_endemico", filtros=filters
+                codigo_grafico=CodigoGrafico.CORREDOR_ENDEMICO, filtros=filters
             )
             return {
                 "spec": spec.model_dump(by_alias=True),
-                "chart_code": "corredor_endemico",
+                "chart_code": CodigoGrafico.CORREDOR_ENDEMICO.value,
             }
         except Exception as e:
             logger.warning(f"Error generando spec corredor_endemico: {e}")
@@ -2112,7 +2118,7 @@ async def execute_query(
 
     elif query_type == "comparacion_anual":
         # Comparación año actual vs año anterior (acumulado hasta semana actual)
-        from app.domains.charts.schemas import FiltrosGrafico
+        from app.domains.charts.schemas import CodigoGrafico, FiltrosGrafico
         from app.domains.charts.services.spec_generator import ChartSpecGenerator
 
         generator = ChartSpecGenerator(db)
@@ -2128,7 +2134,7 @@ async def execute_query(
         )
         try:
             spec = await generator.generar_spec(
-                codigo_grafico="curva_epidemiologica", filtros=filters
+                codigo_grafico=CodigoGrafico.CURVA_EPIDEMIOLOGICA, filtros=filters
             )
             return {
                 "spec": spec.model_dump(by_alias=True),
@@ -2412,53 +2418,53 @@ def render_chart_block(
         ]
 
         # Data rows
-        for dept in departamentos_sorted:
-            table_rows.append(
-                {
-                    "type": "tableRow",
-                    "content": [
-                        {
-                            "type": "tableCell",
-                            "content": [
-                                {
-                                    "type": "paragraph",
-                                    "content": [
-                                        {"type": "text", "text": dept.get("nombre", "")}
-                                    ],
-                                }
-                            ],
-                        },
-                        {
-                            "type": "tableCell",
-                            "content": [
-                                {
-                                    "type": "paragraph",
-                                    "content": [
-                                        {
-                                            "type": "text",
-                                            "text": str(dept.get("casos", 0)),
-                                        }
-                                    ],
-                                }
-                            ],
-                        },
-                        {
-                            "type": "tableCell",
-                            "content": [
-                                {
-                                    "type": "paragraph",
-                                    "content": [
-                                        {
-                                            "type": "text",
-                                            "text": f"{dept.get('tasa_incidencia', 0):.2f}",
-                                        }
-                                    ],
-                                }
-                            ],
-                        },
-                    ],
-                }
-            )
+        table_rows.extend(
+            {
+                "type": "tableRow",
+                "content": [
+                    {
+                        "type": "tableCell",
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "content": [
+                                    {"type": "text", "text": dept.get("nombre", "")}
+                                ],
+                            }
+                        ],
+                    },
+                    {
+                        "type": "tableCell",
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "content": [
+                                    {
+                                        "type": "text",
+                                        "text": str(dept.get("casos", 0)),
+                                    }
+                                ],
+                            }
+                        ],
+                    },
+                    {
+                        "type": "tableCell",
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "content": [
+                                    {
+                                        "type": "text",
+                                        "text": f"{dept.get('tasa_incidencia', 0):.2f}",
+                                    }
+                                ],
+                            }
+                        ],
+                    },
+                ],
+            }
+            for dept in departamentos_sorted
+        )
 
         content_nodes = [
             # Título del mapa
@@ -2537,7 +2543,7 @@ def render_block(
     data: Any,
     render_config: dict[str, Any],
     context: dict[str, Any],
-    evento_id: Optional[int] = None,
+    evento_id: int | None = None,
 ) -> dict[str, Any]:
     """
     Renderiza un bloque según el tipo configurado.
@@ -2656,7 +2662,7 @@ async def save_boletin_instance(
     request: GenerateDraftRequest,
     content: dict[str, Any],
     context: dict[str, Any],
-    current_user: Optional[User],
+    current_user: User | None,
 ) -> BoletinInstance:
     """
     Guarda la instancia del boletín en DB.

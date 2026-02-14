@@ -6,7 +6,6 @@ todos los casos/eventos asociados a ese domicilio.
 """
 
 from datetime import date
-from typing import List, Optional
 
 from fastapi import Depends, Path, Query
 from pydantic import BaseModel, Field
@@ -36,26 +35,26 @@ class CasoDetalle(BaseModel):
     """Detalle de un caso/evento en el domicilio"""
 
     id_evento: int = Field(..., description="ID del evento")
-    fecha_evento: Optional[date] = Field(None, description="Fecha del evento")
-    tipo_evento_nombre: Optional[str] = Field(
+    fecha_evento: date | None = Field(None, description="Fecha del evento")
+    tipo_evento_nombre: str | None = Field(
         None, description="Nombre del tipo de evento"
     )
-    grupo_evento_nombre: Optional[str] = Field(
+    grupo_evento_nombre: str | None = Field(
         None, description="Nombre del grupo de evento"
     )
-    clasificacion_manual: Optional[str] = Field(
+    clasificacion_manual: str | None = Field(
         None, description="Clasificación manual"
     )
-    estado: Optional[str] = Field(None, description="Estado del caso")
+    estado: str | None = Field(None, description="Estado del caso")
 
     # Datos del ciudadano
     codigo_ciudadano: int = Field(..., description="Código del ciudadano")
-    dni: Optional[str] = Field(None, description="DNI del ciudadano")
-    nombre_completo: Optional[str] = Field(None, description="Nombre completo")
-    edad: Optional[int] = Field(
+    dni: str | None = Field(None, description="DNI del ciudadano")
+    nombre_completo: str | None = Field(None, description="Nombre completo")
+    edad: int | None = Field(
         None, description="Edad del ciudadano al momento del evento"
     )
-    sexo: Optional[str] = Field(None, description="Sexo del ciudadano")
+    sexo: str | None = Field(None, description="Sexo del ciudadano")
 
 
 class DomicilioDetalleResponse(BaseModel):
@@ -69,14 +68,14 @@ class DomicilioDetalleResponse(BaseModel):
 
     # Datos geográficos
     localidad_nombre: str = Field(..., description="Nombre de la localidad")
-    departamento_nombre: Optional[str] = Field(
+    departamento_nombre: str | None = Field(
         None, description="Nombre del departamento"
     )
     provincia_nombre: str = Field(..., description="Nombre de la provincia")
 
     # Casos
     total_casos: int = Field(..., description="Total de casos en este domicilio")
-    casos: List[CasoDetalle] = Field(default_factory=list, description="Lista de casos")
+    casos: list[CasoDetalle] = Field(default_factory=list, description="Lista de casos")
 
     # Resumen por tipo
     casos_por_tipo: dict = Field(
@@ -86,10 +85,10 @@ class DomicilioDetalleResponse(BaseModel):
 
 async def get_domicilio_detalle(
     id_domicilio: int = Path(..., description="ID del domicilio"),
-    fecha_desde: Optional[date] = Query(
+    fecha_desde: date | None = Query(
         None, description="Filtrar casos desde esta fecha"
     ),
-    fecha_hasta: Optional[date] = Query(
+    fecha_hasta: date | None = Query(
         None, description="Filtrar casos hasta esta fecha"
     ),
     session: Session = Depends(get_session),
@@ -183,7 +182,7 @@ async def get_domicilio_detalle(
     results = session.execute(query).all()
 
     # Construir lista de casos
-    casos: List[CasoDetalle] = []
+    casos: list[CasoDetalle] = []
     casos_por_tipo = {}
 
     for row in results:

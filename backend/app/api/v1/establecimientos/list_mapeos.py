@@ -1,6 +1,5 @@
 """Endpoint para listar mapeos existentes."""
 
-from typing import Optional
 
 from fastapi import Depends, Query
 from sqlalchemy import func, or_, select
@@ -17,7 +16,7 @@ from .mapeo_schemas import MapeoInfo, MapeosListResponse
 async def listar_mapeos_existentes(
     page: int = Query(1, ge=1, description="Número de página"),
     page_size: int = Query(50, ge=1, le=200, description="Resultados por página"),
-    confianza: Optional[str] = Query(
+    confianza: str | None = Query(
         None, description="Filtrar por confianza: HIGH, MEDIUM, LOW"
     ),
     validados_solo: bool = Query(False, description="Solo mostrar mapeos validados"),

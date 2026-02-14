@@ -7,9 +7,9 @@ Definiciones para:
 - Serialización API
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -24,16 +24,16 @@ class FilterConditionRequest(BaseModel):
 
     filter_type: TipoFiltro = Field(..., description="Tipo de filtro")
     field_name: str = Field(..., min_length=1, description="Nombre del campo a filtrar")
-    value: Optional[str] = Field(None, description="Valor para filtros de valor único")
-    values: Optional[List[str]] = Field(
+    value: str | None = Field(None, description="Valor para filtros de valor único")
+    values: list[str] | None = Field(
         None, description="Lista de valores para filtros múltiples"
     )
     logical_operator: str = Field("AND", description="Operador lógico (AND/OR)")
     order: int = Field(0, ge=0, description="Orden de aplicación del filtro")
-    config: Optional[Dict[str, Any]] = Field(
+    config: dict[str, Any] | None = Field(
         None, description="Configuración adicional específica del filtro"
     )
-    extracted_metadata_field: Optional[str] = Field(
+    extracted_metadata_field: str | None = Field(
         None, description="Campo donde guardar metadata extraída"
     )
 
@@ -55,9 +55,8 @@ class FilterConditionRequest(BaseModel):
             if field_name == "value" and not v:
                 raise ValueError(f"value es requerido para filtro tipo {filter_type}")
 
-        elif filter_type == TipoFiltro.CAMPO_EN_LISTA:
-            if field_name == "values" and (not v or len(v) == 0):
-                raise ValueError("values es requerido para filtro tipo campo_en_lista")
+        elif filter_type == TipoFiltro.CAMPO_EN_LISTA and field_name == "values" and (not v or len(v) == 0):
+            raise ValueError("values es requerido para filtro tipo campo_en_lista")
 
         return v
 
@@ -65,9 +64,9 @@ class FilterConditionRequest(BaseModel):
 class FilterConditionResponse(FilterConditionRequest):
     """Response DTO para condiciones de filtro."""
 
-    id: Optional[int] = Field(None, description="ID del filtro")
-    created_at: Optional[datetime] = Field(None, description="Fecha de creación")
-    updated_at: Optional[datetime] = Field(
+    id: int | None = Field(None, description="ID del filtro")
+    created_at: datetime | None = Field(None, description="Fecha de creación")
+    updated_at: datetime | None = Field(
         None, description="Fecha de última actualización"
     )
 
@@ -88,18 +87,18 @@ class ClassificationRuleRequest(BaseModel):
     auto_approve: bool = Field(
         True, description="Si los casos se aprueban automáticamente"
     )
-    required_confidence: Optional[float] = Field(
+    required_confidence: float | None = Field(
         None, ge=0.0, le=1.0, description="Confianza mínima requerida (0.0-1.0)"
     )
-    filters: List[FilterConditionRequest] = Field(
+    filters: list[FilterConditionRequest] = Field(
         [], description="Lista de condiciones de filtro"
     )
 
     @field_validator("filters")
     @classmethod
     def validate_at_least_one_filter(
-        cls, v: List[FilterConditionRequest]
-    ) -> List[FilterConditionRequest]:
+        cls, v: list[FilterConditionRequest]
+    ) -> list[FilterConditionRequest]:
         if not v or len(v) == 0:
             raise ValueError("Debe tener al menos un filtro")
 
@@ -113,10 +112,10 @@ class ClassificationRuleRequest(BaseModel):
 class ClassificationRuleResponse(ClassificationRuleRequest):
     """Response DTO para reglas de clasificación."""
 
-    id: Optional[int] = Field(None, description="ID de la regla")
-    filters: List[FilterConditionResponse] = Field([], description="Lista de filtros")
-    created_at: Optional[datetime] = Field(None, description="Fecha de creación")
-    updated_at: Optional[datetime] = Field(
+    id: int | None = Field(None, description="ID de la regla")
+    filters: list[FilterConditionResponse] = Field([], description="Lista de filtros")
+    created_at: datetime | None = Field(None, description="Fecha de creación")
+    updated_at: datetime | None = Field(
         None, description="Fecha de última actualización"
     )
 
@@ -135,25 +134,25 @@ class EstrategiaClasificacionBase(BaseModel):
     confidence_threshold: float = Field(
         0.7, ge=0.0, le=1.0, description="Umbral de confianza general"
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
         None, description="Descripción completa de la estrategia"
     )
-    config: Optional[Dict[str, Any]] = Field(
+    config: dict[str, Any] | None = Field(
         None, description="Configuración adicional (filtros geográficos, etc.)"
     )
     valid_from: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="Fecha desde cuando la estrategia es válida",
     )
-    valid_until: Optional[datetime] = Field(
+    valid_until: datetime | None = Field(
         None, description="Fecha hasta cuando la estrategia es válida (None = sin fin)"
     )
 
     @field_validator("valid_until")
     @classmethod
     def validate_valid_until(
-        cls, v: Optional[datetime], info: Any
-    ) -> Optional[datetime]:
+        cls, v: datetime | None, info: Any
+    ) -> datetime | None:
         """Valida que valid_until sea posterior a valid_from."""
         values = info.data
         valid_from = values.get("valid_from")
@@ -165,18 +164,18 @@ class EstrategiaClasificacionBase(BaseModel):
 class EstrategiaClasificacionCreate(EstrategiaClasificacionBase):
     """Request DTO para crear estrategia."""
 
-    classification_rules: List[ClassificationRuleRequest] = Field(
+    classification_rules: list[ClassificationRuleRequest] = Field(
         [], description="Reglas de clasificación"
     )
-    metadata_extractors: List[FilterConditionRequest] = Field(
+    metadata_extractors: list[FilterConditionRequest] = Field(
         [], description="Extractores de metadata"
     )
 
     @field_validator("classification_rules")
     @classmethod
     def validate_rules(
-        cls, v: List[ClassificationRuleRequest]
-    ) -> List[ClassificationRuleRequest]:
+        cls, v: list[ClassificationRuleRequest]
+    ) -> list[ClassificationRuleRequest]:
         if not v or len(v) == 0:
             raise ValueError("Debe definir al menos una regla de clasificación")
 
@@ -191,35 +190,35 @@ class EstrategiaClasificacionCreate(EstrategiaClasificacionBase):
 class EstrategiaClasificacionUpdate(BaseModel):
     """Request DTO para actualizar estrategia."""
 
-    name: Optional[str] = Field(
+    name: str | None = Field(
         None, min_length=1, max_length=255, description="Nombre de la estrategia"
     )
-    active: Optional[bool] = Field(None, description="Si la estrategia está activa")
-    confidence_threshold: Optional[float] = Field(
+    active: bool | None = Field(None, description="Si la estrategia está activa")
+    confidence_threshold: float | None = Field(
         None, ge=0.0, le=1.0, description="Umbral de confianza general"
     )
-    description: Optional[str] = Field(None, description="Descripción de la estrategia")
-    config: Optional[Dict[str, Any]] = Field(
+    description: str | None = Field(None, description="Descripción de la estrategia")
+    config: dict[str, Any] | None = Field(
         None, description="Configuración adicional"
     )
-    valid_from: Optional[datetime] = Field(
+    valid_from: datetime | None = Field(
         None, description="Fecha desde cuando la estrategia es válida"
     )
-    valid_until: Optional[datetime] = Field(
+    valid_until: datetime | None = Field(
         None, description="Fecha hasta cuando la estrategia es válida (None = sin fin)"
     )
-    classification_rules: Optional[List[ClassificationRuleRequest]] = Field(
+    classification_rules: list[ClassificationRuleRequest] | None = Field(
         None, description="Reglas de clasificación"
     )
-    metadata_extractors: Optional[List[FilterConditionRequest]] = Field(
+    metadata_extractors: list[FilterConditionRequest] | None = Field(
         None, description="Extractores de metadata"
     )
 
     @field_validator("classification_rules")
     @classmethod
     def validate_rules(
-        cls, v: Optional[List[ClassificationRuleRequest]]
-    ) -> Optional[List[ClassificationRuleRequest]]:
+        cls, v: list[ClassificationRuleRequest] | None
+    ) -> list[ClassificationRuleRequest] | None:
         if v is not None:
             if len(v) == 0:
                 raise ValueError("Debe definir al menos una regla de clasificación")
@@ -236,30 +235,30 @@ class EstrategiaClasificacionResponse(EstrategiaClasificacionBase):
     """Response DTO para estrategias."""
 
     id: int = Field(..., description="ID de la estrategia")
-    tipo_enfermedad_name: Optional[str] = Field(
+    tipo_enfermedad_name: str | None = Field(
         None, description="Nombre del tipo de evento"
     )
     status: str = Field("active", description="Estado de la estrategia")
-    classification_rules: List[ClassificationRuleResponse] = Field(
+    classification_rules: list[ClassificationRuleResponse] = Field(
         [], description="Reglas de clasificación"
     )
-    metadata_extractors: List[FilterConditionResponse] = Field(
+    metadata_extractors: list[FilterConditionResponse] = Field(
         [], description="Extractores de metadata"
     )
     valid_from: datetime = Field(
         ..., description="Fecha desde cuando la estrategia es válida"
     )
-    valid_until: Optional[datetime] = Field(
+    valid_until: datetime | None = Field(
         None, description="Fecha hasta cuando la estrategia es válida"
     )
     created_at: datetime = Field(..., description="Fecha de creación")
     updated_at: datetime = Field(..., description="Fecha de última actualización")
-    created_by: Optional[str] = Field(
+    created_by: str | None = Field(
         None, description="Usuario que creó la estrategia"
     )
 
     # Campos calculados
-    classification_rules_count: Optional[int] = Field(
+    classification_rules_count: int | None = Field(
         None, description="Número de reglas activas"
     )
 
@@ -283,7 +282,7 @@ class StrategyTestRequest(BaseModel):
     """Request DTO para probar estrategia."""
 
     csv_data: str = Field(..., description="Datos CSV para probar")
-    sample_size: Optional[int] = Field(
+    sample_size: int | None = Field(
         None, ge=1, le=1000, description="Tamaño de muestra a procesar"
     )
 
@@ -306,16 +305,16 @@ class StrategyTestResponse(BaseModel):
 
     total_rows: int = Field(..., description="Total de filas procesadas")
     classified_rows: int = Field(..., description="Filas que fueron clasificadas")
-    classification_summary: Dict[str, int] = Field(
+    classification_summary: dict[str, int] = Field(
         ..., description="Resumen de clasificaciones"
     )
-    results_preview: List[Dict[str, Any]] = Field(
+    results_preview: list[dict[str, Any]] = Field(
         ..., description="Muestra de resultados"
     )
-    confidence_stats: Optional[Dict[str, float]] = Field(
+    confidence_stats: dict[str, float] | None = Field(
         None, description="Estadísticas de confianza"
     )
-    processing_time_seconds: Optional[float] = Field(
+    processing_time_seconds: float | None = Field(
         None, description="Tiempo de procesamiento"
     )
 
@@ -337,13 +336,13 @@ class AuditLogResponse(BaseModel):
     strategy_id: int = Field(..., description="ID de la estrategia")
     strategy_name: str = Field(..., description="Nombre de la estrategia")
     action: AuditAction = Field(..., description="Acción realizada")
-    field_changed: Optional[str] = Field(None, description="Campo modificado")
-    old_value: Optional[str] = Field(None, description="Valor anterior")
-    new_value: Optional[str] = Field(None, description="Nuevo valor")
+    field_changed: str | None = Field(None, description="Campo modificado")
+    old_value: str | None = Field(None, description="Valor anterior")
+    new_value: str | None = Field(None, description="Nuevo valor")
     changed_by: str = Field(..., description="Usuario que realizó el cambio")
     changed_at: datetime = Field(..., description="Fecha y hora del cambio")
-    ip_address: Optional[str] = Field(None, description="Dirección IP del usuario")
-    user_agent: Optional[str] = Field(None, description="User agent del navegador")
+    ip_address: str | None = Field(None, description="Dirección IP del usuario")
+    user_agent: str | None = Field(None, description="User agent del navegador")
 
     class Config:
         from_attributes = True
@@ -355,17 +354,17 @@ class ClassificationResultResponse(BaseModel):
     ideventocaso: str = Field(..., description="ID del caso")
     clasificacion: str = Field(..., description="Clasificación asignada")
     es_positivo: bool = Field(..., description="Si es un caso positivo")
-    confidence_score: Optional[float] = Field(
+    confidence_score: float | None = Field(
         None, description="Puntuación de confianza"
     )
-    tipo_sujeto_detectado: Optional[str] = Field(
+    tipo_sujeto_detectado: str | None = Field(
         None, description="Tipo de sujeto detectado"
     )
-    metadata_extraida: Optional[Dict[str, Any]] = Field(
+    metadata_extraida: dict[str, Any] | None = Field(
         None, description="Metadata adicional extraída"
     )
     requiere_revision: bool = Field(False, description="Si requiere revisión manual")
-    regla_aplicada: Optional[str] = Field(
+    regla_aplicada: str | None = Field(
         None, description="Nombre de la regla que se aplicó"
     )
 
@@ -386,7 +385,7 @@ class BatchClassificationResponse(BaseModel):
 
     job_id: str = Field(..., description="ID del job de procesamiento")
     total_rows: int = Field(..., description="Total de filas a procesar")
-    estimated_time_seconds: Optional[int] = Field(
+    estimated_time_seconds: int | None = Field(
         None, description="Tiempo estimado de procesamiento"
     )
     polling_url: str = Field(..., description="URL para consultar el estado del job")

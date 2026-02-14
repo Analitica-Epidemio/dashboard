@@ -75,5 +75,5 @@ async def generate_report(
     except Exception as e:
         logger.error(f"Error generando reporte SERVER-SIDE: {e}", exc_info=True)
         raise HTTPException(
-            status_code=500, detail=f"Error generando reporte: {str(e)}"
-        )
+            status_code=500, detail=f"Error generando reporte: {e!s}"
+        ) from e

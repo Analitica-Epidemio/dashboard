@@ -2,7 +2,6 @@
 Router para endpoints de boletines epidemiológicos
 """
 
-from typing import List
 
 from fastapi import APIRouter
 
@@ -52,7 +51,7 @@ router.add_api_route(
     "/templates",
     templates_crud.list_templates,
     methods=["GET"],
-    response_model=SuccessResponse[List[BoletinTemplateResponse]],
+    response_model=SuccessResponse[list[BoletinTemplateResponse]],
     name="list_boletin_templates",
     summary="Listar templates de boletines",
     responses={
@@ -139,7 +138,7 @@ router.add_api_route(
     "/instances",
     instances_crud.list_instances,
     methods=["GET"],
-    response_model=SuccessResponse[List[BoletinInstanceResponse]],
+    response_model=SuccessResponse[list[BoletinInstanceResponse]],
     name="list_boletin_instances",
     summary="Listar instancias de boletines",
     responses={
@@ -200,6 +199,20 @@ router.add_api_route(
         403: {"model": ErrorResponse, "description": "Sin permisos"},
         400: {"model": ErrorResponse, "description": "Sin contenido para generar"},
         500: {"model": ErrorResponse, "description": "Error generando PDF"},
+    },
+)
+
+router.add_api_route(
+    "/instances/{instance_id}/export-docx",
+    instances_crud.generate_instance_docx,
+    methods=["POST"],
+    name="generate_boletin_instance_docx",
+    summary="Generar y descargar DOCX de instancia",
+    responses={
+        404: {"model": ErrorResponse, "description": "Instancia no encontrada"},
+        403: {"model": ErrorResponse, "description": "Sin permisos"},
+        400: {"model": ErrorResponse, "description": "Sin contenido para generar"},
+        500: {"model": ErrorResponse, "description": "Error generando DOCX"},
     },
 )
 
@@ -326,7 +339,7 @@ router.add_api_route(
     "/preview/eventos-disponibles",
     preview.list_available_eventos,
     methods=["GET"],
-    response_model=SuccessResponse[List[CasoEpidemiologicoDisponible]],
+    response_model=SuccessResponse[list[CasoEpidemiologicoDisponible]],
     name="list_available_eventos",
     summary="Listar eventos disponibles para preview",
     description="Retorna todos los Enfermedad y GrupoDeEnfermedades con código para usar en el selector",
@@ -339,7 +352,7 @@ router.add_api_route(
     "/preview/agentes-disponibles",
     preview.list_available_agentes,
     methods=["GET"],
-    response_model=SuccessResponse[List[AgenteDisponible]],
+    response_model=SuccessResponse[list[AgenteDisponible]],
     name="list_available_agentes",
     summary="Listar agentes etiológicos disponibles",
     description="Retorna todos los agentes etiológicos activos para usar en selectores de bloques dinámicos",

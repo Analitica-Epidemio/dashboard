@@ -6,7 +6,7 @@ todos los eventos/personas asociados según el tipo de relación (clínica, diag
 """
 
 from datetime import date
-from typing import Any, List, Optional
+from typing import Any
 
 from fastapi import Depends, Path, Query
 from pydantic import BaseModel, Field
@@ -38,26 +38,26 @@ class PersonaRelacionada(BaseModel):
 
     # Datos del ciudadano
     codigo_ciudadano: int = Field(..., description="Código del ciudadano")
-    dni: Optional[str] = Field(None, description="DNI del ciudadano")
-    nombre_completo: Optional[str] = Field(None, description="Nombre completo")
-    edad: Optional[int] = Field(
+    dni: str | None = Field(None, description="DNI del ciudadano")
+    nombre_completo: str | None = Field(None, description="Nombre completo")
+    edad: int | None = Field(
         None, description="Edad del ciudadano al momento del evento"
     )
-    sexo: Optional[str] = Field(None, description="Sexo del ciudadano")
+    sexo: str | None = Field(None, description="Sexo del ciudadano")
 
     # Datos del evento
     id_evento: int = Field(..., description="ID del evento")
-    fecha_evento: Optional[date] = Field(None, description="Fecha del evento")
-    tipo_evento_nombre: Optional[str] = Field(
+    fecha_evento: date | None = Field(None, description="Fecha del evento")
+    tipo_evento_nombre: str | None = Field(
         None, description="Nombre del tipo de evento"
     )
-    grupo_evento_nombre: Optional[str] = Field(
+    grupo_evento_nombre: str | None = Field(
         None, description="Nombre del grupo de evento"
     )
-    clasificacion_manual: Optional[str] = Field(
+    clasificacion_manual: str | None = Field(
         None, description="Clasificación manual"
     )
-    estado: Optional[str] = Field(None, description="Estado del caso")
+    estado: str | None = Field(None, description="Estado del caso")
 
     # Tipo de relación con el establecimiento
     tipo_relacion: str = Field(
@@ -72,21 +72,21 @@ class EstablecimientoDetalleResponse(BaseModel):
     # Datos del establecimiento
     id_establecimiento: int = Field(..., description="ID del establecimiento")
     nombre: str = Field(..., description="Nombre del establecimiento")
-    codigo_refes: Optional[str] = Field(None, description="Código REFES")
-    codigo_snvs: Optional[str] = Field(None, description="Código SNVS")
+    codigo_refes: str | None = Field(None, description="Código REFES")
+    codigo_snvs: str | None = Field(None, description="Código SNVS")
     latitud: float = Field(..., description="Latitud")
     longitud: float = Field(..., description="Longitud")
 
     # Datos geográficos
-    localidad_nombre: Optional[str] = Field(None, description="Nombre de la localidad")
-    departamento_nombre: Optional[str] = Field(
+    localidad_nombre: str | None = Field(None, description="Nombre de la localidad")
+    departamento_nombre: str | None = Field(
         None, description="Nombre del departamento"
     )
-    provincia_nombre: Optional[str] = Field(None, description="Nombre de la provincia")
+    provincia_nombre: str | None = Field(None, description="Nombre de la provincia")
 
     # Personas y eventos relacionados
     total_personas: int = Field(..., description="Total de personas relacionadas")
-    personas: List[PersonaRelacionada] = Field(
+    personas: list[PersonaRelacionada] = Field(
         default_factory=list, description="Lista de personas relacionadas"
     )
 
@@ -103,10 +103,10 @@ class EstablecimientoDetalleResponse(BaseModel):
 
 async def get_establecimiento_detalle(
     id_establecimiento: int = Path(..., description="ID del establecimiento"),
-    fecha_desde: Optional[date] = Query(
+    fecha_desde: date | None = Query(
         None, description="Filtrar eventos desde esta fecha"
     ),
-    fecha_hasta: Optional[date] = Query(
+    fecha_hasta: date | None = Query(
         None, description="Filtrar eventos hasta esta fecha"
     ),
     session: Session = Depends(get_session),

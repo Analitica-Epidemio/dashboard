@@ -265,7 +265,7 @@ class BloqueQueryAdapter:
                 anios_hist = self._get_anios_historicos_disponibles(
                     contexto.anio_actual
                 )
-            anios = anios_hist + [contexto.anio_actual]
+            anios = [*anios_hist, contexto.anio_actual]
             criterios.append(AniosMultiplesCriterion(anios=anios))
         else:
             # Default: últimas num_semanas semanas

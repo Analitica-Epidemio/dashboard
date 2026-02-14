@@ -1,15 +1,16 @@
+
 from pydantic import BaseModel
-from typing import Optional, List
+
 
 class RangoEdadSchema(BaseModel):
     desde: float
-    hasta: Optional[float] = None
+    hasta: float | None = None
     unidad: str
 
 class ConfiguracionRangosBase(BaseModel):
     nombre: str
-    descripcion: Optional[str] = None
-    rangos: List[RangoEdadSchema]
+    descripcion: str | None = None
+    rangos: list[RangoEdadSchema]
 
 class ConfiguracionRangosCreate(ConfiguracionRangosBase):
     pass

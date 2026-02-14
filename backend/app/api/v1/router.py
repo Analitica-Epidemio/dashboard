@@ -1,6 +1,6 @@
 """Router principal de la API v1"""
 
-from typing import Any, Dict
+from typing import Any
 
 from fastapi import APIRouter, Depends
 
@@ -53,7 +53,7 @@ api_router.include_router(metricas_router)  # Router de métricas (Metric Engine
 
 # Endpoint raíz de la API
 @api_router.get("/")
-async def api_root(current_user: User = Depends(RequireAnyRole())) -> Dict[str, Any]:
+async def api_root(current_user: User = Depends(RequireAnyRole())) -> dict[str, Any]:
     """Endpoint raíz de la API v1"""
     return {
         "message": "API v1 funcionando correctamente",

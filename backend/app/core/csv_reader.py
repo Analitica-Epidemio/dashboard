@@ -7,7 +7,6 @@ de columnas para que los tipos sean correctos desde la lectura.
 
 import logging
 from pathlib import Path
-from typing import Optional
 
 import polars as pl
 
@@ -16,8 +15,8 @@ logger = logging.getLogger(__name__)
 
 def load_file(
     file_path: Path,
-    sheet_name: Optional[str] = None,
-    schema_overrides: Optional[dict[str, pl.DataType]] = None,
+    sheet_name: str | None = None,
+    schema_overrides: dict[str, pl.DataType] | None = None,
 ) -> pl.DataFrame:
     """
     Carga CSV o Excel usando Polars.
@@ -57,7 +56,7 @@ def load_file(
 
 def _read_csv(
     file_path: Path,
-    schema_overrides: Optional[dict[str, pl.DataType]] = None,
+    schema_overrides: dict[str, pl.DataType] | None = None,
 ) -> pl.DataFrame:
     """
     Lee CSV probando múltiples encodings.
@@ -66,7 +65,7 @@ def _read_csv(
     para que las columnas de fecha se lean como pl.Date nativamente.
     """
     encodings_to_try = ["utf-8-sig", "utf-8", "latin1"]
-    last_error: Optional[Exception] = None
+    last_error: Exception | None = None
 
     for encoding in encodings_to_try:
         try:

@@ -8,7 +8,6 @@ Puede ser ejecutado directamente o importado desde seed.py
 import datetime as dt
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional
 
 # Agregar el directorio raíz al path
 sys.path.append(str(Path(__file__).parent.parent.parent))
@@ -36,8 +35,8 @@ class StrategySeeder:
 
     def __init__(self, session: Session):
         self.session = session
-        self.created_strategies: Dict[str, EstrategiaClasificacion] = {}
-        self.tipo_enos: Dict[str, Enfermedad] = {}
+        self.created_strategies: dict[str, EstrategiaClasificacion] = {}
+        self.tipo_enos: dict[str, Enfermedad] = {}
 
     def seed_all(self) -> None:
         """Ejecuta el seed completo de todas las estrategias."""
@@ -212,7 +211,7 @@ class StrategySeeder:
         tipo_eno_name: str,
         name: str,
         description: str,
-        config: Optional[Dict] = None,
+        config: dict | None = None,
         confidence_threshold: float = 0.7,
     ) -> EstrategiaClasificacion:
         """Crea una estrategia base."""
@@ -257,10 +256,10 @@ class StrategySeeder:
         strategy: EstrategiaClasificacion,
         classification: TipoClasificacion,
         name: str,
-        conditions: List[Dict],
+        conditions: list[dict],
         priority: int = 100,
-        justificacion: Optional[str] = None,
-        ejemplos: Optional[str] = None,
+        justificacion: str | None = None,
+        ejemplos: str | None = None,
     ) -> ClassificationRule:
         """Agrega una regla de clasificación con sus condiciones."""
         if strategy.id is None:

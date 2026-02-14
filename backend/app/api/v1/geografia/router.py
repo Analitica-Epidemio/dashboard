@@ -41,26 +41,25 @@ async def get_provincias_geojson(
     result = await session.execute(query)
     rows = result.fetchall()
 
-    features = []
-    for row in rows:
-        features.append(
-            {
-                "type": "Feature",
-                "properties": {
-                    "id": row.id_provincia_indec,
-                    "id_provincia_indec": row.id_provincia_indec,
-                    "nombre": row.nombre,
-                    "poblacion": row.poblacion,
-                    "centroide": {
-                        "lat": row.latitud,
-                        "lon": row.longitud,
-                    }
-                    if row.latitud and row.longitud
-                    else None,
-                },
-                "geometry": row.geometry,
-            }
-        )
+    features = [
+        {
+            "type": "Feature",
+            "properties": {
+                "id": row.id_provincia_indec,
+                "id_provincia_indec": row.id_provincia_indec,
+                "nombre": row.nombre,
+                "poblacion": row.poblacion,
+                "centroide": {
+                    "lat": row.latitud,
+                    "lon": row.longitud,
+                }
+                if row.latitud and row.longitud
+                else None,
+            },
+            "geometry": row.geometry,
+        }
+        for row in rows
+    ]
 
     return {
         "type": "FeatureCollection",
@@ -207,28 +206,27 @@ async def get_departamentos_geojson(
 
     rows = result.fetchall()
 
-    features = []
-    for row in rows:
-        features.append(
-            {
-                "type": "Feature",
-                "properties": {
-                    "id": row.id_departamento_indec,
-                    "id_departamento_indec": row.id_departamento_indec,
-                    "id_provincia_indec": row.id_provincia_indec,
-                    "nombre": row.nombre,
-                    "provincia": row.provincia_nombre,
-                    "poblacion": row.poblacion,
-                    "centroide": {
-                        "lat": row.latitud,
-                        "lon": row.longitud,
-                    }
-                    if row.latitud and row.longitud
-                    else None,
-                },
-                "geometry": row.geometry,
-            }
-        )
+    features = [
+        {
+            "type": "Feature",
+            "properties": {
+                "id": row.id_departamento_indec,
+                "id_departamento_indec": row.id_departamento_indec,
+                "id_provincia_indec": row.id_provincia_indec,
+                "nombre": row.nombre,
+                "provincia": row.provincia_nombre,
+                "poblacion": row.poblacion,
+                "centroide": {
+                    "lat": row.latitud,
+                    "lon": row.longitud,
+                }
+                if row.latitud and row.longitud
+                else None,
+            },
+            "geometry": row.geometry,
+        }
+        for row in rows
+    ]
 
     return {
         "type": "FeatureCollection",

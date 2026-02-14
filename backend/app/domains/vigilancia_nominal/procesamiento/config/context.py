@@ -3,7 +3,7 @@ Contexto simplificado para procesamiento de archivos epidemiológicos.
 """
 
 import logging
-from typing import Callable, Optional
+from collections.abc import Callable
 
 from sqlmodel import Session
 
@@ -16,7 +16,7 @@ class ProcessingContext:
     def __init__(
         self,
         session: Session,
-        progress_callback: Optional[Callable[[int, str], None]] = None,
+        progress_callback: Callable[[int, str], None] | None = None,
         batch_size: int = 1000,
     ):
         self.session = session

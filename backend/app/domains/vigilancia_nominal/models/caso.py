@@ -6,7 +6,7 @@ Representa un caso individual de una Enfermedad de Notificación Obligatoria.
 """
 
 from datetime import date
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import JSON, BigInteger, Column, Index, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped
@@ -94,16 +94,16 @@ class AntecedenteEpidemiologico(BaseModel, table=True):
         ),
     )
 
-    id_snvs_antecedente_epidemio: Optional[int] = Field(
+    id_snvs_antecedente_epidemio: int | None = Field(
         None, description="ID del antecedente en SNVS"
     )
-    descripcion: Optional[str] = Field(
+    descripcion: str | None = Field(
         None,
         max_length=150,
         description="Descripción del antecedente (ej: 'Diabetes', 'Embarazo')",
     )
 
-    antecedentes_casos: Mapped[List["AntecedentesCasoEpidemiologico"]] = Relationship(
+    antecedentes_casos: Mapped[list["AntecedentesCasoEpidemiologico"]] = Relationship(
         back_populates="antecedente_epidemiologico_rel"
     )
 
@@ -151,7 +151,7 @@ class CasoEpidemiologico(BaseModel, table=True):
     # Fechas epidemiológicas
     # =========================================================================
 
-    fecha_minima_caso: Optional[date] = Field(
+    fecha_minima_caso: date | None = Field(
         None,
         description="Fecha más temprana del caso (mín de apertura, síntomas, consulta)",
     )
@@ -161,50 +161,50 @@ class CasoEpidemiologico(BaseModel, table=True):
     fecha_minima_caso_anio_epi: int = Field(
         ..., index=True, description="Año epidemiológico de fecha_minima_caso"
     )
-    fecha_inicio_sintomas: Optional[date] = Field(
+    fecha_inicio_sintomas: date | None = Field(
         None, description="Fecha de inicio de síntomas"
     )
-    es_caso_sintomatico: Optional[bool] = Field(
+    es_caso_sintomatico: bool | None = Field(
         None, description="True si el caso presenta síntomas"
     )
-    fecha_apertura_caso: Optional[date] = Field(
+    fecha_apertura_caso: date | None = Field(
         None, description="Fecha de apertura del caso en SNVS"
     )
-    semana_epidemiologica_apertura: Optional[int] = Field(
+    semana_epidemiologica_apertura: int | None = Field(
         None, description="Semana epidemiológica de apertura"
     )
-    anio_epidemiologico_apertura: Optional[int] = Field(
+    anio_epidemiologico_apertura: int | None = Field(
         None, description="Año epidemiológico de apertura"
     )
-    fecha_nacimiento: Optional[date] = Field(
+    fecha_nacimiento: date | None = Field(
         None, description="Fecha de nacimiento del paciente"
     )
-    fecha_primera_consulta: Optional[date] = Field(
+    fecha_primera_consulta: date | None = Field(
         None, description="Fecha de primera consulta médica"
     )
-    anio_epidemiologico_consulta: Optional[int] = Field(
+    anio_epidemiologico_consulta: int | None = Field(
         None, description="Año epidemiológico de consulta"
     )
-    semana_epidemiologica_consulta: Optional[int] = Field(
+    semana_epidemiologica_consulta: int | None = Field(
         None, description="Semana epidemiológica de consulta"
     )
-    semana_minima_calculada: Optional[int] = Field(
+    semana_minima_calculada: int | None = Field(
         None, description="Semana mínima calculada del caso"
     )
-    anio_evento: Optional[int] = Field(None, description="Año calendario del evento")
-    observaciones_texto: Optional[str] = Field(
+    anio_evento: int | None = Field(None, description="Año calendario del evento")
+    observaciones_texto: str | None = Field(
         None,
         sa_column=Column(Text),
         description="Observaciones clínicas en texto libre",
     )
-    fecha_consulta: Optional[date] = Field(None, description="Fecha de consulta")
-    id_origen: Optional[str] = Field(
+    fecha_consulta: date | None = Field(None, description="Fecha de consulta")
+    id_origen: str | None = Field(
         None, max_length=200, description="Sistema de origen del registro"
     )
-    semana_epidemiologica_sintomas: Optional[int] = Field(
+    semana_epidemiologica_sintomas: int | None = Field(
         None, description="Semana epidemiológica de inicio de síntomas"
     )
-    semana_epidemiologica_muestra: Optional[int] = Field(
+    semana_epidemiologica_muestra: int | None = Field(
         None, description="Semana epidemiológica de toma de muestra"
     )
 
@@ -216,31 +216,31 @@ class CasoEpidemiologico(BaseModel, table=True):
         foreign_key="enfermedad.id",
         description="ID de la Enfermedad de Notificación Obligatoria",
     )
-    codigo_ciudadano: Optional[int] = Field(
+    codigo_ciudadano: int | None = Field(
         None,
         sa_type=BigInteger,
         foreign_key="ciudadano.codigo_ciudadano",
         description="Código del ciudadano (paciente humano)",
     )
-    id_animal: Optional[int] = Field(
+    id_animal: int | None = Field(
         None, foreign_key="animal.id", description="ID del animal (si es caso animal)"
     )
-    id_establecimiento_consulta: Optional[int] = Field(
+    id_establecimiento_consulta: int | None = Field(
         None,
         foreign_key="establecimiento.id",
         description="Establecimiento donde se realizó la consulta",
     )
-    id_establecimiento_notificacion: Optional[int] = Field(
+    id_establecimiento_notificacion: int | None = Field(
         None,
         foreign_key="establecimiento.id",
         description="Establecimiento que notificó el caso",
     )
-    id_establecimiento_carga: Optional[int] = Field(
+    id_establecimiento_carga: int | None = Field(
         None,
         foreign_key="establecimiento.id",
         description="Establecimiento que cargó el registro",
     )
-    id_domicilio: Optional[int] = Field(
+    id_domicilio: int | None = Field(
         None,
         foreign_key="domicilio.id",
         index=True,
@@ -251,37 +251,37 @@ class CasoEpidemiologico(BaseModel, table=True):
     # Clasificación
     # =========================================================================
 
-    requiere_revision_especie: Optional[bool] = Field(
+    requiere_revision_especie: bool | None = Field(
         False, description="True si requiere revisión de especie (animal)"
     )
-    datos_originales_csv: Optional[Dict] = Field(
+    datos_originales_csv: dict | None = Field(
         None, sa_column=Column(JSON), description="Datos originales del CSV importado"
     )
-    metadata_clasificacion: Optional[Dict] = Field(
+    metadata_clasificacion: dict | None = Field(
         None,
         sa_column=Column(JSON),
         description="Metadata del proceso de clasificación",
     )
-    clasificacion_manual: Optional[str] = Field(
+    clasificacion_manual: str | None = Field(
         None, max_length=500, description="Clasificación original del SNVS"
     )
-    clasificacion_estrategia: Optional[TipoClasificacion] = Field(
+    clasificacion_estrategia: TipoClasificacion | None = Field(
         None,
         max_length=255,
         description="Clasificación asignada por estrategia automática",
     )
-    metadata_extraida: Optional[Dict] = Field(
+    metadata_extraida: dict | None = Field(
         None, sa_column=Column(JSON), description="Metadata extraída del procesamiento"
     )
-    confidence_score: Optional[float] = Field(
+    confidence_score: float | None = Field(
         None, description="Score de confianza de la clasificación (0.0 a 1.0)"
     )
-    id_estrategia_aplicada: Optional[int] = Field(
+    id_estrategia_aplicada: int | None = Field(
         None,
         foreign_key="estrategia_clasificacion.id",
         description="ID de la estrategia de clasificación aplicada",
     )
-    trazabilidad_clasificacion: Optional[Dict] = Field(
+    trazabilidad_clasificacion: dict | None = Field(
         None,
         sa_column=Column(JSON),
         description="Trazabilidad completa del proceso de clasificación",
@@ -292,7 +292,7 @@ class CasoEpidemiologico(BaseModel, table=True):
     # =========================================================================
 
     enfermedad: Mapped["Enfermedad"] = Relationship(back_populates="casos")
-    caso_grupos: Mapped[List["CasoGrupoEnfermedad"]] = Relationship(
+    caso_grupos: Mapped[list["CasoGrupoEnfermedad"]] = Relationship(
         back_populates="caso"
     )
     ciudadano: Mapped[Optional["Ciudadano"]] = Relationship(back_populates="casos")
@@ -317,34 +317,34 @@ class CasoEpidemiologico(BaseModel, table=True):
             "foreign_keys": "[CasoEpidemiologico.id_establecimiento_carga]"
         }
     )
-    sintomas: Mapped[List["DetalleCasoSintomas"]] = Relationship(back_populates="caso")
-    muestras: Mapped[List["MuestraCasoEpidemiologico"]] = Relationship(
+    sintomas: Mapped[list["DetalleCasoSintomas"]] = Relationship(back_populates="caso")
+    muestras: Mapped[list["MuestraCasoEpidemiologico"]] = Relationship(
         back_populates="caso"
     )
-    antecedentes: Mapped[List["AntecedentesCasoEpidemiologico"]] = Relationship(
+    antecedentes: Mapped[list["AntecedentesCasoEpidemiologico"]] = Relationship(
         back_populates="caso"
     )
-    vacunas: Mapped[List["VacunasCiudadano"]] = Relationship(back_populates="caso")
-    diagnosticos: Mapped[List["DiagnosticoCasoEpidemiologico"]] = Relationship(
+    vacunas: Mapped[list["VacunasCiudadano"]] = Relationship(back_populates="caso")
+    diagnosticos: Mapped[list["DiagnosticoCasoEpidemiologico"]] = Relationship(
         back_populates="caso"
     )
-    internaciones: Mapped[List["InternacionCasoEpidemiologico"]] = Relationship(
+    internaciones: Mapped[list["InternacionCasoEpidemiologico"]] = Relationship(
         back_populates="caso"
     )
-    tratamientos: Mapped[List["TratamientoCasoEpidemiologico"]] = Relationship(
+    tratamientos: Mapped[list["TratamientoCasoEpidemiologico"]] = Relationship(
         back_populates="caso"
     )
-    investigaciones: Mapped[List["InvestigacionCasoEpidemiologico"]] = Relationship(
+    investigaciones: Mapped[list["InvestigacionCasoEpidemiologico"]] = Relationship(
         back_populates="caso"
     )
-    contactos: Mapped[List["ContactosNotificacion"]] = Relationship(
+    contactos: Mapped[list["ContactosNotificacion"]] = Relationship(
         back_populates="caso"
     )
-    ambitos_concurrencia: Mapped[List["AmbitosConcurrenciaCaso"]] = Relationship(
+    ambitos_concurrencia: Mapped[list["AmbitosConcurrenciaCaso"]] = Relationship(
         back_populates="caso"
     )
     domicilio: Mapped[Optional["Domicilio"]] = Relationship(back_populates="casos")
-    agentes_detectados: Mapped[List["CasoAgente"]] = Relationship(
+    agentes_detectados: Mapped[list["CasoAgente"]] = Relationship(
         back_populates="caso",
         sa_relationship_kwargs={"foreign_keys": "caso_agente.c.id_caso"},
     )
@@ -367,13 +367,13 @@ class DetalleCasoSintomas(BaseModel, table=True):
         UniqueConstraint("id_caso", "id_sintoma", name="uq_caso_sintoma"),
     )
 
-    semana_epidemiologica_aparicion_sintoma: Optional[int] = Field(
+    semana_epidemiologica_aparicion_sintoma: int | None = Field(
         None, description="Semana epidemiológica de aparición del síntoma"
     )
-    fecha_inicio_sintoma: Optional[date] = Field(
+    fecha_inicio_sintoma: date | None = Field(
         None, description="Fecha de inicio del síntoma"
     )
-    anio_epidemiologico_sintoma: Optional[int] = Field(
+    anio_epidemiologico_sintoma: int | None = Field(
         None, description="Año epidemiológico del síntoma"
     )
 
@@ -405,7 +405,7 @@ class AntecedentesCasoEpidemiologico(BaseModel, table=True):
         ),
     )
 
-    fecha_antecedente_epidemiologico: Optional[date] = Field(
+    fecha_antecedente_epidemiologico: date | None = Field(
         None, description="Fecha del antecedente (si aplica)"
     )
 

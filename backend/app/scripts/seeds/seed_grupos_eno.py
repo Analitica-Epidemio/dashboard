@@ -15,7 +15,7 @@ en la visualización temporal del mapa:
 FUENTE: Sistema Nacional de Vigilancia de la Salud (SNVS) - Argentina
 """
 
-from typing import List, TypedDict
+from typing import TypedDict
 
 from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert
@@ -37,7 +37,7 @@ class GrupoEnoData(TypedDict):
 
 # Lista completa de grupos ENO con sus configuraciones
 # Excluye "Vigilancia Epidemiológica" que era un hack genérico
-GRUPOS_ENO: List[GrupoEnoData] = [
+GRUPOS_ENO: list[GrupoEnoData] = [
     # Enfermedades transmitidas por vectores
     {
         "nombre": "Dengue",

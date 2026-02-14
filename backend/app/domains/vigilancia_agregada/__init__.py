@@ -25,15 +25,15 @@ from app.domains.vigilancia_agregada.models import (
 )
 
 __all__ = [
-    # Constants
-    "EstadoNotificacion",
-    "OrigenDatosPasivos",
-    "Sexo",
-    # Models
-    "NotificacionSemanal",
-    "TipoCasoEpidemiologicoPasivo",
-    "RangoEtario",
+    "ConteoCamasIRA",
     "ConteoCasosClinicos",
     "ConteoEstudiosLab",
-    "ConteoCamasIRA",
+    # Constants
+    "EstadoNotificacion",
+    # Models
+    "NotificacionSemanal",
+    "OrigenDatosPasivos",
+    "RangoEtario",
+    "Sexo",
+    "TipoCasoEpidemiologicoPasivo",
 ]

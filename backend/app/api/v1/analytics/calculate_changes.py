@@ -3,7 +3,6 @@ Calculate changes for custom events - calcula cambios para eventos seleccionados
 """
 
 import logging
-from typing import Optional
 
 from fastapi import Depends
 from sqlalchemy import text
@@ -26,7 +25,7 @@ logger = logging.getLogger(__name__)
 async def calculate_changes(
     request: CalculateChangesRequest,
     db: AsyncSession = Depends(get_async_session),
-    current_user: Optional[User] = RequireAuthOrSignedUrl,
+    current_user: User | None = RequireAuthOrSignedUrl,
 ) -> SuccessResponse[CalculateChangesResponse]:
     """
     Calcula cambios para eventos custom seleccionados por el usuario.

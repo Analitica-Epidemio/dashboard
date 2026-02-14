@@ -4,7 +4,8 @@ Convierte datos de queries en TipTap JSON nativo (100% editable).
 """
 
 import logging
-from typing import Any, Iterator
+from collections.abc import Iterator
+from typing import Any
 
 from jinja2 import BaseLoader, Environment, Undefined
 
@@ -306,25 +307,25 @@ class BoletinBlockRenderer:
 
         # Agregar charts dinámicos si están configurados
         charts_config = config.get("charts", [])
-        for chart in charts_config:
-            content_nodes.append(
-                {
-                    "type": "paragraph",
-                    "content": [
-                        {
-                            "type": "dynamicChart",
-                            "attrs": {
-                                "chartCode": chart["code"],
-                                "title": f"{data.get('tipo_eno_nombre')} - {chart['code']}",
-                                "eventoIds": str(data.get("tipo_eno_id", "")),
-                                "fechaDesde": context.get("fecha_inicio", ""),
-                                "fechaHasta": context.get("fecha_fin", ""),
-                                "height": chart.get("height", 400),
-                            },
-                        }
-                    ],
-                }
-            )
+        content_nodes.extend(
+            {
+                "type": "paragraph",
+                "content": [
+                    {
+                        "type": "dynamicChart",
+                        "attrs": {
+                            "chartCode": chart["code"],
+                            "title": f"{data.get('tipo_eno_nombre')} - {chart['code']}",
+                            "eventoIds": str(data.get("tipo_eno_id", "")),
+                            "fechaDesde": context.get("fecha_inicio", ""),
+                            "fechaHasta": context.get("fecha_fin", ""),
+                            "height": chart.get("height", 400),
+                        },
+                    }
+                ],
+            }
+            for chart in charts_config
+        )
 
         # Espacio al final
         content_nodes.append({"type": "paragraph", "content": []})
@@ -419,65 +420,65 @@ class BoletinBlockRenderer:
         ]
 
         # Data rows
-        for row in data:
-            table_rows.append(
-                {
-                    "type": "tableRow",
-                    "content": [
-                        {
-                            "type": "tableCell",
-                            "content": [
-                                {
-                                    "type": "paragraph",
-                                    "content": [{"type": "text", "text": row["ugd"]}],
-                                }
-                            ],
-                        },
-                        {
-                            "type": "tableCell",
-                            "content": [
-                                {
-                                    "type": "paragraph",
-                                    "content": [
-                                        {
-                                            "type": "text",
-                                            "text": str(row["camas_totales"]),
-                                        }
-                                    ],
-                                }
-                            ],
-                        },
-                        {
-                            "type": "tableCell",
-                            "content": [
-                                {
-                                    "type": "paragraph",
-                                    "content": [
-                                        {
-                                            "type": "text",
-                                            "text": str(row["camas_ocupadas"]),
-                                        }
-                                    ],
-                                }
-                            ],
-                        },
-                        {
-                            "type": "tableCell",
-                            "content": [
-                                {
-                                    "type": "paragraph",
-                                    "content": [
-                                        {
-                                            "type": "text",
-                                            "text": f"{row['porcentaje_ocupacion']:.1f}%",
-                                        }
-                                    ],
-                                }
-                            ],
-                        },
-                    ],
-                }
-            )
+        table_rows.extend(
+            {
+                "type": "tableRow",
+                "content": [
+                    {
+                        "type": "tableCell",
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "content": [{"type": "text", "text": row["ugd"]}],
+                            }
+                        ],
+                    },
+                    {
+                        "type": "tableCell",
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "content": [
+                                    {
+                                        "type": "text",
+                                        "text": str(row["camas_totales"]),
+                                    }
+                                ],
+                            }
+                        ],
+                    },
+                    {
+                        "type": "tableCell",
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "content": [
+                                    {
+                                        "type": "text",
+                                        "text": str(row["camas_ocupadas"]),
+                                    }
+                                ],
+                            }
+                        ],
+                    },
+                    {
+                        "type": "tableCell",
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "content": [
+                                    {
+                                        "type": "text",
+                                        "text": f"{row['porcentaje_ocupacion']:.1f}%",
+                                    }
+                                ],
+                            }
+                        ],
+                    },
+                ],
+            }
+            for row in data
+        )
 
         content_nodes.append({"type": "table", "content": table_rows})
 
@@ -573,67 +574,67 @@ class BoletinBlockRenderer:
         ]
 
         # Data rows
-        for row in data:
-            table_rows.append(
-                {
-                    "type": "tableRow",
-                    "content": [
-                        {
-                            "type": "tableCell",
-                            "content": [
-                                {
-                                    "type": "paragraph",
-                                    "content": [
-                                        {"type": "text", "text": row["virus_tipo"]}
-                                    ],
-                                }
-                            ],
-                        },
-                        {
-                            "type": "tableCell",
-                            "content": [
-                                {
-                                    "type": "paragraph",
-                                    "content": [
-                                        {
-                                            "type": "text",
-                                            "text": str(row["casos_positivos"]),
-                                        }
-                                    ],
-                                }
-                            ],
-                        },
-                        {
-                            "type": "tableCell",
-                            "content": [
-                                {
-                                    "type": "paragraph",
-                                    "content": [
-                                        {
-                                            "type": "text",
-                                            "text": str(row["casos_testeados"]),
-                                        }
-                                    ],
-                                }
-                            ],
-                        },
-                        {
-                            "type": "tableCell",
-                            "content": [
-                                {
-                                    "type": "paragraph",
-                                    "content": [
-                                        {
-                                            "type": "text",
-                                            "text": f"{row['porcentaje_positividad']:.1f}%",
-                                        }
-                                    ],
-                                }
-                            ],
-                        },
-                    ],
-                }
-            )
+        table_rows.extend(
+            {
+                "type": "tableRow",
+                "content": [
+                    {
+                        "type": "tableCell",
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "content": [
+                                    {"type": "text", "text": row["virus_tipo"]}
+                                ],
+                            }
+                        ],
+                    },
+                    {
+                        "type": "tableCell",
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "content": [
+                                    {
+                                        "type": "text",
+                                        "text": str(row["casos_positivos"]),
+                                    }
+                                ],
+                            }
+                        ],
+                    },
+                    {
+                        "type": "tableCell",
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "content": [
+                                    {
+                                        "type": "text",
+                                        "text": str(row["casos_testeados"]),
+                                    }
+                                ],
+                            }
+                        ],
+                    },
+                    {
+                        "type": "tableCell",
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "content": [
+                                    {
+                                        "type": "text",
+                                        "text": f"{row['porcentaje_positividad']:.1f}%",
+                                    }
+                                ],
+                            }
+                        ],
+                    },
+                ],
+            }
+            for row in data
+        )
 
         content_nodes.append({"type": "table", "content": table_rows})
 

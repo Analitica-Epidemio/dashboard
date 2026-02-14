@@ -7,7 +7,7 @@ import tempfile
 import time
 import uuid
 from pathlib import Path
-from typing import Any, List, Literal, Optional
+from typing import Any, Literal
 
 import magic
 import pandas as pd
@@ -60,12 +60,12 @@ class SheetPreviewData(BaseModel):
     """Preview data for a single sheet."""
 
     name: str
-    columns: List[str]
+    columns: list[str]
     row_count: int
-    preview_rows: List[List[Any]]  # Any para permitir tipos mixtos
+    preview_rows: list[list[Any]]  # Any para permitir tipos mixtos
     is_valid: bool
-    missing_columns: List[str]
-    detected_type: Optional[str] = None  # NOMINAL, CLI_P26, CLI_P26_INT, LAB_P26
+    missing_columns: list[str]
+    detected_type: str | None = None  # NOMINAL, CLI_P26, CLI_P26_INT, LAB_P26
 
 
 class FilePreviewResponse(BaseModel):
@@ -74,19 +74,21 @@ class FilePreviewResponse(BaseModel):
     upload_id: str
     filename: str
     file_size: int
-    sheets: List[SheetPreviewData]
+    sheets: list[SheetPreviewData]
     valid_sheets_count: int
     total_sheets_count: int
 
 
 def detect_file_type(
-    columns: List[str], preview_rows: List[List[Any]] = []
-) -> Optional[str]:
+    columns: list[str], preview_rows: list[list[Any]] | None = None
+) -> str | None:
     """
     Detect file type based on columns present.
 
     Returns: NOMINAL, CLI_P26, CLI_P26_INT, LAB_P26, or None
     """
+    if preview_rows is None:
+        preview_rows = []
     columns_upper = {col.upper().strip() for col in columns}
 
     # LAB_P26: tiene ID_AGRP_LABO
@@ -111,7 +113,7 @@ def detect_file_type(
     return None
 
 
-def validate_columns(columns: List[str]) -> bool:
+def validate_columns(columns: list[str]) -> bool:
     """Check if sheet has all required columns for NOMINAL type."""
     columns_upper = {col.upper().strip() for col in columns}
     required_upper = {col.upper() for col in REQUIRED_COLUMNS}
@@ -119,8 +121,8 @@ def validate_columns(columns: List[str]) -> bool:
 
 
 def get_missing_columns(
-    columns: List[str], file_type: Optional[str] = None
-) -> List[str]:
+    columns: list[str], file_type: str | None = None
+) -> list[str]:
     """Get list of missing required columns based on file type."""
     columns_upper = {col.upper().strip() for col in columns}
 
@@ -135,7 +137,7 @@ def get_missing_columns(
     return missing
 
 
-def clean_preview_data(df: pd.DataFrame, max_rows: int = 10) -> List[List[Any]]:
+def clean_preview_data(df: pd.DataFrame, max_rows: int = 10) -> list[list[Any]]:
     """
     Convert DataFrame to serializable preview data.
 
@@ -163,7 +165,7 @@ def clean_preview_data(df: pd.DataFrame, max_rows: int = 10) -> List[List[Any]]:
     return rows
 
 
-def get_total_row_count(file_path: Path, sheet_name: Optional[str] = None) -> int:
+def get_total_row_count(file_path: Path, sheet_name: str | None = None) -> int:
     """
     Get total row count efficiently without loading all data.
 
@@ -194,10 +196,7 @@ def get_total_row_count(file_path: Path, sheet_name: Optional[str] = None) -> in
         ws = wb[sheet_name] if sheet_name else wb.active
 
         # Handle empty sheets or sheets with only header
-        if ws.max_row is None or ws.max_row <= 1:
-            row_count = 0
-        else:
-            row_count = ws.max_row - 1  # -1 to exclude header
+        row_count = 0 if ws.max_row is None or ws.max_row <= 1 else ws.max_row - 1
 
         wb.close()
         openpyxl_duration = time.time() - openpyxl_start
@@ -239,7 +238,7 @@ async def preview_uploaded_file(
             detail=f"Formato no soportado: {file_ext}. Use Excel (.xlsx, .xls) o CSV (.csv)",
         )
 
-    temp_file_path: Optional[Path] = None
+    temp_file_path: Path | None = None
     try:
         start_time = time.time()
 
@@ -426,10 +425,10 @@ async def preview_uploaded_file(
         logger.error("❌ Empty file")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="El archivo está vacío"
-        )
+        ) from None
 
     except Exception as e:
-        logger.error(f"❌ Error analyzing file: {str(e)}", exc_info=True)
+        logger.error(f"❌ Error analyzing file: {e!s}", exc_info=True)
 
         # Clean up temp file on error
         if temp_file_path is not None and temp_file_path.exists():
@@ -437,5 +436,5 @@ async def preview_uploaded_file(
 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error analizando archivo: {str(e)}",
-        )
+            detail=f"Error analizando archivo: {e!s}",
+        ) from e

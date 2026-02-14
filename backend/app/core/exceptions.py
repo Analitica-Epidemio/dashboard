@@ -1,6 +1,6 @@
 """Excepciones personalizadas del sistema."""
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 class EpidemiologiaException(Exception):
@@ -9,8 +9,8 @@ class EpidemiologiaException(Exception):
     def __init__(
         self,
         message: str,
-        details: Optional[Dict[str, Any]] = None,
-        error_code: Optional[str] = None,
+        details: dict[str, Any] | None = None,
+        error_code: str | None = None,
     ):
         self.message = message
         self.details = details or {}
@@ -24,8 +24,8 @@ class ValidationException(EpidemiologiaException):
     def __init__(
         self,
         message: str = "Error de validación",
-        field: Optional[str] = None,
-        value: Optional[Any] = None,
+        field: str | None = None,
+        value: Any | None = None,
         **kwargs: Any,
     ) -> None:
         details = {"field": field, "value": value} if field else {}
@@ -35,7 +35,7 @@ class ValidationException(EpidemiologiaException):
 class BusinessRuleException(EpidemiologiaException):
     """Excepción de reglas de negocio."""
 
-    def __init__(self, message: str, rule: Optional[str] = None, **kwargs: Any) -> None:
+    def __init__(self, message: str, rule: str | None = None, **kwargs: Any) -> None:
         details = {"rule": rule} if rule else {}
         super().__init__(message, details, "BUSINESS_RULE_ERROR", **kwargs)
 
@@ -44,7 +44,7 @@ class NotFoundException(EpidemiologiaException):
     """Excepción cuando no se encuentra un recurso."""
 
     def __init__(
-        self, resource: str, identifier: Optional[str] = None, **kwargs: Any
+        self, resource: str, identifier: str | None = None, **kwargs: Any
     ) -> None:
         message = f"{resource} no encontrado"
         if identifier:
@@ -76,7 +76,7 @@ class AuthorizationException(EpidemiologiaException):
     def __init__(
         self,
         message: str = "No tienes permisos para realizar esta acción",
-        required_permission: Optional[str] = None,
+        required_permission: str | None = None,
         **kwargs: Any,
     ) -> None:
         details = (
@@ -92,7 +92,7 @@ class ExternalServiceException(EpidemiologiaException):
         self,
         service: str,
         message: str = "Error en servicio externo",
-        status_code: Optional[int] = None,
+        status_code: int | None = None,
         **kwargs: Any,
     ) -> None:
         details = {"service": service, "status_code": status_code}
@@ -105,7 +105,7 @@ class DatabaseException(EpidemiologiaException):
     def __init__(
         self,
         message: str = "Error de base de datos",
-        operation: Optional[str] = None,
+        operation: str | None = None,
         **kwargs: Any,
     ) -> None:
         details = {"operation": operation} if operation else {}

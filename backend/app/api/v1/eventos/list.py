@@ -5,7 +5,7 @@ Endpoint para listado de eventos epidemiológicos.
 import logging
 from datetime import date
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import Depends, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field
@@ -43,24 +43,24 @@ class CasoEpidemiologicoListItem(BaseModel):
     id: int = Field(..., description="ID del evento")
     id_evento_caso: int = Field(..., description="ID único del caso")
     tipo_eno_id: int = Field(..., description="ID del tipo ENO")
-    tipo_eno_nombre: Optional[str] = Field(None, description="Nombre del tipo ENO")
-    id_domicilio: Optional[int] = Field(
+    tipo_eno_nombre: str | None = Field(None, description="Nombre del tipo ENO")
+    id_domicilio: int | None = Field(
         None, description="ID del domicilio asociado al evento"
     )
-    fecha_minima_caso: Optional[date] = Field(None, description="Fecha del evento")
-    fecha_inicio_sintomas: Optional[date] = Field(
+    fecha_minima_caso: date | None = Field(None, description="Fecha del evento")
+    fecha_inicio_sintomas: date | None = Field(
         None, description="Fecha de inicio de síntomas"
     )
-    clasificacion_estrategia: Optional[TipoClasificacion] = Field(
+    clasificacion_estrategia: TipoClasificacion | None = Field(
         None, description="Clasificación estratégica del evento"
     )
-    confidence_score: Optional[float] = Field(None, description="Score de confianza")
+    confidence_score: float | None = Field(None, description="Score de confianza")
 
     # Información epidemiológica
-    semana_epidemiologica_apertura: Optional[int] = Field(
+    semana_epidemiologica_apertura: int | None = Field(
         None, description="Semana epidemiológica de apertura del caso"
     )
-    anio_epidemiologico_apertura: Optional[int] = Field(
+    anio_epidemiologico_apertura: int | None = Field(
         None, description="Año epidemiológico de apertura del caso"
     )
 
@@ -68,23 +68,23 @@ class CasoEpidemiologicoListItem(BaseModel):
     tipo_sujeto: str = Field(
         ..., description="Tipo de sujeto: humano/animal/desconocido"
     )
-    nombre_sujeto: Optional[str] = Field(None, description="Nombre del sujeto")
-    documento_sujeto: Optional[str] = Field(None, description="Documento del sujeto")
-    edad: Optional[int] = Field(None, description="Edad en años")
-    sexo: Optional[str] = Field(None, description="Sexo del sujeto")
+    nombre_sujeto: str | None = Field(None, description="Nombre del sujeto")
+    documento_sujeto: str | None = Field(None, description="Documento del sujeto")
+    edad: int | None = Field(None, description="Edad en años")
+    sexo: str | None = Field(None, description="Sexo del sujeto")
 
     # Ubicación
-    provincia: Optional[str] = Field(None, description="Provincia de residencia")
-    localidad: Optional[str] = Field(None, description="Localidad de residencia")
+    provincia: str | None = Field(None, description="Provincia de residencia")
+    localidad: str | None = Field(None, description="Localidad de residencia")
 
     # Estados
-    es_caso_sintomatico: Optional[bool] = Field(
+    es_caso_sintomatico: bool | None = Field(
         None, description="Si presenta síntomas"
     )
-    requiere_revision_especie: Optional[bool] = Field(
+    requiere_revision_especie: bool | None = Field(
         None, description="Si requiere revisión"
     )
-    con_resultado_mortal: Optional[bool] = Field(
+    con_resultado_mortal: bool | None = Field(
         None, description="Si tuvo resultado mortal"
     )
 
@@ -126,10 +126,10 @@ class CasoEpidemiologicoStats(BaseModel):
 class CasoEpidemiologicoListResponse(BaseModel):
     """Respuesta completa del listado de eventos"""
 
-    data: List[CasoEpidemiologicoListItem] = Field(..., description="Lista de eventos")
+    data: list[CasoEpidemiologicoListItem] = Field(..., description="Lista de eventos")
     pagination: PaginationInfo = Field(..., description="Información de paginación")
     stats: CasoEpidemiologicoStats = Field(..., description="Estadísticas agregadas")
-    filters_applied: Dict[str, Any] = Field(..., description="Filtros aplicados")
+    filters_applied: dict[str, Any] = Field(..., description="Filtros aplicados")
 
 
 logger = logging.getLogger(__name__)
@@ -140,30 +140,30 @@ async def list_eventos(
     page: int = Query(1, ge=1, description="Número de página"),
     page_size: int = Query(50, ge=10, le=200, description="Tamaño de página"),
     # Búsqueda
-    search: Optional[str] = Query(
+    search: str | None = Query(
         None, description="Búsqueda por ID, nombre o documento"
     ),
     # Filtros
-    tipo_eno_ids: Optional[List[int]] = Query(
+    tipo_eno_ids: list[int] | None = Query(
         None, description="Lista de IDs de tipos de eventos"
     ),
-    grupo_eno_ids: Optional[List[int]] = Query(
+    grupo_eno_ids: list[int] | None = Query(
         None, description="Lista de IDs de grupos de eventos"
     ),
-    fecha_desde: Optional[date] = None,
-    fecha_hasta: Optional[date] = None,
-    clasificacion: Optional[List[str]] = Query(
+    fecha_desde: date | None = None,
+    fecha_hasta: date | None = None,
+    clasificacion: list[str] | None = Query(
         None, description="Lista de clasificaciones"
     ),
-    provincia_ids_establecimiento: Optional[List[int]] = Query(
+    provincia_ids_establecimiento: list[int] | None = Query(
         None,
         description="Lista de códigos INDEC de provincias (filtro por ESTABLECIMIENTO DE NOTIFICACIÓN)",
         alias="provincia_id",  # Mantiene compatibilidad con frontend que usa provincia_id
     ),
-    tipo_sujeto: Optional[str] = None,
-    requiere_revision: Optional[bool] = None,
-    edad_min: Optional[int] = Query(None, ge=0, le=120, description="Edad mínima"),
-    edad_max: Optional[int] = Query(None, ge=0, le=120, description="Edad máxima"),
+    tipo_sujeto: str | None = None,
+    requiere_revision: bool | None = None,
+    edad_min: int | None = Query(None, ge=0, le=120, description="Edad mínima"),
+    edad_max: int | None = Query(None, ge=0, le=120, description="Edad máxima"),
     # Ordenamiento
     sort_by: CasoEpidemiologicoSortBy = CasoEpidemiologicoSortBy.FECHA_DESC,
     # DB and Auth
@@ -604,8 +604,8 @@ async def list_eventos(
         return SuccessResponse(data=response)
 
     except Exception as e:
-        logger.error(f"💥 Error listando eventos: {str(e)}")
+        logger.error(f"💥 Error listando eventos: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error obteniendo eventos: {str(e)}",
-        )
+            detail=f"Error obteniendo eventos: {e!s}",
+        ) from e
