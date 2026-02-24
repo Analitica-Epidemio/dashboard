@@ -58,10 +58,10 @@ export function AdvancedFilterPanel({
     <div className={`space-y-6 ${className}`}>
       {/* Header con contador de filtros activos */}
       {activeFiltersCount > 0 && onClearAll && (
-        <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-900">
+        <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
           <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-            <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+            <Filter className="h-4 w-4 text-blue-600" />
+            <span className="text-sm font-medium text-blue-900">
               {activeFiltersCount} {activeFiltersCount === 1 ? "filtro activo" : "filtros activos"}
             </span>
           </div>
@@ -69,7 +69,7 @@ export function AdvancedFilterPanel({
             variant="ghost"
             size="sm"
             onClick={onClearAll}
-            className="h-7 text-xs gap-1 text-blue-700 hover:text-blue-900 hover:bg-blue-100 dark:text-blue-300 dark:hover:text-blue-100 dark:hover:bg-blue-900"
+            className="h-7 text-xs gap-1 text-blue-700 hover:text-blue-900 hover:bg-blue-100"
           >
             <X className="h-3 w-3" />
             Limpiar filtros

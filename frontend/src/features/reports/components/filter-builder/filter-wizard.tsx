@@ -146,8 +146,8 @@ export function FilterWizard({ open, onOpenChange, groups, allEvents, onComplete
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
                 <div className="p-4 border rounded-lg space-y-2">
                   <div className="flex items-center gap-2">
-                    <div className="p-2 rounded bg-blue-100 dark:bg-blue-900">
-                      <Filter className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <div className="p-2 rounded bg-blue-100">
+                      <Filter className="h-4 w-4 text-blue-600" />
                     </div>
                     <h4 className="font-medium">Flexible</h4>
                   </div>
@@ -158,8 +158,8 @@ export function FilterWizard({ open, onOpenChange, groups, allEvents, onComplete
 
                 <div className="p-4 border rounded-lg space-y-2">
                   <div className="flex items-center gap-2">
-                    <div className="p-2 rounded bg-green-100 dark:bg-green-900">
-                      <Layers className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    <div className="p-2 rounded bg-green-100">
+                      <Layers className="h-4 w-4 text-green-600" />
                     </div>
                     <h4 className="font-medium">Comparativo</h4>
                   </div>
@@ -170,8 +170,8 @@ export function FilterWizard({ open, onOpenChange, groups, allEvents, onComplete
 
                 <div className="p-4 border rounded-lg space-y-2">
                   <div className="flex items-center gap-2">
-                    <div className="p-2 rounded bg-purple-100 dark:bg-purple-900">
-                      <BarChart3 className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                    <div className="p-2 rounded bg-purple-100">
+                      <BarChart3 className="h-4 w-4 text-purple-600" />
                     </div>
                     <h4 className="font-medium">Visual</h4>
                   </div>
@@ -185,8 +185,8 @@ export function FilterWizard({ open, onOpenChange, groups, allEvents, onComplete
 
           {currentStep === 1 && (
             <div className="space-y-4">
-              <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-900">
-                <p className="text-sm text-blue-900 dark:text-blue-100">
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <p className="text-sm text-blue-900">
                   💡 <strong>Tip:</strong> Puedes seleccionar múltiples grupos para comparar,
                   o eventos individuales si quieres un control más específico.
                   Por ejemplo, si quieres ver Dengue de todos los grupos a los que pertenece.
@@ -207,8 +207,8 @@ export function FilterWizard({ open, onOpenChange, groups, allEvents, onComplete
               />
 
               {(config.selectedGroups.length > 0 || config.selectedEvents.length > 0) && (
-                <div className="bg-green-50 dark:bg-green-950/20 p-4 rounded-lg border border-green-200 dark:border-green-900">
-                  <p className="text-sm text-green-900 dark:text-green-100">
+                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <p className="text-sm text-green-900">
                     ✓ Seleccionaste {config.selectedGroups.length} grupo(s) y {config.selectedEvents.length} evento(s)
                   </p>
                 </div>
@@ -218,8 +218,8 @@ export function FilterWizard({ open, onOpenChange, groups, allEvents, onComplete
 
           {currentStep === 2 && (
             <div className="space-y-4">
-              <div className="bg-amber-50 dark:bg-amber-950/20 p-4 rounded-lg border border-amber-200 dark:border-amber-900">
-                <p className="text-sm text-amber-900 dark:text-amber-100">
+              <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
+                <p className="text-sm text-amber-900">
                   ℹ️ <strong>Opcional:</strong> Si no seleccionas ninguna clasificación,
                   se incluirán todos los estados epidemiológicos.
                 </p>
@@ -245,8 +245,8 @@ export function FilterWizard({ open, onOpenChange, groups, allEvents, onComplete
           {currentStep === 3 && (
             <div className="space-y-6">
               <div className="text-center space-y-2">
-                <div className="inline-flex p-3 rounded-full bg-green-100 dark:bg-green-900">
-                  <Check className="h-8 w-8 text-green-600 dark:text-green-400" />
+                <div className="inline-flex p-3 rounded-full bg-green-100">
+                  <Check className="h-8 w-8 text-green-600" />
                 </div>
                 <h3 className="text-lg font-semibold">Configuración completa</h3>
                 <p className="text-muted-foreground">
@@ -264,7 +264,7 @@ export function FilterWizard({ open, onOpenChange, groups, allEvents, onComplete
                       {config.selectedGroups.map(groupId => {
                         const group = groups.find(g => String(g.id) === groupId)
                         return group ? (
-                          <span key={groupId} className="text-sm bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">
+                          <span key={groupId} className="text-sm bg-blue-100 px-2 py-1 rounded">
                             {group.name}
                           </span>
                         ) : null
@@ -282,7 +282,7 @@ export function FilterWizard({ open, onOpenChange, groups, allEvents, onComplete
                       {config.selectedEvents.map(eventId => {
                         const event = allEvents.find(e => String(e.id) === eventId)
                         return event ? (
-                          <span key={eventId} className="text-sm bg-green-100 dark:bg-green-900 px-2 py-1 rounded">
+                          <span key={eventId} className="text-sm bg-green-100 px-2 py-1 rounded">
                             {event.name}
                           </span>
                         ) : null
@@ -298,7 +298,7 @@ export function FilterWizard({ open, onOpenChange, groups, allEvents, onComplete
                   ) : (
                     <div className="flex flex-wrap gap-2">
                       {config.selectedClassifications.map(classification => (
-                        <span key={classification} className="text-sm bg-purple-100 dark:bg-purple-900 px-2 py-1 rounded capitalize">
+                        <span key={classification} className="text-sm bg-purple-100 px-2 py-1 rounded capitalize">
                           {classification}
                         </span>
                       ))}

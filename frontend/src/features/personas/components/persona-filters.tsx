@@ -87,11 +87,11 @@ export function PersonaFiltersAdvanced({
       defaultOpen: true,
       content: (
         <div className="space-y-4">
-          <div className="bg-purple-50 dark:bg-purple-950/20 p-3 rounded-lg border border-purple-200 dark:border-purple-900">
-            <p className="text-sm font-medium text-purple-900 dark:text-purple-100 mb-2">
+          <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
+            <p className="text-sm font-medium text-purple-900 mb-2">
               Filtros de Eventos Asociados
             </p>
-            <p className="text-xs text-purple-700 dark:text-purple-300">
+            <p className="text-xs text-purple-700">
               Filtra personas según los tipos de eventos que han tenido
             </p>
           </div>
@@ -126,7 +126,7 @@ export function PersonaFiltersAdvanced({
               onFilterChange("provincia_id", provinciaIds.length > 0 ? provinciaIds : undefined);
             }}
           />
-          <p className="text-xs text-muted-foreground bg-amber-50 dark:bg-amber-950/20 p-2 rounded border border-amber-200 dark:border-amber-900">
+          <p className="text-xs text-muted-foreground bg-amber-50 p-2 rounded border border-amber-200">
             ⚠️ Filtra por provincia del <strong>establecimiento donde se notificaron</strong> los eventos, no por domicilio de la persona
           </p>
         </div>

@@ -12,6 +12,7 @@ import logging
 from sqlalchemy.orm import Session
 
 from app.domains.boletines.seeds.secciones_bloques import seed_secciones_y_bloques
+from app.domains.boletines.seeds.template_config import seed_template_config
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,7 @@ def seed_boletin_template_config(session: Session) -> None:
     logger.info("SEED: Sistema de Boletines v2 (Secciones y Bloques)")
     logger.info("=" * 70)
 
+    seed_template_config(session)
     seed_secciones_y_bloques(session)  # type: ignore[arg-type]
 
     logger.info("")

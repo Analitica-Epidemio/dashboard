@@ -7,9 +7,11 @@ from app.domains.boletines.seeds_module import (
 )
 
 from .secciones_bloques import seed_secciones_y_bloques
+from .template_config import seed_template_config
 
 __all__ = [
     "seed_boletin_sync",
     "seed_boletin_template_config",
     "seed_secciones_y_bloques",
+    "seed_template_config",
 ]

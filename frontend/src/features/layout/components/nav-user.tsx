@@ -138,7 +138,7 @@ export function NavUser({
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => signOut({ callbackUrl: "/login" })}
-                className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
+                className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
               >
                 <IconLogout />
                 Cerrar sesión

@@ -265,26 +265,26 @@ export function PersonaDetailModern({ tipoSujeto, personaId, onClose }: PersonaD
 
         {/* Quick Stats Grid */}
         <div className="grid grid-cols-4 gap-3">
-          <div className="rounded-lg border bg-red-50 dark:bg-red-950/20 p-3 text-center">
-            <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+          <div className="rounded-lg border bg-red-50 p-3 text-center">
+            <div className="text-2xl font-bold text-red-600">
               {persona.eventos_confirmados}
             </div>
             <div className="text-xs text-muted-foreground mt-1">Confirmados</div>
           </div>
-          <div className="rounded-lg border bg-yellow-50 dark:bg-yellow-950/20 p-3 text-center">
-            <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+          <div className="rounded-lg border bg-yellow-50 p-3 text-center">
+            <div className="text-2xl font-bold text-yellow-600">
               {persona.eventos_sospechosos}
             </div>
             <div className="text-xs text-muted-foreground mt-1">Sospechosos</div>
           </div>
-          <div className="rounded-lg border bg-orange-50 dark:bg-orange-950/20 p-3 text-center">
-            <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+          <div className="rounded-lg border bg-orange-50 p-3 text-center">
+            <div className="text-2xl font-bold text-orange-600">
               {persona.eventos_probables || 0}
             </div>
             <div className="text-xs text-muted-foreground mt-1">Probables</div>
           </div>
-          <div className="rounded-lg border bg-gray-50 dark:bg-gray-950/20 p-3 text-center">
-            <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">
+          <div className="rounded-lg border bg-gray-50 p-3 text-center">
+            <div className="text-2xl font-bold text-gray-600">
               {persona.eventos_descartados || 0}
             </div>
             <div className="text-xs text-muted-foreground mt-1">Descartados</div>

@@ -76,18 +76,25 @@ _RE_DYNAMIC_TABLE = re.compile(
 )
 
 
-def _resolve_chart_code(slug: str) -> CodigoGrafico:
-    """Resuelve un slug de frontend al CodigoGrafico canónico del backend.
+def _resolve_chart_code(code: str) -> CodigoGrafico:
+    """Resuelve un código de chart al CodigoGrafico canónico del backend.
+
+    Acepta tanto valores canónicos del enum (snake_case) como slugs legacy (kebab-case).
 
     Raises:
-        KeyError: Si el slug no está registrado en CHART_CODE_MAP.
+        KeyError: Si el código no es un CodigoGrafico válido ni está en CHART_CODE_MAP.
     """
+    # Primero intentar como valor directo del enum
     try:
-        return CHART_CODE_MAP[slug]
+        return CodigoGrafico(code)
+    except ValueError:
+        pass
+    # Luego buscar en el mapa de slugs legacy
+    try:
+        return CHART_CODE_MAP[code]
     except KeyError:
         raise KeyError(
-            f"Slug de chart '{slug}' no registrado en CHART_CODE_MAP. "
-            f"Agregarlo al mapa en html_renderer.py."
+            f"Chart code '{code}' no es un CodigoGrafico válido ni está en CHART_CODE_MAP."
         ) from None
 
 

@@ -42,6 +42,7 @@ const CHART_TYPE_ICONS: Record<string, React.ComponentType<{ className?: string 
 export function ChartConfigDialog({ open, onOpenChange, onInsert, initialConfig }: ChartConfigDialogProps) {
   const { data: chartsData, isLoading } = useChartsDisponibles();
   const [step, setStep] = useState<"chart" | "config">("chart");
+  const isEditing = !!initialConfig;
   const [config, setConfig] = useState<ChartConfig>({
     chartId: 0,
     chartCode: "",
@@ -52,40 +53,48 @@ export function ChartConfigDialog({ open, onOpenChange, onInsert, initialConfig 
     fechaHasta: null,
   });
 
-  // Cargar valores iniciales si estamos editando
+  // Cargar valores iniciales solo cuando el dialog se abre (no en cada re-render del padre)
+  const hasInitializedRef = React.useRef(false);
   React.useEffect(() => {
-    if (open && initialConfig) {
-      setConfig({
-        chartId: initialConfig.chartId,
-        chartCode: initialConfig.chartCode,
-        title: initialConfig.title || "",
-        selectedGroups: initialConfig.selectedGroups || new Set<string>(),
-        selectedEvents: initialConfig.selectedEvents || new Set<string>(),
-        fechaDesde: initialConfig.fechaDesde || null,
-        fechaHasta: initialConfig.fechaHasta || null,
-      });
-      // Si tenemos initialConfig, ir directo al paso de config
-      setStep("config");
-    } else if (open && !initialConfig) {
-      // Reset cuando abrimos para insertar nuevo
-      setConfig({
-        chartId: 0,
-        chartCode: "",
-        title: "",
-        selectedGroups: new Set<string>(),
-        selectedEvents: new Set<string>(),
-        fechaDesde: null,
-        fechaHasta: null,
-      });
-      setStep("chart");
+    if (open && !hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      if (initialConfig) {
+        setConfig({
+          chartId: initialConfig.chartId,
+          chartCode: initialConfig.chartCode,
+          title: initialConfig.title || "",
+          selectedGroups: initialConfig.selectedGroups || new Set<string>(),
+          selectedEvents: initialConfig.selectedEvents || new Set<string>(),
+          fechaDesde: initialConfig.fechaDesde || null,
+          fechaHasta: initialConfig.fechaHasta || null,
+        });
+        setStep("config");
+      } else {
+        setConfig({
+          chartId: 0,
+          chartCode: "",
+          title: "",
+          selectedGroups: new Set<string>(),
+          selectedEvents: new Set<string>(),
+          fechaDesde: null,
+          fechaHasta: null,
+        });
+        setStep("chart");
+      }
+    }
+    if (!open) {
+      hasInitializedRef.current = false;
     }
   }, [open, initialConfig]);
 
   const charts = chartsData?.data?.charts || [];
+  const currentChart = charts.find(
+    (c) => c.id === config.chartId || c.codigo === config.chartCode
+  );
 
   const handleInsert = () => {
-    if (!config.chartId) return;
-    if (!config.fechaDesde || !config.fechaHasta) return; // Fechas requeridas
+    if (!config.chartId && !config.chartCode) return;
+    if (!config.fechaDesde || !config.fechaHasta) return;
     onInsert(config);
     onOpenChange(false);
     // Reset
@@ -176,6 +185,24 @@ export function ChartConfigDialog({ open, onOpenChange, onInsert, initialConfig 
         {/* Step 2: Config */}
         {step === "config" && (
           <div className="space-y-4 py-4">
+            {currentChart && (
+              <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                {(() => {
+                  const Icon = CHART_TYPE_ICONS[currentChart.tipo_visualizacion] || Activity;
+                  return <Icon className="w-4 h-4 text-blue-600 shrink-0" />;
+                })()}
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-blue-900 truncate">{currentChart.nombre}</p>
+                  <p className="text-xs text-blue-600">{currentChart.tipo_visualizacion}</p>
+                </div>
+                {!isEditing && (
+                  <Button variant="ghost" size="sm" className="ml-auto text-xs text-blue-700 h-7" onClick={handleBack}>
+                    Cambiar
+                  </Button>
+                )}
+              </div>
+            )}
+
             <div className="grid gap-2">
               <Label htmlFor="title">Título del Gráfico (opcional)</Label>
               <Input
@@ -234,7 +261,7 @@ export function ChartConfigDialog({ open, onOpenChange, onInsert, initialConfig 
               onClick={handleInsert}
               disabled={!config.fechaDesde || !config.fechaHasta}
             >
-              Insertar Gráfico
+              {isEditing ? "Actualizar Gráfico" : "Insertar Gráfico"}
             </Button>
           )}
         </DialogFooter>

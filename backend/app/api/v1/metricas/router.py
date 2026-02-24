@@ -126,6 +126,14 @@ class MetricQueryRequest(BaseModel):
     )
 
 
+class CorredorMetadata(BaseModel):
+    """Metadata específica del corredor endémico."""
+
+    anio_actual: int
+    anios_historicos: list[int]
+    anios_excluidos: list[int] = [2020, 2021]
+
+
 class MetricQueryMetadata(BaseModel):
     """Metadata de respuesta de query."""
 
@@ -136,6 +144,7 @@ class MetricQueryMetadata(BaseModel):
     source: str | None = None
     compute: str | None = None
     warnings: list[str] | None = None
+    corredor: CorredorMetadata | None = None
 
 
 class MetricDataRow(BaseModel):
@@ -348,7 +357,11 @@ def query_metric(
 
     # Parsear filtros a Criteria
     try:
-        criteria = _parse_filters_to_criteria(request.filters)
+        # Para corredor endémico, expandir rango a múltiples años históricos
+        if request.compute == "corredor_endemico":
+            criteria = _parse_filters_for_corredor(request.filters)
+        else:
+            criteria = _parse_filters_to_criteria(request.filters)
     except Exception as e:
         logger.error(f"❌ Error parseando filtros: {e}")
         raise HTTPException(status_code=400, detail=f"Error en filtros: {e!s}") from e
@@ -469,6 +482,33 @@ def _parse_filters_to_criteria(filters: MetricFilters) -> Criterion | None:
         criteria = criteria & c
 
     return criteria
+
+
+CORREDOR_ANIOS_HISTORICOS = 5  # Cuántos años hacia atrás buscar para el corredor
+
+
+def _parse_filters_for_corredor(filters: MetricFilters) -> Criterion | None:
+    """
+    Para corredor endémico: expande el rango temporal para incluir años históricos.
+
+    El corredor necesita datos de múltiples años para calcular percentiles.
+    Toma anio_hasta como año actual y expande anio_desde hacia atrás.
+    """
+    periodo = filters.periodo
+    anio_actual = periodo.anio_hasta
+
+    # Expandir a CORREDOR_ANIOS_HISTORICOS años atrás, semanas completas (1-52)
+    expanded_filters = filters.model_copy(
+        update={
+            "periodo": PeriodoFilter(
+                anio_desde=anio_actual - CORREDOR_ANIOS_HISTORICOS,
+                semana_desde=1,
+                anio_hasta=anio_actual,
+                semana_hasta=52,
+            )
+        }
+    )
+    return _parse_filters_to_criteria(expanded_filters)
 
 
 def _filters_to_dict(filters: MetricFilters) -> dict:

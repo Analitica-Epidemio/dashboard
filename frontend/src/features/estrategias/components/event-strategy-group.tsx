@@ -129,7 +129,7 @@ export function EventStrategyGroup({
                     </Badge>
                   )}
                   {hasNoActive && (
-                    <Badge variant="outline" className="text-amber-600 border-amber-600/50 bg-amber-50/50 dark:bg-amber-950/20">
+                    <Badge variant="outline" className="text-amber-600 border-amber-600/50 bg-amber-50/50">
                       <AlertTriangle className="mr-1 h-3 w-3" />
                       Sin activa
                     </Badge>
@@ -243,7 +243,7 @@ export function EventStrategyGroup({
                         key={strategy.id}
                         className={cn(
                           "group rounded-lg border p-4 transition-all hover:shadow-md",
-                          isCurrentlyActive && "border-green-500/50 bg-green-50/30 dark:bg-green-950/10"
+                          isCurrentlyActive && "border-green-500/50 bg-green-50/30"
                         )}
                       >
                         <div className="flex items-start justify-between gap-4">

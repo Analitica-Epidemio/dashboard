@@ -313,6 +313,35 @@ router.add_api_route(
     },
 )
 
+router.add_api_route(
+    "/config/metadata",
+    config.update_metadata,
+    methods=["PUT"],
+    response_model=SuccessResponse[BoletinTemplateConfigResponse],
+    name="update_boletin_metadata",
+    summary="Actualizar metadatos del boletín",
+    description="Actualiza institución, autoridades, logo y otros metadatos",
+    responses={
+        404: {"model": ErrorResponse, "description": "Configuración no encontrada"},
+        403: {"model": ErrorResponse, "description": "Sin permisos (requiere admin)"},
+        500: {"model": ErrorResponse, "description": "Error interno"},
+    },
+)
+
+router.add_api_route(
+    "/secciones-config",
+    config.update_secciones_order,
+    methods=["PATCH"],
+    response_model=SuccessResponse[dict],
+    name="update_secciones_order",
+    summary="Actualizar orden y estado de secciones",
+    description="Actualiza el orden y el estado activo/inactivo de las secciones del boletín",
+    responses={
+        403: {"model": ErrorResponse, "description": "Sin permisos (requiere admin)"},
+        500: {"model": ErrorResponse, "description": "Error interno"},
+    },
+)
+
 
 # ============================================================================
 # Preview Endpoints (for section data preview in the generator UI)

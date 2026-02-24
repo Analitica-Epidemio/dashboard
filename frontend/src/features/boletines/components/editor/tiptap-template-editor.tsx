@@ -68,7 +68,7 @@ const CustomTableCell = TableCell.extend({
     return {
       ...this.parent?.(),
       class: {
-        default: "border border-gray-300 dark:border-gray-600 px-4 py-2",
+        default: "border border-gray-300 px-4 py-2",
       },
     };
   },
@@ -79,7 +79,7 @@ const CustomTableHeader = TableHeader.extend({
     return {
       ...this.parent?.(),
       class: {
-        default: "border border-gray-300 dark:border-gray-600 px-4 py-2 bg-gray-100 dark:bg-gray-800 font-semibold",
+        default: "border border-gray-300 px-4 py-2 bg-gray-100 font-semibold",
       },
     };
   },
@@ -136,8 +136,8 @@ export function TiptapTemplateEditor({
           "[&_ul]:mb-4 [&_ul]:ml-6 [&_ol]:mb-4 [&_ol]:ml-6 [&_li]:mb-2 " +
           "[&_blockquote]:border-l-4 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:my-4 " +
           "[&_table]:border-collapse [&_table]:w-full [&_table]:my-4 " +
-          "[&_td]:border [&_td]:border-gray-300 [&_td]:dark:border-gray-600 [&_td]:px-4 [&_td]:py-2 " +
-          "[&_th]:border [&_th]:border-gray-300 [&_th]:dark:border-gray-600 [&_th]:px-4 [&_th]:py-2 [&_th]:bg-gray-100 [&_th]:dark:bg-gray-800 [&_th]:font-semibold " +
+          "[&_td]:border [&_td]:border-gray-300 [&_td]:px-4 [&_td]:py-2 " +
+          "[&_th]:border [&_th]:border-gray-300 [&_th]:px-4 [&_th]:py-2 [&_th]:bg-gray-100 [&_th]:font-semibold " +
           "[&_img]:max-w-full [&_img]:h-auto [&_img]:my-4 [&_img]:rounded-lg [&_img]:shadow-sm",
       },
       // Manejo de archivos arrastrados (imágenes)

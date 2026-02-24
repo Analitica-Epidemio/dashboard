@@ -162,11 +162,10 @@ async def get_secciones_config(
         # Calcular semana epidemiológica aproximada
         semana = min(hoy.isocalendar()[1], 52)
 
-    # Obtener secciones activas con sus bloques (eager loading)
+    # Obtener todas las secciones con sus bloques (eager loading)
     stmt = (
         select(BoletinSeccion)
         .options(selectinload(BoletinSeccion.bloques))  # type: ignore[arg-type]
-        .where(col(BoletinSeccion.activo).is_(True))
         .order_by(col(BoletinSeccion.orden))
     )
     result = await session.execute(stmt)
@@ -187,6 +186,7 @@ async def get_secciones_config(
                 titulo=seccion.titulo,
                 descripcion=seccion.descripcion,
                 orden=seccion.orden,
+                activo=seccion.activo,
                 bloques=[_bloque_to_response(b, semana, anio) for b in bloques_activos],
             )
         )

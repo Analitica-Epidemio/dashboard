@@ -49,15 +49,15 @@ export function PersonSummaryCard({ persona, onViewDetail }: PersonSummaryCardPr
 
         {/* Estadísticas */}
         <div className="grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-lg bg-green-50 dark:bg-green-950/20 p-2">
+          <div className="rounded-lg bg-green-50 p-2">
             <p className="text-2xl font-bold text-green-600">{persona.eventos_confirmados || 0}</p>
             <p className="text-xs text-muted-foreground">Confirmados</p>
           </div>
-          <div className="rounded-lg bg-yellow-50 dark:bg-yellow-950/20 p-2">
+          <div className="rounded-lg bg-yellow-50 p-2">
             <p className="text-2xl font-bold text-yellow-600">{persona.eventos_sospechosos || 0}</p>
             <p className="text-xs text-muted-foreground">Sospechosos</p>
           </div>
-          <div className="rounded-lg bg-orange-50 dark:bg-orange-950/20 p-2">
+          <div className="rounded-lg bg-orange-50 p-2">
             <p className="text-2xl font-bold text-orange-600">{persona.eventos_probables || 0}</p>
             <p className="text-xs text-muted-foreground">Probables</p>
           </div>

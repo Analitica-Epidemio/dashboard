@@ -7,8 +7,9 @@ import type { DynamicChartAttrs } from '../tiptap';
 
 import type { UniversalChartSpec } from "@/lib/types/chart-spec";
 
-// Mapeo de códigos de chart (slug → código backend)
-// Los códigos deben coincidir exactamente con los del backend
+// El chartCode debe ser siempre un CodigoGrafico canónico del backend.
+// Este mapeo existe solo para compatibilidad con charts del catálogo de DashboardChart
+// que usan kebab-case como código.
 const chartCodeMap: Record<string, string> = {
   "curva-epidemiologica": "curva_epidemiologica",
   "corredor-endemico": "corredor_endemico",
@@ -66,14 +67,13 @@ function DynamicChartComponent({ node, updateAttributes }: NodeViewProps) {
     '/api/v1/charts/spec',
     {
       body: {
-        chart_code: apiChartCode,
-        filters: {
+        codigo_grafico: apiChartCode,
+        filtros: {
           grupo_eno_ids: selectedGrupoIds.length > 0 ? selectedGrupoIds : undefined,
           tipo_eno_ids: selectedEventoIds.length > 0 ? selectedEventoIds : undefined,
           fecha_desde: fechaDesde || undefined,
           fecha_hasta: fechaHasta || undefined,
         },
-        config: undefined,
       } as never,
     },
     {

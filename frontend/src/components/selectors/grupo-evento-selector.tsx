@@ -188,15 +188,11 @@ export function GrupoEventoSelector({
     <div className={cn("space-y-3", className)}>
       {/* Selección actual */}
       {showSelectionSummary && selectedEventIds.length > 0 && (
-        <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-900">
-          <div className="text-sm">
-            <span className="font-medium text-blue-900 dark:text-blue-100">
-              {selectedEventIds.length}
-            </span>
-            <span className="text-blue-700 dark:text-blue-300 ml-1">
-              evento(s) seleccionado(s)
-            </span>
-          </div>
+        <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <p className="text-sm text-gray-700">
+            <span className="font-semibold">{selectedEventIds.length}</span>
+            {" "}evento{selectedEventIds.length !== 1 ? "s" : ""} seleccionado{selectedEventIds.length !== 1 ? "s" : ""}
+          </p>
           <Button
             variant="ghost"
             size="sm"
@@ -244,7 +240,19 @@ export function GrupoEventoSelector({
           </div>
         ) : (
           <>
-            {serverGroups.map((group) => {
+            {[...serverGroups].sort((a, b) => {
+              const aHasSelected = (a.eventos || []).some((e) => {
+                const eid = typeof e.id === "string" ? parseInt(e.id as string) : e.id;
+                return selectedEventIds.includes(eid as number);
+              });
+              const bHasSelected = (b.eventos || []).some((e) => {
+                const eid = typeof e.id === "string" ? parseInt(e.id as string) : e.id;
+                return selectedEventIds.includes(eid as number);
+              });
+              if (aHasSelected && !bHasSelected) return -1;
+              if (!aHasSelected && bHasSelected) return 1;
+              return 0;
+            }).map((group) => {
               const groupId = String(group.id);
               const groupEvents = group.eventos || [];
               const groupIdNum =

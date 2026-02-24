@@ -42,61 +42,38 @@ export function useBoletinTemplateConfig() {
 // ============================================================================
 
 /**
- * Update static content template (TipTap JSON)
- *
- * @returns Mutation for updating static content
- *
- * @example
- * ```tsx
- * const updateMutation = useUpdateStaticContent();
- * await updateMutation.mutateAsync({
- *   body: { content: { type: "doc", content: [...] } }
- * });
- * ```
- */
-export function useUpdateStaticContent() {
-  return $api.useMutation('put', '/api/v1/boletines/config/static-content');
-}
-
-// NOTE: Dynamic blocks endpoints removed - now using BoletinSeccion/BoletinBloque
-// database models managed via BloqueQueryAdapter. See backend/app/domains/boletines/
-
-/**
- * Update unified boletin template (content + embedded dynamic blocks)
- * Uses the static content endpoint but stores the full unified structure
- *
- * @returns Mutation for updating unified content
- *
- * @example
- * ```tsx
- * const updateMutation = useUpdateBoletinTemplate();
- * await updateMutation.mutateAsync({
- *   body: { unified_content: { type: "doc", content: [...] } }
- * });
- * ```
+ * Update unified boletin template (static content as TipTap JSON)
  */
 export function useUpdateBoletinTemplate() {
-  // For now, we reuse the static content endpoint
-  // The unified_content will be stored as static_content_template
-  // and dynamic blocks will be extracted from it on the backend
   return $api.useMutation('put', '/api/v1/boletines/config/static-content');
 }
 
 /**
  * Update event section template (TipTap JSON that repeats for each event)
- *
- * @returns Mutation for updating event section template
- *
- * @example
- * ```tsx
- * const updateMutation = useUpdateEventSectionTemplate();
- * await updateMutation.mutateAsync({
- *   body: { content: { type: "doc", content: [...] } }
- * });
- * ```
  */
 export function useUpdateEventSectionTemplate() {
   return $api.useMutation('put', '/api/v1/boletines/config/event-section-template');
+}
+
+/**
+ * Update boletin metadata (institution, authorities, logo, etc.)
+ */
+export function useUpdateBoletinMetadata() {
+  return $api.useMutation('put', '/api/v1/boletines/config/metadata');
+}
+
+/**
+ * Fetch secciones configuration (all sections with their blocks)
+ */
+export function useSeccionesConfig() {
+  return $api.useQuery('get', '/api/v1/boletines/secciones-config');
+}
+
+/**
+ * Update secciones order and active state
+ */
+export function useUpdateSeccionesOrder() {
+  return $api.useMutation('patch', '/api/v1/boletines/secciones-config');
 }
 
 /**

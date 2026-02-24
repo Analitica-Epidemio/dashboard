@@ -260,6 +260,10 @@ class BoletinTemplateConfigResponse(BaseModel):
         default_factory=dict,
         description="Template de sección de evento (se repite por cada evento seleccionado)",
     )
+    boletin_metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Metadatos del boletín (institución, autoridades, logo, etc.)",
+    )
     updated_at: datetime | None = Field(None, description="Última actualización")
     updated_by: int | None = Field(None, description="Usuario que actualizó")
 
@@ -278,6 +282,30 @@ class UpdateEventSectionTemplateRequest(BaseModel):
 
     content: dict[str, Any] = Field(
         ..., description="Template TipTap JSON de sección de evento"
+    )
+
+
+class UpdateMetadataRequest(BaseModel):
+    """Request para actualizar metadatos del boletín"""
+
+    boletin_metadata: dict[str, Any] = Field(
+        ..., description="Metadatos del boletín (institución, autoridades, logo, etc.)"
+    )
+
+
+class SeccionOrderItem(BaseModel):
+    """Item para reordenar/toggle una sección"""
+
+    id: int = Field(..., description="ID de la sección")
+    orden: int = Field(..., description="Nuevo orden")
+    activo: bool = Field(..., description="Si la sección está activa")
+
+
+class UpdateSeccionesOrderRequest(BaseModel):
+    """Request para actualizar orden y estado de secciones"""
+
+    secciones: list[SeccionOrderItem] = Field(
+        ..., description="Lista de secciones con su nuevo orden y estado"
     )
 
 
@@ -326,6 +354,7 @@ class SeccionConfigResponse(BaseModel):
     titulo: str
     descripcion: str | None = None
     orden: int
+    activo: bool = Field(default=True, description="Si la sección está activa")
     bloques: list[BloqueConfigResponse] = Field(
         default_factory=list, description="Bloques de la sección"
     )

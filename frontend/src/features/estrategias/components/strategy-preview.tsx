@@ -377,8 +377,8 @@ export function StrategyPreview({ strategy, onClose, onEdit }: StrategyPreviewPr
       <Separator />
 
       {/* How it works */}
-      <Alert className="border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/20">
-        <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+      <Alert className="border-blue-200 bg-blue-50/50">
+        <Info className="h-4 w-4 text-blue-600" />
         <AlertDescription className="text-sm">
           Las reglas se evalúan por prioridad. Cuando un evento cumple todas las
           condiciones de una regla, se clasifica automáticamente.

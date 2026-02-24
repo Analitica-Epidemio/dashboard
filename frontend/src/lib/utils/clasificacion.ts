@@ -46,13 +46,13 @@ export function getClasificacionColorClasses(clasificacion: TipoClasificacion | 
   if (!clasificacion) return "bg-muted text-muted-foreground";
 
   const colors: Record<string, string> = {
-    'CONFIRMADOS': 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400 border-red-200 dark:border-red-900',
-    'SOSPECHOSOS': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-400 border-yellow-200 dark:border-yellow-900',
-    'PROBABLES': 'bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-400 border-orange-200 dark:border-orange-900',
-    'DESCARTADOS': 'bg-gray-100 text-gray-700 dark:bg-gray-950 dark:text-gray-400 border-gray-200 dark:border-gray-900',
-    'NEGATIVOS': 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400 border-green-200 dark:border-green-900',
-    'EN_ESTUDIO': 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400 border-blue-200 dark:border-blue-900',
-    'REQUIERE_REVISION': 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-400 border-purple-200 dark:border-purple-900',
+    'CONFIRMADOS': 'bg-red-100 text-red-700 border-red-200',
+    'SOSPECHOSOS': 'bg-yellow-100 text-yellow-700 border-yellow-200',
+    'PROBABLES': 'bg-orange-100 text-orange-700 border-orange-200',
+    'DESCARTADOS': 'bg-gray-100 text-gray-700 border-gray-200',
+    'NEGATIVOS': 'bg-green-100 text-green-700 border-green-200',
+    'EN_ESTUDIO': 'bg-blue-100 text-blue-700 border-blue-200',
+    'REQUIERE_REVISION': 'bg-purple-100 text-purple-700 border-purple-200',
   };
 
   return colors[clasificacion] || "bg-muted text-muted-foreground";

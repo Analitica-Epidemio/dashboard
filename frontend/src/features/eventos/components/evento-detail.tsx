@@ -187,7 +187,7 @@ export function EventoDetail({ eventoId, onClose }: EventoDetailProps) {
         {evento.confidence_score && (
           <div className="flex items-center gap-4 text-sm">
             <div className="flex items-center gap-1.5">
-              <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <Shield className="h-4 w-4 text-blue-600" />
               <span>
                 Confianza: {(evento.confidence_score * 100).toFixed(0)}%
               </span>

@@ -416,9 +416,9 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
 
         {/* Observation Alert */}
         {evento.observaciones_texto && (
-          <Alert className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900">
-            <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-            <AlertDescription className="text-blue-900 dark:text-blue-100">
+          <Alert className="bg-blue-50 border-blue-200">
+            <Info className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-blue-900">
               {evento.observaciones_texto}
             </AlertDescription>
           </Alert>
@@ -608,10 +608,10 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
           {/* Semana epidemiológica destacada */}
           {evento.semana_epidemiologica_apertura &&
             evento.anio_epidemiologico_apertura && (
-              <div className="mb-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900">
+              <div className="mb-4 p-3 rounded-lg bg-blue-50 border border-blue-200">
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                  <Calendar className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-900">
                     Semana Epidemiológica{" "}
                     {evento.semana_epidemiologica_apertura}/
                     {evento.anio_epidemiologico_apertura}
@@ -673,14 +673,14 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
             <div className="space-y-4">
               {/* Estrategia aplicada */}
               {evento.estrategia_nombre && (
-                <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900">
+                <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
                   <div className="flex items-center gap-2 mb-1">
-                    <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                    <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                    <Shield className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-900">
                       Estrategia: {evento.estrategia_nombre}
                     </span>
                   </div>
-                  <p className="text-xs text-blue-700 dark:text-blue-300 ml-6">
+                  <p className="text-xs text-blue-700 ml-6">
                     ID: {evento.id_estrategia_aplicada}
                   </p>
                 </div>
@@ -692,11 +692,11 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                   className={cn(
                     "p-3 rounded-lg border",
                     trazabilidad.razon === "regla_aplicada"
-                      ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900"
+                      ? "bg-green-50 border-green-200"
                       : trazabilidad.razon ===
                         "requiere_revision"
-                        ? "bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-900"
-                        : "bg-gray-50 dark:bg-gray-950/20 border-gray-200 dark:border-gray-900"
+                        ? "bg-yellow-50 border-yellow-200"
+                        : "bg-gray-50 border-gray-200"
                   )}
                 >
                   <p className="text-sm font-medium mb-1">
@@ -759,8 +759,8 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                                     className={cn(
                                       "p-3 rounded-lg border",
                                       cond.resultado
-                                        ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900"
-                                        : "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900"
+                                        ? "bg-green-50 border-green-200"
+                                        : "bg-red-50 border-red-200"
                                     )}
                                   >
                                     <div className="flex items-start gap-3">
@@ -847,7 +847,7 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                             (regla, idx) => (
                               <div
                                 key={idx}
-                                className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800"
+                                className="p-3 rounded-lg bg-gray-50 border border-gray-200"
                               >
                                 <div className="flex items-start justify-between mb-3">
                                   <span className="text-sm font-medium">
@@ -868,8 +868,8 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                                             className={cn(
                                               "p-2 rounded border flex items-start gap-2",
                                               cond.resultado
-                                                ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
-                                                : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
+                                                ? "bg-green-50 border-green-200"
+                                                : "bg-red-50 border-red-200"
                                             )}
                                           >
                                             <div
@@ -1154,7 +1154,7 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     Consulta
                   </p>
-                  <div className="pl-3 border-l-2 border-blue-200 dark:border-blue-900">
+                  <div className="pl-3 border-l-2 border-blue-200">
                     <p className="text-sm font-medium">
                       {evento.establecimiento_consulta.nombre}
                     </p>
@@ -1183,7 +1183,7 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     Notificación
                   </p>
-                  <div className="pl-3 border-l-2 border-yellow-200 dark:border-yellow-900">
+                  <div className="pl-3 border-l-2 border-yellow-200">
                     <p className="text-sm font-medium">
                       {evento.establecimiento_notificacion.nombre}
                     </p>
@@ -1212,7 +1212,7 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     Carga
                   </p>
-                  <div className="pl-3 border-l-2 border-gray-200 dark:border-gray-800">
+                  <div className="pl-3 border-l-2 border-gray-200">
                     <p className="text-sm font-medium">
                       {evento.establecimiento_carga.nombre}
                     </p>
@@ -1366,8 +1366,8 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                     contacto.contactos_embarazadas !== null) && (
                       <div className="grid gap-4 md:grid-cols-3 text-center">
                         {contacto.contactos_menores_un_ano !== null && (
-                          <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20">
-                            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                          <div className="p-3 rounded-lg bg-blue-50">
+                            <p className="text-2xl font-bold text-blue-600">
                               {contacto.contactos_menores_un_ano}
                             </p>
                             <p className="text-xs text-muted-foreground mt-1">
@@ -1376,8 +1376,8 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                           </div>
                         )}
                         {contacto.contactos_vacunados !== null && (
-                          <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/20">
-                            <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                          <div className="p-3 rounded-lg bg-green-50">
+                            <p className="text-2xl font-bold text-green-600">
                               {contacto.contactos_vacunados}
                             </p>
                             <p className="text-xs text-muted-foreground mt-1">
@@ -1386,8 +1386,8 @@ export function EventoDetailModern({ eventoId, onClose }: EventoDetailProps) {
                           </div>
                         )}
                         {contacto.contactos_embarazadas !== null && (
-                          <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-950/20">
-                            <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                          <div className="p-3 rounded-lg bg-purple-50">
+                            <p className="text-2xl font-bold text-purple-600">
                               {contacto.contactos_embarazadas}
                             </p>
                             <p className="text-xs text-muted-foreground mt-1">

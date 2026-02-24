@@ -1597,6 +1597,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/boletines/instances/{instance_id}/export-docx": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generar y descargar DOCX de instancia
+         * @description Generar DOCX de una instancia de boletín y retornarlo como descarga.
+         */
+        post: operations["generate_boletin_instance_docx_api_v1_boletines_instances__instance_id__export_docx_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/boletines/instances/{instance_id}/duplicate": {
         parameters: {
             query?: never;
@@ -1717,6 +1737,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/boletines/config/metadata": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Actualizar metadatos del boletín
+         * @description Actualiza institución, autoridades, logo y otros metadatos
+         */
+        put: operations["update_boletin_metadata_api_v1_boletines_config_metadata_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/boletines/secciones-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Obtener configuración de secciones y bloques
+         * @description Retorna la configuración de todas las secciones y bloques activos del boletín.
+         *
+         *         Incluye información detallada sobre:
+         *         - Qué métricas se consultan
+         *         - Qué rangos temporales se usan (con ejemplos concretos)
+         *         - Tipo de visualización de cada bloque
+         *
+         *         Usar los parámetros `semana` y `anio` para ver ejemplos de rangos
+         *         para una semana de referencia específica.
+         */
+        get: operations["get_secciones_config_api_v1_boletines_secciones_config_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Actualizar orden y estado de secciones
+         * @description Actualiza el orden y el estado activo/inactivo de las secciones del boletín
+         */
+        patch: operations["update_secciones_order_api_v1_boletines_secciones_config_patch"];
+        trace?: never;
+    };
     "/api/v1/boletines/preview/evento": {
         parameters: {
             query?: never;
@@ -1769,34 +1841,6 @@ export interface paths {
          * @description Retorna todos los agentes etiológicos activos para usar en selectores de bloques dinámicos
          */
         get: operations["list_available_agentes_api_v1_boletines_preview_agentes_disponibles_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/boletines/secciones-config": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Obtener configuración de secciones y bloques
-         * @description Retorna la configuración de todas las secciones y bloques activos del boletín.
-         *
-         *         Incluye información detallada sobre:
-         *         - Qué métricas se consultan
-         *         - Qué rangos temporales se usan (con ejemplos concretos)
-         *         - Tipo de visualización de cada bloque
-         *
-         *         Usar los parámetros `semana` y `anio` para ver ejemplos de rangos
-         *         para una semana de referencia específica.
-         */
-        get: operations["get_secciones_config_api_v1_boletines_secciones_config_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2772,6 +2816,13 @@ export interface components {
              * @description Template de sección de evento (se repite por cada evento seleccionado)
              */
             event_section_template?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Boletin Metadata
+             * @description Metadatos del boletín (institución, autoridades, logo, etc.)
+             */
+            boletin_metadata?: {
                 [key: string]: unknown;
             };
             /**
@@ -3997,6 +4048,12 @@ export interface components {
                 [key: string]: unknown;
             }[];
         };
+        /**
+         * CodigoGrafico
+         * @description Códigos canónicos de gráficos soportados por el ChartSpecGenerator.
+         * @enum {string}
+         */
+        CodigoGrafico: "curva_epidemiologica" | "corredor_endemico" | "piramide_edad" | "mapa_chubut" | "estacionalidad" | "casos_edad" | "distribucion_clasificacion" | "casos_por_semana";
         /**
          * ComparisonType
          * @description Tipo de comparación a realizar
@@ -5544,6 +5601,24 @@ export interface components {
              * @description Extractores de metadata
              */
             metadata_extractors?: components["schemas"]["FilterConditionRequest"][] | null;
+        };
+        /**
+         * FilePreviewResponse
+         * @description Response with file preview data.
+         */
+        FilePreviewResponse: {
+            /** Upload Id */
+            upload_id: string;
+            /** Filename */
+            filename: string;
+            /** File Size */
+            file_size: number;
+            /** Sheets */
+            sheets: components["schemas"]["SheetPreviewData"][];
+            /** Valid Sheets Count */
+            valid_sheets_count: number;
+            /** Total Sheets Count */
+            total_sheets_count: number;
         };
         /**
          * FilterCombination
@@ -7107,10 +7182,37 @@ export interface components {
             /** Orden */
             orden: number;
             /**
+             * Activo
+             * @description Si la sección está activa
+             * @default true
+             */
+            activo: boolean;
+            /**
              * Bloques
              * @description Bloques de la sección
              */
             bloques?: components["schemas"]["BloqueConfigResponse"][];
+        };
+        /**
+         * SeccionOrderItem
+         * @description Item para reordenar/toggle una sección
+         */
+        SeccionOrderItem: {
+            /**
+             * Id
+             * @description ID de la sección
+             */
+            id: number;
+            /**
+             * Orden
+             * @description Nuevo orden
+             */
+            orden: number;
+            /**
+             * Activo
+             * @description Si la sección está activa
+             */
+            activo: boolean;
         };
         /**
          * SeccionesConfigResponse
@@ -7187,6 +7289,26 @@ export interface components {
             es_actual: boolean;
         };
         /**
+         * SheetPreviewData
+         * @description Preview data for a single sheet.
+         */
+        SheetPreviewData: {
+            /** Name */
+            name: string;
+            /** Columns */
+            columns: string[];
+            /** Row Count */
+            row_count: number;
+            /** Preview Rows */
+            preview_rows: unknown[][];
+            /** Is Valid */
+            is_valid: boolean;
+            /** Missing Columns */
+            missing_columns: string[];
+            /** Detected Type */
+            detected_type?: string | null;
+        };
+        /**
          * SignedUrlResponse
          * @description Response con la URL firmada
          */
@@ -7207,8 +7329,7 @@ export interface components {
          * @description Request para obtener spec de un chart
          */
         SolicitudSpecGrafico: {
-            /** Codigo Grafico */
-            codigo_grafico: string;
+            codigo_grafico: components["schemas"]["CodigoGrafico"];
             filtros: components["schemas"]["FiltrosGrafico"];
             /** Configuracion */
             configuracion?: {
@@ -7537,6 +7658,18 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /** SuccessResponse[FilePreviewResponse] */
+        SuccessResponse_FilePreviewResponse_: {
+            /** @description Datos de la respuesta */
+            data: components["schemas"]["FilePreviewResponse"];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
         /** SuccessResponse[GenerateDraftResponse] */
         SuccessResponse_GenerateDraftResponse_: {
             /** @description Datos de la respuesta */
@@ -7565,81 +7698,6 @@ export interface components {
         SuccessResponse_JobStatusResponse_: {
             /** @description Datos de la respuesta */
             data: components["schemas"]["JobStatusResponse"];
-            /**
-             * Meta
-             * @description Metadata opcional (paginación, etc)
-             */
-            meta?: {
-                [key: string]: unknown;
-            } | null;
-        };
-        /** SuccessResponse[List[AgenteDisponible]] */
-        SuccessResponse_List_AgenteDisponible__: {
-            /**
-             * Data
-             * @description Datos de la respuesta
-             */
-            data: components["schemas"]["AgenteDisponible"][];
-            /**
-             * Meta
-             * @description Metadata opcional (paginación, etc)
-             */
-            meta?: {
-                [key: string]: unknown;
-            } | null;
-        };
-        /** SuccessResponse[List[AuditLogResponse]] */
-        SuccessResponse_List_AuditLogResponse__: {
-            /**
-             * Data
-             * @description Datos de la respuesta
-             */
-            data: components["schemas"]["AuditLogResponse"][];
-            /**
-             * Meta
-             * @description Metadata opcional (paginación, etc)
-             */
-            meta?: {
-                [key: string]: unknown;
-            } | null;
-        };
-        /** SuccessResponse[List[BoletinInstanceResponse]] */
-        SuccessResponse_List_BoletinInstanceResponse__: {
-            /**
-             * Data
-             * @description Datos de la respuesta
-             */
-            data: components["schemas"]["BoletinInstanceResponse"][];
-            /**
-             * Meta
-             * @description Metadata opcional (paginación, etc)
-             */
-            meta?: {
-                [key: string]: unknown;
-            } | null;
-        };
-        /** SuccessResponse[List[BoletinTemplateResponse]] */
-        SuccessResponse_List_BoletinTemplateResponse__: {
-            /**
-             * Data
-             * @description Datos de la respuesta
-             */
-            data: components["schemas"]["BoletinTemplateResponse"][];
-            /**
-             * Meta
-             * @description Metadata opcional (paginación, etc)
-             */
-            meta?: {
-                [key: string]: unknown;
-            } | null;
-        };
-        /** SuccessResponse[List[CasoEpidemiologicoDisponible]] */
-        SuccessResponse_List_CasoEpidemiologicoDisponible__: {
-            /**
-             * Data
-             * @description Datos de la respuesta
-             */
-            data: components["schemas"]["CasoEpidemiologicoDisponible"][];
             /**
              * Meta
              * @description Metadata opcional (paginación, etc)
@@ -7801,6 +7859,81 @@ export interface components {
             data: {
                 [key: string]: unknown;
             };
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[list[AgenteDisponible]] */
+        SuccessResponse_list_AgenteDisponible__: {
+            /**
+             * Data
+             * @description Datos de la respuesta
+             */
+            data: components["schemas"]["AgenteDisponible"][];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[list[AuditLogResponse]] */
+        SuccessResponse_list_AuditLogResponse__: {
+            /**
+             * Data
+             * @description Datos de la respuesta
+             */
+            data: components["schemas"]["AuditLogResponse"][];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[list[BoletinInstanceResponse]] */
+        SuccessResponse_list_BoletinInstanceResponse__: {
+            /**
+             * Data
+             * @description Datos de la respuesta
+             */
+            data: components["schemas"]["BoletinInstanceResponse"][];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[list[BoletinTemplateResponse]] */
+        SuccessResponse_list_BoletinTemplateResponse__: {
+            /**
+             * Data
+             * @description Datos de la respuesta
+             */
+            data: components["schemas"]["BoletinTemplateResponse"][];
+            /**
+             * Meta
+             * @description Metadata opcional (paginación, etc)
+             */
+            meta?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** SuccessResponse[list[CasoEpidemiologicoDisponible]] */
+        SuccessResponse_list_CasoEpidemiologicoDisponible__: {
+            /**
+             * Data
+             * @description Datos de la respuesta
+             */
+            data: components["schemas"]["CasoEpidemiologicoDisponible"][];
             /**
              * Meta
              * @description Metadata opcional (paginación, etc)
@@ -8109,6 +8242,30 @@ export interface components {
         UpdateInstanceContentRequest: {
             /** Content */
             content: string;
+        };
+        /**
+         * UpdateMetadataRequest
+         * @description Request para actualizar metadatos del boletín
+         */
+        UpdateMetadataRequest: {
+            /**
+             * Boletin Metadata
+             * @description Metadatos del boletín (institución, autoridades, logo, etc.)
+             */
+            boletin_metadata: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * UpdateSeccionesOrderRequest
+         * @description Request para actualizar orden y estado de secciones
+         */
+        UpdateSeccionesOrderRequest: {
+            /**
+             * Secciones
+             * @description Lista de secciones con su nuevo orden y estado
+             */
+            secciones: components["schemas"]["SeccionOrderItem"][];
         };
         /**
          * UpdateStaticContentRequest
@@ -9025,7 +9182,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": {
+                        [key: string]: string;
+                    };
                 };
             };
             /** @description Validation Error */
@@ -9265,7 +9424,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": {
+                        [key: string]: string;
+                    };
                 };
             };
             /** @description Validation Error */
@@ -9438,7 +9599,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["SuccessResponse_FilePreviewResponse_"];
                 };
             };
             /** @description Formato de archivo no válido */
@@ -10477,7 +10638,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SuccessResponse_List_AuditLogResponse__"];
+                    "application/json": components["schemas"]["SuccessResponse_list_AuditLogResponse__"];
                 };
             };
             /** @description Estrategia no encontrada */
@@ -11739,7 +11900,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SuccessResponse_List_BoletinTemplateResponse__"];
+                    "application/json": components["schemas"]["SuccessResponse_list_BoletinTemplateResponse__"];
                 };
             };
             /** @description Validation Error */
@@ -12072,7 +12233,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SuccessResponse_List_BoletinInstanceResponse__"];
+                    "application/json": components["schemas"]["SuccessResponse_list_BoletinInstanceResponse__"];
                 };
             };
             /** @description Validation Error */
@@ -12381,6 +12542,73 @@ export interface operations {
                 };
             };
             /** @description Error generando PDF */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    generate_boletin_instance_docx_api_v1_boletines_instances__instance_id__export_docx_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                instance_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Sin contenido para generar */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Sin permisos */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Instancia no encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error generando DOCX */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -12709,6 +12937,160 @@ export interface operations {
             };
         };
     };
+    update_boletin_metadata_api_v1_boletines_config_metadata_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateMetadataRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_BoletinTemplateConfigResponse_"];
+                };
+            };
+            /** @description Sin permisos (requiere admin) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Configuración no encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_secciones_config_api_v1_boletines_secciones_config_get: {
+        parameters: {
+            query?: {
+                /** @description Semana epidemiológica de referencia (default: semana actual) */
+                semana?: number | null;
+                /** @description Año de referencia (default: año actual) */
+                anio?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_SeccionesConfigResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_secciones_order_api_v1_boletines_secciones_config_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSeccionesOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessResponse_dict_"];
+                };
+            };
+            /** @description Sin permisos (requiere admin) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Error interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     preview_evento_api_v1_boletines_preview_evento_get: {
         parameters: {
             query: {
@@ -12780,7 +13162,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SuccessResponse_List_CasoEpidemiologicoDisponible__"];
+                    "application/json": components["schemas"]["SuccessResponse_list_CasoEpidemiologicoDisponible__"];
                 };
             };
             /** @description Error interno */
@@ -12809,50 +13191,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SuccessResponse_List_AgenteDisponible__"];
-                };
-            };
-            /** @description Error interno */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    get_secciones_config_api_v1_boletines_secciones_config_get: {
-        parameters: {
-            query?: {
-                /** @description Semana epidemiológica de referencia (default: semana actual) */
-                semana?: number | null;
-                /** @description Año de referencia (default: año actual) */
-                anio?: number | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SuccessResponse_SeccionesConfigResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["SuccessResponse_list_AgenteDisponible__"];
                 };
             };
             /** @description Error interno */

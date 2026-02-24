@@ -109,14 +109,14 @@ async def get_evento_details(
     query_resumen = text("""
         WITH casos_actual AS (
             SELECT COUNT(DISTINCT id) as casos
-            FROM evento
+            FROM caso_epidemiologico
             WHERE id_enfermedad = :tipo_eno_id
                 AND fecha_minima_caso >= :fecha_inicio_actual
                 AND fecha_minima_caso <= :fecha_fin_actual
         ),
         casos_anterior AS (
             SELECT COUNT(DISTINCT id) as casos
-            FROM evento
+            FROM caso_epidemiologico
             WHERE id_enfermedad = :tipo_eno_id
                 AND fecha_minima_caso >= :fecha_inicio_anterior
                 AND fecha_minima_caso <= :fecha_fin_anterior
@@ -157,27 +157,27 @@ async def get_evento_details(
     query_trend = text("""
         WITH semanas_actual AS (
             SELECT
-                semana_epidemiologica,
-                anio_epidemiologico,
+                fecha_minima_caso_semana_epi as semana_epidemiologica,
+                fecha_minima_caso_anio_epi as anio_epidemiologico,
                 COUNT(DISTINCT id) as casos,
                 'actual' as periodo
-            FROM evento
+            FROM caso_epidemiologico
             WHERE id_enfermedad = :tipo_eno_id
                 AND fecha_minima_caso >= :fecha_inicio_actual
                 AND fecha_minima_caso <= :fecha_fin_actual
-            GROUP BY semana_epidemiologica, anio_epidemiologico
+            GROUP BY fecha_minima_caso_semana_epi, fecha_minima_caso_anio_epi
         ),
         semanas_anterior AS (
             SELECT
-                semana_epidemiologica,
-                anio_epidemiologico,
+                fecha_minima_caso_semana_epi as semana_epidemiologica,
+                fecha_minima_caso_anio_epi as anio_epidemiologico,
                 COUNT(DISTINCT id) as casos,
                 'anterior' as periodo
-            FROM evento
+            FROM caso_epidemiologico
             WHERE id_enfermedad = :tipo_eno_id
                 AND fecha_minima_caso >= :fecha_inicio_anterior
                 AND fecha_minima_caso <= :fecha_fin_anterior
-            GROUP BY semana_epidemiologica, anio_epidemiologico
+            GROUP BY fecha_minima_caso_semana_epi, fecha_minima_caso_anio_epi
         )
         SELECT * FROM semanas_actual
         UNION ALL

@@ -90,6 +90,13 @@ class BoletinTemplateConfig(BaseModel, table=True):
         description="TipTap JSON del template de sección de evento (se repite por cada evento)",
     )
 
+    # Metadatos estructurados (institución, autoridades, logo, etc.)
+    boletin_metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        sa_column=Column(JSON, nullable=False, server_default="{}"),
+        description="Metadatos del boletín (institución, autoridades, logo, periodo default)",
+    )
+
     updated_by: int | None = Field(
         default=None,
         foreign_key="users.id",

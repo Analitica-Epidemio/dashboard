@@ -137,27 +137,31 @@ class MetricService:
             data = self._compute_derived_metrics(metric_def, data)
 
         # Aplicar cálculos post-query si se solicitan
-        compute_warnings = []
+        compute_warnings: list[str] = []
+        compute_extra_metadata: dict = {}
         if compute:
-            data, compute_warnings = self._apply_compute(
+            data, compute_warnings, compute_extra_metadata = self._apply_compute(
                 compute, data, dimension_codes, filters or {}
             )
 
         # Extraer columns del primer row (todos los rows tienen las mismas keys)
         columns = list(data[0].keys()) if data else []
 
+        metadata: dict = {
+            "metric": metric_def.code,
+            "metric_label": metric_def.label,
+            "dimensions": [d.value for d in dimension_codes],
+            "total_rows": len(data),
+            "source": metric_def.source.value,
+            "compute": compute,
+            "warnings": compute_warnings if compute_warnings else None,
+            **compute_extra_metadata,
+        }
+
         return {
             "columns": columns,
             "data": data,
-            "metadata": {
-                "metric": metric_def.code,
-                "metric_label": metric_def.label,
-                "dimensions": [d.value for d in dimension_codes],
-                "total_rows": len(data),
-                "source": metric_def.source.value,
-                "compute": compute,
-                "warnings": compute_warnings if compute_warnings else None,
-            },
+            "metadata": metadata,
         }
 
     def _compute_derived_metrics(
@@ -182,7 +186,7 @@ class MetricService:
         data: list[dict],
         dimension_codes: list[DimensionCode],
         filters: dict,
-    ) -> tuple[list[dict], list[str]]:
+    ) -> tuple[list[dict], list[str], dict]:
         """
         Aplica cálculos post-query.
 
@@ -190,7 +194,7 @@ class MetricService:
         - "corredor_endemico": Calcula percentiles por semana para múltiples años
 
         Returns:
-            Tuple of (processed_data, warnings)
+            Tuple of (processed_data, warnings, extra_metadata)
         """
         if compute == "corredor_endemico":
             return self._compute_corredor_endemico(data, dimension_codes, filters)
@@ -204,7 +208,7 @@ class MetricService:
         data: list[dict],
         dimension_codes: list[DimensionCode],
         filters: dict,
-    ) -> tuple[list[dict], list[str]]:
+    ) -> tuple[list[dict], list[str], dict]:
         """
         Calcula corredor endémico a partir de datos multi-año.
 
@@ -306,4 +310,12 @@ class MetricService:
                 }
             result.append(row_data)
 
-        return result, warnings
+        extra_metadata = {
+            "corredor": {
+                "anio_actual": anio_actual,
+                "anios_historicos": anios_historicos,
+                "anios_excluidos": [2020, 2021],
+            },
+        }
+
+        return result, warnings, extra_metadata

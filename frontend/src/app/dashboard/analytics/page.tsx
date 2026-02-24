@@ -18,6 +18,8 @@ import {
     FlaskConical,
     Clock,
     Newspaper,
+    AlertTriangle,
+    Info,
 } from "lucide-react";
 
 import { AppSidebar } from "@/features/layout/components/app-sidebar";
@@ -83,6 +85,7 @@ import { ChartTypeSelector } from "@/components/charts";
 import { useTopChangesByGroup, useGenerateDraft, usePreviewDraft, type EventoCambio } from "@/features/analytics/api";
 import { useEventosDisponibles } from "@/features/boletines/api";
 import { BoletinCreationPanel } from "@/features/analytics/components/boletin-creation-panel";
+import { EventoDetailDialog } from "@/features/analytics/components/evento-detail-dialog";
 import type { EventoSeleccionado } from "@/features/boletines/types";
 
 function getCurrentWeek(): number {
@@ -119,6 +122,84 @@ const PIE_COLORS = [
     "hsl(262 83% 58%)",
 ];
 
+const FUENTE_STYLES = {
+    clinica: {
+        label: "Clínica (Agrupados)",
+        className: "bg-violet-100 text-violet-700 border-violet-200",
+        tooltip: "Conteos semanales de vigilancia clínica pasiva (CLI_P26) reportados por establecimientos de salud",
+    },
+    laboratorio: {
+        label: "Laboratorio",
+        className: "bg-amber-100 text-amber-700 border-amber-200",
+        tooltip: "Muestras procesadas y resultados de laboratorio (LAB_P26)",
+    },
+    nominal: {
+        label: "Nominal",
+        className: "bg-teal-100 text-teal-700 border-teal-200",
+        tooltip: "Casos individuales con datos de paciente (vigilancia nominal por caso)",
+    },
+} as const;
+
+function FuenteBadge({ fuente }: { fuente: keyof typeof FUENTE_STYLES }) {
+    const style = FUENTE_STYLES[fuente];
+    return (
+        <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <span className={cn("text-[10px] font-medium px-1.5 py-0.5 rounded border cursor-help", style.className)}>
+                        {style.label}
+                    </span>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs text-xs">
+                    {style.tooltip}
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+    );
+}
+
+/** Badge interactivo que permite cambiar la fuente de datos */
+function FuenteSelector({
+    value,
+    onChange,
+    options,
+}: {
+    value: string;
+    onChange: (value: string) => void;
+    options: { value: string; fuente: keyof typeof FUENTE_STYLES }[];
+}) {
+    const currentOption = options.find((o) => o.value === value);
+    const currentFuente = currentOption?.fuente ?? "clinica";
+    const style = FUENTE_STYLES[currentFuente];
+
+    return (
+        <Select value={value} onValueChange={onChange}>
+            <SelectTrigger
+                className={cn(
+                    "h-auto py-0.5 px-1.5 gap-0.5 text-[10px] font-medium rounded border shadow-none",
+                    "focus:ring-0 focus:ring-offset-0 [&>svg]:h-3 [&>svg]:w-3 [&>svg]:opacity-50",
+                    style.className,
+                )}
+            >
+                <SelectValue />
+            </SelectTrigger>
+            <SelectContent align="start" className="min-w-0">
+                {options.map((opt) => {
+                    const optStyle = FUENTE_STYLES[opt.fuente];
+                    return (
+                        <SelectItem key={opt.value} value={opt.value} className="text-xs py-1.5">
+                            <span className={cn("inline-flex items-center gap-1.5")}>
+                                <span className={cn("w-2 h-2 rounded-full", optStyle.className.split(" ")[0])} />
+                                {optStyle.label}
+                            </span>
+                        </SelectItem>
+                    );
+                })}
+            </SelectContent>
+        </Select>
+    );
+}
+
 function RangoBadge({ rango, className }: { rango: string; className?: string }) {
     return (
         <TooltipProvider>
@@ -145,9 +226,12 @@ export default function AnalyticsPage() {
     const [chartType, setChartType] = useState<string>("area");
     const [numSemanas, setNumSemanas] = useState(4);
     const [tituloCustom, setTituloCustom] = useState("");
+    const [fuenteCorredor, setFuenteCorredor] = useState<"casos_clinicos" | "casos_nominales">("casos_clinicos");
     const [generatedContent, setGeneratedContent] = useState<string | null>(null);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [generatedInstanceId, setGeneratedInstanceId] = useState<number | null>(null);
+    const [eventoDetailOpen, setEventoDetailOpen] = useState(false);
+    const [selectedEvento, setSelectedEvento] = useState<EventoCambio | null>(null);
 
     const rangoPreview = `SE 1 - ${semanaReferencia} / ${anioReferencia}`;
 
@@ -179,9 +263,9 @@ export default function AnalyticsPage() {
 
     const { data: corredorData, isLoading: loadingCorredor } = $api.useQuery("post", "/api/v1/metricas/query", {
         body: {
-            metric: "casos_clinicos",
+            metric: fuenteCorredor,
             dimensions: ["SEMANA_EPIDEMIOLOGICA", "ANIO_EPIDEMIOLOGICO"],
-            filters: buildFilters({ comparar_con: "yoy" }),
+            filters: buildFilters(),
             compute: "corredor_endemico",
         },
     });
@@ -246,6 +330,11 @@ export default function AnalyticsPage() {
         });
     }, [eventosLookup]);
 
+    const openEventoDetail = useCallback((evento: EventoCambio) => {
+        setSelectedEvento(evento);
+        setEventoDetailOpen(true);
+    }, []);
+
     // Add evento from quick-add
     const handleAddEvento = useCallback((evento: EventoSeleccionado) => {
         setEventosSeleccionados(prev => {
@@ -308,6 +397,13 @@ export default function AnalyticsPage() {
             .slice(0, 10);
     }, [topChangesData]);
 
+    const corredorMeta = useMemo(() => {
+        const meta = (corredorData as Record<string, unknown>)?.metadata as Record<string, unknown> | undefined;
+        const corredor = meta?.corredor as { anio_actual: number; anios_historicos: number[]; anios_excluidos: number[] } | undefined;
+        const warnings = (meta?.warnings as string[] | undefined) ?? [];
+        return { corredor: corredor ?? null, warnings };
+    }, [corredorData]);
+
     const corredorChartData = useMemo(() => {
         if (!corredorData?.data || !Array.isArray(corredorData.data)) return [];
         return (corredorData.data as Array<Record<string, number | boolean>>).map((row) => {
@@ -326,6 +422,21 @@ export default function AnalyticsPage() {
             };
         }).sort((a, b) => a.semana - b.semana);
     }, [corredorData]);
+
+    /** Estado del corredor: qué falta o qué está incompleto */
+    const corredorStatus = useMemo(() => {
+        const meta = corredorMeta.corredor;
+        const data = corredorChartData;
+        const hasBands = data.some((d) => d.p25 > 0 || d.p50 > 0 || d.p75 > 0);
+        const hasCurrentData = data.some((d) => d.casos_actual > 0);
+        const nHistoricos = meta?.anios_historicos.length ?? 0;
+
+        if (!data.length) return { type: "empty" as const, message: `No hay datos disponibles para ${anioReferencia}` };
+        if (nHistoricos < 2 && !hasCurrentData) return { type: "empty" as const, message: `No hay datos suficientes. Se necesitan al menos 2 años históricos y datos del año ${anioReferencia}` };
+        if (nHistoricos < 2) return { type: "warning" as const, message: `No se pueden calcular los percentiles (bandas). Se necesitan al menos 2 años históricos, pero solo hay datos de: ${meta?.anios_historicos.join(", ") || "ninguno"}. Solo se muestra la línea de casos ${anioReferencia}.` };
+        if (!hasCurrentData) return { type: "info" as const, message: `Las bandas muestran percentiles de ${meta?.anios_historicos.join(", ")}. Aún no hay datos de casos para ${meta?.anio_actual}.` };
+        return { type: "ok" as const, message: null };
+    }, [corredorMeta, corredorChartData, anioReferencia]);
 
     const eventoPieData = useMemo(() => {
         if (!eventosData?.data) return [];
@@ -434,9 +545,31 @@ export default function AnalyticsPage() {
                                 <CardHeader className="pb-2 py-3">
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <CardTitle className="text-sm">Corredor Endémico</CardTitle>
+                                            <div className="flex items-center gap-2">
+                                                <CardTitle className="text-sm">Corredor Endémico</CardTitle>
+                                                <FuenteSelector
+                                                    value={fuenteCorredor}
+                                                    onChange={(v) => setFuenteCorredor(v as "casos_clinicos" | "casos_nominales")}
+                                                    options={[
+                                                        { value: "casos_clinicos", fuente: "clinica" },
+                                                        { value: "casos_nominales", fuente: "nominal" },
+                                                    ]}
+                                                />
+                                            </div>
                                             <CardDescription className="text-xs">
-                                                Casos {anioReferencia} vs percentiles históricos
+                                                {corredorMeta.corredor ? (
+                                                    <>
+                                                        Línea: casos {corredorMeta.corredor.anio_actual} | Bandas: percentiles P25/P50/P75 calculados con{" "}
+                                                        {corredorMeta.corredor.anios_historicos.length > 0
+                                                            ? corredorMeta.corredor.anios_historicos.join(", ")
+                                                            : "sin datos históricos"}
+                                                        {corredorMeta.corredor.anios_excluidos.length > 0 && (
+                                                            <span className="text-muted-foreground"> (excl. pandemia {corredorMeta.corredor.anios_excluidos.join("-")})</span>
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    <>Casos {anioReferencia} vs percentiles históricos</>
+                                                )}
                                             </CardDescription>
                                         </div>
                                         <div className="flex items-center gap-2">
@@ -456,7 +589,25 @@ export default function AnalyticsPage() {
                                 <CardContent className="pb-3">
                                     {loadingCorredor ? (
                                         <Skeleton className="h-[280px] w-full" />
+                                    ) : corredorStatus.type === "empty" ? (
+                                        <div className="h-[280px] flex items-center justify-center">
+                                            <div className="text-center max-w-md space-y-2">
+                                                <AlertTriangle className="h-10 w-10 mx-auto text-amber-400" />
+                                                <p className="text-sm text-muted-foreground">{corredorStatus.message}</p>
+                                            </div>
+                                        </div>
                                     ) : (
+                                        <div className="space-y-2">
+                                        {corredorStatus.type !== "ok" && (
+                                            <div className={cn(
+                                                "flex items-start gap-2 text-xs px-3 py-2 rounded-md",
+                                                corredorStatus.type === "warning" && "bg-amber-50 text-amber-800 border border-amber-200",
+                                                corredorStatus.type === "info" && "bg-blue-50 text-blue-800 border border-blue-200",
+                                            )}>
+                                                {corredorStatus.type === "warning" ? <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" /> : <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />}
+                                                <span>{corredorStatus.message}</span>
+                                            </div>
+                                        )}
                                         <div className="h-[280px]">
                                             <ChartContainer config={corredorConfig} className="h-full w-full">
                                                 <ComposedChart data={corredorChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -475,6 +626,7 @@ export default function AnalyticsPage() {
                                                 </ComposedChart>
                                             </ChartContainer>
                                         </div>
+                                        </div>
                                     )}
                                 </CardContent>
                             </Card>
@@ -484,6 +636,7 @@ export default function AnalyticsPage() {
                                 <div className="flex items-center gap-2 mb-3">
                                     <Activity className="h-4 w-4 text-muted-foreground" />
                                     <h3 className="text-sm font-semibold">Cambios Significativos</h3>
+                                    <FuenteBadge fuente="nominal" />
                                     {topChangesData?.data?.periodo_actual && (
                                         <RangoBadge
                                             rango={`SE ${topChangesData.data.periodo_actual.semana_inicio}-${topChangesData.data.periodo_actual.semana_fin} vs ${topChangesData.data.periodo_anterior.semana_inicio}-${topChangesData.data.periodo_anterior.semana_fin}`}
@@ -492,9 +645,9 @@ export default function AnalyticsPage() {
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     {/* Crecimiento */}
-                                    <Card className="border-rose-200 dark:border-rose-800">
+                                    <Card className="border-rose-200">
                                         <CardHeader className="pb-1 py-2 px-3">
-                                            <CardTitle className="text-xs flex items-center gap-1.5 text-rose-700 dark:text-rose-400">
+                                            <CardTitle className="text-xs flex items-center gap-1.5 text-rose-700">
                                                 <TrendingUp className="h-3.5 w-3.5" />
                                                 Mayor Crecimiento
                                             </CardTitle>
@@ -516,9 +669,9 @@ export default function AnalyticsPage() {
                                                             <TableRow
                                                                 key={evento.tipo_eno_id}
                                                                 className="cursor-pointer hover:bg-muted/50"
-                                                                onClick={() => toggleEventoFromTable(evento)}
+                                                                onClick={() => openEventoDetail(evento)}
                                                             >
-                                                                <TableCell className="px-1">
+                                                                <TableCell className="px-1" onClick={(e) => { e.stopPropagation(); toggleEventoFromTable(evento); }}>
                                                                     <Checkbox checked={selectedIds.has(evento.tipo_eno_id)} />
                                                                 </TableCell>
                                                                 <TableCell className="font-medium text-xs px-1 truncate max-w-[180px]">
@@ -540,9 +693,9 @@ export default function AnalyticsPage() {
                                     </Card>
 
                                     {/* Decrecimiento */}
-                                    <Card className="border-emerald-200 dark:border-emerald-800">
+                                    <Card className="border-emerald-200">
                                         <CardHeader className="pb-1 py-2 px-3">
-                                            <CardTitle className="text-xs flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">
+                                            <CardTitle className="text-xs flex items-center gap-1.5 text-emerald-700">
                                                 <TrendingDown className="h-3.5 w-3.5" />
                                                 Mayor Decrecimiento
                                             </CardTitle>
@@ -564,9 +717,9 @@ export default function AnalyticsPage() {
                                                             <TableRow
                                                                 key={evento.tipo_eno_id}
                                                                 className="cursor-pointer hover:bg-muted/50"
-                                                                onClick={() => toggleEventoFromTable(evento)}
+                                                                onClick={() => openEventoDetail(evento)}
                                                             >
-                                                                <TableCell className="px-1">
+                                                                <TableCell className="px-1" onClick={(e) => { e.stopPropagation(); toggleEventoFromTable(evento); }}>
                                                                     <Checkbox checked={selectedIds.has(evento.tipo_eno_id)} />
                                                                 </TableCell>
                                                                 <TableCell className="font-medium text-xs px-1 truncate max-w-[180px]">
@@ -594,7 +747,10 @@ export default function AnalyticsPage() {
                                 <Card>
                                     <CardHeader className="pb-1 py-2 px-3">
                                         <div className="flex items-center justify-between">
-                                            <CardTitle className="text-xs">Distribución por Evento</CardTitle>
+                                            <div className="flex items-center gap-2">
+                                                <CardTitle className="text-xs">Distribución por Evento</CardTitle>
+                                                <FuenteBadge fuente="clinica" />
+                                            </div>
                                             <RangoBadge rango={rangoPreview} />
                                         </div>
                                     </CardHeader>
@@ -631,7 +787,10 @@ export default function AnalyticsPage() {
                                 <Card>
                                     <CardHeader className="pb-1 py-2 px-3">
                                         <div className="flex items-center justify-between">
-                                            <CardTitle className="text-xs">Distribución por Edad</CardTitle>
+                                            <div className="flex items-center gap-2">
+                                                <CardTitle className="text-xs">Distribución por Edad</CardTitle>
+                                                <FuenteBadge fuente="clinica" />
+                                            </div>
                                             <RangoBadge rango={rangoPreview} />
                                         </div>
                                     </CardHeader>
@@ -660,10 +819,13 @@ export default function AnalyticsPage() {
                                 <CardHeader className="pb-1 py-2 px-3">
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <CardTitle className="text-xs flex items-center gap-1.5">
-                                                <FlaskConical className="h-3.5 w-3.5" />
-                                                Muestras Positivas por Agente
-                                            </CardTitle>
+                                            <div className="flex items-center gap-1.5">
+                                                <CardTitle className="text-xs flex items-center gap-1.5">
+                                                    <FlaskConical className="h-3.5 w-3.5" />
+                                                    Muestras Positivas por Agente
+                                                </CardTitle>
+                                                <FuenteBadge fuente="laboratorio" />
+                                            </div>
                                             <CardDescription className="text-[10px]">Top 10 agentes etiológicos</CardDescription>
                                         </div>
                                         <RangoBadge rango={rangoPreview} />
@@ -720,6 +882,15 @@ export default function AnalyticsPage() {
                     </ResizablePanel>
                 </ResizablePanelGroup>
             </SidebarInset>
+
+            <EventoDetailDialog
+                open={eventoDetailOpen}
+                onOpenChange={setEventoDetailOpen}
+                evento={selectedEvento}
+                semanaActual={semanaReferencia}
+                anioActual={anioReferencia}
+                numSemanas={numSemanas}
+            />
         </SidebarProvider>
     );
 }

@@ -166,7 +166,7 @@ export function StrategyTimeline({ strategies, className }: StrategyTimelineProp
         {(hasGaps || hasOverlaps) && (
           <div className="flex items-center gap-2 text-sm">
             {hasGaps && (
-              <Badge variant="outline" className="text-amber-600 border-amber-600/50 bg-amber-50/50 dark:bg-amber-950/20">
+              <Badge variant="outline" className="text-amber-600 border-amber-600/50 bg-amber-50/50">
                 <AlertTriangle className="mr-1 h-3 w-3" />
                 Gaps detectados
               </Badge>

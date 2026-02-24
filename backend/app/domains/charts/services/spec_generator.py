@@ -120,7 +120,7 @@ class ChartSpecGenerator:
             ids_tipo_eno = filtros.ids_tipo_eno or []
             if ids_tipo_eno:
                 configuracion_series = [
-                    {"tipo_eno_id": id, "label": "Casos", "color": "rgb(75, 192, 192)"}
+                    {"tipo_eno_ids": [id], "label": "Casos", "color": "rgb(75, 192, 192)"}
                     for id in ids_tipo_eno
                 ]
             else:
@@ -467,7 +467,7 @@ class ChartSpecGenerator:
             ids_tipo_eno = filtros.ids_tipo_eno or []
             if ids_tipo_eno:
                 configuracion_series = [
-                    {"tipo_eno_id": id, "label": "Casos", "color": "#4CAF50"}
+                    {"tipo_eno_ids": [id], "label": "Casos", "color": "#4CAF50"}
                     for id in ids_tipo_eno
                 ]
             else:

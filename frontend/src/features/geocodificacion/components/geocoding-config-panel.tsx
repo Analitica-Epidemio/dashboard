@@ -216,13 +216,13 @@ export function GeocodingConfigPanel() {
 
             {/* Status message */}
             {isProcessing && (
-              <div className="flex items-center gap-2 rounded-lg bg-blue-50 dark:bg-blue-950/20 p-4">
+              <div className="flex items-center gap-2 rounded-lg bg-blue-50 p-4">
                 <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                  <p className="text-sm font-medium text-blue-900">
                     Geocodificación en progreso
                   </p>
-                  <p className="text-xs text-blue-700 dark:text-blue-300">
+                  <p className="text-xs text-blue-700">
                     {stats.processing} domicilios siendo procesados. Las
                     estadísticas se actualizan automáticamente.
                   </p>
@@ -231,13 +231,13 @@ export function GeocodingConfigPanel() {
             )}
 
             {!hasPending && !isProcessing && (
-              <div className="flex items-center gap-2 rounded-lg bg-green-50 dark:bg-green-950/20 p-4">
+              <div className="flex items-center gap-2 rounded-lg bg-green-50 p-4">
                 <CheckCircle2 className="h-5 w-5 text-green-500" />
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-green-900 dark:text-green-100">
+                  <p className="text-sm font-medium text-green-900">
                     ¡Geocodificación completa!
                   </p>
-                  <p className="text-xs text-green-700 dark:text-green-300">
+                  <p className="text-xs text-green-700">
                     No hay domicilios pendientes de geocodificar
                   </p>
                 </div>

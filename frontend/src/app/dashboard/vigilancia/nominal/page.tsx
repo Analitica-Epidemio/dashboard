@@ -91,10 +91,10 @@ interface KpiProps {
 // --- Components ---
 function KpiCard({ title, value, icon: Icon, trend, trendLabel, variant = "default", description }: KpiProps) {
     const colorMap = {
-        default: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400",
-        success: "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400",
-        warning: "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400",
-        danger: "bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400",
+        default: "bg-blue-50 text-blue-700",
+        success: "bg-emerald-50 text-emerald-700",
+        warning: "bg-amber-50 text-amber-700",
+        danger: "bg-rose-50 text-rose-700",
     };
 
     return (

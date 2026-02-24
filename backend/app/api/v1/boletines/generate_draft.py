@@ -32,6 +32,7 @@ from app.api.v1.boletines.schemas import (
 from app.core.database import get_async_session
 from app.core.schemas.response import SuccessResponse
 from app.core.security import RequireAuthOrSignedUrl
+from app.domains.charts.schemas import CodigoGrafico
 from app.domains.autenticacion.models import User
 from app.domains.boletines.models import (
     BoletinInstance,
@@ -1406,11 +1407,18 @@ def _render_chart_resultado(
         "generated_at": datetime.now(UTC).isoformat(),
     }
 
+    # Resolver chartCode canónico desde el slug del bloque
+    from app.domains.boletines.html_renderer import CHART_CODE_MAP
+
+    canonical_code = CHART_CODE_MAP.get(
+        resultado.slug, CodigoGrafico.CURVA_EPIDEMIOLOGICA
+    ).value
+
     # Crear nodo dynamicChart con spec embebido
     chart_node = {
         "type": "dynamicChart",
         "attrs": {
-            "chartCode": resultado.slug,
+            "chartCode": canonical_code,
             "title": resultado.titulo,
             "height": resultado.config_visual.get("height", 350),
             "fechaDesde": fecha_inicio,
@@ -1705,7 +1713,7 @@ def _generate_evento_section(
             chart_node = {
                 "type": "dynamicChart",
                 "attrs": {
-                    "chartCode": f"curva-{evento_slug}",
+                    "chartCode": CodigoGrafico.CURVA_EPIDEMIOLOGICA.value,
                     "title": f"Casos por semana epidemiológica - {evento_nombre}",
                     "height": 300,
                     "fechaDesde": fecha_inicio,
@@ -2037,7 +2045,7 @@ async def execute_query(
                 configuracion_series=resolved_series if resolved_series else None,
                 agrupar_por=agrupar_por,
             )
-            return {"spec": spec.model_dump(by_alias=True), "chart_code": "casos_edad"}
+            return {"spec": spec.model_dump(by_alias=True), "chart_code": CodigoGrafico.CASOS_EDAD.value}
         except Exception as e:
             logger.warning(f"Error generando spec distribucion_edad: {e}")
             return {}
@@ -2138,7 +2146,7 @@ async def execute_query(
             )
             return {
                 "spec": spec.model_dump(by_alias=True),
-                "chart_code": "curva_epidemiologica_comparada",
+                "chart_code": CodigoGrafico.CURVA_EPIDEMIOLOGICA.value,
             }
         except Exception as e:
             logger.warning(f"Error generando spec comparacion_anual: {e}")
@@ -2247,7 +2255,7 @@ async def execute_query(
             )
             return {
                 "spec": spec.model_dump(by_alias=True),
-                "chart_code": "curva_epidemiologica",
+                "chart_code": CodigoGrafico.CURVA_EPIDEMIOLOGICA.value,
             }
         except Exception as e:
             logger.warning(f"Error generando spec curva_epidemiologica: {e}")
