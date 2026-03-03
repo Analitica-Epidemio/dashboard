@@ -1,0 +1,28 @@
+{
+  "name": "epidemiologia-e2e",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "setup": "pnpm install && pnpm exec playwright install chromium",
+    "start": "tsx src/cli.ts",
+    "tutorial": "tsx src/cli.ts --tutorial",
+    "tutorial:headed": "tsx src/cli.ts --headed --tutorial",
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:debug": "PWDEBUG=1 playwright test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "music-metadata": "^11.12.1",
+    "playwright": "^1.50.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

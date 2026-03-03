@@ -10,7 +10,7 @@
 #   Terminal 3: make celery
 #   Terminal 4: make frontend
 
-.PHONY: help install up down logs dev celery frontend migrate migration seed superadmin reset lint typecheck test prod
+.PHONY: help install up down logs dev celery frontend migrate migration seed superadmin reset lint typecheck test prod e2e-setup e2e-test e2e-tutorial
 
 help:
 	@echo "Setup:"
@@ -30,6 +30,11 @@ help:
 	@echo "  seed        Cargar datos iniciales (pregunta si crear admin de dev)"
 	@echo "  superadmin  Crear superadmin interactivo (producción)"
 	@echo "  reset       Resetear DB (borra todo y re-seedea)"
+	@echo ""
+	@echo "E2E / Tutoriales:"
+	@echo "  e2e-setup       Instalar deps + Chromium para E2E"
+	@echo "  e2e-test        Correr tests E2E"
+	@echo "  e2e-tutorial    Grabar tutorial (make e2e-tutorial t=ejemplo-login)"
 	@echo ""
 	@echo "Calidad:"
 	@echo "  lint        Linter + formatter"
@@ -126,3 +131,17 @@ deploy-ssh:
 
 deploy-rollback:
 	./scripts/deploy.sh rollback
+
+# E2E / Tutoriales
+e2e-setup:
+	cd e2e && pnpm install && pnpm exec playwright install chromium
+
+e2e-test:
+	cd e2e && pnpm test
+
+e2e-test-headed:
+	cd e2e && pnpm test:headed
+
+e2e-tutorial:
+	@if [ -z "$(t)" ]; then echo "Uso: make e2e-tutorial t=ejemplo-login"; exit 1; fi
+	cd e2e && pnpm tutorial:headed $(t)

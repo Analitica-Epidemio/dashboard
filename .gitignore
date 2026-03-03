@@ -74,3 +74,9 @@ temp/
 
 node_modules/
 issues/
+
+# E2E
+e2e/output/
+!e2e/output/.gitkeep
+e2e/test-results/
+e2e/playwright-report/
